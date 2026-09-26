@@ -12,85 +12,77 @@ export const StepDSALogo: React.FC<StepDSALogoProps> = ({
   className = '',
 }) => {
   const iconDimensions = {
-    sm: { width: 32, height: 32, rx: 'rounded-lg' },
-    md: { width: 40, height: 40, rx: 'rounded-xl' },
-    lg: { width: 56, height: 56, rx: 'rounded-2xl' },
+    sm: { width: 34, height: 34 },
+    md: { width: 44, height: 44 },
+    lg: { width: 64, height: 64 },
   }[size];
 
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      {/* Dynamic Emblem */}
+      {/* Brandkit Emblem: Stepped Pillars + Forward Chevron + Connected Graph Nodes */}
       <div
-        className={`relative flex items-center justify-center p-1 bg-[#111827] border border-[#1F293D] shadow-lg shadow-[#10B981]/10 ${iconDimensions.rx} group-hover:border-[#10B981]/50 transition-all duration-300`}
+        className="relative flex items-center justify-center p-0.5 group-hover:scale-105 transition-transform duration-300 shrink-0"
         style={{ width: iconDimensions.width, height: iconDimensions.height }}
       >
         <svg
-          viewBox="0 0 64 64"
+          viewBox="0 0 100 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full"
+          className="w-full h-full drop-shadow-md"
         >
           <defs>
-            <linearGradient id="logoBarG1" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="compBar1" x1="0" y1="52" x2="0" y2="96" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="#34D399" />
               <stop offset="100%" stopColor="#059669" />
             </linearGradient>
-            <linearGradient id="logoBarG2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#22D3EE" />
-              <stop offset="100%" stopColor="#0891B2" />
+            <linearGradient id="compBar2" x1="0" y1="32" x2="0" y2="96" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#2DD4BF" />
+              <stop offset="100%" stopColor="#0D9488" />
             </linearGradient>
-            <linearGradient id="logoBarG3" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#818CF8" />
-              <stop offset="100%" stopColor="#4F46E5" />
+            <linearGradient id="compChev" x1="50" y1="18" x2="86" y2="82" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#38BDF8" />
+              <stop offset="100%" stopColor="#0284C7" />
             </linearGradient>
-            <filter id="logoNodeGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <linearGradient id="compNodes" x1="45" y1="4" x2="95" y2="24" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#34D399" />
+              <stop offset="100%" stopColor="#38BDF8" />
+            </linearGradient>
+            <filter id="nodeGlowFilter" x="-30%" y="-30%" width="160%" height="160%">
               <feGaussianBlur stdDeviation="2" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
           </defs>
 
-          {/* Stepped Algorithm Bars */}
-          <rect x="8" y="34" width="12" height="22" rx="3" fill="url(#logoBarG1)" />
-          <rect x="26" y="22" width="12" height="34" rx="3" fill="url(#logoBarG2)" />
-          <rect x="44" y="10" width="12" height="46" rx="3" fill="url(#logoBarG3)" />
+          {/* Stepped Pillar 1 (Short - Cyber Emerald) */}
+          <rect x="4" y="52" width="16" height="44" rx="5" fill="url(#compBar1)" />
 
-          {/* Time-Travel Interpolation Path */}
+          {/* Stepped Pillar 2 (Medium - Vibrant Teal) */}
+          <rect x="26" y="32" width="16" height="64" rx="5" fill="url(#compBar2)" />
+
+          {/* Forward Execution Chevron (Step / Time-Travel - Electric Cyan) */}
           <path
-            d="M14 34 C 20 20, 32 18, 50 10"
-            stroke="#F8FAFC"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeDasharray="2 3"
-            opacity="0.85"
-          />
-
-          {/* Stepper Nodes */}
-          <circle cx="14" cy="34" r="3.5" fill="#FFFFFF" filter="url(#logoNodeGlow)" />
-          <circle cx="32" cy="22" r="3.5" fill="#FFFFFF" filter="url(#logoNodeGlow)" />
-          <circle
-            cx="50"
-            cy="10"
-            r="4.5"
-            fill="#38BDF8"
-            stroke="#FFFFFF"
-            strokeWidth="1.8"
-            filter="url(#logoNodeGlow)"
-          />
-
-          {/* Micro forward arrow */}
-          <path
-            d="M48 24 L56 24 L56 16"
-            fill="none"
-            stroke="#FDE047"
-            strokeWidth="2.5"
+            d="M 50 18 L 76 50 L 50 82"
+            stroke="url(#compChev)"
+            strokeWidth="16"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+
+          {/* Connected Graph/Tree Vertices (Floating Algorithmic Network) */}
+          <path
+            d="M 48 20 L 70 14 L 92 6"
+            stroke="url(#compNodes)"
+            strokeWidth="4.5"
+            strokeLinecap="round"
+          />
+          <circle cx="48" cy="20" r="5.5" fill="#10B981" stroke="#FFFFFF" strokeWidth="1.8" filter="url(#nodeGlowFilter)" />
+          <circle cx="70" cy="14" r="6" fill="#06B6D4" stroke="#FFFFFF" strokeWidth="1.8" filter="url(#nodeGlowFilter)" />
+          <circle cx="92" cy="6" r="6.5" fill="#38BDF8" stroke="#FFFFFF" strokeWidth="2" filter="url(#nodeGlowFilter)" />
         </svg>
       </div>
 
       {showText && (
-        <div className="flex flex-col text-left">
+        <div className="flex flex-col text-left select-none">
           <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
             Step<span className="text-[#10B981]">DSA</span>
           </span>
