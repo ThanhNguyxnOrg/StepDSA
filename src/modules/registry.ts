@@ -15,6 +15,7 @@ import { trieModule } from './trees/trie';
 import { knapsackModule } from './dp/knapsack';
 import { octree3dModule } from './trees/octree3d';
 
+import { linearSearchModule } from './searching/linearSearch';
 import { insertionSortModule } from './sorting/insertionSort';
 import { selectionSortModule } from './sorting/selectionSort';
 import { topologicalSortModule } from './graphs/topologicalSort';
@@ -25,6 +26,7 @@ export const allModules: AlgorithmModule[] = [
   insertionSortModule,
   selectionSortModule,
   bubbleSortModule,
+  linearSearchModule,
   binarySearchModule,
   twoPointersModule,
   slidingWindowModule,

@@ -54,6 +54,7 @@ Most existing algorithm visualizers suffer from the same fundamental flaws:
 | 🔄 **Sorting** | **Insertion Sort (Incremental Build)** | $\mathcal{O}(n)$ / $\mathcal{O}(n^2)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
 | 🔄 **Sorting** | **Selection Sort (Minimum Scan)** | $\mathcal{O}(n^2)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
 | 🔄 **Sorting** | **Bubble Sort (Adaptive Invariant)** | $\mathcal{O}(n)$ / $\mathcal{O}(n^2)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🔍 **Searching** | **Linear Search (Sequential Scan)** | $\mathcal{O}(n)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
 | 🔍 **Searching** | **Binary Search (Invariant Halving)** | $\mathcal{O}(\log n)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
 | 🎯 **Arrays** | **Sliding Window (Max Sum Subarray)** | $\mathcal{O}(n)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
 | 🎯 **Arrays** | **Two Pointers (Container With Most Water)**| $\mathcal{O}(n)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |

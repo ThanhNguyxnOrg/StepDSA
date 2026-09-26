@@ -232,6 +232,32 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
         </div>
       );
 
+    case 'linear-search':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#4338CA] to-[#3730A3] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>Sequential Scan</span>
+            <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
+          </div>
+
+          <div className="flex items-center justify-center gap-2 h-24">
+            <div className="w-8 h-10 rounded bg-white/20 opacity-40 flex items-center justify-center text-xs font-mono text-white/50">
+              14
+            </div>
+            <div className="w-8 h-10 rounded bg-white/20 opacity-40 flex items-center justify-center text-xs font-mono text-white/50">
+              33
+            </div>
+            <div className="w-9 h-11 rounded bg-amber-400 border-2 border-white flex flex-col items-center justify-center text-xs font-mono font-bold text-slate-900 shadow-lg shadow-black/40 animate-bounce">
+              <span>35</span>
+              <span className="text-[7px] uppercase font-mono font-extrabold text-amber-950">MATCH</span>
+            </div>
+            <div className="w-8 h-10 rounded bg-white/40 flex items-center justify-center text-xs font-mono text-white">
+              19
+            </div>
+          </div>
+        </div>
+      );
+
     case 'binary-search':
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#4338CA] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">

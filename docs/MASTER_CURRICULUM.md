@@ -34,7 +34,7 @@ Mỗi thuật toán trong StepDSA khi được triển khai bắt buộc phải 
 ## 🏛️ Master Curriculum Roadmap (20 Nhóm Phân Loại A → T)
 
 ### A. Searching
-- [ ] Linear Search
+- [x] **Linear Search (Sequential Scan)** `[ACTIVE]`
 - [x] **Binary Search (Invariant Boundary Halving)** `[ACTIVE]`
 - [ ] Jump Search
 - [ ] Interpolation Search
@@ -386,14 +386,15 @@ graph TD
 
 ---
 
-## 📈 Trạng thái Hiện tại của StepDSA (18 Modules Đang Hoạt Động)
+## 📈 Trạng thái Hiện tại của StepDSA (19 Modules Đang Hoạt Động)
 
-1. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx) — Sorting
-2. [Mergesort (Divide & Conquer)](../src/modules/sorting/mergesort.tsx) — Sorting
-3. [Insertion Sort (Incremental Build)](../src/modules/sorting/insertionSort.tsx) — Sorting
-4. [Selection Sort (Minimum Scan)](../src/modules/sorting/selectionSort.tsx) — Sorting
-5. [Bubble Sort (Adjacent Swaps)](../src/modules/sorting/bubbleSort.tsx) — Sorting
-6. [Binary Search (Boundary Halving)](../src/modules/searching/binarySearch.tsx) — Searching
+1. [Linear Search (Sequential Scan)](../src/modules/searching/linearSearch.tsx) — Searching
+2. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx) — Sorting
+3. [Mergesort (Divide & Conquer)](../src/modules/sorting/mergesort.tsx) — Sorting
+4. [Insertion Sort (Incremental Build)](../src/modules/sorting/insertionSort.tsx) — Sorting
+5. [Selection Sort (Minimum Scan)](../src/modules/sorting/selectionSort.tsx) — Sorting
+6. [Bubble Sort (Adjacent Swaps)](../src/modules/sorting/bubbleSort.tsx) — Sorting
+7. [Binary Search (Boundary Halving)](../src/modules/searching/binarySearch.tsx) — Searching
 7. [Two Pointers (Container With Most Water)](../src/modules/arrays/twoPointers.tsx) — Arrays & Pointers
 8. [Sliding Window (Max Subarray Sum K)](../src/modules/arrays/slidingWindow.tsx) — Arrays & Pointers
 9. [Singly Linked List (Pointers & Mutations)](../src/modules/linkedList/singlyLinkedList.tsx) — Linked Lists

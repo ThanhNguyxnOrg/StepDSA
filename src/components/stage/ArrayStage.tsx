@@ -12,6 +12,7 @@ export interface ArrayStageState {
   array: ArrayElement[];
   pointers?: Record<string, number>;
   discardedRange?: [number, number]; // e.g. for Binary Search
+  target?: number;
   auxiliary?: any;
 }
 

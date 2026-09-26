@@ -19,10 +19,12 @@ This document tracks all 17 implemented interactive modules in StepDSA, along wi
 
 | # | Algorithm | Category | Level | Time Complexity | Space Complexity |
 |---|---|---|---|---|---|
-| 1 | **Insertion Sort** | Sorting | Beginner | $\mathcal{O}(N^2)$ / Best $\mathcal{O}(N)$ | $\mathcal{O}(1)$ |
-| 2 | **Bubble Sort** | Sorting | Beginner | $\mathcal{O}(N^2)$ / Best $\mathcal{O}(N)$ | $\mathcal{O}(1)$ |
-| 3 | **Binary Search** | Searching | Beginner | $\mathcal{O}(\log N)$ | $\mathcal{O}(1)$ |
-| 4 | **Singly Linked List** | Linked Lists | Beginner | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ |
+| 1 | **Linear Search (Sequential Scan)** | Searching | Beginner | $\mathcal{O}(N)$ / Best $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+| 2 | **Binary Search (Boundary Halving)** | Searching | Beginner | $\mathcal{O}(\log N)$ | $\mathcal{O}(1)$ |
+| 3 | **Selection Sort (Minimum Scan)** | Sorting | Beginner | $\mathcal{O}(N^2)$ | $\mathcal{O}(1)$ |
+| 4 | **Insertion Sort** | Sorting | Beginner | $\mathcal{O}(N^2)$ / Best $\mathcal{O}(N)$ | $\mathcal{O}(1)$ |
+| 5 | **Bubble Sort** | Sorting | Beginner | $\mathcal{O}(N^2)$ / Best $\mathcal{O}(N)$ | $\mathcal{O}(1)$ |
+| 6 | **Singly Linked List** | Linked Lists | Beginner | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ |
 | 5 | **Two Pointers (Most Water)** | Arrays | Intermediate | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ |
 | 6 | **Sliding Window (Max Sum K)** | Arrays | Intermediate | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ |
 | 7 | **Quicksort (Lomuto Partition)** | Sorting | Intermediate | $\mathcal{O}(N \log N)$ | $\mathcal{O}(\log N)$ |
