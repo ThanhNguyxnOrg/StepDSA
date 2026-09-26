@@ -19,6 +19,9 @@ import { linearSearchModule } from './searching/linearSearch';
 import { insertionSortModule } from './sorting/insertionSort';
 import { selectionSortModule } from './sorting/selectionSort';
 import { topologicalSortModule } from './graphs/topologicalSort';
+import { balancedParenthesesModule } from './stack/balancedParentheses';
+import { lcsModule } from './dp/lcs';
+import { sieveModule } from './math/sieveOfEratosthenes';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -28,6 +31,9 @@ export const allModules: AlgorithmModule[] = [
   bubbleSortModule,
   linearSearchModule,
   binarySearchModule,
+  balancedParenthesesModule,
+  sieveModule,
+  lcsModule,
   twoPointersModule,
   slidingWindowModule,
   bstModule,

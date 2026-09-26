@@ -27,6 +27,66 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
         </div>
       );
 
+    case 'valid-parentheses':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#6366F1] to-[#4F46E5] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>Stack LIFO Matching</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+
+          <div className="flex items-center justify-center gap-4 h-24">
+            <div className="w-20 h-20 bg-black/30 border-2 border-indigo-300 rounded-b-xl flex flex-col-reverse p-1.5 gap-1 items-center shadow-inner">
+              <span className="w-full py-1 bg-white text-indigo-950 font-mono font-bold text-xs rounded text-center shadow">{'['}</span>
+              <span className="w-full py-1 bg-cyan-300 text-indigo-950 font-mono font-bold text-xs rounded text-center shadow animate-pulse">{'{'}</span>
+            </div>
+            <div className="flex flex-col gap-1 text-xs font-mono text-indigo-200">
+              <span>push '{'{'}'</span>
+              <span className="text-emerald-300 font-bold">pop '{'}'}' match!</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'longest-common-subsequence':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#9333EA] to-[#7E22CE] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-purple-100 uppercase tracking-wider">
+            <span>2D DP Alignment</span>
+            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+          </div>
+
+          <div className="flex items-center justify-center gap-2 h-24">
+            <div className="grid grid-cols-3 gap-1 p-2 bg-black/30 rounded-lg border border-purple-400/40">
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">0</div>
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">1</div>
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">1</div>
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">1</div>
+              <div className="w-6 h-6 rounded bg-emerald-400 text-purple-950 font-bold flex items-center justify-center font-mono text-xs shadow-md">2</div>
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">2</div>
+            </div>
+            <span className="text-xs font-mono text-purple-200 font-bold">LCS="ONE"</span>
+          </div>
+        </div>
+      );
+
+    case 'sieve-of-eratosthenes':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#059669] to-[#047857] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>Prime Elimination Grid</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5 p-2 bg-black/20 rounded-lg max-w-[180px] mx-auto my-auto">
+            <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-mono font-bold text-xs flex items-center justify-center shadow">2</div>
+            <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-mono font-bold text-xs flex items-center justify-center shadow">3</div>
+            <div className="w-7 h-7 rounded bg-rose-500/40 text-rose-200 line-through font-mono text-xs flex items-center justify-center opacity-60">4</div>
+            <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-mono font-bold text-xs flex items-center justify-center shadow">5</div>
+          </div>
+        </div>
+      );
+
     case 'selection-sort':
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#D97706] to-[#B45309] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
