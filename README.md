@@ -23,7 +23,7 @@
 
 **Interactive Textbook** &nbsp;•&nbsp; **Deterministic Step Visualizer** &nbsp;•&nbsp; **Multi-Language Inspector** &nbsp;•&nbsp; **DSA Playground**
 
-[🌐 Live Web Demo](https://ThanhNguyxnOrg.github.io/StepDSA/) · [📖 Algorithm Catalog](docs/ALGORITHMS.md) · [🏗️ Architecture Spec](ARCHITECTURE.md) · [💻 CLI Guide](docs/CLI.md) · [🐛 Report Bug](.github/ISSUE_TEMPLATE/bug_report.yml)
+[🌐 Live Web Demo](https://ThanhNguyxnOrg.github.io/StepDSA/) · [📖 Master Curriculum (44 Modules)](docs/MASTER_CURRICULUM.md) · [🏗️ Architecture Spec](ARCHITECTURE.md) · [💻 CLI Guide](docs/CLI.md) · [🐛 Report Bug](.github/ISSUE_TEMPLATE/bug_report.yml)
 
 </div>
 
@@ -69,7 +69,7 @@ Most existing algorithm visualizers suffer from the same fundamental flaws:
 | 📊 **DP** | **0/1 Knapsack Problem (2D Table & Backtrack)** | $\mathcal{O}(n \cdot W)$ | $\mathcal{O}(n \cdot W)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
 | 📐 **Spatial 3D** | **Octree (3D Spatial Decomposition)** | $\mathcal{O}(\log n)$ | $\mathcal{O}(n)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
 
-*For complete pedagogical notes, see [Algorithm Roadmap & Guide](docs/ALGORITHMS.md).*
+*For complete pedagogical notes and curriculum roadmap, see [Master Curriculum & Guide](docs/MASTER_CURRICULUM.md).*
 
 ---
 
@@ -163,7 +163,7 @@ For full CLI documentation, see [docs/CLI.md](docs/CLI.md).
 We welcome contributions of new algorithms, refined explanations, and animation polish!
 
 1. Check our [Contributing Guide](CONTRIBUTING.md).
-2. Choose an algorithm from [docs/ALGORITHMS.md](docs/ALGORITHMS.md) or open an issue using the [Algorithm Request Form](.github/ISSUE_TEMPLATE/new_algorithm.yml).
+2. Choose an algorithm from [docs/MASTER_CURRICULUM.md](docs/MASTER_CURRICULUM.md) or open an issue using the [Algorithm Request Form](.github/ISSUE_TEMPLATE/new_algorithm.yml).
 3. Submit a Pull Request following our [PR Template](.github/pull_request_template.md).
 
 ---

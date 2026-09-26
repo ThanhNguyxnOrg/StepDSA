@@ -75,7 +75,7 @@ Import and append your module to `allModules` array so it automatically appears 
 We follow [Conventional Commits](https://www.conventionalcommits.org/):
 * `feat(algo): add dijkstra shortest path visualizer`
 * `fix(quicksort): correct Lomuto pointer boundary on single-element arrays`
-* `docs: update algorithm complexity proof in ALGORITHMS.md`
+* `docs: update algorithm complexity proof in MASTER_CURRICULUM.md`
 * `style: enhance stage contrast and typography`
 * `test(bst): add duplicate keys edge case tests`
 
