@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" fill="none">
+  <defs>
+    <linearGradient id="logoEmblemGrad" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="50%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#3B82F6" />
+    </linearGradient>
+    <linearGradient id="logoBar1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="logoBar2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22D3EE" />
+      <stop offset="100%" stop-color="#0891B2" />
+    </linearGradient>
+    <linearGradient id="logoBar3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#818CF8" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+    <filter id="logoGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Left Icon Emblem (64x64) -->
+  <g transform="translate(4, 2)">
+    <rect x="6" y="32" width="10" height="20" rx="3" fill="url(#logoBar1)" />
+    <rect x="22" y="20" width="10" height="32" rx="3" fill="url(#logoBar2)" />
+    <rect x="38" y="8" width="10" height="44" rx="3" fill="url(#logoBar3)" />
+    <path d="M11 32 C 16 18, 26 16, 43 8" stroke="#F8FAFC" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.85" />
+    <circle cx="11" cy="32" r="3" fill="#FFFFFF" filter="url(#logoGlow)" />
+    <circle cx="27" cy="20" r="3" fill="#FFFFFF" filter="url(#logoGlow)" />
+    <circle cx="43" cy="8" r="4" fill="#38BDF8" stroke="#FFFFFF" stroke-width="2" filter="url(#logoGlow)" />
+    <path d="M42 22 L49 22 L49 15" fill="none" stroke="#FDE047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+
+  <!-- Brand Typography -->
+  <text x="70" y="36" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="800" font-size="28" fill="#F8FAFC" letter-spacing="-0.5">
+    Step<tspan fill="#10B981">DSA</tspan>
+  </text>
+  <text x="72" y="52" font-family="'JetBrains Mono', monospace" font-weight="600" font-size="9" fill="#94A3B8" letter-spacing="2">
+    TIME-TRAVEL ENGINE
+  </text>
+</svg>

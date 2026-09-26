@@ -10,6 +10,7 @@ import { StepNarrationBanner } from './components/stage/StepNarrationBanner';
 import { PlaygroundBar } from './components/playground/PlaygroundBar';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { AboutModal } from './components/about/AboutModal';
+import { PersonalCodeStudioModal } from './components/developer/PersonalCodeStudioModal';
 import { soundEngine } from './utils/soundEngine';
 import { BookOpen, Code2 } from 'lucide-react';
 
@@ -22,6 +23,7 @@ export default function App() {
   const [theoryOpen, setTheoryOpen] = useState<boolean>(false); // Collapsed by default for spacious stage
   const [codeOpen, setCodeOpen] = useState<boolean>(true); // Code open for synchronized tracking
   const [aboutOpen, setAboutOpen] = useState<boolean>(false);
+  const [personalStudioOpen, setPersonalStudioOpen] = useState<boolean>(false);
 
   // When module changes, update input to module's defaultInput
   const handleSelectModule = (mod: AlgorithmModule) => {
@@ -135,11 +137,16 @@ export default function App() {
         isMuted={isMuted}
         onToggleSound={handleToggleSound}
         onOpenAbout={() => setAboutOpen(true)}
+        onOpenPersonalStudio={() => setPersonalStudioOpen(true)}
       />
 
       {/* 2. Main Content: Dashboard or Visualizer Workbench */}
       {currentView === 'dashboard' ? (
-        <DashboardView modules={allModules} onSelectModule={handleSelectModule} />
+        <DashboardView
+          modules={allModules}
+          onSelectModule={handleSelectModule}
+          onOpenPersonalStudio={() => setPersonalStudioOpen(true)}
+        />
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Playground Preset Bar */}
@@ -213,8 +220,13 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. About Modal */}
+      {/* 3. Modals */}
       <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <PersonalCodeStudioModal
+        isOpen={personalStudioOpen}
+        onClose={() => setPersonalStudioOpen(false)}
+        onLoadCustomSnapshot={(customMod) => handleSelectModule(customMod)}
+      />
     </div>
   );
 }

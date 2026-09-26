@@ -7,8 +7,8 @@ describe('App Full Integration Smoke Test', () => {
     render(<App />);
     expect(screen.getAllByText(/TIME-TRAVEL ENGINE/i)[0]).toBeInTheDocument();
     expect(screen.getByText(/Explore Hub/i)).toBeInTheDocument();
-    expect(screen.getByText(/Core Algorithms/i)).toBeInTheDocument();
-    expect(screen.getByText(/Quicksort \(Lomuto Partition\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Quicksort/i)[0]).toBeInTheDocument();
+    expect(screen.getByText(/Personal Code Visualization Studio/i)).toBeInTheDocument();
   });
 
   it('navigates to Workbench when clicking Launch Visualizer', () => {
@@ -20,5 +20,13 @@ describe('App Full Integration Smoke Test', () => {
     // Should now show the Workbench controls
     expect(screen.getByTitle(/Reset to Start/i)).toBeInTheDocument();
     expect(screen.getByTitle('Play (Space)')).toBeInTheDocument();
+  });
+
+  it('opens Personal Code Studio modal when clicking CLI button', () => {
+    render(<App />);
+    const studioBtn = screen.getByText(/Launch CLI Studio/i);
+    fireEvent.click(studioBtn);
+
+    expect(screen.getByText(/100% Local Execution Security/i)).toBeInTheDocument();
   });
 });

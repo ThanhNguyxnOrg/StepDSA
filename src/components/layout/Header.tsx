@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Sparkles, Layers, Box, Volume2, VolumeX, Compass, ChevronDown, LayoutDashboard, Info } from 'lucide-react';
+import { Layers, Box, Volume2, VolumeX, Compass, ChevronDown, LayoutDashboard, Info, Terminal } from 'lucide-react';
 import { AlgorithmModule, AlgorithmCategory } from '../../core/types';
+import { StepDSALogo } from '../brand/StepDSALogo';
 
 interface HeaderProps {
   currentView: 'dashboard' | 'visualizer';
@@ -13,6 +14,7 @@ interface HeaderProps {
   isMuted: boolean;
   onToggleSound: () => void;
   onOpenAbout: () => void;
+  onOpenPersonalStudio?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,6 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   isMuted,
   onToggleSound,
   onOpenAbout,
+  onOpenPersonalStudio,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -61,17 +64,9 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-6">
         <button
           onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-2 group text-left"
+          className="group text-left"
         >
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#10B981] to-[#06B6D4] flex items-center justify-center shadow-lg shadow-[#10B981]/20 group-hover:scale-105 transition-transform">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-              Step<span className="text-[#10B981]">DSA</span>
-            </span>
-            <span className="text-[10px] text-[#9CA3AF] -mt-1 font-mono tracking-wider">TIME-TRAVEL ENGINE</span>
-          </div>
+          <StepDSALogo size="sm" showText={true} />
         </button>
 
         {/* View Switcher Tabs */}
@@ -189,6 +184,18 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {isMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-[#10B981]" />}
         </button>
+
+        {/* Personal Code Studio Trigger */}
+        {onOpenPersonalStudio && (
+          <button
+            onClick={onOpenPersonalStudio}
+            title="Personal Code Studio: Trace & Visualize Your Own Code Locally"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 hover:text-white hover:bg-indigo-900/40 text-xs font-semibold font-mono transition-colors shadow-sm"
+          >
+            <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">CLI Studio</span>
+          </button>
+        )}
 
         {/* About Modal Button */}
         <button
