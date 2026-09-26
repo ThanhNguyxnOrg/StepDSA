@@ -34,6 +34,8 @@
   * `2D Flat (Pedagogical Standard)`: Primary, high-contrast, crystal-clear standard mode for all 1D/2D data structures and algorithms (Sorting, Searching, Linked Lists, Trees, Graph BFS, Two Pointers). Zero distortion.
   * `3D Spatial (Spatial Data Structures)`: Reserved strictly for data structures whose domain is genuinely 3-dimensional, namely **Octree** (3D space partitioning for computer graphics, spatial indexing, collision detection) and **3D K-D Tree**, rendered using clean isometric voxel bounding boxes.
 * **AlgorithmModule:** A self-contained plugin bundle defining an algorithm's metadata, complexity profile, intuition narrative, deterministic generator, multi-language code snippets, and custom input presets.
+* **Vector Algorithm Thumbnail:** High-contrast, deterministic SVG mini-visualizers rendered on dashboard catalog cards. Embeds exact mathematical node coordinates, connecting branch vectors, rotation trajectories, and CSS keyframe telemetry without DOM layout shifts.
+* **Context-Aware Preset:** Category-specific input datasets (e.g., Nearly Sorted, Reverse Sorted, Duplicate Elements, Search Targets, Binary Trees) loaded reactively when switching modules in Playground to guarantee runtime validity and optimal pedagogical demonstration.
 
 ### 4. Personal Code Tracing & Local Runner (BYOC — Bring Your Own Code)
 
