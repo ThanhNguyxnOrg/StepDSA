@@ -116,3 +116,31 @@
 .anim-arrow-flow {
   animation: arrowFlowMotion 1.8s ease-in-out infinite;
 }
+
+@keyframes scanMotion {
+  0% { transform: translateX(-80%); opacity: 0; }
+  50% { opacity: 0.9; }
+  100% { transform: translateX(180%); opacity: 0; }
+}
+
+@keyframes spinContinuous {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dashFlowStroke {
+  to { stroke-dashoffset: -20; }
+}
+
+.anim-scan {
+  animation: scanMotion 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.anim-spin-slow {
+  animation: spinContinuous 8s linear infinite;
+}
+
+.anim-dash {
+  stroke-dasharray: 4 2;
+  animation: dashFlowStroke 1.2s linear infinite;
+}

@@ -57,16 +57,20 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
           </div>
 
-          <div className="flex items-center justify-center gap-2 h-24">
-            <div className="grid grid-cols-3 gap-1 p-2 bg-black/30 rounded-lg border border-purple-400/40">
-              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">0</div>
-              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">1</div>
-              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">1</div>
-              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">1</div>
-              <div className="w-6 h-6 rounded bg-emerald-400 text-purple-950 font-bold flex items-center justify-center font-mono text-xs shadow-md">2</div>
-              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center font-mono text-xs text-purple-300">2</div>
+          <div className="flex items-center justify-center gap-3 h-24 font-mono">
+            <div className="grid grid-cols-3 gap-1 p-2 bg-black/30 rounded-lg border border-purple-400/40 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent anim-scan pointer-events-none" />
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center text-xs text-purple-300">0</div>
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center text-xs text-purple-300">1</div>
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center text-xs text-purple-300">1</div>
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center text-xs text-purple-300">1</div>
+              <div className="w-6 h-6 rounded bg-emerald-400 text-purple-950 font-extrabold flex items-center justify-center text-xs shadow-md anim-pulse-fade">2</div>
+              <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center text-xs text-purple-300">2</div>
             </div>
-            <span className="text-xs font-mono text-purple-200 font-bold">LCS="ONE"</span>
+            <div className="flex flex-col gap-1 text-[11px] text-purple-100">
+              <span className="text-emerald-300 font-bold anim-arrow-flow">↖ match: 'E'=='E'</span>
+              <span className="text-purple-200">LCS="ONE" (len 3)</span>
+            </div>
           </div>
         </div>
       );
@@ -79,11 +83,17 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5 p-2 bg-black/20 rounded-lg max-w-[180px] mx-auto my-auto">
-            <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-mono font-bold text-xs flex items-center justify-center shadow">2</div>
-            <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-mono font-bold text-xs flex items-center justify-center shadow">3</div>
-            <div className="w-7 h-7 rounded bg-rose-500/40 text-rose-200 line-through font-mono text-xs flex items-center justify-center opacity-60">4</div>
-            <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-mono font-bold text-xs flex items-center justify-center shadow">5</div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="grid grid-cols-4 gap-1.5 p-2 bg-black/25 rounded-lg border border-emerald-400/30">
+              <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-bold text-xs flex items-center justify-center shadow anim-pulse-fade">2</div>
+              <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-bold text-xs flex items-center justify-center shadow anim-pulse-fade">3</div>
+              <div className="w-7 h-7 rounded bg-rose-500/30 text-rose-200 line-through text-xs flex items-center justify-center opacity-60">4</div>
+              <div className="w-7 h-7 rounded bg-emerald-400 text-emerald-950 font-bold text-xs flex items-center justify-center shadow anim-pulse-fade">5</div>
+            </div>
+            <div className="text-[10px] text-emerald-100 flex items-center gap-1">
+              <span className="text-amber-300 font-bold animate-pulse">cross-out 2k</span>
+              <span>→ primes survive</span>
+            </div>
           </div>
         </div>
       );
@@ -549,8 +559,8 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <line x1="80" y1="18" x2="130" y2="40" stroke="#FECDD3" strokeWidth="2.5" />
             <line x1="30" y1="40" x2="80" y2="62" stroke="#FECDD3" strokeWidth="2.5" />
 
-            {/* Back edge (Cycle) */}
-            <path d="M 130 40 Q 80 8 30 40" fill="none" stroke="#FDE047" strokeWidth="2.5" strokeDasharray="3 3" />
+            {/* Back edge (Cycle) with flowing dashes */}
+            <path d="M 130 40 Q 80 8 30 40" fill="none" stroke="#FDE047" strokeWidth="2.5" className="anim-dash" />
 
             {/* Nodes */}
             <circle cx="30" cy="40" r="11" fill="#FFFFFF" stroke="#BE123C" strokeWidth="2" />
@@ -616,20 +626,21 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Frequency Bucket Indexing</span>
             <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
-          <div className="flex flex-col items-center justify-center gap-2 h-24">
+          <div className="flex flex-col items-center justify-center gap-2 h-24 relative">
             <div className="flex gap-2">
-              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200">
-                1: <span className="text-emerald-300 ml-1">2</span>
+              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200 shadow">
+                1: <span className="text-emerald-300 ml-1 anim-pulse-fade">2</span>
               </div>
-              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200">
-                2: <span className="text-amber-300 ml-1">3</span>
+              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200 shadow">
+                2: <span className="text-amber-300 ml-1 anim-pulse-fade">3</span>
               </div>
-              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200">
-                3: <span className="text-sky-300 ml-1">1</span>
+              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200 shadow">
+                3: <span className="text-sky-300 ml-1 anim-pulse-fade">1</span>
               </div>
             </div>
-            <div className="text-[10px] font-mono text-indigo-200/80 bg-indigo-950/50 px-2 py-0.5 rounded">
-              count[x] → prefix_sum → output[pos]
+            <div className="text-[10px] font-mono text-indigo-200 bg-indigo-950/70 border border-indigo-300/30 px-2 py-0.5 rounded flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+              <span>count[x] → prefix_sum → output</span>
             </div>
           </div>
         </div>
@@ -646,7 +657,8 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <line x1="30" y1="25" x2="80" y2="20" stroke="#34D399" strokeWidth="2.5" />
             <line x1="80" y1="20" x2="130" y2="35" stroke="#34D399" strokeWidth="2.5" />
             <line x1="30" y1="25" x2="60" y2="60" stroke="#34D399" strokeWidth="2.5" />
-            <line x1="80" y1="20" x2="60" y2="60" stroke="#F87171" strokeWidth="1.5" strokeDasharray="3,3" />
+            {/* Rejected cycle edge flowing with anim-dash */}
+            <line x1="80" y1="20" x2="60" y2="60" stroke="#F87171" strokeWidth="2" className="anim-dash" />
             <line x1="60" y1="60" x2="130" y2="35" stroke="#34D399" strokeWidth="2.5" />
 
             <circle cx="30" cy="25" r="7" fill="#14B8A6" stroke="#FFFFFF" strokeWidth="1.5" />
@@ -662,8 +674,6 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
         </div>
       );
 
-
-
     case 'euclidean-gcd':
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#B45309] to-[#78350F] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
@@ -675,10 +685,11 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <div className="text-xs text-amber-200">
               gcd(<span className="text-white font-bold">252</span>, <span className="text-sky-300 font-bold">105</span>)
             </div>
-            <div className="text-[11px] text-amber-300">
-              252 = 2 × 105 + <span className="text-rose-300 font-bold">42</span>
+            <div className="text-[11px] text-amber-300 flex items-center gap-1">
+              <span>252 = 2 × 105 +</span>
+              <span className="text-rose-300 font-bold animate-pulse">42</span>
             </div>
-            <div className="text-[10px] bg-black/40 px-2 py-0.5 rounded text-emerald-300 font-bold">
+            <div className="text-[10px] bg-black/40 border border-emerald-400/40 px-2.5 py-0.5 rounded text-emerald-300 font-bold shadow anim-pulse-fade">
               GCD = 21
             </div>
           </div>
@@ -694,10 +705,10 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
             <div className="flex gap-2">
-              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">17<strong className="text-amber-300">0</strong></span>
-              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">80<strong className="text-amber-300">2</strong></span>
-              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">02<strong className="text-amber-300">4</strong></span>
-              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">04<strong className="text-amber-300">5</strong></span>
+              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">17<strong className="text-amber-300 anim-pulse-fade">0</strong></span>
+              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">80<strong className="text-amber-300 anim-pulse-fade">2</strong></span>
+              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">02<strong className="text-amber-300 anim-pulse-fade">4</strong></span>
+              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">04<strong className="text-amber-300 anim-pulse-fade">5</strong></span>
             </div>
             <div className="text-[10px] text-purple-200/80">pass 1: [1s] → pass 2: [10s] → pass 3: [100s]</div>
           </div>
@@ -716,9 +727,9 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
               <span className="text-slate-400">T:</span>
               <span className="bg-sky-950/70 border border-sky-400/40 px-2 py-0.5 rounded text-white font-bold">A B A B C A B</span>
             </div>
-            <div className="flex items-center gap-1 text-xs">
+            <div className="flex items-center gap-1 text-xs anim-window-slide">
               <span className="text-slate-400">P:</span>
-              <span className="bg-amber-500/20 border border-amber-400/50 px-2 py-0.5 rounded text-amber-200 font-bold ml-6">A B C</span>
+              <span className="bg-amber-500/20 border border-amber-400/50 px-2 py-0.5 rounded text-amber-200 font-bold">A B C</span>
             </div>
             <div className="text-[10px] text-sky-200">π[j-1] prevents text backtracking</div>
           </div>
@@ -1114,15 +1125,21 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="flex gap-1 items-center">
-              <span className="w-6 h-7 rounded bg-black/30 text-teal-200 text-xs flex items-center justify-center">-2</span>
-              <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-bold text-xs flex items-center justify-center shadow">4</span>
-              <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-bold text-xs flex items-center justify-center shadow">-1</span>
-              <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-bold text-xs flex items-center justify-center shadow">2</span>
-              <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-bold text-xs flex items-center justify-center shadow">1</span>
-              <span className="w-6 h-7 rounded bg-black/30 text-teal-200 text-xs flex items-center justify-center">-5</span>
+            <div className="flex gap-1 items-center relative p-1">
+              <span className="w-6 h-7 rounded bg-black/30 text-teal-200 text-xs flex items-center justify-center opacity-70">-2</span>
+              {/* Animated contiguous max subarray window */}
+              <div className="flex gap-1 p-0.5 rounded border border-emerald-300 bg-emerald-400/20 anim-pulse-fade shadow-md">
+                <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-extrabold text-xs flex items-center justify-center shadow">4</span>
+                <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-extrabold text-xs flex items-center justify-center shadow">-1</span>
+                <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-extrabold text-xs flex items-center justify-center shadow">2</span>
+                <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-extrabold text-xs flex items-center justify-center shadow">1</span>
+              </div>
+              <span className="w-6 h-7 rounded bg-black/30 text-teal-200 text-xs flex items-center justify-center opacity-70">-5</span>
             </div>
-            <div className="text-xs text-white font-bold bg-black/30 px-2 py-0.5 rounded">Max Subarray Sum = 6</div>
+            <div className="text-xs text-white font-bold bg-black/40 border border-teal-300/30 px-2.5 py-0.5 rounded flex items-center gap-1.5">
+              <span className="text-amber-300">max_ending_here</span>
+              <span>→ Sum = 6</span>
+            </div>
           </div>
         </div>
       );
@@ -1134,16 +1151,20 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Levenshtein Distance Matrix</span>
             <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
-          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
-            <div className="grid grid-cols-3 gap-1 bg-black/30 p-1.5 rounded border border-indigo-400/40">
+          <div className="flex items-center justify-center gap-3 h-24 font-mono">
+            <div className="grid grid-cols-3 gap-1 bg-black/35 p-1.5 rounded border border-indigo-400/40 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent anim-scan pointer-events-none" />
               <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">0</span>
               <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">1</span>
               <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">2</span>
               <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">1</span>
-              <span className="w-6 h-6 bg-emerald-400 text-indigo-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
+              <span className="w-6 h-6 bg-emerald-400 text-indigo-950 font-extrabold rounded text-xs flex items-center justify-center shadow anim-pulse-fade">1</span>
               <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">2</span>
             </div>
-            <div className="text-[10px] text-indigo-200">insert / delete / replace</div>
+            <div className="flex flex-col gap-1 text-[10px] text-indigo-100">
+              <span className="text-amber-300 font-bold anim-arrow-flow">↖ diag-match: 0 cost</span>
+              <span className="text-indigo-200">min(ins, del, rep)</span>
+            </div>
           </div>
         </div>
       );
@@ -1156,14 +1177,16 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-sky-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="flex gap-1">
+            <div className="flex gap-1 relative p-1 rounded bg-black/25">
               <span className="w-6 h-6 bg-black/40 text-slate-300 rounded text-xs flex items-center justify-center">a</span>
               <span className="w-6 h-6 bg-black/40 text-slate-300 rounded text-xs flex items-center justify-center">a</span>
               <span className="w-6 h-6 bg-sky-950 text-sky-200 border border-sky-300 rounded text-xs flex items-center justify-center font-bold">b</span>
-              <span className="w-6 h-6 bg-amber-400 text-sky-950 rounded text-xs flex items-center justify-center font-bold shadow">a</span>
-              <span className="w-6 h-6 bg-amber-400 text-sky-950 rounded text-xs flex items-center justify-center font-bold shadow">a</span>
+              <div className="flex gap-1 p-0.5 rounded border border-amber-300 anim-pulse-fade">
+                <span className="w-6 h-6 bg-amber-400 text-sky-950 rounded text-xs flex items-center justify-center font-extrabold shadow">a</span>
+                <span className="w-6 h-6 bg-amber-400 text-sky-950 rounded text-xs flex items-center justify-center font-extrabold shadow">a</span>
+              </div>
             </div>
-            <div className="text-[10px] text-sky-100 font-bold">Z[i] = 2 (matches prefix [0..1])</div>
+            <div className="text-[10px] text-sky-100 font-bold">Z-Box [l, r] = length 2 prefix match</div>
           </div>
         </div>
       );
@@ -1177,13 +1200,13 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
             <div className="flex gap-2">
-              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center"><span>🏠</span><span>2</span></div>
-              <div className="px-2 py-1 bg-emerald-400 text-amber-950 rounded text-xs font-bold flex flex-col items-center shadow"><span>💰</span><span>7</span></div>
-              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center"><span>🏠</span><span>9</span></div>
-              <div className="px-2 py-1 bg-emerald-400 text-amber-950 rounded text-xs font-bold flex flex-col items-center shadow"><span>💰</span><span>3</span></div>
-              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center"><span>🏠</span><span>1</span></div>
+              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center opacity-60"><span>🏠</span><span>2</span></div>
+              <div className="px-2 py-1 bg-emerald-400 text-amber-950 rounded text-xs font-extrabold flex flex-col items-center shadow-lg anim-pulse-fade"><span>💰</span><span>7</span></div>
+              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center opacity-60"><span>🏠</span><span>9</span></div>
+              <div className="px-2 py-1 bg-emerald-400 text-amber-950 rounded text-xs font-extrabold flex flex-col items-center shadow-lg anim-pulse-fade"><span>💰</span><span>3</span></div>
+              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center opacity-60"><span>🏠</span><span>1</span></div>
             </div>
-            <div className="text-[10px] text-amber-100 font-bold">Max Loot = 10 (non-adjacent)</div>
+            <div className="text-[10px] text-amber-100 font-bold bg-black/30 px-2 py-0.5 rounded">Max Loot = 10 (7 + 3 non-adjacent)</div>
           </div>
         </div>
       );
@@ -1195,18 +1218,21 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Backtracking Board Constraints</span>
             <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
           </div>
-          <div className="flex items-center justify-center gap-2 h-24">
+          <div className="flex items-center justify-center gap-3 h-24">
             <div className="grid grid-cols-4 gap-0.5 p-1 bg-black/40 rounded border border-purple-400/40">
               <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
-              <span className="w-5 h-5 bg-amber-400 text-purple-950 rounded-xs flex items-center justify-center text-xs font-bold shadow">♛</span>
+              <span className="w-5 h-5 bg-amber-400 text-purple-950 rounded-xs flex items-center justify-center text-xs font-bold shadow anim-pulse-fade">♛</span>
               <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
               <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
               <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
               <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
               <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
-              <span className="w-5 h-5 bg-amber-400 text-purple-950 rounded-xs flex items-center justify-center text-xs font-bold shadow">♛</span>
+              <span className="w-5 h-5 bg-amber-400 text-purple-950 rounded-xs flex items-center justify-center text-xs font-bold shadow anim-pulse-fade">♛</span>
             </div>
-            <div className="text-[10px] font-mono text-purple-200">Safe rows, cols & diagonals</div>
+            <div className="text-[10px] font-mono text-purple-200 flex flex-col gap-0.5">
+              <span className="text-amber-300 font-bold">col / diag check</span>
+              <span>safe placement</span>
+            </div>
           </div>
         </div>
       );
@@ -1219,11 +1245,11 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
           <div className="flex items-center justify-center gap-2 h-24 font-mono">
-            <span className="px-2 py-1 bg-white text-blue-950 rounded font-bold text-xs">1</span>
-            <span className="text-amber-300 font-bold text-sm">◀──</span>
-            <span className="px-2 py-1 bg-cyan-300 text-blue-950 rounded font-bold text-xs shadow">2</span>
-            <span className="text-amber-300 font-bold text-sm">◀──</span>
-            <span className="px-2 py-1 bg-white text-blue-950 rounded font-bold text-xs">3</span>
+            <span className="px-2 py-1 bg-white text-blue-950 rounded font-bold text-xs shadow">1</span>
+            <span className="text-amber-300 font-bold text-sm anim-arrow-flow">◀──</span>
+            <span className="px-2 py-1 bg-cyan-300 text-blue-950 rounded font-bold text-xs shadow anim-pulse-fade">2</span>
+            <span className="text-amber-300 font-bold text-sm anim-arrow-flow">◀──</span>
+            <span className="px-2 py-1 bg-white text-blue-950 rounded font-bold text-xs shadow">3</span>
           </div>
         </div>
       );
@@ -1257,10 +1283,15 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="text-xs font-bold text-white bg-black/30 px-3 py-1 rounded border border-amber-400/40">
-              3<sup>13</sup> = 3<sup>8</sup> · 3<sup>4</sup> · 3<sup>1</sup>
+            <div className="text-xs font-bold text-white bg-black/35 border border-amber-400/40 px-3 py-1 rounded shadow flex items-center gap-1">
+              <span>3<sup>13</sup> =</span>
+              <span className="text-amber-300 anim-pulse-fade">3<sup>8</sup></span>
+              <span>·</span>
+              <span className="text-amber-300 anim-pulse-fade">3<sup>4</sup></span>
+              <span>·</span>
+              <span className="text-amber-300 anim-pulse-fade">3<sup>1</sup></span>
             </div>
-            <div className="text-[10px] text-amber-200 font-bold">b & 1 ? ans = (ans · base) : square</div>
+            <div className="text-[10px] text-amber-200 font-bold anim-arrow-flow">O(log B) repeated squaring</div>
           </div>
         </div>
       );
@@ -1273,16 +1304,19 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="flex gap-1 items-end">
+            <div className="flex gap-1 items-end relative">
               <span className="w-5 h-9 bg-white text-cyan-950 font-bold text-xs flex items-center justify-center rounded">4</span>
               <span className="w-5 h-12 bg-white text-cyan-950 font-bold text-xs flex items-center justify-center rounded">5</span>
               <span className="w-5 h-14 bg-white text-cyan-950 font-bold text-xs flex items-center justify-center rounded">6</span>
-              <span className="w-1 h-14 bg-rose-400/60 mx-1" />
+              <span className="w-1 h-14 bg-rose-400 mx-1 anim-pulse-fade shadow-sm shadow-rose-300" />
               <span className="w-5 h-6 bg-cyan-200 text-cyan-950 font-bold text-xs flex items-center justify-center rounded">0</span>
               <span className="w-5 h-8 bg-cyan-200 text-cyan-950 font-bold text-xs flex items-center justify-center rounded">1</span>
               <span className="w-5 h-10 bg-cyan-200 text-cyan-950 font-bold text-xs flex items-center justify-center rounded">2</span>
             </div>
-            <div className="text-[10px] text-cyan-100 font-bold">Determine which half is sorted</div>
+            <div className="text-[10px] text-cyan-100 font-bold flex items-center gap-1">
+              <span className="text-rose-300">cliff pivot</span>
+              <span>→ binary search sorted half</span>
+            </div>
           </div>
         </div>
       );
@@ -1295,14 +1329,14 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="flex gap-1.5 items-center">
-              <span className="text-emerald-300 text-xs font-bold">b</span>
+            <div className="flex gap-2 items-center">
+              <span className="text-amber-300 font-bold text-xs anim-pointer-l">← L</span>
               <span className="w-6 h-6 rounded bg-emerald-300 text-emerald-950 font-bold text-xs flex items-center justify-center">a</span>
-              <span className="w-6 h-6 rounded bg-white text-emerald-950 font-bold text-xs flex items-center justify-center shadow animate-pulse">b</span>
+              <span className="w-7 h-7 rounded bg-white text-emerald-950 font-bold text-sm flex items-center justify-center shadow anim-pulse-fade">b</span>
               <span className="w-6 h-6 rounded bg-emerald-300 text-emerald-950 font-bold text-xs flex items-center justify-center">a</span>
-              <span className="text-emerald-300 text-xs font-bold">d</span>
+              <span className="text-amber-300 font-bold text-xs anim-pointer-r">R →</span>
             </div>
-            <div className="text-[10px] text-emerald-100 font-bold">← expand (L, R) → match "aba"</div>
+            <div className="text-[10px] text-emerald-100 font-bold">outward expansion matches "aba"</div>
           </div>
         </div>
       );
@@ -1316,8 +1350,8 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
           </div>
           <div className="flex items-center justify-center gap-3 h-24 font-mono">
             <div className="w-7 h-7 rounded-full bg-white text-emerald-950 font-bold text-xs flex items-center justify-center shadow">1</div>
-            <span className="text-white text-xs">→</span>
-            <div className="w-16 h-16 rounded-full border-2 border-emerald-300 border-dashed flex items-center justify-center relative">
+            <span className="text-white text-xs anim-arrow-flow">→</span>
+            <div className="w-16 h-16 rounded-full border-2 border-emerald-300 border-dashed flex items-center justify-center relative anim-spin-slow">
               <span className="absolute top-0 text-[10px] bg-amber-300 text-emerald-950 px-1 rounded font-bold">🐢 1x</span>
               <span className="absolute bottom-0 text-[10px] bg-cyan-300 text-emerald-950 px-1 rounded font-bold">🐇 2x</span>
               <span className="text-[9px] text-white font-bold">CYCLE</span>
@@ -1333,7 +1367,8 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Interval Scheduling Greedy</span>
             <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
           </div>
-          <div className="flex flex-col justify-center gap-1.5 h-24 font-mono px-4">
+          <div className="flex flex-col justify-center gap-1.5 h-24 font-mono px-4 relative overflow-hidden">
+            <div className="absolute inset-y-0 w-1 bg-amber-300/80 anim-scan shadow-lg shadow-amber-300 pointer-events-none" />
             <div className="h-4 bg-emerald-400 text-teal-950 rounded text-[9px] font-bold px-2 flex items-center justify-between shadow w-3/4">
               <span>[1..4] ✓</span>
             </div>
@@ -1355,7 +1390,7 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="flex gap-1">
+            <div className="flex gap-1 relative p-1 rounded bg-black/30">
               <span className="w-5 h-6 bg-black/40 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
               <span className="w-5 h-6 bg-black/40 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
               <span className="w-5 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
@@ -1363,9 +1398,13 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
               <span className="w-5 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
               <span className="w-5 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
               <span className="w-5 h-6 bg-black/40 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
-              <span className="w-5 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
+              {/* Lowest set bit glowing */}
+              <span className="w-5 h-6 bg-amber-400 text-purple-950 font-extrabold rounded text-xs flex items-center justify-center shadow-lg anim-pulse-fade">1</span>
             </div>
-            <div className="text-[10px] text-purple-200">x & (x - 1) = drops lowest bit</div>
+            <div className="text-[10px] text-purple-200 flex items-center gap-1.5">
+              <span className="text-amber-300 font-bold anim-arrow-flow">isolate: x & -x</span>
+              <span>→ lowest set bit</span>
+            </div>
           </div>
         </div>
       );
