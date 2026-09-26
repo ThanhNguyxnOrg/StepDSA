@@ -32,6 +32,14 @@
   background: #374151;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* 2.5D Isometric Stage Projection */
 .stage-isometric {
   transform: perspective(1000px) rotateX(22deg) rotateZ(-6deg) scale(0.92);

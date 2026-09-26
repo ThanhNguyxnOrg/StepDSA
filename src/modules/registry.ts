@@ -3,8 +3,6 @@ import { quicksortModule } from './sorting/quicksort';
 import { mergesortModule } from './sorting/mergesort';
 import { bubbleSortModule } from './sorting/bubbleSort';
 import { binarySearchModule } from './searching/binarySearch';
-import { twoPointersModule } from './arrays/twoPointers';
-import { slidingWindowModule } from './arrays/slidingWindow';
 import { bstModule } from './trees/bst';
 import { singlyLinkedListModule } from './linkedList/singlyLinkedList';
 import { binaryHeapModule } from './trees/binaryHeap';
@@ -39,8 +37,6 @@ export const allModules: AlgorithmModule[] = [
   sieveModule,
   euclideanGcdModule,
   lcsModule,
-  twoPointersModule,
-  slidingWindowModule,
   bstModule,
   trieModule,
   singlyLinkedListModule,

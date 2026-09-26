@@ -48,6 +48,7 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
         </div>
       );
 
+    case 'lcs':
     case 'longest-common-subsequence':
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#9333EA] to-[#7E22CE] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
@@ -646,6 +647,29 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <text x="130" y="38" textAnchor="middle" fill="#FFFFFF" fontSize="7" fontWeight="bold">C</text>
             <text x="60" y="63" textAnchor="middle" fill="#FFFFFF" fontSize="7" fontWeight="bold">D</text>
           </svg>
+        </div>
+      );
+
+
+
+    case 'euclidean-gcd':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#B45309] to-[#78350F] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-100 uppercase tracking-wider">
+            <span>Greatest Common Divisor</span>
+            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="text-xs text-amber-200">
+              gcd(<span className="text-white font-bold">252</span>, <span className="text-sky-300 font-bold">105</span>)
+            </div>
+            <div className="text-[11px] text-amber-300">
+              252 = 2 × 105 + <span className="text-rose-300 font-bold">42</span>
+            </div>
+            <div className="text-[10px] bg-black/40 px-2 py-0.5 rounded text-emerald-300 font-bold">
+              GCD = 21
+            </div>
+          </div>
         </div>
       );
 

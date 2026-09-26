@@ -268,9 +268,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* 2. Visual Algorithm Catalog (VisuAlgo-inspired layout) */}
       <section className="max-w-6xl mx-auto px-6 pt-10 pb-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto no-scrollbar py-1">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+          {/* Category Filter Pills (Wrap cleanly into rows, no scrollbar) */}
+          <div className="flex flex-wrap items-center gap-1.5 py-1">
             {categories.map((cat) => (
               <button
                 key={cat.id}
@@ -287,7 +287,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* Search Box */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full lg:w-72 shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"

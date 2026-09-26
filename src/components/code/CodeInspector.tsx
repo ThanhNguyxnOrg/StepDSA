@@ -81,8 +81,8 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
       </div>
 
       {/* Upper Half: Code Editor Window (55% Height) */}
-      <div className="flex-[3] overflow-y-auto p-2 font-mono text-[11px] leading-relaxed bg-[#0B0F19]">
-        <div className="space-y-0.5">
+      <div className="flex-[3] overflow-auto p-2 font-mono text-[11px] leading-relaxed bg-[#0B0F19]">
+        <div className="min-w-max space-y-0.5">
           {lines.map((lineText, idx) => {
             const lineNum = idx + 1;
             const isHighlighted = lineNum === activeLine;
@@ -97,13 +97,13 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
                 }`}
               >
                 <span
-                  className={`w-6 shrink-0 text-right pr-2.5 select-none text-[10px] ${
+                  className={`w-7 shrink-0 text-right pr-2.5 select-none text-[10px] ${
                     isHighlighted ? 'text-[#10B981] font-bold' : 'text-slate-600'
                   }`}
                 >
                   {lineNum}
                 </span>
-                <span className="whitespace-pre overflow-x-auto">{lineText || ' '}</span>
+                <span className="whitespace-pre pr-4">{lineText || ' '}</span>
               </div>
             );
           })}
