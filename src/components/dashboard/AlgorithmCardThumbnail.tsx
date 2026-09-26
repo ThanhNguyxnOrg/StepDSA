@@ -238,26 +238,36 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#0D9488] to-[#0F766E] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
           <div className="flex items-center justify-between text-[11px] font-mono font-bold text-teal-100 uppercase tracking-wider">
-            <span>Binary Max Heap</span>
+            <span>Binary Max Heap Sift-Up</span>
             <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-1.5 h-24">
-            <div className="w-7 h-7 rounded-full bg-white text-teal-950 font-mono text-xs font-extrabold flex items-center justify-center shadow-md anim-pulse-fade">
-              95
-            </div>
-            <div className="flex gap-10">
-              <div className="w-6 h-6 rounded-full bg-teal-200 text-teal-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">
-                75
-              </div>
-              <div className="w-6 h-6 rounded-full bg-teal-200 text-teal-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">
-                80
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <span className="text-[9px] font-mono text-teal-200">left: 2i+1</span>
-              <span className="text-[9px] font-mono text-teal-200">right: 2i+2</span>
-            </div>
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            <line x1="70" y1="16" x2="38" y2="40" stroke="#99F6E4" strokeWidth="2" />
+            <line x1="70" y1="16" x2="102" y2="40" stroke="#99F6E4" strokeWidth="2" />
+            <line x1="38" y1="40" x2="22" y2="60" stroke="#5EEAD4" strokeWidth="1.5" />
+            <line x1="38" y1="40" x2="54" y2="60" stroke="#5EEAD4" strokeWidth="1.5" />
+
+            <circle cx="70" cy="16" r="9" fill="#FFFFFF" className="anim-pulse-fade" />
+            <text x="70" y="19.5" textAnchor="middle" fill="#115E59" fontSize="8" fontWeight="extrabold" fontFamily="monospace">95</text>
+
+            <circle cx="38" cy="40" r="7.5" fill="#CCFBF1" />
+            <text x="38" y="43" textAnchor="middle" fill="#115E59" fontSize="7" fontWeight="bold" fontFamily="monospace">75</text>
+
+            <circle cx="102" cy="40" r="7.5" fill="#CCFBF1" />
+            <text x="102" y="43" textAnchor="middle" fill="#115E59" fontSize="7" fontWeight="bold" fontFamily="monospace">80</text>
+
+            <circle cx="54" cy="60" r="6.5" fill="#FDE047" />
+            <text x="54" y="62.5" textAnchor="middle" fill="#000" fontSize="6.5" fontWeight="extrabold" fontFamily="monospace">90</text>
+            <path d="M 50 52 L 42 44" stroke="#FDE047" strokeWidth="1.5" strokeDasharray="2 1" />
+
+            <circle cx="22" cy="60" r="6" fill="#99F6E4" />
+            <text x="22" y="62" textAnchor="middle" fill="#115E59" fontSize="5.5" fontFamily="monospace">60</text>
+          </svg>
+
+          <div className="flex items-center justify-center gap-2 text-[10px] font-mono text-teal-100">
+            <span>parent: ⌊(i-1)/2⌋</span>
+            <span className="text-amber-300 font-bold">siftUp(90)</span>
           </div>
         </div>
       );
@@ -722,15 +732,34 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Max-Heap In-Place Sort</span>
             <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
           </div>
-          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
-            <div className="w-7 h-7 rounded-full bg-white text-amber-950 text-xs font-extrabold flex items-center justify-center shadow-md animate-bounce">
-              99
-            </div>
-            <div className="flex gap-8">
-              <div className="w-6 h-6 rounded-full bg-amber-200 text-amber-950 text-[10px] font-bold flex items-center justify-center shadow">72</div>
-              <div className="w-6 h-6 rounded-full bg-amber-200 text-amber-950 text-[10px] font-bold flex items-center justify-center shadow">64</div>
-            </div>
-            <div className="text-[10px] text-amber-100 font-semibold">siftDown(0) & swap root</div>
+
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            <line x1="70" y1="16" x2="40" y2="40" stroke="#FDE68A" strokeWidth="2" />
+            <line x1="70" y1="16" x2="100" y2="40" stroke="#FDE68A" strokeWidth="2" />
+            <line x1="40" y1="40" x2="24" y2="60" stroke="#FCD34D" strokeWidth="1.5" />
+            <line x1="40" y1="40" x2="56" y2="60" stroke="#FCD34D" strokeWidth="1.5" />
+
+            <circle cx="70" cy="16" r="9" fill="#FFFFFF" className="anim-pulse-fade" />
+            <text x="70" y="19.5" textAnchor="middle" fill="#92400E" fontSize="8" fontWeight="extrabold" fontFamily="monospace">99</text>
+
+            <circle cx="40" cy="40" r="7.5" fill="#FEF3C7" />
+            <text x="40" y="43" textAnchor="middle" fill="#92400E" fontSize="7" fontWeight="bold" fontFamily="monospace">72</text>
+
+            <circle cx="100" cy="40" r="7.5" fill="#FEF3C7" />
+            <text x="100" y="43" textAnchor="middle" fill="#92400E" fontSize="7" fontWeight="bold" fontFamily="monospace">64</text>
+
+            <circle cx="24" cy="60" r="6" fill="#FDE68A" />
+            <text x="24" y="62" textAnchor="middle" fill="#92400E" fontSize="5.5" fontFamily="monospace">35</text>
+
+            <circle cx="56" cy="60" r="6" fill="#10B981" />
+            <text x="56" y="62" textAnchor="middle" fill="#FFFFFF" fontSize="5.5" fontWeight="bold" fontFamily="monospace">12</text>
+
+            <path d="M 64 22 C 40 30, 48 50, 52 56" fill="none" stroke="#FDE047" strokeWidth="1.5" strokeDasharray="2 2" className="anim-arrow-flow" />
+          </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-amber-100">
+            <span className="text-amber-300 font-bold">swap(root, last)</span>
+            <span>& siftDown(0)</span>
           </div>
         </div>
       );
@@ -783,19 +812,41 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#4338CA] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
           <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
-            <span>AVL Balance Factor & Rotations</span>
-            <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
+            <span>AVL Balance & Rotations</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
-          <div className="flex flex-col items-center justify-center gap-1.5 h-24">
-            <div className="flex items-center gap-1.5">
-              <div className="w-7 h-7 rounded-full bg-white text-indigo-950 font-mono text-xs font-bold flex items-center justify-center shadow">40</div>
-              <span className="text-[9px] px-1 bg-amber-400 text-indigo-950 rounded font-mono font-bold">BF: +2</span>
-            </div>
-            <div className="flex gap-6 items-center">
-              <div className="w-6 h-6 rounded-full bg-indigo-200 text-indigo-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">20</div>
-              <div className="w-6 h-6 rounded-full bg-indigo-200 text-indigo-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">50</div>
-            </div>
-            <span className="text-[10px] font-mono text-indigo-200 font-semibold animate-pulse">↻ LL Rotation Rebalance</span>
+
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            <line x1="70" y1="16" x2="40" y2="40" stroke="#C7D2FE" strokeWidth="2" />
+            <line x1="70" y1="16" x2="100" y2="40" stroke="#C7D2FE" strokeWidth="2" />
+            <line x1="40" y1="40" x2="24" y2="60" stroke="#818CF8" strokeWidth="1.5" />
+
+            {/* Rotation Arc Arrow */}
+            <path d="M 46 22 A 20 20 0 0 1 88 22" fill="none" stroke="#FDE047" strokeWidth="2" strokeDasharray="3 2" className="anim-arrow-flow" />
+            <polygon points="86,18 92,23 85,26" fill="#FDE047" />
+
+            {/* Root Node (40) */}
+            <circle cx="70" cy="16" r="9" fill="#FFFFFF" className="anim-pulse-fade" />
+            <text x="70" y="19" textAnchor="middle" fill="#312E81" fontSize="8" fontWeight="extrabold" fontFamily="monospace">40</text>
+            <rect x="80" y="8" width="26" height="10" rx="3" fill="#F59E0B" />
+            <text x="93" y="15.5" textAnchor="middle" fill="#1E1B4B" fontSize="6.5" fontWeight="extrabold" fontFamily="monospace">BF:+2</text>
+
+            {/* Left Child (20) */}
+            <circle cx="40" cy="40" r="8" fill="#C7D2FE" />
+            <text x="40" y="43" textAnchor="middle" fill="#312E81" fontSize="7.5" fontWeight="bold" fontFamily="monospace">20</text>
+
+            {/* Right Child (50) */}
+            <circle cx="100" cy="40" r="8" fill="#C7D2FE" />
+            <text x="100" y="43" textAnchor="middle" fill="#312E81" fontSize="7.5" fontWeight="bold" fontFamily="monospace">50</text>
+
+            {/* Grandchild (10) */}
+            <circle cx="24" cy="60" r="6" fill="#A5B4FC" />
+            <text x="24" y="62.5" textAnchor="middle" fill="#312E81" fontSize="6" fontWeight="bold" fontFamily="monospace">10</text>
+          </svg>
+
+          <div className="flex items-center justify-center gap-1 text-[10px] font-mono text-indigo-200">
+            <span className="text-amber-300 font-bold">↻ Right Rotation</span>
+            <span>restores O(log N)</span>
           </div>
         </div>
       );
@@ -807,15 +858,40 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Inorder Preorder Postorder</span>
             <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
           </div>
-          <div className="flex flex-col items-center justify-center gap-1.5 h-24">
-            <div className="w-6 h-6 rounded-full bg-white text-teal-950 font-mono text-xs font-bold flex items-center justify-center shadow">A</div>
-            <div className="flex gap-8">
-              <div className="w-6 h-6 rounded-full bg-teal-200 text-teal-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">B</div>
-              <div className="w-6 h-6 rounded-full bg-teal-200 text-teal-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">C</div>
-            </div>
-            <div className="flex gap-1 text-[10px] font-mono text-teal-100 bg-black/20 px-2 py-0.5 rounded">
-              <span className="text-amber-300 font-bold">L</span> → <span className="text-white font-bold">Root</span> → <span className="text-cyan-300 font-bold">R</span>
-            </div>
+
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            <line x1="70" y1="16" x2="38" y2="38" stroke="#99F6E4" strokeWidth="2" />
+            <line x1="70" y1="16" x2="102" y2="38" stroke="#99F6E4" strokeWidth="2" />
+            <line x1="38" y1="38" x2="22" y2="58" stroke="#5EEAD4" strokeWidth="1.5" />
+            <line x1="38" y1="38" x2="54" y2="58" stroke="#5EEAD4" strokeWidth="1.5" />
+
+            {/* Animated Traversal Wave Tracker */}
+            <circle cx="22" cy="58" r="10" fill="none" stroke="#FDE047" strokeWidth="2" className="anim-pulse-fade" />
+
+            {/* Root Node A */}
+            <circle cx="70" cy="16" r="8.5" fill="#FFFFFF" />
+            <text x="70" y="19" textAnchor="middle" fill="#115E59" fontSize="8" fontWeight="bold" fontFamily="monospace">A</text>
+
+            {/* Left Subtree B */}
+            <circle cx="38" cy="38" r="8" fill="#CCFBF1" />
+            <text x="38" y="41" textAnchor="middle" fill="#115E59" fontSize="7.5" fontWeight="bold" fontFamily="monospace">B</text>
+
+            {/* Right Subtree C */}
+            <circle cx="102" cy="38" r="8" fill="#CCFBF1" />
+            <text x="102" y="41" textAnchor="middle" fill="#115E59" fontSize="7.5" fontWeight="bold" fontFamily="monospace">C</text>
+
+            {/* Leaves D & E */}
+            <circle cx="22" cy="58" r="6.5" fill="#2DD4BF" />
+            <text x="22" y="60.5" textAnchor="middle" fill="#042F2E" fontSize="6.5" fontWeight="bold" fontFamily="monospace">D</text>
+
+            <circle cx="54" cy="58" r="6.5" fill="#99F6E4" />
+            <text x="54" y="60.5" textAnchor="middle" fill="#115E59" fontSize="6.5" fontWeight="bold" fontFamily="monospace">E</text>
+          </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-teal-100">
+            <span className="px-1.5 py-0.5 rounded bg-black/30 border border-teal-300/30">
+              <strong className="text-amber-300">D</strong> → B → E → <strong className="text-white">A</strong> → C
+            </span>
           </div>
         </div>
       );
@@ -933,21 +1009,40 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#4338CA] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
           <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
-            <span>Path Compression & Union by Rank</span>
+            <span>Path Compression & Union</span>
             <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
-          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
-            <div className="w-8 h-8 rounded-full bg-emerald-400 text-indigo-950 font-bold text-xs flex items-center justify-center shadow">Root: 1</div>
-            <div className="flex gap-6">
-              <div className="flex flex-col items-center">
-                <span className="text-xs text-indigo-200">↑</span>
-                <div className="w-6 h-6 rounded-full bg-white text-indigo-950 font-bold text-[10px] flex items-center justify-center shadow">2</div>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-xs text-cyan-300 animate-pulse">⇡ direct</span>
-                <div className="w-6 h-6 rounded-full bg-cyan-300 text-indigo-950 font-bold text-[10px] flex items-center justify-center shadow">4</div>
-              </div>
-            </div>
+
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            {/* Standard Branch */}
+            <line x1="70" y1="16" x2="42" y2="40" stroke="#C7D2FE" strokeWidth="2" />
+            <line x1="42" y1="40" x2="24" y2="60" stroke="#818CF8" strokeWidth="1.5" />
+
+            {/* Compressed Direct Branch */}
+            <path d="M 100 58 Q 85 30 72 24" fill="none" stroke="#38BDF8" strokeWidth="2" strokeDasharray="3 2" className="anim-arrow-flow" />
+            <polygon points="70,22 75,26 71,28" fill="#38BDF8" />
+
+            {/* Root 1 */}
+            <circle cx="70" cy="16" r="9" fill="#10B981" />
+            <text x="70" y="19" textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="extrabold" fontFamily="monospace">1</text>
+            <text x="70" y="6" textAnchor="middle" fill="#A7F3D0" fontSize="6" fontWeight="bold" fontFamily="monospace">ROOT</text>
+
+            {/* Child 2 */}
+            <circle cx="42" cy="40" r="7.5" fill="#E0E7FF" />
+            <text x="42" y="43" textAnchor="middle" fill="#312E81" fontSize="7" fontWeight="bold" fontFamily="monospace">2</text>
+
+            {/* Leaf 3 */}
+            <circle cx="24" cy="60" r="6" fill="#C7D2FE" />
+            <text x="24" y="62" textAnchor="middle" fill="#312E81" fontSize="5.5" fontFamily="monospace">3</text>
+
+            {/* Compressed Child 4 */}
+            <circle cx="100" cy="60" r="7" fill="#38BDF8" className="anim-pulse-fade" />
+            <text x="100" y="62.5" textAnchor="middle" fill="#0C4A6E" fontSize="6.5" fontWeight="extrabold" fontFamily="monospace">4</text>
+          </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-indigo-200">
+            <span className="text-cyan-300 font-bold">find(4): parent[4]=1</span>
+            <span>(O(α(N)))</span>
           </div>
         </div>
       );
