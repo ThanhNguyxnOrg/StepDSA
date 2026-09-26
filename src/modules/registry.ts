@@ -51,6 +51,13 @@ import { zAlgorithmModule } from './strings/zAlgorithm';
 import { houseRobberModule } from './dp/houseRobber';
 import { nQueensModule } from './math/nQueens';
 
+// Level-3 Essential Interview & Data Structure Additions
+import { reverseLinkedListModule } from './linkedList/reverseLinkedList';
+import { monotonicStackModule } from './stack/monotonicStack';
+import { binaryExponentiationModule } from './math/binaryExponentiation';
+import { rotatedSortedArrayModule } from './searching/rotatedSortedArray';
+import { longestPalindromicSubstringModule } from './dp/longestPalindromicSubstring';
+
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
   mergesortModule,
@@ -96,6 +103,11 @@ export const allModules: AlgorithmModule[] = [
   primMSTModule,
   dsuModule,
   octree3dModule,
+  reverseLinkedListModule,
+  monotonicStackModule,
+  binaryExponentiationModule,
+  rotatedSortedArrayModule,
+  longestPalindromicSubstringModule,
 ];
 
 export const defaultModule = quicksortModule;

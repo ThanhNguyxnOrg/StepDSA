@@ -38,6 +38,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ### A. Searching
 - [x] **Linear Search (Sequential Scan)** `[ACTIVE]`
 - [x] **Binary Search (Invariant Boundary Halving)** `[ACTIVE]`
+- [x] **Search in Rotated Sorted Array (Pivot Invariant Halving)** `[ACTIVE]`
 - [ ] Jump Search (Block Hopping $\mathcal{O}(\sqrt{N})$)
 - [ ] Interpolation Search (Uniformly Distributed Probing)
 - [ ] Exponential Search (Doubling Range Search)
@@ -78,8 +79,8 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ### C. Linked Lists (Structures & Operations)
 - [x] **Singly Linked List (Insert, Delete, Reverse)** `[ACTIVE]`
 - [x] **Doubly Linked List (Bidirectional Pointers)** `[ACTIVE]`
+- [x] **Reverse Linked List (In-Place Iterative & Recursive)** `[ACTIVE]`
 - [ ] Circular Linked List (Ring Buffer Traversal)
-- [ ] Reverse Linked List (In-Place Iterative & Recursive)
 - [ ] Floyd's Cycle Detection (Tortoise and Hare Fast & Slow Pointers)
 - [ ] Middle of the Linked List (Two-Pointer Midpoint Finding)
 - [ ] Merge Two Sorted Linked Lists (Splice & Merge Pointers)
@@ -96,9 +97,9 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [ ] Deque (Double-Ended Queue with Head/Tail $\mathcal{O}(1)$ Operations)
 * **Algorithmic Applications:**
   - [x] **Balanced Parentheses (Stack LIFO Syntax Validator)** `[ACTIVE]`
+  - [x] **Monotonic Stack (Next Greater Element / Histogram Rectangles)** `[ACTIVE]`
   - [ ] Infix to Postfix Conversion (Dijkstra's Shunting-Yard Algorithm)
   - [ ] Postfix Expression Evaluation (Operand Stack Evaluator)
-  - [ ] Monotonic Stack (Next Greater Element / Histogram Rectangles)
   - [ ] Monotonic Queue (Sliding Window Maximum $\mathcal{O}(N)$)
 
 ---
@@ -220,6 +221,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [x] **Longest Common Subsequence (LCS 2D DP Table & Backtrack)** `[ACTIVE]`
   - [x] **Longest Increasing Subsequence (LIS)** `[ACTIVE]`
   - [x] **Edit Distance (Levenshtein Distance Matrix Alignment)** `[ACTIVE]`
+  - [x] **Longest Palindromic Substring (Expand Around Center / DP)** `[ACTIVE]`
   - [ ] Longest Palindromic Subsequence (Interval Matrix DP)
 * **Grid & Interval DP:**
   - [ ] Unique Paths & Minimum Path Sum in 2D Grid
@@ -273,7 +275,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ### R. Number Theory & Mathematics
 - [x] **Euclidean Algorithm (Greatest Common Divisor via Modulo)** `[ACTIVE]`
 - [x] **Sieve of Eratosthenes (Composite Grid Elimination)** `[ACTIVE]`
-- [ ] Fast Binary Modular Exponentiation (Logarithmic Exponent Halving)
+- [x] **Fast Binary Modular Exponentiation (Logarithmic Exponent Halving)** `[ACTIVE]`
 - [ ] Modular Multiplicative Inverse (Extended Euclidean Algorithm)
 - [ ] Integer Prime Factorization (Trial Division & Pollard's Rho)
 
