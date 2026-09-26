@@ -9,175 +9,305 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
   switch (moduleId) {
     case 'bubble-sort':
       return (
-        <div className="w-full h-36 bg-gradient-to-br from-emerald-950/40 via-[#0d1f1d] to-[#0B0F19] rounded-xl flex items-end justify-center gap-2 p-4 border border-emerald-500/20 overflow-hidden relative group-hover:border-emerald-500/50 transition-all">
-          <div className="absolute top-2 left-3 text-[10px] font-mono text-emerald-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            Adjacent Swapping
+        <div className="w-full h-40 bg-gradient-to-b from-[#059669] to-[#047857] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          {/* VisuAlgo Header Label */}
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>Adjacent Swapping</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
-          {/* Animated Bars */}
-          <div className="w-5 bg-emerald-500/30 rounded-t h-12 transition-all duration-500 group-hover:h-8" />
-          <div className="w-5 bg-amber-400/80 rounded-t h-20 animate-pulse transition-all duration-500 group-hover:translate-x-7" />
-          <div className="w-5 bg-emerald-400 rounded-t h-16 transition-all duration-500 group-hover:-translate-x-7" />
-          <div className="w-5 bg-emerald-500/40 rounded-t h-24" />
-          <div className="w-5 bg-emerald-500/60 rounded-t h-28" />
+
+          {/* Looping Animated Bars */}
+          <div className="flex items-end justify-center gap-3 h-24 pb-1">
+            <div className="w-6 bg-white/70 rounded-t h-10" />
+            <div className="w-6 bg-amber-300 rounded-t h-20 anim-swap-a shadow-md shadow-black/20" />
+            <div className="w-6 bg-white rounded-t h-14 anim-swap-b shadow-md shadow-black/20" />
+            <div className="w-6 bg-white/80 rounded-t h-24" />
+            <div className="w-6 bg-white/90 rounded-t h-28" />
+          </div>
         </div>
       );
 
     case 'quicksort':
       return (
-        <div className="w-full h-36 bg-gradient-to-br from-cyan-950/40 via-[#0e212b] to-[#0B0F19] rounded-xl flex items-end justify-center gap-2 p-4 border border-cyan-500/20 overflow-hidden relative group-hover:border-cyan-500/50 transition-all">
-          <div className="absolute top-2 left-3 text-[10px] font-mono text-cyan-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-            Lomuto Partitioning
+        <div className="w-full h-40 bg-gradient-to-b from-[#0284C7] to-[#0369A1] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-sky-100 uppercase tracking-wider">
+            <span>Pivot Partitioning</span>
+            <span className="w-2 h-2 rounded-full bg-sky-300 animate-ping" />
           </div>
-          <div className="w-5 bg-cyan-600/40 rounded-t h-10" />
-          <div className="w-5 bg-cyan-500/50 rounded-t h-16" />
-          <div className="w-5 bg-amber-400 rounded-t h-26 relative">
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-amber-300">P</span>
+
+          <div className="flex items-end justify-center gap-3 h-24 pb-1">
+            <div className="w-6 bg-white/60 rounded-t h-12" />
+            <div className="w-6 bg-white/70 rounded-t h-16" />
+            <div className="w-6 bg-amber-300 rounded-t h-26 relative shadow-md shadow-black/20">
+              <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-extrabold text-amber-100">PIVOT</span>
+            </div>
+            <div className="w-6 bg-sky-200 rounded-t h-20 anim-swap-a" />
+            <div className="w-6 bg-white rounded-t h-28 anim-swap-b" />
           </div>
-          <div className="w-5 bg-cyan-400/70 rounded-t h-20" />
-          <div className="w-5 bg-emerald-400 rounded-t h-28 shadow-lg shadow-emerald-400/20" />
         </div>
       );
 
     case 'mergesort':
       return (
-        <div className="w-full h-36 bg-gradient-to-br from-blue-950/40 via-[#101b33] to-[#0B0F19] rounded-xl flex flex-col justify-center items-center gap-3 p-4 border border-blue-500/20 overflow-hidden relative group-hover:border-blue-500/50 transition-all">
-          <div className="absolute top-2 left-3 text-[10px] font-mono text-blue-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
-            Divide & Conquer
+        <div className="w-full h-40 bg-gradient-to-b from-[#2563EB] to-[#1D4ED8] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-blue-100 uppercase tracking-wider">
+            <span>Divide & Conquer Merge</span>
+            <span className="w-2 h-2 rounded-full bg-blue-300 animate-ping" />
           </div>
-          {/* Top unsorted split */}
-          <div className="flex gap-4">
-            <div className="flex gap-1 p-1 bg-blue-500/10 border border-blue-500/30 rounded">
-              <span className="w-4 h-5 bg-blue-400/40 rounded text-[9px] flex items-center justify-center font-mono">4</span>
-              <span className="w-4 h-5 bg-blue-400/60 rounded text-[9px] flex items-center justify-center font-mono">7</span>
+
+          <div className="flex flex-col items-center justify-center gap-2 h-24">
+            {/* Split Halves */}
+            <div className="flex gap-4">
+              <div className="flex gap-1 p-1 bg-white/20 rounded shadow-sm">
+                <span className="w-5 h-6 bg-white text-blue-900 rounded text-xs font-mono font-bold flex items-center justify-center">4</span>
+                <span className="w-5 h-6 bg-white text-blue-900 rounded text-xs font-mono font-bold flex items-center justify-center">7</span>
+              </div>
+              <div className="flex gap-1 p-1 bg-white/20 rounded shadow-sm">
+                <span className="w-5 h-6 bg-white text-blue-900 rounded text-xs font-mono font-bold flex items-center justify-center">1</span>
+                <span className="w-5 h-6 bg-white text-blue-900 rounded text-xs font-mono font-bold flex items-center justify-center">3</span>
+              </div>
             </div>
-            <div className="flex gap-1 p-1 bg-cyan-500/10 border border-cyan-500/30 rounded">
-              <span className="w-4 h-5 bg-cyan-400/40 rounded text-[9px] flex items-center justify-center font-mono">1</span>
-              <span className="w-4 h-5 bg-cyan-400/60 rounded text-[9px] flex items-center justify-center font-mono">3</span>
+
+            {/* Merge Arrow */}
+            <span className="text-white text-xs font-bold font-mono anim-arrow-flow">↓ merging</span>
+
+            {/* Merged Sorted Array */}
+            <div className="flex gap-1 p-1 bg-emerald-400/30 rounded border border-emerald-300 shadow-md">
+              <span className="w-6 h-6 bg-white text-emerald-900 rounded text-xs font-mono font-bold flex items-center justify-center">1</span>
+              <span className="w-6 h-6 bg-white text-emerald-900 rounded text-xs font-mono font-bold flex items-center justify-center">3</span>
+              <span className="w-6 h-6 bg-white text-emerald-900 rounded text-xs font-mono font-bold flex items-center justify-center">4</span>
+              <span className="w-6 h-6 bg-white text-emerald-900 rounded text-xs font-mono font-bold flex items-center justify-center">7</span>
             </div>
           </div>
-          {/* Downward merge arrow */}
-          <div className="text-[10px] text-slate-500 font-mono">↓ Merged Result</div>
-          {/* Bottom merged sorted */}
-          <div className="flex gap-1 p-1 bg-emerald-500/10 border border-emerald-500/40 rounded shadow-sm">
-            <span className="w-5 h-6 bg-emerald-400/30 text-emerald-300 rounded text-[10px] font-bold flex items-center justify-center font-mono">1</span>
-            <span className="w-5 h-6 bg-emerald-400/40 text-emerald-300 rounded text-[10px] font-bold flex items-center justify-center font-mono">3</span>
-            <span className="w-5 h-6 bg-emerald-400/60 text-emerald-300 rounded text-[10px] font-bold flex items-center justify-center font-mono">4</span>
-            <span className="w-5 h-6 bg-emerald-400/80 text-emerald-200 rounded text-[10px] font-bold flex items-center justify-center font-mono">7</span>
+        </div>
+      );
+
+    case 'linked-list':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#1D4ED8] to-[#1E40AF] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-blue-100 uppercase tracking-wider">
+            <span>Singly Linked List</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
+
+          <div className="flex items-center justify-center gap-2 h-24">
+            <div className="flex items-stretch rounded-lg bg-white shadow-md overflow-hidden border border-blue-300">
+              <span className="px-2.5 py-1.5 font-mono text-xs font-bold text-blue-950">HEAD</span>
+              <span className="px-2 py-1.5 bg-blue-100 font-mono text-xs text-blue-800">12</span>
+            </div>
+            <span className="font-mono text-white text-sm font-bold anim-arrow-flow">→</span>
+            <div className="flex items-stretch rounded-lg bg-white shadow-md overflow-hidden border border-blue-300">
+              <span className="px-2.5 py-1.5 font-mono text-xs font-bold text-blue-950">45</span>
+            </div>
+            <span className="font-mono text-white text-sm font-bold anim-arrow-flow">→</span>
+            <div className="flex items-stretch rounded-lg bg-emerald-400 text-emerald-950 shadow-md overflow-hidden border border-white font-bold">
+              <span className="px-2 py-1.5 font-mono text-xs">99</span>
+            </div>
+            <span className="font-mono text-white text-sm font-bold">→</span>
+            <span className="text-[10px] font-mono text-blue-200">NULL</span>
+          </div>
+        </div>
+      );
+
+    case 'binary-heap':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0D9488] to-[#0F766E] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-teal-100 uppercase tracking-wider">
+            <span>Binary Max Heap</span>
+            <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
+          </div>
+
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24">
+            <div className="w-7 h-7 rounded-full bg-white text-teal-950 font-mono text-xs font-extrabold flex items-center justify-center shadow-md anim-pulse-fade">
+              95
+            </div>
+            <div className="flex gap-10">
+              <div className="w-6 h-6 rounded-full bg-teal-200 text-teal-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">
+                75
+              </div>
+              <div className="w-6 h-6 rounded-full bg-teal-200 text-teal-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">
+                80
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <span className="text-[9px] font-mono text-teal-200">left: 2i+1</span>
+              <span className="text-[9px] font-mono text-teal-200">right: 2i+2</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'graph-bfs':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#7C3AED] to-[#6D28D9] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-purple-100 uppercase tracking-wider">
+            <span>Graph BFS Traversal</span>
+            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+          </div>
+
+          <svg viewBox="0 0 160 80" className="w-48 h-24 mx-auto">
+            {/* Edges */}
+            <line x1="30" y1="40" x2="80" y2="20" stroke="#DDD6FE" strokeWidth="2.5" />
+            <line x1="30" y1="40" x2="80" y2="60" stroke="#DDD6FE" strokeWidth="2.5" />
+            <line x1="80" y1="20" x2="130" y2="40" stroke="#DDD6FE" strokeWidth="2.5" />
+            <line x1="80" y1="60" x2="130" y2="40" stroke="#DDD6FE" strokeWidth="2.5" />
+
+            {/* Nodes */}
+            <circle cx="30" cy="40" r="12" fill="#FFFFFF" stroke="#C4B5FD" strokeWidth="2" className="anim-pulse-fade" />
+            <text x="30" y="44" textAnchor="middle" fill="#5B21B6" fontSize="10" fontWeight="bold" fontFamily="monospace">0</text>
+
+            <circle cx="80" cy="20" r="10" fill="#E9D5FF" stroke="#FFFFFF" strokeWidth="2" />
+            <text x="80" y="23.5" textAnchor="middle" fill="#5B21B6" fontSize="9" fontWeight="bold" fontFamily="monospace">1</text>
+
+            <circle cx="80" cy="60" r="10" fill="#E9D5FF" stroke="#FFFFFF" strokeWidth="2" />
+            <text x="80" y="63.5" textAnchor="middle" fill="#5B21B6" fontSize="9" fontWeight="bold" fontFamily="monospace">2</text>
+
+            <circle cx="130" cy="40" r="10" fill="#C4B5FD" stroke="#FFFFFF" strokeWidth="2" />
+            <text x="130" y="43.5" textAnchor="middle" fill="#5B21B6" fontSize="9" fontWeight="bold" fontFamily="monospace">3</text>
+          </svg>
         </div>
       );
 
     case 'binary-search':
       return (
-        <div className="w-full h-36 bg-gradient-to-br from-purple-950/40 via-[#1e1133] to-[#0B0F19] rounded-xl flex flex-col justify-center items-center gap-2 p-4 border border-purple-500/20 overflow-hidden relative group-hover:border-purple-500/50 transition-all">
-          <div className="absolute top-2 left-3 text-[10px] font-mono text-purple-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
-            O(log N) Halving
+        <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#4338CA] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>O(log N) Halving</span>
+            <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
-          <div className="flex gap-1.5 mt-3">
-            <div className="w-7 h-10 rounded border border-slate-700/50 bg-slate-800/30 opacity-40 flex flex-col items-center justify-center text-[10px] font-mono text-slate-500 line-through">
-              2
+
+          <div className="flex flex-col items-center justify-center gap-2 h-24">
+            <div className="flex gap-1.5">
+              <div className="w-7 h-10 rounded bg-white/20 opacity-40 flex items-center justify-center text-xs font-mono text-white/50 line-through">
+                2
+              </div>
+              <div className="w-7 h-10 rounded bg-white/20 opacity-40 flex items-center justify-center text-xs font-mono text-white/50 line-through">
+                5
+              </div>
+              <div className="w-8 h-12 rounded bg-amber-300 flex flex-col items-center justify-center text-xs font-mono font-extrabold text-black shadow-lg scale-110 anim-pulse-fade">
+                8
+                <span className="text-[8px] font-bold">MID</span>
+              </div>
+              <div className="w-7 h-10 rounded bg-white/40 flex items-center justify-center text-xs font-mono text-white font-bold">
+                12
+              </div>
+              <div className="w-7 h-10 rounded bg-white/40 flex items-center justify-center text-xs font-mono text-white font-bold">
+                19
+              </div>
             </div>
-            <div className="w-7 h-10 rounded border border-slate-700/50 bg-slate-800/30 opacity-40 flex flex-col items-center justify-center text-[10px] font-mono text-slate-500 line-through">
-              5
-            </div>
-            <div className="w-8 h-12 rounded border-2 border-purple-400 bg-purple-500/30 flex flex-col items-center justify-center text-xs font-mono font-bold text-white shadow-lg shadow-purple-500/30 scale-110">
-              8
-              <span className="text-[8px] text-purple-300 -mt-0.5">MID</span>
-            </div>
-            <div className="w-7 h-10 rounded border border-purple-500/30 bg-purple-900/20 flex flex-col items-center justify-center text-[10px] font-mono text-purple-200">
-              12
-            </div>
-            <div className="w-7 h-10 rounded border border-purple-500/30 bg-purple-900/20 flex flex-col items-center justify-center text-[10px] font-mono text-purple-200">
-              19
-            </div>
+            <div className="text-[10px] text-indigo-200 font-mono">target = 8 → MATCHED</div>
           </div>
-          <div className="text-[10px] text-purple-300/80 font-mono mt-1">target = 8 → MATCH</div>
         </div>
       );
 
     case 'two-pointers':
       return (
-        <div className="w-full h-36 bg-gradient-to-br from-amber-950/40 via-[#261b0c] to-[#0B0F19] rounded-xl flex flex-col justify-center items-center gap-2 p-4 border border-amber-500/20 overflow-hidden relative group-hover:border-amber-500/50 transition-all">
-          <div className="absolute top-2 left-3 text-[10px] font-mono text-amber-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-            Inward Convergence
+        <div className="w-full h-40 bg-gradient-to-b from-[#D97706] to-[#B45309] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-100 uppercase tracking-wider">
+            <span>Inward Convergence</span>
+            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
           </div>
-          <div className="flex items-end gap-2 h-16 mt-3">
-            <div className="w-5 bg-amber-400 rounded-t h-12 relative flex flex-col items-center shadow-lg shadow-amber-400/20">
-              <span className="absolute -top-4 text-[9px] font-bold text-amber-300">L →</span>
+
+          <div className="flex flex-col items-center justify-center gap-1 h-24">
+            <div className="flex items-end gap-2.5 h-16">
+              <div className="w-6 bg-white rounded-t h-12 relative flex flex-col items-center anim-pointer-l shadow-md">
+                <span className="absolute -top-4 text-[9px] font-bold text-amber-200">L →</span>
+              </div>
+              <div className="w-4 bg-white/40 rounded-t h-6" />
+              <div className="w-4 bg-white/50 rounded-t h-9" />
+              <div className="w-4 bg-white/40 rounded-t h-5" />
+              <div className="w-6 bg-white rounded-t h-16 relative flex flex-col items-center anim-pointer-r shadow-md">
+                <span className="absolute -top-4 text-[9px] font-bold text-amber-200">← R</span>
+              </div>
             </div>
-            <div className="w-4 bg-slate-700/50 rounded-t h-8" />
-            <div className="w-4 bg-slate-700/50 rounded-t h-10" />
-            <div className="w-4 bg-slate-700/50 rounded-t h-6" />
-            <div className="w-5 bg-cyan-400 rounded-t h-14 relative flex flex-col items-center shadow-lg shadow-cyan-400/20">
-              <span className="absolute -top-4 text-[9px] font-bold text-cyan-300">← R</span>
-            </div>
+            <span className="text-[10px] font-mono text-amber-100 font-semibold">Max Water Area = 48</span>
           </div>
-          <div className="text-[10px] text-amber-300/80 font-mono">Max Water Area = 48</div>
         </div>
       );
 
     case 'sliding-window':
       return (
-        <div className="w-full h-36 bg-gradient-to-br from-teal-950/40 via-[#0e2424] to-[#0B0F19] rounded-xl flex flex-col justify-center items-center gap-2 p-4 border border-teal-500/20 overflow-hidden relative group-hover:border-teal-500/50 transition-all">
-          <div className="absolute top-2 left-3 text-[10px] font-mono text-teal-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-ping" />
-            Constant Size K Window
+        <div className="w-full h-40 bg-gradient-to-b from-[#0F766E] to-[#115E59] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-teal-100 uppercase tracking-wider">
+            <span>Dynamic Window of Size K</span>
+            <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
           </div>
-          <div className="flex gap-1.5 mt-3 items-center relative">
-            {/* Sliding window bounding border */}
-            <div className="absolute -inset-1.5 border-2 border-teal-400 rounded-lg bg-teal-500/10 pointer-events-none transition-all" style={{ left: '32px', width: '80px' }} />
-            <div className="w-6 h-8 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono flex items-center justify-center text-slate-400">2</div>
-            <div className="w-6 h-8 rounded bg-teal-600/30 border border-teal-400 text-[10px] font-mono flex items-center justify-center font-bold text-white">1</div>
-            <div className="w-6 h-8 rounded bg-teal-600/30 border border-teal-400 text-[10px] font-mono flex items-center justify-center font-bold text-white">5</div>
-            <div className="w-6 h-8 rounded bg-teal-600/30 border border-teal-400 text-[10px] font-mono flex items-center justify-center font-bold text-white">1</div>
-            <div className="w-6 h-8 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono flex items-center justify-center text-slate-400">3</div>
+
+          <div className="flex flex-col items-center justify-center gap-2 h-24">
+            <div className="flex gap-1.5 items-center relative">
+              {/* Animated Sliding Window Box */}
+              <div className="absolute -inset-1 border-2 border-white rounded-lg bg-white/20 anim-window-slide pointer-events-none" style={{ width: '84px' }} />
+              <div className="w-7 h-9 rounded bg-white/30 text-xs font-mono flex items-center justify-center text-white">2</div>
+              <div className="w-7 h-9 rounded bg-white text-xs font-mono font-extrabold flex items-center justify-center text-teal-950 shadow">1</div>
+              <div className="w-7 h-9 rounded bg-white text-xs font-mono font-extrabold flex items-center justify-center text-teal-950 shadow">5</div>
+              <div className="w-7 h-9 rounded bg-white text-xs font-mono font-extrabold flex items-center justify-center text-teal-950 shadow">1</div>
+              <div className="w-7 h-9 rounded bg-white/30 text-xs font-mono flex items-center justify-center text-white">3</div>
+            </div>
+            <span className="text-[10px] font-mono text-teal-100">Window sum = [1+5+1] = 7 (k=3)</span>
           </div>
-          <div className="text-[10px] text-teal-300 font-mono mt-1">sum = [1+5+1] = 7 (k=3)</div>
         </div>
       );
 
-    case 'bst':
+    case 'bst-insert':
       return (
-        <div className="w-full h-36 bg-gradient-to-br from-indigo-950/40 via-[#161433] to-[#0B0F19] rounded-xl flex flex-col justify-center items-center p-3 border border-indigo-500/20 overflow-hidden relative group-hover:border-indigo-500/50 transition-all">
-          <div className="absolute top-2 left-3 text-[10px] font-mono text-indigo-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-            Binary Search Tree
+        <div className="w-full h-40 bg-gradient-to-b from-[#6366F1] to-[#4F46E5] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>Binary Search Tree</span>
+            <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
-          <svg viewBox="0 0 120 70" className="w-32 h-20 mt-3">
-            {/* Branches */}
-            <line x1="60" y1="14" x2="30" y2="38" stroke="#6366F1" strokeWidth="2" strokeDasharray="2 2" opacity="0.6" />
-            <line x1="60" y1="14" x2="90" y2="38" stroke="#6366F1" strokeWidth="2" strokeDasharray="2 2" opacity="0.6" />
-            <line x1="30" y1="38" x2="15" y2="58" stroke="#6366F1" strokeWidth="1.5" opacity="0.4" />
-            <line x1="90" y1="38" x2="105" y2="58" stroke="#6366F1" strokeWidth="1.5" opacity="0.4" />
 
-            {/* Nodes */}
-            <circle cx="60" cy="14" r="8" fill="#4F46E5" stroke="#818CF8" strokeWidth="2" />
-            <text x="60" y="17" fill="#FFF" fontSize="8" fontWeight="bold" textAnchor="middle">50</text>
+          <svg viewBox="0 0 120 60" className="w-36 h-24 mx-auto">
+            <line x1="60" y1="12" x2="30" y2="34" stroke="#E0E7FF" strokeWidth="2" />
+            <line x1="60" y1="12" x2="90" y2="34" stroke="#E0E7FF" strokeWidth="2" />
+            <line x1="30" y1="34" x2="15" y2="52" stroke="#E0E7FF" strokeWidth="1.5" />
+            <line x1="90" y1="34" x2="105" y2="52" stroke="#E0E7FF" strokeWidth="1.5" />
 
-            <circle cx="30" cy="38" r="7" fill="#312E81" stroke="#6366F1" strokeWidth="1.5" />
-            <text x="30" y="41" fill="#FFF" fontSize="7" textAnchor="middle">30</text>
+            <circle cx="60" cy="12" r="8" fill="#FFFFFF" />
+            <text x="60" y="15.5" fill="#3730A3" fontSize="8" fontWeight="bold" textAnchor="middle">50</text>
 
-            <circle cx="90" cy="38" r="7" fill="#059669" stroke="#34D399" strokeWidth="2" className="animate-pulse" />
-            <text x="90" y="41" fill="#FFF" fontSize="7" fontWeight="bold" textAnchor="middle">70</text>
+            <circle cx="30" cy="34" r="7" fill="#E0E7FF" />
+            <text x="30" y="37" fill="#3730A3" fontSize="7" fontWeight="bold" textAnchor="middle">30</text>
 
-            <circle cx="15" cy="58" r="5" fill="#1E1B4B" stroke="#4338CA" strokeWidth="1" />
-            <text x="15" y="60.5" fill="#CBD5E1" fontSize="6" textAnchor="middle">20</text>
+            <circle cx="90" cy="34" r="7" fill="#FDE047" className="anim-pulse-fade" />
+            <text x="90" y="37" fill="#000" fontSize="7" fontWeight="extrabold" textAnchor="middle">70</text>
 
-            <circle cx="105" cy="58" r="5" fill="#1E1B4B" stroke="#4338CA" strokeWidth="1" />
-            <text x="105" y="60.5" fill="#CBD5E1" fontSize="6" textAnchor="middle">85</text>
+            <circle cx="15" cy="52" r="5.5" fill="#E0E7FF" />
+            <text x="15" y="54.5" fill="#3730A3" fontSize="6" textAnchor="middle">20</text>
+
+            <circle cx="105" cy="52" r="5.5" fill="#E0E7FF" />
+            <text x="105" y="54.5" fill="#3730A3" fontSize="6" textAnchor="middle">85</text>
+          </svg>
+        </div>
+      );
+
+    case 'octree-3d':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#4338CA] to-[#312E81] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>3D Spatial Partitioning</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+
+          <svg viewBox="0 0 120 70" className="w-36 h-24 mx-auto">
+            {/* 3D Wireframe Cube with Split Planes */}
+            <polygon points="60,10 95,25 60,40 25,25" fill="rgba(99,102,241,0.15)" stroke="#818CF8" strokeWidth="1.5" />
+            <polygon points="25,25 60,40 60,65 25,50" fill="rgba(79,70,229,0.2)" stroke="#818CF8" strokeWidth="1.5" />
+            <polygon points="95,25 60,40 60,65 95,50" fill="rgba(67,56,202,0.25)" stroke="#818CF8" strokeWidth="1.5" />
+            {/* Subdividing Midlines */}
+            <line x1="60" y1="10" x2="60" y2="40" stroke="#38BDF8" strokeWidth="1" strokeDasharray="2 2" />
+            <line x1="42.5" y1="17.5" x2="77.5" y2="32.5" stroke="#38BDF8" strokeWidth="1" strokeDasharray="2 2" />
+            {/* 3D Points */}
+            <circle cx="48" cy="28" r="3.5" fill="#34D399" className="anim-pulse-fade" />
+            <circle cx="75" cy="42" r="3" fill="#F43F5E" />
+            <circle cx="35" cy="45" r="3" fill="#38BDF8" />
           </svg>
         </div>
       );
 
     default:
       return (
-        <div className="w-full h-36 bg-slate-900/60 rounded-xl flex items-center justify-center border border-slate-800">
-          <span className="text-xs font-mono text-slate-500">Visualization Sandbox</span>
+        <div className="w-full h-40 bg-slate-800 rounded-xl flex items-center justify-center">
+          <span className="text-xs font-mono text-slate-400">Interactive Sandbox</span>
         </div>
       );
   }

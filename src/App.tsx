@@ -18,7 +18,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'visualizer'>('dashboard');
   const [currentModule, setCurrentModule] = useState<AlgorithmModule>(defaultModule);
   const [currentData, setCurrentData] = useState<any>(defaultModule.defaultInput);
-  const [projectionMode, setProjectionMode] = useState<'2d' | 'isometric'>('2d');
   const [isMuted, setIsMuted] = useState<boolean>(soundEngine.getMuted());
   const [theoryOpen, setTheoryOpen] = useState<boolean>(false); // Collapsed by default for spacious stage
   const [codeOpen, setCodeOpen] = useState<boolean>(true); // Code open for synchronized tracking
@@ -99,10 +98,6 @@ export default function App() {
     soundEngine.setMuted(next);
   };
 
-  const handleToggleProjection = () => {
-    setProjectionMode((prev) => (prev === '2d' ? 'isometric' : '2d'));
-  };
-
   // Convert currentData to number array for the array playground if applicable
   const arrayData = useMemo(() => {
     if (Array.isArray(currentData)) return currentData;
@@ -132,8 +127,6 @@ export default function App() {
         currentModule={currentModule}
         modules={allModules}
         onSelectModule={handleSelectModule}
-        projectionMode={projectionMode}
-        onToggleProjection={handleToggleProjection}
         isMuted={isMuted}
         onToggleSound={handleToggleSound}
         onOpenAbout={() => setAboutOpen(true)}
@@ -199,7 +192,7 @@ export default function App() {
               {/* Visual Stage */}
               <div className="flex-1 flex items-center justify-center relative overflow-hidden px-4">
                 {currentFrame ? (
-                  currentModule.renderStage(currentFrame, projectionMode)
+                  currentModule.renderStage(currentFrame, '2d')
                 ) : (
                   <div className="text-slate-500 font-mono text-sm">Generating execution timeline...</div>
                 )}

@@ -24,7 +24,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
   onClose,
   onLoadCustomSnapshot,
 }) => {
-  const [activeLang, setActiveLang] = useState<'python' | 'node' | 'cpp' | 'json'>('python');
+  const [activeLang, setActiveLang] = useState<'python' | 'node' | 'cpp' | 'json'>('cpp');
   const [copied, setCopied] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
@@ -239,8 +239,8 @@ void selectionSort(std::vector<int>& arr) {
                 <h2 className="text-xl font-bold text-white tracking-tight">
                   Personal Code Visualization Studio
                 </h2>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase">
-                  Developer Capability
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">
+                  Roadmap v1.2 · Developer Preview
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">

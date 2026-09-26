@@ -43,3 +43,68 @@
   transform-style: flat;
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* VisuAlgo Continuous Animation Keyframes */
+@keyframes barSwapA {
+  0%, 100% { transform: translateX(0); }
+  40%, 60% { transform: translateX(28px); }
+}
+
+@keyframes barSwapB {
+  0%, 100% { transform: translateX(0); }
+  40%, 60% { transform: translateX(-28px); }
+}
+
+@keyframes windowSlideMotion {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(48px); }
+}
+
+@keyframes pointerInwardL {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(24px); }
+}
+
+@keyframes pointerInwardR {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-24px); }
+}
+
+@keyframes pulseFadeLoop {
+  0%, 100% { opacity: 0.3; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.08); filter: drop-shadow(0 0 8px currentColor); }
+}
+
+@keyframes arrowFlowMotion {
+  0% { transform: translateX(-4px); opacity: 0.4; }
+  50% { transform: translateX(4px); opacity: 1; }
+  100% { transform: translateX(-4px); opacity: 0.4; }
+}
+
+.anim-swap-a {
+  animation: barSwapA 2.4s ease-in-out infinite;
+}
+
+.anim-swap-b {
+  animation: barSwapB 2.4s ease-in-out infinite;
+}
+
+.anim-window-slide {
+  animation: windowSlideMotion 3s ease-in-out infinite;
+}
+
+.anim-pointer-l {
+  animation: pointerInwardL 2.6s ease-in-out infinite;
+}
+
+.anim-pointer-r {
+  animation: pointerInwardR 2.6s ease-in-out infinite;
+}
+
+.anim-pulse-fade {
+  animation: pulseFadeLoop 2s ease-in-out infinite;
+}
+
+.anim-arrow-flow {
+  animation: arrowFlowMotion 1.8s ease-in-out infinite;
+}

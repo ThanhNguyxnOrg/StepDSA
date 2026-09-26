@@ -1,55 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 84" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 56" fill="none">
   <defs>
-    <linearGradient id="logoBar1Grad" x1="0" y1="42" x2="0" y2="80" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#34D399" />
+    <linearGradient id="logoPillar1" x1="0" y1="30" x2="0" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" />
       <stop offset="100%" stop-color="#059669" />
     </linearGradient>
-    <linearGradient id="logoBar2Grad" x1="0" y1="26" x2="0" y2="80" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#2DD4BF" />
-      <stop offset="100%" stop-color="#0D9488" />
+    <linearGradient id="logoPillar2" x1="16" y1="16" x2="16" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#0891B2" />
     </linearGradient>
-    <linearGradient id="logoChevGrad" x1="42" y1="14" x2="78" y2="80" gradientUnits="userSpaceOnUse">
+    <linearGradient id="logoPillar3" x1="32" y1="2" x2="52" y2="56" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#38BDF8" />
-      <stop offset="100%" stop-color="#0284C7" />
-    </linearGradient>
-    <linearGradient id="logoNodeGrad" x1="38" y1="4" x2="80" y2="20" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#34D399" />
-      <stop offset="100%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#2563EB" />
     </linearGradient>
   </defs>
 
-  <!-- Left Emblem (Tight Bounds: 4 4 to 82 80) -->
-  <g id="brand-emblem">
-    <!-- Bar 1 (Short) -->
-    <rect x="4" y="44" width="13" height="36" rx="4" fill="url(#logoBar1Grad)" />
-    <!-- Bar 2 (Medium) -->
-    <rect x="22" y="26" width="13" height="54" rx="4" fill="url(#logoBar2Grad)" />
-    <!-- Forward Stepper Chevron -->
-    <path
-      d="M 42 16 L 64 45 L 42 74"
-      stroke="url(#logoChevGrad)"
-      stroke-width="13"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-    <!-- Floating Tree / Graph Nodes -->
-    <path
-      d="M 40 18 L 58 13 L 78 5"
-      stroke="url(#logoNodeGrad)"
-      stroke-width="3.5"
-      stroke-linecap="round"
-    />
-    <circle cx="40" cy="18" r="4.5" fill="#10B981" stroke="#FFFFFF" stroke-width="1.5" />
-    <circle cx="58" cy="13" r="5" fill="#06B6D4" stroke="#FFFFFF" stroke-width="1.5" />
-    <circle cx="78" cy="5" r="5.5" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.8" />
+  <!-- Left Monolithic Stepped Glyph (52x56 tight bounds) -->
+  <g id="brand-glyph">
+    <path d="M 0 30 L 14 30 L 14 56 L 0 56 Z" fill="url(#logoPillar1)" />
+    <path d="M 18 16 L 32 16 L 32 56 L 18 56 Z" fill="url(#logoPillar2)" />
+    <path d="M 36 2 L 54 20 L 54 56 L 36 56 Z" fill="url(#logoPillar3)" />
+    <!-- Algorithmic Precision Cut -->
+    <path d="M 0 28 L 18 14 L 36 0 L 54 18" stroke="#0B0F19" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 0 28 L 18 14 L 36 0 L 54 18" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
   </g>
 
-  <!-- Typography: StepDSA + TIME-TRAVEL ENGINE -->
-  <g transform="translate(94, 0)">
-    <text x="0" y="48" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="800" font-size="38" fill="#F8FAFC" letter-spacing="-1">
+  <!-- Brand Typography -->
+  <g transform="translate(70, 0)">
+    <text x="0" y="34" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="800" font-size="32" fill="#F8FAFC" letter-spacing="-0.8">
       Step<tspan fill="#10B981">DSA</tspan>
     </text>
-    <text x="2" y="70" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="11" fill="#94A3B8" letter-spacing="3.2">
+    <text x="1.5" y="50" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="9" fill="#94A3B8" letter-spacing="2.6">
       TIME-TRAVEL ENGINE
     </text>
   </g>

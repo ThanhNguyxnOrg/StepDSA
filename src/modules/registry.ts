@@ -6,6 +6,10 @@ import { binarySearchModule } from './searching/binarySearch';
 import { twoPointersModule } from './arrays/twoPointers';
 import { slidingWindowModule } from './arrays/slidingWindow';
 import { bstModule } from './trees/bst';
+import { singlyLinkedListModule } from './linkedList/singlyLinkedList';
+import { binaryHeapModule } from './trees/binaryHeap';
+import { bfsTraversalModule } from './graphs/bfsTraversal';
+import { octree3dModule } from './trees/octree3d';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -15,6 +19,10 @@ export const allModules: AlgorithmModule[] = [
   twoPointersModule,
   slidingWindowModule,
   bstModule,
+  singlyLinkedListModule,
+  binaryHeapModule,
+  bfsTraversalModule,
+  octree3dModule,
 ];
 
 export const defaultModule = quicksortModule;

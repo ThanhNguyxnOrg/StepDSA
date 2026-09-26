@@ -31,7 +31,13 @@
 * **Playground / Sandbox Mode:** An unguided mode where learners provide custom inputs, select preset edge cases (e.g., Reverse Sorted, All Duplicates, Sparse Graph), and observe the algorithm's behavior.
 * **Step Explanation / Narration:** A dynamically updated human-readable note explaining the exact rationale of the current step (e.g., *"Comparing arr[i] (3) with pivot (7): 3 <= 7, so swap arr[i] with arr[pIndex]"*).
 * **View Projection Mode:** The visual rendering perspective on the Stage:
-  * `2D Flat (Default)`: Crisp, high-readability standard layout optimized for study.
-  * `2.5D / Isometric Tilt`: Stylized perspective view using CSS transforms for immersive visual appeal.
-  * `3D Spatial (Specialized)`: WebGL-driven 3D canvas reserved for multi-dimensional algorithms (e.g. 3D pathfinding, Call-stack elevation, Octrees).
+  * `2D Flat (Pedagogical Standard)`: Primary, high-contrast, crystal-clear standard mode for all 1D/2D data structures and algorithms (Sorting, Searching, Linked Lists, Trees, Graph BFS, Two Pointers). Zero distortion.
+  * `3D Spatial (Spatial Data Structures)`: Reserved strictly for data structures whose domain is genuinely 3-dimensional, namely **Octree** (3D space partitioning for computer graphics, spatial indexing, collision detection) and **3D K-D Tree**, rendered using clean isometric voxel bounding boxes.
 * **AlgorithmModule:** A self-contained plugin bundle defining an algorithm's metadata, complexity profile, intuition narrative, deterministic generator, multi-language code snippets, and custom input presets.
+
+### 4. Personal Code Tracing & Local Runner (BYOC — Bring Your Own Code)
+
+* **Local Tracing Engine (Tracer CLI):** A standalone developer tool executing strictly on the user's local machine that instruments algorithm code, records variable/pointer mutations, and outputs deterministic snapshots without cloud upload.
+* **Execution Snapshot (`.stepdsa.json`):** An immutable, language-agnostic JSON format encapsulating the step-by-step memory states, line numbers, call stack, and explanations of arbitrary developer code.
+* **Local Bridge / Dev Streamer:** A lightweight local daemon (`ws://localhost:9123`) or drag-and-drop loader that pipes locally captured snapshots directly into the StepDSA web visualizer for time-travel playback.
+* **Universal Playback Adapter:** The web visualizer's modular rendering pipeline capable of dynamically detecting whether an execution snapshot represents arrays, linked lists, binary trees, or graphs, and binding it to the appropriate Stage.

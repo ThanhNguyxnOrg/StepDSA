@@ -1,0 +1,1993 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "sourceFile": "sample_bubble_sort.cpp",
+    "language": "cpp",
+    "totalSteps": 41,
+    "createdAt": "2026-09-26T07:23:33.161Z",
+    "generator": "StepDSA Local Tracer CLI v1.0"
+  },
+  "sourceCode": "// sample_bubble_sort.cpp\n// StepDSA Local Tracing Engine — C++ Example (ICPC / Competitive Programming)\n\n#include <iostream>\n#include <vector>\n#include <utility>\n\nvoid bubbleSort(std::vector<int>& arr) {\n    int n = arr.size();\n    for (int i = 0; i < n; ++i) {\n        for (int j = 0; j < n - i - 1; ++j) {\n            if (arr[j] > arr[j + 1]) {\n                std::swap(arr[j], arr[j + 1]);\n            }\n        }\n    }\n}\n\nint main() {\n    std::vector<int> arr = {45, 12, 89, 34, 7, 23, 60};\n    \n    std::cout << \"Original Array: \";\n    for (int x : arr) std::cout << x << \" \";\n    std::cout << \"\\n\";\n\n    bubbleSort(arr);\n\n    std::cout << \"Sorted Array:   \";\n    for (int x : arr) std::cout << x << \" \";\n    std::cout << \"\\n\";\n\n    return 0;\n}\n",
+  "steps": [
+    {
+      "stepIndex": 0,
+      "codeLine": 1,
+      "explanation": "Initial state: Loaded array of size 7 from sample_bubble_sort.cpp",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 89,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "n": 7
+        }
+      }
+    },
+    {
+      "stepIndex": 1,
+      "codeLine": 4,
+      "explanation": "Comparing arr[0] (45) with arr[1] (12). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 45,
+            "status": "comparing"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 89,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 0,
+          "j+1": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 2,
+      "codeLine": 5,
+      "explanation": "Swapped arr[0] and arr[1]. Array is now [12, 45, 89, 34, 7, 23, 60].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "swapping"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "swapping"
+          },
+          {
+            "id": "2",
+            "value": 89,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 0
+        }
+      }
+    },
+    {
+      "stepIndex": 3,
+      "codeLine": 4,
+      "explanation": "Comparing arr[1] (45) with arr[2] (89). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 89,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 1,
+          "j+1": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 4,
+      "codeLine": 4,
+      "explanation": "Comparing arr[2] (89) with arr[3] (34). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 89,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "comparing"
+          },
+          {
+            "id": "4",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 2,
+          "j+1": 3
+        }
+      }
+    },
+    {
+      "stepIndex": 5,
+      "codeLine": 5,
+      "explanation": "Swapped arr[2] and arr[3]. Array is now [12, 45, 34, 89, 7, 23, 60].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "swapping"
+          },
+          {
+            "id": "3",
+            "value": 89,
+            "status": "swapping"
+          },
+          {
+            "id": "4",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 6,
+      "codeLine": 4,
+      "explanation": "Comparing arr[3] (89) with arr[4] (7). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 89,
+            "status": "comparing"
+          },
+          {
+            "id": "4",
+            "value": 7,
+            "status": "comparing"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 3,
+          "j+1": 4
+        }
+      }
+    },
+    {
+      "stepIndex": 7,
+      "codeLine": 5,
+      "explanation": "Swapped arr[3] and arr[4]. Array is now [12, 45, 34, 7, 89, 23, 60].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "swapping"
+          },
+          {
+            "id": "4",
+            "value": 89,
+            "status": "swapping"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 3
+        }
+      }
+    },
+    {
+      "stepIndex": 8,
+      "codeLine": 4,
+      "explanation": "Comparing arr[4] (89) with arr[5] (23). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 89,
+            "status": "comparing"
+          },
+          {
+            "id": "5",
+            "value": 23,
+            "status": "comparing"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 4,
+          "j+1": 5
+        }
+      }
+    },
+    {
+      "stepIndex": 9,
+      "codeLine": 5,
+      "explanation": "Swapped arr[4] and arr[5]. Array is now [12, 45, 34, 7, 23, 89, 60].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "swapping"
+          },
+          {
+            "id": "5",
+            "value": 89,
+            "status": "swapping"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "normal"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 4
+        }
+      }
+    },
+    {
+      "stepIndex": 10,
+      "codeLine": 4,
+      "explanation": "Comparing arr[5] (89) with arr[6] (60). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 89,
+            "status": "comparing"
+          },
+          {
+            "id": "6",
+            "value": 60,
+            "status": "comparing"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 5,
+          "j+1": 6
+        }
+      }
+    },
+    {
+      "stepIndex": 11,
+      "codeLine": 5,
+      "explanation": "Swapped arr[5] and arr[6]. Array is now [12, 45, 34, 7, 23, 60, 89].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "swapping"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "swapping"
+          }
+        ],
+        "pointers": {
+          "i": 0,
+          "j": 5
+        }
+      }
+    },
+    {
+      "stepIndex": 12,
+      "codeLine": 3,
+      "explanation": "Pass 1 complete. Largest unsorted element settled at index 6.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "sorted": 6
+        }
+      }
+    },
+    {
+      "stepIndex": 13,
+      "codeLine": 4,
+      "explanation": "Comparing arr[0] (12) with arr[1] (45). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "comparing"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 1,
+          "j": 0,
+          "j+1": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 14,
+      "codeLine": 4,
+      "explanation": "Comparing arr[1] (45) with arr[2] (34). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 45,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 1,
+          "j": 1,
+          "j+1": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 15,
+      "codeLine": 5,
+      "explanation": "Swapped arr[1] and arr[2]. Array is now [12, 34, 45, 7, 23, 60, 89].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "swapping"
+          },
+          {
+            "id": "2",
+            "value": 45,
+            "status": "swapping"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 1,
+          "j": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 16,
+      "codeLine": 4,
+      "explanation": "Comparing arr[2] (45) with arr[3] (7). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 45,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 7,
+            "status": "comparing"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 1,
+          "j": 2,
+          "j+1": 3
+        }
+      }
+    },
+    {
+      "stepIndex": 17,
+      "codeLine": 5,
+      "explanation": "Swapped arr[2] and arr[3]. Array is now [12, 34, 7, 45, 23, 60, 89].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 7,
+            "status": "swapping"
+          },
+          {
+            "id": "3",
+            "value": 45,
+            "status": "swapping"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 1,
+          "j": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 18,
+      "codeLine": 4,
+      "explanation": "Comparing arr[3] (45) with arr[4] (23). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 45,
+            "status": "comparing"
+          },
+          {
+            "id": "4",
+            "value": 23,
+            "status": "comparing"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 1,
+          "j": 3,
+          "j+1": 4
+        }
+      }
+    },
+    {
+      "stepIndex": 19,
+      "codeLine": 5,
+      "explanation": "Swapped arr[3] and arr[4]. Array is now [12, 34, 7, 23, 45, 60, 89].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 23,
+            "status": "swapping"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "swapping"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "normal"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 1,
+          "j": 3
+        }
+      }
+    },
+    {
+      "stepIndex": 20,
+      "codeLine": 4,
+      "explanation": "Comparing arr[4] (45) with arr[5] (60). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "comparing"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "comparing"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 1,
+          "j": 4,
+          "j+1": 5
+        }
+      }
+    },
+    {
+      "stepIndex": 21,
+      "codeLine": 3,
+      "explanation": "Pass 2 complete. Largest unsorted element settled at index 5.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "sorted": 5
+        }
+      }
+    },
+    {
+      "stepIndex": 22,
+      "codeLine": 4,
+      "explanation": "Comparing arr[0] (12) with arr[1] (34). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "comparing"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 2,
+          "j": 0,
+          "j+1": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 23,
+      "codeLine": 4,
+      "explanation": "Comparing arr[1] (34) with arr[2] (7). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 34,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 7,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 2,
+          "j": 1,
+          "j+1": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 24,
+      "codeLine": 5,
+      "explanation": "Swapped arr[1] and arr[2]. Array is now [12, 7, 34, 23, 45, 60, 89].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 7,
+            "status": "swapping"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "swapping"
+          },
+          {
+            "id": "3",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 2,
+          "j": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 25,
+      "codeLine": 4,
+      "explanation": "Comparing arr[2] (34) with arr[3] (23). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 34,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 23,
+            "status": "comparing"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 2,
+          "j": 2,
+          "j+1": 3
+        }
+      }
+    },
+    {
+      "stepIndex": 26,
+      "codeLine": 5,
+      "explanation": "Swapped arr[2] and arr[3]. Array is now [12, 7, 23, 34, 45, 60, 89].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "swapping"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "swapping"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "normal"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 2,
+          "j": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 27,
+      "codeLine": 4,
+      "explanation": "Comparing arr[3] (34) with arr[4] (45). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "comparing"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "comparing"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 2,
+          "j": 3,
+          "j+1": 4
+        }
+      }
+    },
+    {
+      "stepIndex": 28,
+      "codeLine": 3,
+      "explanation": "Pass 3 complete. Largest unsorted element settled at index 4.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "sorted": 4
+        }
+      }
+    },
+    {
+      "stepIndex": 29,
+      "codeLine": 4,
+      "explanation": "Comparing arr[0] (12) with arr[1] (7). Swap required!",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 12,
+            "status": "comparing"
+          },
+          {
+            "id": "1",
+            "value": 7,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 3,
+          "j": 0,
+          "j+1": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 30,
+      "codeLine": 5,
+      "explanation": "Swapped arr[0] and arr[1]. Array is now [7, 12, 23, 34, 45, 60, 89].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "swapping"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "swapping"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 3,
+          "j": 0
+        }
+      }
+    },
+    {
+      "stepIndex": 31,
+      "codeLine": 4,
+      "explanation": "Comparing arr[1] (12) with arr[2] (23). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "normal"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 3,
+          "j": 1,
+          "j+1": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 32,
+      "codeLine": 4,
+      "explanation": "Comparing arr[2] (23) with arr[3] (34). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "comparing"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 3,
+          "j": 2,
+          "j+1": 3
+        }
+      }
+    },
+    {
+      "stepIndex": 33,
+      "codeLine": 3,
+      "explanation": "Pass 4 complete. Largest unsorted element settled at index 3.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "sorted"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "sorted": 3
+        }
+      }
+    },
+    {
+      "stepIndex": 34,
+      "codeLine": 4,
+      "explanation": "Comparing arr[0] (7) with arr[1] (12). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "comparing"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "normal"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "sorted"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 4,
+          "j": 0,
+          "j+1": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 35,
+      "codeLine": 4,
+      "explanation": "Comparing arr[1] (12) with arr[2] (23). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "comparing"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "sorted"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 4,
+          "j": 1,
+          "j+1": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 36,
+      "codeLine": 3,
+      "explanation": "Pass 5 complete. Largest unsorted element settled at index 2.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "normal"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "sorted"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "sorted"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "sorted": 2
+        }
+      }
+    },
+    {
+      "stepIndex": 37,
+      "codeLine": 4,
+      "explanation": "Comparing arr[0] (7) with arr[1] (12). In order, continue.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "comparing"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "comparing"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "sorted"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "sorted"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "i": 5,
+          "j": 0,
+          "j+1": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 38,
+      "codeLine": 3,
+      "explanation": "Pass 6 complete. Largest unsorted element settled at index 1.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "normal"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "sorted"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "sorted"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "sorted"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "sorted": 1
+        }
+      }
+    },
+    {
+      "stepIndex": 39,
+      "codeLine": 3,
+      "explanation": "Pass 7 complete. Largest unsorted element settled at index 0.",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "sorted"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "sorted"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "sorted"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "sorted"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {
+          "sorted": 0
+        }
+      }
+    },
+    {
+      "stepIndex": 40,
+      "codeLine": 34,
+      "isMilestone": true,
+      "milestoneTitle": "Algorithm Execution Terminated",
+      "explanation": "Local trace finished. Final sorted array: [7, 12, 23, 34, 45, 60, 89].",
+      "state": {
+        "array": [
+          {
+            "id": "0",
+            "value": 7,
+            "status": "sorted"
+          },
+          {
+            "id": "1",
+            "value": 12,
+            "status": "sorted"
+          },
+          {
+            "id": "2",
+            "value": 23,
+            "status": "sorted"
+          },
+          {
+            "id": "3",
+            "value": 34,
+            "status": "sorted"
+          },
+          {
+            "id": "4",
+            "value": 45,
+            "status": "sorted"
+          },
+          {
+            "id": "5",
+            "value": 60,
+            "status": "sorted"
+          },
+          {
+            "id": "6",
+            "value": 89,
+            "status": "sorted"
+          }
+        ],
+        "pointers": {}
+      }
+    }
+  ]
+}

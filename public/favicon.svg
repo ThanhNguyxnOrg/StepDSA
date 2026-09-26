@@ -1,46 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
   <defs>
-    <linearGradient id="bar1Grad" x1="0" y1="48" x2="0" y2="96" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#34D399" />
+    <linearGradient id="monoStep1" x1="0" y1="26" x2="0" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" />
       <stop offset="100%" stop-color="#059669" />
     </linearGradient>
-    <linearGradient id="bar2Grad" x1="0" y1="28" x2="0" y2="96" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#2DD4BF" />
-      <stop offset="100%" stop-color="#0D9488" />
+    <linearGradient id="monoStep2" x1="16" y1="14" x2="16" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#0891B2" />
     </linearGradient>
-    <linearGradient id="chevGrad" x1="50" y1="14" x2="94" y2="96" gradientUnits="userSpaceOnUse">
+    <linearGradient id="monoStep3" x1="32" y1="2" x2="48" y2="48" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#38BDF8" />
-      <stop offset="100%" stop-color="#0284C7" />
-    </linearGradient>
-    <linearGradient id="nodeGrad" x1="45" y1="4" x2="95" y2="24" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#34D399" />
-      <stop offset="100%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#2563EB" />
     </linearGradient>
   </defs>
 
-  <!-- Step Bar 1 (Short - Cyber Emerald) -->
-  <rect x="4" y="52" width="16" height="44" rx="5" fill="url(#bar1Grad)" />
+  <!-- Monolithic Stepped Geometry (Linear/Supabase aesthetic) -->
+  <!-- Step 1: Base Pillar with 45° chamfer -->
+  <path d="M 0 26 L 12 26 L 12 48 L 0 48 Z" fill="url(#monoStep1)" />
 
-  <!-- Step Bar 2 (Medium - Vibrant Teal) -->
-  <rect x="26" y="32" width="16" height="64" rx="5" fill="url(#bar2Grad)" />
+  <!-- Step 2: Mid Pillar -->
+  <path d="M 16 14 L 28 14 L 28 48 L 16 48 Z" fill="url(#monoStep2)" />
 
-  <!-- Forward Execution Chevron (Step / Time-Travel - Electric Cyan) -->
-  <path
-    d="M 50 18 L 76 50 L 50 82"
-    stroke="url(#chevGrad)"
-    stroke-width="16"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
+  <!-- Step 3: High Pillar + Integrated Forward Execution Chevron -->
+  <path d="M 32 2 L 48 18 L 48 48 L 32 48 Z" fill="url(#monoStep3)" />
 
-  <!-- Connected Graph/Tree Nodes (Floating Algorithmic Network) -->
-  <path
-    d="M 48 20 L 70 14 L 92 6"
-    stroke="url(#nodeGrad)"
-    stroke-width="4.5"
-    stroke-linecap="round"
-  />
-  <circle cx="48" cy="20" r="5.5" fill="#10B981" stroke="#FFFFFF" stroke-width="1.8" />
-  <circle cx="70" cy="14" r="6" fill="#06B6D4" stroke="#FFFFFF" stroke-width="1.8" />
-  <circle cx="92" cy="6" r="6.5" fill="#38BDF8" stroke="#FFFFFF" stroke-width="2" />
+  <!-- Negative Space Precision Cut (Algorithmic Trajectory) -->
+  <path d="M 0 24 L 16 12 L 32 0 L 48 16" stroke="#0B0F19" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 0 24 L 16 12 L 32 0 L 48 16" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
 </svg>

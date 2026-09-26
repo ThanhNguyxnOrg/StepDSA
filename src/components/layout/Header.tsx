@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Box, Volume2, VolumeX, Compass, ChevronDown, LayoutDashboard, Info, Terminal } from 'lucide-react';
+import { Volume2, VolumeX, Compass, ChevronDown, LayoutDashboard, Info, Terminal } from 'lucide-react';
 import { AlgorithmModule, AlgorithmCategory } from '../../core/types';
 import { StepDSALogo } from '../brand/StepDSALogo';
 
@@ -9,8 +9,6 @@ interface HeaderProps {
   currentModule: AlgorithmModule;
   modules: AlgorithmModule[];
   onSelectModule: (module: AlgorithmModule) => void;
-  projectionMode: '2d' | 'isometric';
-  onToggleProjection: () => void;
   isMuted: boolean;
   onToggleSound: () => void;
   onOpenAbout: () => void;
@@ -23,8 +21,6 @@ export const Header: React.FC<HeaderProps> = ({
   currentModule,
   modules,
   onSelectModule,
-  projectionMode,
-  onToggleProjection,
   isMuted,
   onToggleSound,
   onOpenAbout,
@@ -150,29 +146,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </>
               )}
             </div>
-
-            {/* Projection Toggle: 2D vs 2.5D Isometric */}
-            <button
-              onClick={onToggleProjection}
-              title={`Switch to ${projectionMode === '2d' ? '2.5D Isometric Mode' : '2D Flat Mode'}`}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                projectionMode === 'isometric'
-                  ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40 shadow-sm'
-                  : 'bg-[#111827] text-slate-400 border border-[#1F293D] hover:text-white hover:border-slate-600'
-              }`}
-            >
-              {projectionMode === 'isometric' ? (
-                <>
-                  <Box className="w-3.5 h-3.5 text-[#10B981]" />
-                  <span className="hidden md:inline">2.5D</span>
-                </>
-              ) : (
-                <>
-                  <Layers className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="hidden md:inline">2D</span>
-                </>
-              )}
-            </button>
           </>
         )}
 

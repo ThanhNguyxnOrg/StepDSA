@@ -63,10 +63,34 @@ const ALGO_METADATA: Record<
     tags: ['fixed-k', 'subarray-sum', 'rolling-state'],
     themeColor: 'teal',
   },
-  'bst': {
+  'bst-insert': {
     shortTitle: 'BST Tree',
     subtitle: 'Binary Search Tree',
     tags: ['binary-tree', 'hierarchical', 'inorder-traversal'],
+    themeColor: 'indigo',
+  },
+  'linked-list': {
+    shortTitle: 'Linked List',
+    subtitle: 'Pointers & Nodes',
+    tags: ['singly', 'tail-insert', 'traversal'],
+    themeColor: 'blue',
+  },
+  'binary-heap': {
+    shortTitle: 'Binary Heap',
+    subtitle: 'Priority Queue & Sift-Up',
+    tags: ['complete-tree', 'sift-up', 'array-backed'],
+    themeColor: 'teal',
+  },
+  'graph-bfs': {
+    shortTitle: 'Graph BFS',
+    subtitle: 'Breadth-First Search',
+    tags: ['fifo-queue', 'shortest-path', 'wavefront'],
+    themeColor: 'purple',
+  },
+  'octree-3d': {
+    shortTitle: 'Octree',
+    subtitle: '3D Spatial Partitioning',
+    tags: ['3D-space', 'octants', 'collision-detection'],
     themeColor: 'indigo',
   },
 };
@@ -84,7 +108,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     { id: 'sorting', label: 'Sorting' },
     { id: 'searching', label: 'Searching' },
     { id: 'arrays-pointers', label: 'Pointers & Arrays' },
-    { id: 'trees-bst', label: 'Trees & BST' },
+    { id: 'linked-lists', label: 'Linked Lists' },
+    { id: 'trees-bst', label: 'Trees & Heaps' },
+    { id: 'graphs', label: 'Graphs' },
   ];
 
   const filteredModules = useMemo(() => {
