@@ -43,7 +43,7 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
   if (!isOpen) return null;
 
   return (
-    <aside className="w-full md:w-80 lg:w-96 border-l border-[#1F293D] bg-[#0B0F19] flex flex-col h-full overflow-hidden">
+    <aside className="w-full md:w-[22rem] lg:w-96 border-l border-[#1F293D] bg-[#0B0F19] flex flex-col h-full overflow-hidden">
       {/* Top Bar / Language Selector */}
       <div className="h-11 border-b border-[#1F293D] px-3 flex items-center justify-between bg-[#111827]/80 shrink-0">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1">

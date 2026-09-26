@@ -116,14 +116,14 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({ state, projection }) => 
                 [{idx}]
               </span>
 
-              {/* Pointer Badges: Strictly on SAME horizontal line, never stacking vertically */}
-              <div className="mt-1 flex flex-row items-center justify-center gap-1 whitespace-nowrap min-h-[22px] z-10">
+              {/* Pointer Badges: Compact, never overflow into adjacent columns */}
+              <div className="mt-1 flex flex-row items-center justify-center gap-0.5 flex-wrap min-h-[18px] z-10 max-w-full overflow-hidden">
                 {elPointers.map((pName) => (
                   <motion.div
                     key={pName}
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase shadow-sm border whitespace-nowrap shrink-0 ${
+                    className={`px-1 py-0.5 rounded text-[8px] leading-none font-mono font-bold uppercase shadow-sm border whitespace-nowrap ${
                       pName === 'pivot'
                         ? 'bg-[#8B5CF6] text-white border-[#8B5CF6]'
                         : pName === 'left' || pName === 'i' || pName === 'low'

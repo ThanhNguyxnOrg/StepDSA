@@ -267,6 +267,101 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </section>
 
+      {/* 1.5 Quick Visual Legend / How to Read StepDSA (for first-time visitors) */}
+      <section className="max-w-6xl mx-auto px-6 pt-6 pb-2">
+        <div className="rounded-2xl bg-[#111827]/80 border border-[#1F293D] p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-amber-400 text-lg">✦</span>
+            <h2 className="text-sm sm:text-base font-bold text-white">
+              Cách đọc mô phỏng StepDSA
+            </h2>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 border border-amber-500/20 font-semibold">
+              30-Second Guide
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Color Legend */}
+            <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#10B981]" /> Màu sắc
+              </h3>
+              <div className="space-y-1.5 text-[10px] text-slate-300">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded bg-[#10B981] shrink-0" />
+                  <span><strong className="text-[#10B981]">Xanh lá</strong> — Đã hoàn thành / Sắp xếp đúng</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded bg-[#F59E0B] shrink-0" />
+                  <span><strong className="text-[#F59E0B]">Vàng</strong> — Đang so sánh / Active</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded bg-[#06B6D4] shrink-0" />
+                  <span><strong className="text-[#06B6D4]">Cyan</strong> — Con trỏ biên / Queue</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded bg-[#F43F5E] shrink-0" />
+                  <span><strong className="text-[#F43F5E]">Đỏ</strong> — Swap / Loại bỏ / Lỗi</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pointer Badges */}
+            <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#06B6D4]" /> Con trỏ
+              </h3>
+              <div className="space-y-1.5 text-[10px] text-slate-300">
+                <div className="flex items-center gap-1.5">
+                  <span className="px-1 py-0.5 rounded bg-[#06B6D4] text-[#0B0F19] text-[8px] font-mono font-bold">LEFT</span>
+                  <span className="px-1 py-0.5 rounded bg-[#10B981] text-[#0B0F19] text-[8px] font-mono font-bold">RIGHT</span>
+                </div>
+                <p className="text-slate-400">Nhãn dưới thanh bar = biến đang trỏ vào phần tử đó</p>
+                <div className="bg-[#1F2937] px-2 py-1 rounded font-mono text-[10px]">
+                  <span className="text-amber-400">WATCH:</span>{' '}
+                  <span className="text-white">left = 0</span>{' '}
+                  <span className="text-slate-400">[38]</span>
+                </div>
+                <p className="text-slate-500 text-[9px]">= biến left ở index 0, giá trị 38</p>
+              </div>
+            </div>
+
+            {/* Step Modes */}
+            <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-white" /> Chế độ Step
+              </h3>
+              <div className="space-y-1.5 text-[10px] text-slate-300">
+                <div className="flex items-center gap-2">
+                  <kbd className="px-1.5 py-0.5 rounded bg-[#1F2937] border border-[#374151] text-[9px] font-mono text-white">← →</kbd>
+                  <span><strong className="text-white">Line</strong> — Từng dòng code</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <kbd className="px-1.5 py-0.5 rounded bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-[9px] font-mono text-[#06B6D4]">Shift+→</kbd>
+                  <span><strong className="text-[#06B6D4]">Action</strong> — Nhảy đến bước đổi state</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <kbd className="px-1.5 py-0.5 rounded bg-[#1F2937] border border-[#374151] text-[9px] font-mono text-white">Space</kbd>
+                  <span>Play / Pause tự động</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Code Inspector */}
+            <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#8B5CF6]" /> Code Inspector
+              </h3>
+              <div className="space-y-1.5 text-[10px] text-slate-300">
+                <p>Bảng bên phải hiển thị mã nguồn 5 ngôn ngữ, dòng đang chạy sáng xanh.</p>
+                <p><strong className="text-white">CALL STACK</strong> — Stack frame đệ quy (giống VS Code debugger).</p>
+                <p><strong className="text-white">SCOPE VARIABLES</strong> — Giá trị biến thời gian thực.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 2. Visual Algorithm Catalog (VisuAlgo-inspired layout) */}
       <section className="max-w-6xl mx-auto px-6 pt-10 pb-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
