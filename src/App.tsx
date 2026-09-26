@@ -117,21 +117,11 @@ export default function App() {
     soundEngine.setMuted(next);
   };
 
-  // Convert currentData to number array for the array playground if applicable
-  const arrayData = useMemo(() => {
-    if (Array.isArray(currentData)) return currentData;
-    if (currentData && Array.isArray(currentData.array)) return currentData.array;
-    if (currentData && Array.isArray(currentData.valuesToInsert)) return currentData.valuesToInsert;
-    return [10, 20, 30, 40, 50];
-  }, [currentData]);
-
-  const handleApplyPlaygroundData = (newData: number[]) => {
-    if (currentModule.id === 'binary-search') {
+  const handleApplyPlaygroundData = (newData: any) => {
+    if (currentModule.id === 'binary-search' && Array.isArray(newData)) {
       setCurrentData({ array: newData, target: newData[Math.floor(newData.length / 2)] });
-    } else if (currentModule.id === 'bst-insert') {
+    } else if (currentModule.id === 'bst-insert' && Array.isArray(newData)) {
       setCurrentData({ valuesToInsert: newData });
-    } else if (currentModule.id === 'sliding-window') {
-      setCurrentData({ array: newData, k: 3 });
     } else {
       setCurrentData(newData);
     }
@@ -162,7 +152,11 @@ export default function App() {
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Playground Preset Bar */}
-          <PlaygroundBar onApplyData={handleApplyPlaygroundData} currentData={arrayData} />
+          <PlaygroundBar
+            currentModule={currentModule}
+            onApplyData={handleApplyPlaygroundData}
+            currentData={currentData}
+          />
 
           {/* Workbench Body */}
           <div className="flex-1 flex overflow-hidden relative">

@@ -21,8 +21,10 @@ import { balancedParenthesesModule } from './stack/balancedParentheses';
 import { lcsModule } from './dp/lcs';
 import { sieveModule } from './math/sieveOfEratosthenes';
 import { countingSortModule } from './sorting/countingSort';
+import { radixSortModule } from './sorting/radixSort';
 import { kruskalMSTModule } from './graphs/kruskalMST';
 import { euclideanGcdModule } from './math/euclideanGcd';
+import { kmpModule } from './strings/kmpSearch';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -31,8 +33,10 @@ export const allModules: AlgorithmModule[] = [
   selectionSortModule,
   bubbleSortModule,
   countingSortModule,
+  radixSortModule,
   linearSearchModule,
   binarySearchModule,
+  kmpModule,
   balancedParenthesesModule,
   sieveModule,
   euclideanGcdModule,

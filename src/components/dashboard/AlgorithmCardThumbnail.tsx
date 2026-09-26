@@ -673,6 +673,46 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
         </div>
       );
 
+    case 'radix-sort':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#7C3AED] to-[#5B21B6] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-purple-100 uppercase tracking-wider">
+            <span>LSD Digit Buckets</span>
+            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-2">
+              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">17<strong className="text-amber-300">0</strong></span>
+              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">80<strong className="text-amber-300">2</strong></span>
+              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">02<strong className="text-amber-300">4</strong></span>
+              <span className="px-2 py-1 rounded bg-black/40 text-purple-200 text-xs font-bold border border-purple-400/40">04<strong className="text-amber-300">5</strong></span>
+            </div>
+            <div className="text-[10px] text-purple-200/80">pass 1: [1s] → pass 2: [10s] → pass 3: [100s]</div>
+          </div>
+        </div>
+      );
+
+    case 'kmp-search':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0284C7] to-[#0369A1] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-sky-100 uppercase tracking-wider">
+            <span>LPS Table Skip O(N+M)</span>
+            <span className="w-2 h-2 rounded-full bg-sky-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex items-center gap-1 text-xs">
+              <span className="text-slate-400">T:</span>
+              <span className="bg-sky-950/70 border border-sky-400/40 px-2 py-0.5 rounded text-white font-bold">A B A B C A B</span>
+            </div>
+            <div className="flex items-center gap-1 text-xs">
+              <span className="text-slate-400">P:</span>
+              <span className="bg-amber-500/20 border border-amber-400/50 px-2 py-0.5 rounded text-amber-200 font-bold ml-6">A B C</span>
+            </div>
+            <div className="text-[10px] text-sky-200">π[j-1] prevents text backtracking</div>
+          </div>
+        </div>
+      );
+
     default:
       return (
         <div className="w-full h-40 bg-slate-800 rounded-xl flex items-center justify-center">

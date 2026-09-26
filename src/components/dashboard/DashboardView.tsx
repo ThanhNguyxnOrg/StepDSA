@@ -177,6 +177,18 @@ const ALGO_METADATA: Record<
     tags: ['greedy', 'minimum-spanning-tree', 'cycle-detection'],
     themeColor: 'teal',
   },
+  'radix-sort': {
+    shortTitle: 'Radix Sort (LSD)',
+    subtitle: 'Digit Bucket Queue Passes',
+    tags: ['non-comparison', 'stable', 'O(d · (N + b))'],
+    themeColor: 'purple',
+  },
+  'kmp-search': {
+    shortTitle: 'KMP Pattern Search',
+    subtitle: 'Knuth-Morris-Pratt & LPS',
+    tags: ['string-matching', 'LPS-table', 'O(N + M)'],
+    themeColor: 'sky',
+  },
 };
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
