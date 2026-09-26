@@ -57,8 +57,8 @@ Mỗi thuật toán trong StepDSA khi được triển khai bắt buộc phải 
 * **Heap:**
   - [ ] Heapsort
 * **Non-Comparison (Không so sánh):**
-  - [ ] Counting Sort
-  - [ ] Radix Sort (LSD Radix Sort & MSD Radix Sort)
+  - [x] **Counting Sort (Frequency Bucket Indexing)** `[ACTIVE]`
+  - [x] **Radix Sort (LSD Radix Sort)** `[ACTIVE]`
   - [ ] Bucket Sort
 * **Advanced / Practical:**
   - [ ] Shell Sort
@@ -165,7 +165,7 @@ Mỗi thuật toán trong StepDSA khi được triển khai bắt buộc phải 
 
 ### J. Minimum Spanning Tree (MST) & Disjoint Set
 - [ ] Disjoint Set Union (DSU / Union-Find with Path Compression & Rank/Size)
-- [ ] Kruskal's Algorithm (Edge Sorting + DSU)
+- [x] **Kruskal's Algorithm (Edge Sorting + DSU)** `[ACTIVE]`
 - [ ] Prim's Algorithm (Priority Queue Cut Property)
 - [ ] Borůvka's Algorithm
 
@@ -194,7 +194,7 @@ Mỗi thuật toán trong StepDSA khi được triển khai bắt buộc phải 
 ### L. String Algorithms & Pattern Matching
 * **Pattern Matching:**
   - [ ] Naive Brute Force Matching
-  - [ ] KMP (Knuth-Morris-Pratt with $\pi$ / LPS Failure Function)
+  - [x] **KMP (Knuth-Morris-Pratt with LPS Failure Function)** `[ACTIVE]`
   - [ ] Z-Algorithm (Z-box substring match)
   - [ ] Rabin-Karp (Rolling Hash)
   - [ ] Boyer-Moore (Bad Character & Good Suffix heuristics)
@@ -231,8 +231,8 @@ Mỗi thuật toán trong StepDSA khi được triển khai bắt buộc phải 
 ---
 
 ### N. Greedy Algorithms
-- [x] **Two Pointers (Container With Most Water)** `[ACTIVE]`
-- [x] **Sliding Window (Max Sum Subarray K)** `[ACTIVE]`
+- [ ] Two Pointers
+- [ ] Sliding Window
 - [ ] Activity Selection / Interval Scheduling
 - [ ] Fractional Knapsack
 - [ ] Huffman Coding (Greedy Frequency Tree)
@@ -270,7 +270,7 @@ Mỗi thuật toán trong StepDSA khi được triển khai bắt buộc phải 
 ---
 
 ### R. Number Theory & Math
-- [ ] Euclidean Algorithm & Extended Euclidean (GCD / Bezout Coefficients)
+- [x] **Euclidean Algorithm (GCD / Modular Division)** `[ACTIVE]`
 - [x] **Sieve of Eratosthenes (Prime Grid Elimination)** `[ACTIVE]`
 - [ ] Fast Binary Modular Exponentiation ($a^b \pmod m$)
 - [ ] Modular Multiplicative Inverse
@@ -386,27 +386,30 @@ graph TD
 
 ---
 
-## 📈 Trạng thái Hiện tại của StepDSA (22 Modules Đang Hoạt Động)
+## 📈 Trạng thái Hiện tại của StepDSA (25 Modules Đang Hoạt Động)
 
-1. [Linear Search (Sequential Scan)](../src/modules/searching/linearSearch.tsx) — Searching
-2. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx) — Sorting
-3. [Mergesort (Divide & Conquer)](../src/modules/sorting/mergesort.tsx) — Sorting
-4. [Insertion Sort (Incremental Build)](../src/modules/sorting/insertionSort.tsx) — Sorting
-5. [Selection Sort (Minimum Scan)](../src/modules/sorting/selectionSort.tsx) — Sorting
-6. [Bubble Sort (Adjacent Swaps)](../src/modules/sorting/bubbleSort.tsx) — Sorting
-7. [Binary Search (Boundary Halving)](../src/modules/searching/binarySearch.tsx) — Searching
-8. [Two Pointers (Container With Most Water)](../src/modules/arrays/twoPointers.tsx) — Arrays & Pointers
-9. [Sliding Window (Max Subarray Sum K)](../src/modules/arrays/slidingWindow.tsx) — Arrays & Pointers
-10. [Balanced Parentheses (Stack LIFO)](../src/modules/stack/balancedParentheses.tsx) — Linear DS & Stack
-11. [Singly Linked List (Pointers & Mutations)](../src/modules/linkedList/singlyLinkedList.tsx) — Linked Lists
-12. [Binary Search Tree (BST Construction)](../src/modules/trees/bst.tsx) — Trees
-13. [Binary Heap (Min-Heap Priority Queue)](../src/modules/trees/binaryHeap.tsx) — Priority Queues
-14. [Trie (Prefix Search & Autocomplete)](../src/modules/trees/trie.tsx) — Trees & Strings
-15. [BFS Wavefront (Queue Shortest Path)](../src/modules/graphs/bfsTraversal.tsx) — Graphs
-16. [DFS Traversal (Call Stack & Cycle Detection)](../src/modules/graphs/dfsTraversal.tsx) — Graphs
-17. [Topological Sort (Kahn's In-Degree DAG)](../src/modules/graphs/topologicalSort.tsx) — Graphs
-18. [Dijkstra's Algorithm (Min-Heap Shortest Path)](../src/modules/graphs/dijkstra.tsx) — Graphs
-19. [0/1 Knapsack Problem (2D DP Matrix)](../src/modules/dp/knapsack.tsx) — Dynamic Programming
-20. [Longest Common Subsequence (LCS 2D DP)](../src/modules/dp/lcs.tsx) — Dynamic Programming
-21. [Sieve of Eratosthenes (Prime Grid)](../src/modules/math/sieveOfEratosthenes.tsx) — Number Theory & Math
-22. [Octree 3D (Spatial Octant Partitioning)](../src/modules/trees/octree3d.tsx) — Spatial 3D
+1. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx) — Sorting
+2. [Mergesort (Divide & Conquer)](../src/modules/sorting/mergesort.tsx) — Sorting
+3. [Insertion Sort (Incremental Build)](../src/modules/sorting/insertionSort.tsx) — Sorting
+4. [Selection Sort (Minimum Scan)](../src/modules/sorting/selectionSort.tsx) — Sorting
+5. [Bubble Sort (Adjacent Swaps)](../src/modules/sorting/bubbleSort.tsx) — Sorting
+6. [Counting Sort (Frequency Bucket Indexing)](../src/modules/sorting/countingSort.tsx) — Sorting
+7. [Radix Sort LSD (Digit Bucket Passes)](../src/modules/sorting/radixSort.tsx) — Sorting
+8. [Linear Search (Sequential Scan)](../src/modules/searching/linearSearch.tsx) — Searching
+9. [Binary Search (Boundary Halving)](../src/modules/searching/binarySearch.tsx) — Searching
+10. [KMP Pattern Search (Knuth-Morris-Pratt)](../src/modules/strings/kmpSearch.tsx) — Strings
+11. [Balanced Parentheses (Stack LIFO)](../src/modules/stack/balancedParentheses.tsx) — Linear DS & Stack
+12. [Sieve of Eratosthenes (Prime Grid)](../src/modules/math/sieveOfEratosthenes.tsx) — Number Theory & Math
+13. [Euclidean Algorithm (GCD)](../src/modules/math/euclideanGcd.tsx) — Number Theory & Math
+14. [Longest Common Subsequence (LCS 2D DP)](../src/modules/dp/lcs.tsx) — Dynamic Programming
+15. [Binary Search Tree (BST Construction)](../src/modules/trees/bst.tsx) — Trees
+16. [Trie (Prefix Search & Autocomplete)](../src/modules/trees/trie.tsx) — Trees & Strings
+17. [Singly Linked List (Pointers & Mutations)](../src/modules/linkedList/singlyLinkedList.tsx) — Linked Lists
+18. [Binary Heap (Min-Heap Priority Queue)](../src/modules/trees/binaryHeap.tsx) — Priority Queues
+19. [BFS Wavefront (Queue Shortest Path)](../src/modules/graphs/bfsTraversal.tsx) — Graphs
+20. [DFS Traversal (Call Stack & Cycle Detection)](../src/modules/graphs/dfsTraversal.tsx) — Graphs
+21. [Topological Sort (Kahn's In-Degree DAG)](../src/modules/graphs/topologicalSort.tsx) — Graphs
+22. [Dijkstra's Algorithm (Min-Heap Shortest Path)](../src/modules/graphs/dijkstra.tsx) — Graphs
+23. [Kruskal's MST (DSU Edge Sorting)](../src/modules/graphs/kruskalMST.tsx) — Graphs
+24. [0/1 Knapsack Problem (2D DP Matrix)](../src/modules/dp/knapsack.tsx) — Dynamic Programming
+25. [Octree 3D (Spatial Octant Partitioning)](../src/modules/trees/octree3d.tsx) — Spatial 3D
