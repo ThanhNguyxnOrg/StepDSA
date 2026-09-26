@@ -26,6 +26,31 @@ import { kruskalMSTModule } from './graphs/kruskalMST';
 import { euclideanGcdModule } from './math/euclideanGcd';
 import { kmpModule } from './strings/kmpSearch';
 
+// Level-1 Core Curriculum Additions
+import { heapsortModule } from './sorting/heapsort';
+import { doublyLinkedListModule } from './linkedList/doublyLinkedList';
+import { queueVisualizerModule } from './stack/queueVisualizer';
+import { avlTreeModule } from './trees/avlTree';
+import { treeTraversalsModule } from './trees/treeTraversals';
+import { primMSTModule } from './graphs/primMST';
+import { rabinKarpModule } from './strings/rabinKarp';
+import { coinChangeModule } from './dp/coinChange';
+import { lisModule } from './dp/lis';
+import { towerOfHanoiModule } from './math/towerOfHanoi';
+
+// Level-2 Advanced Graph & Shortest Path Additions
+import { dsuModule } from './graphs/dsu';
+import { bellmanFordModule } from './graphs/bellmanFord';
+import { floydWarshallModule } from './graphs/floydWarshall';
+import { aStarModule } from './graphs/aStarSearch';
+
+// Level-2 DP, Strings & Backtracking Additions
+import { kadanesAlgorithmModule } from './dp/kadanesAlgorithm';
+import { editDistanceModule } from './dp/editDistance';
+import { zAlgorithmModule } from './strings/zAlgorithm';
+import { houseRobberModule } from './dp/houseRobber';
+import { nQueensModule } from './math/nQueens';
+
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
   mergesortModule,
@@ -34,23 +59,42 @@ export const allModules: AlgorithmModule[] = [
   bubbleSortModule,
   countingSortModule,
   radixSortModule,
+  heapsortModule,
   linearSearchModule,
   binarySearchModule,
   kmpModule,
+  rabinKarpModule,
+  zAlgorithmModule,
   balancedParenthesesModule,
+  queueVisualizerModule,
   sieveModule,
   euclideanGcdModule,
+  towerOfHanoiModule,
+  nQueensModule,
+  kadanesAlgorithmModule,
+  houseRobberModule,
   lcsModule,
+  coinChangeModule,
+  lisModule,
+  editDistanceModule,
+  knapsackModule,
   bstModule,
+  avlTreeModule,
+  treeTraversalsModule,
   trieModule,
   singlyLinkedListModule,
+  doublyLinkedListModule,
   binaryHeapModule,
   bfsTraversalModule,
   dfsTraversalModule,
   topologicalSortModule,
   dijkstraModule,
+  bellmanFordModule,
+  floydWarshallModule,
+  aStarModule,
   kruskalMSTModule,
-  knapsackModule,
+  primMSTModule,
+  dsuModule,
   octree3dModule,
 ];
 

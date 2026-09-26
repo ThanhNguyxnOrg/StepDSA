@@ -273,7 +273,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center gap-2 mb-4">
             <span className="text-amber-400 text-lg">✦</span>
             <h2 className="text-sm sm:text-base font-bold text-white">
-              Cách đọc mô phỏng StepDSA
+              How to Read StepDSA Simulations
             </h2>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 border border-amber-500/20 font-semibold">
               30-Second Guide
@@ -284,24 +284,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Color Legend */}
             <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
               <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#10B981]" /> Màu sắc
+                <span className="w-2 h-2 rounded-full bg-[#10B981]" /> Color Semantics
               </h3>
               <div className="space-y-1.5 text-[10px] text-slate-300">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded bg-[#10B981] shrink-0" />
-                  <span><strong className="text-[#10B981]">Xanh lá</strong> — Đã hoàn thành / Sắp xếp đúng</span>
+                  <span><strong className="text-[#10B981]">Emerald</strong> — Sorted / Settled / Complete</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded bg-[#F59E0B] shrink-0" />
-                  <span><strong className="text-[#F59E0B]">Vàng</strong> — Đang so sánh / Active</span>
+                  <span><strong className="text-[#F59E0B]">Amber</strong> — Comparing / Active Node</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded bg-[#06B6D4] shrink-0" />
-                  <span><strong className="text-[#06B6D4]">Cyan</strong> — Con trỏ biên / Queue</span>
+                  <span><strong className="text-[#06B6D4]">Cyan</strong> — Boundary Pointers / Queue</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded bg-[#F43F5E] shrink-0" />
-                  <span><strong className="text-[#F43F5E]">Đỏ</strong> — Swap / Loại bỏ / Lỗi</span>
+                  <span><strong className="text-[#F43F5E]">Rose</strong> — Swap / Discarded / Error</span>
                 </div>
               </div>
             </div>
@@ -309,40 +309,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Pointer Badges */}
             <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
               <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#06B6D4]" /> Con trỏ
+                <span className="w-2 h-2 rounded-full bg-[#06B6D4]" /> Pointer Badges
               </h3>
               <div className="space-y-1.5 text-[10px] text-slate-300">
                 <div className="flex items-center gap-1.5">
                   <span className="px-1 py-0.5 rounded bg-[#06B6D4] text-[#0B0F19] text-[8px] font-mono font-bold">LEFT</span>
                   <span className="px-1 py-0.5 rounded bg-[#10B981] text-[#0B0F19] text-[8px] font-mono font-bold">RIGHT</span>
                 </div>
-                <p className="text-slate-400">Nhãn dưới thanh bar = biến đang trỏ vào phần tử đó</p>
+                <p className="text-slate-400">Badges below bars indicate variables pointing to elements</p>
                 <div className="bg-[#1F2937] px-2 py-1 rounded font-mono text-[10px]">
                   <span className="text-amber-400">WATCH:</span>{' '}
                   <span className="text-white">left = 0</span>{' '}
                   <span className="text-slate-400">[38]</span>
                 </div>
-                <p className="text-slate-500 text-[9px]">= biến left ở index 0, giá trị 38</p>
+                <p className="text-slate-500 text-[9px]">= pointer left at index 0 holds value 38</p>
               </div>
             </div>
 
             {/* Step Modes */}
             <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
               <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-white" /> Chế độ Step
+                <span className="w-2 h-2 rounded-full bg-white" /> Stepping Modes
               </h3>
               <div className="space-y-1.5 text-[10px] text-slate-300">
                 <div className="flex items-center gap-2">
                   <kbd className="px-1.5 py-0.5 rounded bg-[#1F2937] border border-[#374151] text-[9px] font-mono text-white">← →</kbd>
-                  <span><strong className="text-white">Line</strong> — Từng dòng code</span>
+                  <span><strong className="text-white">Line</strong> — Discrete CPU line step</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <kbd className="px-1.5 py-0.5 rounded bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-[9px] font-mono text-[#06B6D4]">Shift+→</kbd>
-                  <span><strong className="text-[#06B6D4]">Action</strong> — Nhảy đến bước đổi state</span>
+                  <span><strong className="text-[#06B6D4]">Action</strong> — Fast-forward to milestone</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <kbd className="px-1.5 py-0.5 rounded bg-[#1F2937] border border-[#374151] text-[9px] font-mono text-white">Space</kbd>
-                  <span>Play / Pause tự động</span>
+                  <span>Auto Play / Pause</span>
                 </div>
               </div>
             </div>
@@ -353,9 +353,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="w-2 h-2 rounded-full bg-[#8B5CF6]" /> Code Inspector
               </h3>
               <div className="space-y-1.5 text-[10px] text-slate-300">
-                <p>Bảng bên phải hiển thị mã nguồn 5 ngôn ngữ, dòng đang chạy sáng xanh.</p>
-                <p><strong className="text-white">CALL STACK</strong> — Stack frame đệ quy (giống VS Code debugger).</p>
-                <p><strong className="text-white">SCOPE VARIABLES</strong> — Giá trị biến thời gian thực.</p>
+                <p>Right pane displays 5 synchronized languages with active line highlights.</p>
+                <p><strong className="text-white">CALL STACK</strong> — Recursive stack frames (IDE debugger style).</p>
+                <p><strong className="text-white">SCOPE VARIABLES</strong> — Live telemetry of local state.</p>
               </div>
             </div>
           </div>

@@ -12,52 +12,52 @@ const COLOR_LEGEND = [
     border: 'border-[#10B981]/50',
     name: 'Emerald / Green',
     meaning: 'Sorted · Settled · Valid · Confirmed',
-    example: 'Phần tử đã đúng vị trí, nút đã duyệt xong.',
+    example: 'Element in correct sorted position, node fully traversed, or accepted MST edge.',
   },
   {
     color: 'bg-[#F59E0B]',
     border: 'border-[#F59E0B]/50',
     name: 'Amber / Yellow',
     meaning: 'Active · Comparing · Current',
-    example: 'Đang so sánh 2 phần tử, đang xét nút hiện tại.',
+    example: 'Comparing 2 elements, inspecting current node, or testing candidate edge.',
   },
   {
     color: 'bg-[#06B6D4]',
     border: 'border-[#06B6D4]/50',
     name: 'Cyan / Blue',
     meaning: 'Range · Boundary · Queue · Pointer',
-    example: 'left/right boundary, BFS queue frontier.',
+    example: 'left/right search boundary, BFS queue frontier, or doubly-linked pointer.',
   },
   {
     color: 'bg-[#8B5CF6]',
     border: 'border-[#8B5CF6]/50',
     name: 'Violet / Purple',
     meaning: 'Pivot · Special Role · Key Element',
-    example: 'Pivot trong Quicksort, root trong BST.',
+    example: 'Partition pivot in Quicksort, root key in BST/AVL, or hash window anchor.',
   },
   {
     color: 'bg-[#F43F5E]',
     border: 'border-[#F43F5E]/50',
     name: 'Rose / Red',
     meaning: 'Swapping · Mismatch · Cycle · Discarded',
-    example: 'Hai phần tử đang swap, phần tử bị loại.',
+    example: 'Two elements being swapped, discarded element, or cycle rejection.',
   },
 ];
 
 const POINTER_BADGES = [
-  { badge: 'LEFT', color: 'bg-[#06B6D4] text-[#0B0F19]', desc: 'Con trỏ trái / biên dưới (left bound)' },
-  { badge: 'RIGHT', color: 'bg-[#10B981] text-[#0B0F19]', desc: 'Con trỏ phải / biên trên (right bound)' },
-  { badge: 'MID', color: 'bg-[#F59E0B] text-[#0B0F19]', desc: 'Điểm giữa (midpoint), thường trong Binary Search' },
-  { badge: 'PIVOT', color: 'bg-[#8B5CF6] text-white', desc: 'Phần tử pivot, dùng để phân vùng (Quicksort)' },
-  { badge: 'I', color: 'bg-[#06B6D4] text-[#0B0F19]', desc: 'Con trỏ duyệt chính (iterator index)' },
-  { badge: 'J', color: 'bg-[#10B981] text-[#0B0F19]', desc: 'Con trỏ phụ / so sánh (secondary pointer)' },
+  { badge: 'LEFT', color: 'bg-[#06B6D4] text-[#0B0F19]', desc: 'Left pointer / lower bound index' },
+  { badge: 'RIGHT', color: 'bg-[#10B981] text-[#0B0F19]', desc: 'Right pointer / upper bound index' },
+  { badge: 'MID', color: 'bg-[#F59E0B] text-[#0B0F19]', desc: 'Midpoint index (Binary Search / Divide & Conquer)' },
+  { badge: 'PIVOT', color: 'bg-[#8B5CF6] text-white', desc: 'Pivot partition element (Quicksort)' },
+  { badge: 'I', color: 'bg-[#06B6D4] text-[#0B0F19]', desc: 'Primary loop iterator pointer' },
+  { badge: 'J', color: 'bg-[#10B981] text-[#0B0F19]', desc: 'Secondary / comparison pointer' },
 ];
 
 const KEYBOARD_SHORTCUTS = [
-  { keys: 'Space', action: 'Play / Pause tự động chạy' },
-  { keys: '← →', action: 'Lùi / Tiến từng dòng code (Line step)' },
-  { keys: 'Shift + ← →', action: 'Nhảy đến Action trước / sau (Action step)' },
-  { keys: 'R', action: 'Reset về bước đầu tiên' },
+  { keys: 'Space', action: 'Play / Pause automatic execution' },
+  { keys: '← →', action: 'Step backward / forward one CPU instruction line' },
+  { keys: 'Shift + ← →', action: 'Step backward / forward to next visual milestone' },
+  { keys: 'R', action: 'Reset execution to initial state' },
 ];
 
 export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, onClose }) => {
@@ -73,10 +73,10 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
         <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-[#1F293D] bg-[#0B0F19]">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span className="text-amber-400">✦</span> Visual Legend — Chú Giải Ký Hiệu
+              <span className="text-amber-400">✦</span> Visual Legend & Interface Guide
             </h2>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Hướng dẫn đọc hiểu giao diện StepDSA cho người mới
+              Visual telemetry cheat sheet and UI convention guide for StepDSA
             </p>
           </div>
           <button
@@ -93,7 +93,7 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
           <section>
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-              Ý nghĩa màu sắc (Color Semantics)
+              Color Semantics
             </h3>
             <div className="space-y-2">
               {COLOR_LEGEND.map((item) => (
@@ -118,10 +118,10 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
           <section>
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#06B6D4]" />
-              Pointer Badges — Nhãn con trỏ dưới thanh mảng
+              Pointer Badges (Array & Graph Indices)
             </h3>
             <p className="text-[11px] text-slate-400 mb-3">
-              Mỗi badge hiển thị bên dưới thanh bar cho biết con trỏ nào đang chỉ vào phần tử đó.
+              Badges rendered beneath elements indicate which variable pointers currently reference that index.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {POINTER_BADGES.map((item) => (
@@ -139,7 +139,7 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
           <section>
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-              WATCH Expression — Biểu thức theo dõi
+              WATCH Expression (Live Variable Evaluation)
             </h3>
             <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F293D]">
               <div className="flex items-center gap-2 mb-2">
@@ -149,11 +149,11 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
                 </code>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Nghĩa là biến <code className="text-cyan-300 font-mono">left</code> đang có giá trị index là{' '}
-                <code className="text-white font-mono">0</code>, và phần tử tại index đó có giá trị{' '}
+                Indicates variable <code className="text-cyan-300 font-mono">left</code> currently holds index{' '}
+                <code className="text-white font-mono">0</code>, and the element at that index contains value{' '}
                 <code className="text-amber-300 font-mono">[38]</code>.
                 <br />
-                Cú pháp: <code className="text-slate-300 font-mono">tên_biến = index [giá_trị_tại_index]</code>
+                Syntax: <code className="text-slate-300 font-mono">variable_name = index [value_at_index]</code>
               </p>
             </div>
           </section>
@@ -162,7 +162,7 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
           <section>
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-white" />
-              Chế độ Step — Line vs Action
+              Stepping Modes — Line vs Action
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F293D]">
@@ -171,7 +171,7 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
                   <span className="text-[10px] text-slate-500 font-mono">← →</span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Từng dòng code — mỗi bước tiến/lùi 1 dòng code, giống F10 trong debugger.
+                  Discrete CPU instruction line — steps 1 code line per click, identical to F10 in an IDE debugger.
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-[#06B6D4]/5 border border-[#06B6D4]/30">
@@ -180,7 +180,7 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
                   <span className="text-[10px] text-slate-500 font-mono">Shift + →</span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Nhảy đến hành động tiếp theo — bỏ qua các dòng không thay đổi state, giống Shift+F10.
+                  Visual milestone jump — skips non-mutating lines and jumps directly to state changes, like Shift+F10.
                 </p>
               </div>
             </div>
@@ -190,7 +190,7 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
           <section>
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <Keyboard className="w-3.5 h-3.5 text-slate-400" />
-              Phím tắt (Keyboard Shortcuts)
+              Keyboard Shortcuts
             </h3>
             <div className="space-y-1.5">
               {KEYBOARD_SHORTCUTS.map((item) => (
@@ -212,13 +212,13 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
             </h3>
             <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F293D] space-y-2">
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                <strong className="text-white">Code Inspector</strong> (bảng bên phải) hiển thị mã nguồn thuật toán bằng 5 ngôn ngữ 
-                (C++, Python, TypeScript, Java, Pseudocode). Dòng code đang thực thi được highlight xanh lá.
+                <strong className="text-white">Code Inspector</strong> (right pane) displays synchronized source code across 5 languages 
+                (C++, Python, TypeScript, Java, Pseudocode). The active execution line is highlighted in emerald.
               </p>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                <strong className="text-white">CALL STACK</strong> cho thấy stack frame hiện tại — giống cửa sổ debugger 
-                trong VS Code. <strong className="text-white">SCOPE VARIABLES</strong> hiển thị giá trị thực của các biến 
-                tại bước hiện tại.
+                <strong className="text-white">CALL STACK</strong> displays recursive frame depth — identical to an IDE debugger window 
+                in VS Code. <strong className="text-white">SCOPE VARIABLES</strong> displays real-time values of local variables 
+                at the current step.
               </p>
             </div>
           </section>
@@ -227,13 +227,13 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
         {/* Footer */}
         <div className="shrink-0 px-6 py-3 border-t border-[#1F293D] bg-[#0B0F19] flex items-center justify-between">
           <p className="text-[10px] text-slate-500">
-            Bấm <kbd className="px-1 py-0.5 rounded bg-[#1F2937] border border-[#374151] text-[10px] font-mono text-slate-300">Esc</kbd> hoặc click ngoài để đóng
+            Press <kbd className="px-1 py-0.5 rounded bg-[#1F2937] border border-[#374151] text-[10px] font-mono text-slate-300">Esc</kbd> or click outside to dismiss
           </p>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-[#10B981] text-[#0B0F19] text-xs font-bold hover:bg-[#059669] transition-colors"
           >
-            Đã hiểu!
+            Got it!
           </button>
         </div>
       </div>

@@ -195,7 +195,7 @@ export default function App() {
                   <button
                     onClick={() => setLegendOpen(true)}
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-amber-400/90 hover:text-amber-300 hover:bg-amber-400/10 transition-colors border border-amber-500/20"
-                    title="Ký hiệu & Hướng dẫn trực quan (Visual Legend)"
+                    title="Visual Legend & Interface Guide"
                   >
                     <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
                     <span>Visual Legend</span>
