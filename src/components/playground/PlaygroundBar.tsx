@@ -32,23 +32,51 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
   onApplyData,
   currentData,
 }) => {
-  const isSortingOrArray =
+  const isArrayAccepting =
     currentModule.category === 'sorting' ||
-    currentModule.id === 'linear-search' ||
-    currentModule.id === 'counting-sort';
+    currentModule.category === 'linked-lists' ||
+    [
+      'linear-search',
+      'binary-search',
+      'rotated-sorted-array',
+      'two-pointers-water',
+      'sliding-window-max-sum',
+      'queue-visualizer',
+      'monotonic-stack',
+      'binary-heap',
+      'bst-insert',
+      'avl-tree',
+      'tree-traversals',
+      'kadanes-algorithm',
+      'house-robber',
+    ].includes(currentModule.id);
+
+  const isStringAccepting = [
+    'balanced-parentheses',
+    'longest-palindromic-substring',
+  ].includes(currentModule.id);
 
   const isBinarySearch = currentModule.id === 'binary-search';
 
   // Extract array representation if applicable
   const currentArray: number[] = Array.isArray(currentData)
     ? currentData
-    : currentData?.array && Array.isArray(currentData.array)
+    : Array.isArray(currentData?.array)
     ? currentData.array
+    : Array.isArray(currentData?.values)
+    ? currentData.values
+    : Array.isArray(currentData?.valuesToInsert)
+    ? currentData.valuesToInsert
+    : Array.isArray(currentData?.nums)
+    ? currentData.nums
     : [];
 
-  const [customText, setCustomText] = useState<string>(
-    currentArray.length > 0 ? currentArray.join(', ') : ''
-  );
+  const [customText, setCustomText] = useState<string>(() => {
+    if (isArrayAccepting && currentArray.length > 0) return currentArray.join(', ');
+    if (isStringAccepting && typeof currentData === 'string') return currentData;
+    return '';
+  });
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [arraySize, setArraySize] = useState<number>(
     currentArray.length > 0 ? currentArray.length : 10
@@ -56,11 +84,12 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
 
   // Sync customText when currentData changes
   useEffect(() => {
-    if (isSortingOrArray || isBinarySearch) {
-      if (currentArray.length > 0) {
-        setCustomText(currentArray.join(', '));
-        setArraySize(currentArray.length);
-      }
+    setErrorMsg(null);
+    if (isArrayAccepting && currentArray.length > 0) {
+      setCustomText(currentArray.join(', '));
+      setArraySize(currentArray.length);
+    } else if (isStringAccepting && typeof currentData === 'string') {
+      setCustomText(currentData);
     }
   }, [currentData, currentModule.id]);
 
@@ -71,9 +100,8 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
 
     if (isBinarySearch) {
       const sorted = generateSortedArray(newSize);
-      const target = sorted[Math.floor(sorted.length / 2)];
       setCustomText(sorted.join(', '));
-      onApplyData({ array: sorted, target });
+      onApplyData(sorted);
     } else {
       const newArr = generateRandomArray(newSize);
       setCustomText(newArr.join(', '));
@@ -81,7 +109,7 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
     }
   };
 
-  // Preset generators for sorting & linear search
+  // Preset generators for sorting modules without explicit presets
   const sortingPresets = [
     { label: 'Random', icon: Shuffle, fn: () => generateRandomArray(arraySize) },
     { label: 'Nearly Sorted', icon: TrendingUp, fn: () => generateNearlySortedArray(arraySize) },
@@ -92,19 +120,22 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
 
   const handleApplyCustom = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSortingOrArray && !isBinarySearch) return;
 
-    const result = parseCustomArray(customText);
-    if (result.error) {
-      setErrorMsg(result.error);
-    } else {
-      setErrorMsg(null);
-      if (isBinarySearch) {
-        const sorted = [...result.data].sort((a, b) => a - b);
-        setCustomText(sorted.join(', '));
-        onApplyData({ array: sorted, target: sorted[Math.floor(sorted.length / 2)] });
+    if (isArrayAccepting) {
+      const result = parseCustomArray(customText);
+      if (result.error) {
+        setErrorMsg(result.error);
       } else {
+        setErrorMsg(null);
         onApplyData(result.data);
+      }
+    } else if (isStringAccepting) {
+      const trimmed = customText.trim();
+      if (!trimmed) {
+        setErrorMsg('Input string cannot be empty.');
+      } else {
+        setErrorMsg(null);
+        onApplyData(trimmed);
       }
     }
   };
@@ -114,17 +145,20 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
     onApplyData(data);
   };
 
+  const hasModulePresets = currentModule.presets && currentModule.presets.length > 0;
+  const showSortingPresets = !hasModulePresets && (currentModule.category === 'sorting' || isArrayAccepting);
+
   return (
     <div className="bg-[#0B0F19] border-b border-[#1F293D] px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs select-none">
-      {/* 1. If Module has native custom presets (Graphs, Trees, DP, Math, Binary Search) */}
+      {/* 1. Presets / Curated Scenarios */}
       <div className="flex flex-wrap items-center gap-1.5 py-0.5">
         <span className="text-slate-400 font-medium flex items-center gap-1 mr-1 text-[11px] uppercase tracking-wider font-mono">
           <SlidersHorizontal className="w-3.5 h-3.5 text-[#06B6D4]" /> Presets:
         </span>
 
-        {/* If the module has curated presets in its definition, show them! */}
-        {currentModule.presets && currentModule.presets.length > 0 ? (
-          currentModule.presets.map((preset) => (
+        {/* Module defined curated presets */}
+        {hasModulePresets ? (
+          currentModule.presets!.map((preset) => (
             <button
               key={preset.id}
               onClick={() => handleApplyPreset(preset.data)}
@@ -135,7 +169,7 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
               <span>{preset.label}</span>
             </button>
           ))
-        ) : isSortingOrArray ? (
+        ) : showSortingPresets ? (
           sortingPresets.map((preset) => {
             const Icon = preset.icon;
             return (
@@ -153,14 +187,16 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
               </button>
             );
           })
-        ) : null}
+        ) : (
+          <span className="text-slate-500 font-mono text-[11px] italic">Default configured</span>
+        )}
 
-        {/* Size Selector ONLY for Array / Sorting / Binary Search modules */}
-        {(isSortingOrArray || isBinarySearch) && (
+        {/* Size Selector for Array-Accepting modules */}
+        {isArrayAccepting && (
           <div className="flex items-center gap-1.5 border-l border-[#1F293D] pl-2 ml-1 text-slate-400 text-[11px]">
             <button
               onClick={() => handleSizeChange(arraySize)}
-              title="Regenerate random numbers"
+              title="Regenerate numbers"
               className="p-1 rounded-md bg-[#111827] border border-[#1F293D] hover:border-[#10B981] text-[#10B981] hover:bg-[#10B981]/10 transition-colors mr-1"
             >
               <RotateCcw className="w-3 h-3" />
@@ -184,8 +220,8 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
         )}
       </div>
 
-      {/* 2. Custom Input Form ONLY for Array / Sorting / Binary Search modules */}
-      {(isSortingOrArray || isBinarySearch) && (
+      {/* 2. Custom Input Form (Array numbers or String) */}
+      {(isArrayAccepting || isStringAccepting) && (
         <form onSubmit={handleApplyCustom} className="flex items-center gap-2 flex-1 max-w-md min-w-[260px]">
           <div className="relative flex-1">
             <input
@@ -195,7 +231,11 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
                 setCustomText(e.target.value);
                 if (errorMsg) setErrorMsg(null);
               }}
-              placeholder="Custom numbers (e.g. 45, 12, 89, 3)"
+              placeholder={
+                isArrayAccepting
+                  ? 'Custom numbers (e.g. 45, 12, 89, 3)'
+                  : "Custom string (e.g. '({[]})' or 'racecar')"
+              }
               className="w-full bg-[#111827] border border-[#1F293D] focus:border-[#10B981] rounded-lg px-3 py-1 text-xs text-white placeholder-slate-500 font-mono outline-none transition-colors"
             />
           </div>

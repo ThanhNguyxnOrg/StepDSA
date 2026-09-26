@@ -29,4 +29,30 @@ describe('App Full Integration Smoke Test', () => {
 
     expect(screen.getByText(/100% Local Execution Security/i)).toBeInTheDocument();
   });
+
+  it('navigates to Workbench and applies presets and custom input cleanly', () => {
+    render(<App />);
+    const launchButtons = screen.getAllByText(/Launch Visualizer/i);
+    fireEvent.click(launchButtons[0]);
+
+    // Click 'Worst Case (Reversed)' preset
+    const reversedPreset = screen.getByText('Worst Case (Reversed)');
+    expect(reversedPreset).toBeInTheDocument();
+    fireEvent.click(reversedPreset);
+
+    // Timeline should update and show step 1
+    expect(screen.getByText(/Step 1\//i)).toBeInTheDocument();
+
+    // Change size to 6
+    const size6Btn = screen.getByRole('button', { name: '6' });
+    fireEvent.click(size6Btn);
+    expect(screen.getByText(/Step 1\//i)).toBeInTheDocument();
+
+    // Custom input apply
+    const input = screen.getByPlaceholderText(/Custom numbers/i);
+    fireEvent.change(input, { target: { value: '10, 20, 30, 40' } });
+    const applyBtn = screen.getByText('Apply');
+    fireEvent.click(applyBtn);
+    expect(screen.getByText(/Step 1\//i)).toBeInTheDocument();
+  });
 });

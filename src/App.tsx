@@ -120,10 +120,28 @@ export default function App() {
   };
 
   const handleApplyPlaygroundData = (newData: any) => {
-    if (currentModule.id === 'binary-search' && Array.isArray(newData)) {
-      setCurrentData({ array: newData, target: newData[Math.floor(newData.length / 2)] });
-    } else if (currentModule.id === 'bst-insert' && Array.isArray(newData)) {
-      setCurrentData({ valuesToInsert: newData });
+    if (Array.isArray(newData)) {
+      if (currentModule.id === 'binary-search') {
+        const sorted = [...newData].sort((a, b) => a - b);
+        setCurrentData({ array: sorted, target: sorted[Math.floor(sorted.length / 2)] });
+      } else if (currentModule.id === 'linear-search') {
+        setCurrentData({ array: newData, target: newData[Math.floor(newData.length / 2)] ?? 10 });
+      } else if (currentModule.id === 'rotated-sorted-array') {
+        setCurrentData({ array: newData, target: newData[0] ?? 0 });
+      } else if (currentModule.id === 'bst-insert') {
+        setCurrentData({ valuesToInsert: newData });
+      } else if (currentModule.id === 'avl-tree' || currentModule.id === 'tree-traversals') {
+        setCurrentData({ values: newData });
+      } else if (currentModule.id === 'kadanes-algorithm') {
+        setCurrentData({ array: newData });
+      } else if (currentModule.id === 'house-robber') {
+        setCurrentData({ nums: newData });
+      } else if (currentModule.id === 'sliding-window-max-sum') {
+        const k = Math.min(3, Math.max(1, Math.floor(newData.length / 2)));
+        setCurrentData({ array: newData, k });
+      } else {
+        setCurrentData(newData);
+      }
     } else {
       setCurrentData(newData);
     }
