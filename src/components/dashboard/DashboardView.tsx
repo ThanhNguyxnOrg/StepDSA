@@ -51,18 +51,7 @@ const ALGO_METADATA: Record<
     tags: ['sorted-array', 'halving', 'O(log N)'],
     themeColor: 'purple',
   },
-  'two-pointers': {
-    shortTitle: 'Two Pointers',
-    subtitle: 'Inward Convergence',
-    tags: ['two-pointers', 'max-area', 'linear-scan'],
-    themeColor: 'amber',
-  },
-  'sliding-window': {
-    shortTitle: 'Sliding Window',
-    subtitle: 'Dynamic Subarray',
-    tags: ['fixed-k', 'subarray-sum', 'rolling-state'],
-    themeColor: 'teal',
-  },
+
   'bst-insert': {
     shortTitle: 'BST Tree',
     subtitle: 'Binary Search Tree',

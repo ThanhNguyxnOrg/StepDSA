@@ -12,7 +12,8 @@ import { DashboardView } from './components/dashboard/DashboardView';
 import { AboutModal } from './components/about/AboutModal';
 import { PersonalCodeStudioModal } from './components/developer/PersonalCodeStudioModal';
 import { soundEngine } from './utils/soundEngine';
-import { BookOpen, Code2 } from 'lucide-react';
+import { BookOpen, Code2, HelpCircle } from 'lucide-react';
+import { VisualLegendModal } from './components/workbench/VisualLegendModal';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'visualizer'>('dashboard');
@@ -23,6 +24,7 @@ export default function App() {
   const [codeOpen, setCodeOpen] = useState<boolean>(true); // Code open for synchronized tracking
   const [aboutOpen, setAboutOpen] = useState<boolean>(false);
   const [personalStudioOpen, setPersonalStudioOpen] = useState<boolean>(false);
+  const [legendOpen, setLegendOpen] = useState<boolean>(false);
 
   // When module changes, update input to module's defaultInput
   const handleSelectModule = (mod: AlgorithmModule) => {
@@ -168,9 +170,9 @@ export default function App() {
             />
 
             {/* Central Stage & Controls */}
-            <main className="flex-1 flex flex-col justify-between overflow-hidden bg-radial from-[#111827]/40 to-[#0B0F19]">
+            <main className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden bg-radial from-[#111827]/40 to-[#0B0F19]">
               {/* Top sub-bar with Quick Panel Toggles */}
-              <div className="px-4 py-2 flex items-center justify-between border-b border-[#1F293D]/60 bg-[#111827]/30">
+              <div className="shrink-0 px-4 py-2 flex items-center justify-between border-b border-[#1F293D]/60 bg-[#111827]/30">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setTheoryOpen(!theoryOpen)}
@@ -190,6 +192,14 @@ export default function App() {
                     <Code2 className="w-3.5 h-3.5" />
                     <span>Code Inspector</span>
                   </button>
+                  <button
+                    onClick={() => setLegendOpen(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-amber-400/90 hover:text-amber-300 hover:bg-amber-400/10 transition-colors border border-amber-500/20"
+                    title="Ký hiệu & Hướng dẫn trực quan (Visual Legend)"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Visual Legend</span>
+                  </button>
                 </div>
 
                 <div className="text-[11px] font-mono text-slate-500">
@@ -198,12 +208,12 @@ export default function App() {
               </div>
 
               {/* Step Explanation Banner */}
-              <div className="p-3 pb-0 max-w-5xl mx-auto w-full">
+              <div className="shrink-0 p-3 pb-0 max-w-5xl mx-auto w-full">
                 <StepNarrationBanner frame={currentFrame} />
               </div>
 
               {/* Visual Stage */}
-              <div className="flex-1 flex items-center justify-center relative overflow-hidden px-4">
+              <div className="flex-1 min-h-0 flex items-center justify-center relative overflow-hidden px-4">
                 {currentFrame ? (
                   currentModule.renderStage(currentFrame, '2d')
                 ) : (
@@ -211,8 +221,10 @@ export default function App() {
                 )}
               </div>
 
-              {/* Bottom Stepper Controls */}
-              <StepperControls controller={controller} currentFrame={currentFrame} />
+              {/* Bottom Stepper Controls (shrink-0 to prevent viewport clipping) */}
+              <div className="shrink-0">
+                <StepperControls controller={controller} currentFrame={currentFrame} />
+              </div>
             </main>
 
             {/* Right Drawer: Multi-Language Code Inspector & Call Stack Debugger */}
@@ -235,6 +247,7 @@ export default function App() {
         onClose={() => setPersonalStudioOpen(false)}
         onLoadCustomSnapshot={(customMod) => handleSelectModule(customMod)}
       />
+      <VisualLegendModal isOpen={legendOpen} onClose={() => setLegendOpen(false)} />
     </div>
   );
 }
