@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-bg-base: #0B0F19;
+  --color-bg-surface: #111827;
+  --color-bg-elevated: #1F2937;
+  --color-border-subtle: #1F293D;
+  --color-border-focus: #10B981;
+
+  --color-accent-emerald: #10B981;
+  --color-accent-cyan: #06B6D4;
+  --color-accent-amber: #F59E0B;
+  --color-accent-rose: #F43F5E;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0F19;
+}
+::-webkit-scrollbar-thumb {
+  background: #1F293D;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+/* 2.5D Isometric Stage Projection */
+.stage-isometric {
+  transform: perspective(1000px) rotateX(22deg) rotateZ(-6deg) scale(0.92);
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stage-flat {
+  transform: perspective(1000px) rotateX(0deg) rotateZ(0deg) scale(1);
+  transform-style: flat;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
