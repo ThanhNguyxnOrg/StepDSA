@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, ShieldCheck, AlertCircle, Clock, Database, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, ShieldCheck, AlertCircle, Clock, Database, X } from 'lucide-react';
 import { AlgorithmModule } from '../../core/types';
 
 interface TheoryDrawerProps {
@@ -9,116 +9,125 @@ interface TheoryDrawerProps {
 }
 
 export const TheoryDrawer: React.FC<TheoryDrawerProps> = ({ module, isOpen, onToggle }) => {
+  if (!isOpen) return null;
+
   return (
-    <aside
-      className={`relative transition-all duration-300 ease-in-out border-r border-[#1F293D] bg-[#0B0F19] flex flex-col ${
-        isOpen ? 'w-full md:w-80 lg:w-96' : 'w-12'
-      }`}
-    >
-      {/* Collapse Toggle Button */}
-      <button
-        onClick={onToggle}
-        title={isOpen ? 'Collapse Theory Panel' : 'Expand Theory Panel'}
-        className="absolute -right-3.5 top-6 z-20 w-7 h-7 rounded-full bg-[#1F2937] border border-[#1F293D] text-slate-300 hover:text-white flex items-center justify-center hover:bg-[#374151] shadow-md transition-colors"
-      >
-        {isOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-      </button>
+    <aside className="w-88 shrink-0 border-r border-[#1F293D] bg-[#0B0F19] flex flex-col h-full overflow-hidden z-10 transition-all">
+      {/* Drawer Header */}
+      <div className="h-11 px-4 border-b border-[#1F293D] flex items-center justify-between bg-[#111827]/80 shrink-0">
+        <div className="flex items-center gap-2 text-xs font-mono font-semibold text-slate-200">
+          <BookOpen className="w-4 h-4 text-[#10B981]" />
+          <span>THEORY & INVARIANT</span>
+        </div>
+        <button
+          onClick={onToggle}
+          title="Close Theory Panel"
+          className="p-1 rounded hover:bg-[#1F2937] text-slate-400 hover:text-white transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
 
-      {isOpen ? (
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
-          {/* Header & Badges */}
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full border border-[#10B981]/20">
-                {module.category}
-              </span>
-              <span className="text-[11px] font-medium text-slate-400 bg-[#1F2937] px-2 py-0.5 rounded-full">
-                {module.difficulty}
-              </span>
-            </div>
-            <h2 className="text-xl font-bold tracking-tight text-white">{module.title}</h2>
+      {/* Drawer Content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        {/* Title & Badges */}
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#10B981] bg-[#10B981]/15 px-2 py-0.5 rounded border border-[#10B981]/30">
+              {module.category}
+            </span>
+            <span className="text-[10px] font-medium text-slate-400 bg-[#1F2937] px-2 py-0.5 rounded">
+              {module.difficulty}
+            </span>
           </div>
+          <h2 className="text-base font-bold text-white leading-snug">{module.title}</h2>
+        </div>
 
-          {/* Complexity Matrix */}
-          <div className="rounded-xl bg-[#111827] border border-[#1F293D] p-3.5 space-y-3">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-300 border-b border-[#1F293D] pb-2">
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#06B6D4]" /> Time Complexity
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5 text-[#F59E0B]" /> Space Complexity
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div className="space-y-1">
-                <div className="flex justify-between text-slate-400">
-                  <span>Best:</span>
-                  <span className="text-[#10B981] font-semibold">{module.complexity.timeBest}</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Avg:</span>
-                  <span className="text-white font-semibold">{module.complexity.timeAverage}</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Worst:</span>
-                  <span className="text-[#F43F5E] font-semibold">{module.complexity.timeWorst}</span>
-                </div>
+        {/* Complexity Grid */}
+        <div className="rounded-xl bg-[#111827] border border-[#1F293D] p-3 space-y-2.5">
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div>
+              <div className="flex items-center gap-1 text-slate-400 text-[10px] uppercase font-semibold mb-1">
+                <Clock className="w-3 h-3 text-[#06B6D4]" />
+                <span>Time Complexity</span>
               </div>
-              <div className="space-y-1 border-l border-[#1F293D] pl-2.5">
-                <div className="flex justify-between text-slate-400">
-                  <span>Auxiliary:</span>
-                  <span className="text-[#F59E0B] font-semibold">{module.complexity.spaceAuxiliary}</span>
+              <div className="space-y-0.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Best:</span>
+                  <span className="text-[#10B981] font-bold">{module.complexity.timeBest}</span>
                 </div>
-                <div className="text-[10px] text-slate-500 font-sans mt-1 leading-tight">
-                  Worst trigger: {module.complexity.worstCaseCondition}
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Avg:</span>
+                  <span className="text-white font-bold">{module.complexity.timeAverage}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Worst:</span>
+                  <span className="text-[#F43F5E] font-bold">{module.complexity.timeWorst}</span>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Overview */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-[#06B6D4]" /> Conceptual Overview
-            </h3>
-            <p className="text-xs leading-relaxed text-slate-300">{module.theory.overview}</p>
-          </div>
-
-          {/* Why it works / Intuition */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" /> Core Invariant
-            </h3>
-            <div className="p-3 rounded-lg bg-[#111827] border-l-2 border-[#10B981] text-xs text-slate-200 leading-relaxed font-mono">
-              {module.theory.invariant}
+            <div>
+              <div className="flex items-center gap-1 text-slate-400 text-[10px] uppercase font-semibold mb-1">
+                <Database className="w-3 h-3 text-[#F59E0B]" />
+                <span>Space Complexity</span>
+              </div>
+              <div className="space-y-0.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Auxiliary:</span>
+                  <span className="text-[#F59E0B] font-bold">{module.complexity.spaceAuxiliary}</span>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed mt-2">{module.theory.whyItWorks}</p>
           </div>
 
-          {/* Pitfalls & Edge cases */}
-          {module.theory.pitfalls.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 text-[#F59E0B]" /> Gotchas & Edge Cases
-              </h3>
-              <ul className="space-y-1.5 text-xs text-slate-400 list-disc list-inside">
-                {module.theory.pitfalls.map((pitfall, idx) => (
-                  <li key={idx} className="leading-relaxed">
-                    <span className="text-slate-300">{pitfall}</span>
-                  </li>
-                ))}
-              </ul>
+          {module.complexity.worstCaseCondition && (
+            <div className="pt-2 border-t border-[#1F293D] text-[10px] font-mono text-slate-400">
+              <span className="text-amber-300 font-semibold">Worst trigger:</span>{' '}
+              <span>{module.complexity.worstCaseCondition}</span>
             </div>
           )}
         </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center py-6 gap-6 text-slate-400">
-          <BookOpen className="w-5 h-5 text-[#10B981]" />
-          <div className="writing-vertical text-xs font-mono tracking-widest uppercase rotate-180 text-slate-500">
-            THEORY & INVARIANTS
-          </div>
+
+        {/* Conceptual Overview */}
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-mono font-semibold tracking-wider uppercase text-slate-300 flex items-center gap-1.5">
+            <BookOpen className="w-3.5 h-3.5 text-[#06B6D4]" /> Conceptual Overview
+          </h3>
+          <p className="text-xs text-slate-300 leading-relaxed font-sans">{module.theory.overview}</p>
         </div>
-      )}
+
+        {/* Core Invariant */}
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-mono font-semibold tracking-wider uppercase text-slate-300 flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" /> Core Invariant
+          </h3>
+          <div className="rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 p-3">
+            <p className="text-xs font-mono text-[#10B981] font-semibold leading-relaxed">
+              {module.theory.invariant}
+            </p>
+          </div>
+          {module.theory.whyItWorks && (
+            <p className="text-xs text-slate-300 leading-relaxed font-sans">{module.theory.whyItWorks}</p>
+          )}
+        </div>
+
+        {/* Pitfalls & Gotchas */}
+        {module.theory.pitfalls && module.theory.pitfalls.length > 0 && (
+          <div className="space-y-1.5">
+            <h3 className="text-xs font-mono font-semibold tracking-wider uppercase text-slate-300 flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 text-[#F59E0B]" /> Gotchas & Edge Cases
+            </h3>
+            <ul className="space-y-1 text-xs text-slate-300 list-disc list-inside">
+              {module.theory.pitfalls.map((pitfall, idx) => (
+                <li key={idx} className="leading-relaxed">
+                  <span>{pitfall}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </aside>
   );
 };

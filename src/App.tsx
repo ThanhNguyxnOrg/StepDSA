@@ -42,7 +42,18 @@ export default function App() {
 
   // Hook into playback controller
   const controller = useTimelinePlayback(timeline);
-  const { currentFrame, currentStep, isPlaying, play, pause, stepForward, stepBackward, reset } = controller;
+  const {
+    currentFrame,
+    currentStep,
+    isPlaying,
+    play,
+    pause,
+    stepForward,
+    stepBackward,
+    stepToNextAction,
+    stepToPrevAction,
+    reset,
+  } = controller;
 
   // Sound triggering effect
   useEffect(() => {
@@ -59,7 +70,7 @@ export default function App() {
     }
   }, [currentStep, currentFrame, isMuted, currentView]);
 
-  // Global Keyboard Shortcuts (Space, Arrows, R)
+  // Global Keyboard Shortcuts (Space, Arrows, Shift+Arrows, R)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (currentView !== 'visualizer') return;
@@ -78,10 +89,18 @@ export default function App() {
         else play();
       } else if (e.code === 'ArrowRight') {
         e.preventDefault();
-        stepForward();
+        if (e.shiftKey && stepToNextAction) {
+          stepToNextAction();
+        } else {
+          stepForward();
+        }
       } else if (e.code === 'ArrowLeft') {
         e.preventDefault();
-        stepBackward();
+        if (e.shiftKey && stepToPrevAction) {
+          stepToPrevAction();
+        } else {
+          stepBackward();
+        }
       } else if (e.code === 'KeyR') {
         e.preventDefault();
         reset();
@@ -90,7 +109,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, play, pause, stepForward, stepBackward, reset, currentView]);
+  }, [isPlaying, play, pause, stepForward, stepBackward, stepToNextAction, stepToPrevAction, reset, currentView]);
 
   const handleToggleSound = () => {
     const next = !isMuted;
@@ -202,10 +221,12 @@ export default function App() {
               <StepperControls controller={controller} currentFrame={currentFrame} />
             </main>
 
-            {/* Right Drawer: Multi-Language Code Inspector */}
+            {/* Right Drawer: Multi-Language Code Inspector & Call Stack Debugger */}
             <CodeInspector
               codeSnippets={currentModule.codeSnippets}
               activeLine={currentFrame?.codeLine || 1}
+              frame={currentFrame}
+              moduleName={currentModule.title}
               isOpen={codeOpen}
               onToggle={() => setCodeOpen(!codeOpen)}
             />

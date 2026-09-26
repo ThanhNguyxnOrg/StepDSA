@@ -90,14 +90,15 @@ export const StepperControls: React.FC<StepperControlsProps> = ({ controller, cu
             <SkipBack className="w-4 h-4" />
           </button>
 
-          {/* Step Back */}
+          {/* Step Back (Line) */}
           <button
             onClick={stepBackward}
             disabled={currentStep === 0}
-            title="Step Back (← Arrow Left)"
-            className="p-2 rounded-lg bg-[#1F2937] text-slate-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] active:-translate-y-0.5 transition-all"
+            title="Step Back Line (← Arrow Left)"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#1F2937] text-slate-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] active:-translate-y-0.5 transition-all text-xs font-mono font-medium"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Line</span>
           </button>
 
           {/* Play / Pause Primary Button */}
@@ -113,25 +114,29 @@ export const StepperControls: React.FC<StepperControlsProps> = ({ controller, cu
             {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
           </button>
 
-          {/* Step Forward */}
+          {/* Step Forward (Line) */}
           <button
             onClick={stepForward}
             disabled={currentStep >= totalSteps - 1}
-            title="Step Forward (→ Arrow Right)"
-            className="p-2 rounded-lg bg-[#1F2937] text-slate-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] active:-translate-y-0.5 transition-all"
+            title="Step Forward Line (→ Arrow Right)"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#1F2937] text-slate-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] active:-translate-y-0.5 transition-all text-xs font-mono font-medium"
           >
-            <ChevronRight className="w-5 h-5" />
+            <span className="hidden sm:inline">Line</span>
+            <ChevronRight className="w-4 h-4" />
           </button>
 
-          {/* Jump to End */}
-          <button
-            onClick={() => seekTo(totalSteps - 1)}
-            disabled={currentStep >= totalSteps - 1}
-            title="Jump to End"
-            className="p-2 rounded-lg bg-[#1F2937] text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-colors"
-          >
-            <SkipForward className="w-4 h-4" />
-          </button>
+          {/* Next Action Milestone Button */}
+          {controller.stepToNextAction && (
+            <button
+              onClick={controller.stepToNextAction}
+              disabled={currentStep >= totalSteps - 1}
+              title="Jump to Next Action / State Mutation (Shift + →)"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-[#06B6D4] hover:bg-[#06B6D4]/25 hover:text-cyan-200 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-mono font-bold transition-all shadow-sm"
+            >
+              <span>Action</span>
+              <SkipForward className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Right: Speed Toggle */}

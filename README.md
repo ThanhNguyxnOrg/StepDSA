@@ -4,16 +4,26 @@
 
 ### The Modern Interactive DSA Learning Platform & Time-Travel Visualizer
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
-[![GitHub Workflow Status](https://img.shields.io/badge/CI-Passing-22c55e.svg)](.github/workflows/ci.yml)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-06b6d4.svg)](CONTRIBUTING.md)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
-[![React 19](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
-[![Tailwind CSS v4](https://img.shields.io/badge/TailwindCSS-v4-38bdf8.svg)](https://tailwindcss.com/)
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="MIT License" /></a>
+  <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI-Passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI Status" /></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-Welcome-06b6d4?style=for-the-badge&logo=git&logoColor=white" alt="PRs Welcome" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=black" alt="React 19" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/TailwindCSS-v4-38bdf8?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS v4" /></a>
+</p>
 
-**Interactive Textbook** &nbsp;•&nbsp; **Deterministic Step Visualizer** &nbsp;•&nbsp; **DSA Playground**
+<p align="center">
+  <img src="https://img.shields.io/badge/ICPC-Competitive_Ready-f59e0b?style=flat-square&logo=codeforces&logoColor=white" alt="ICPC Ready" />
+  <img src="https://img.shields.io/badge/Code-C%2B%2B%20%7C%20Python%20%7C%20Java%20%7C%20TS-8b5cf6?style=flat-square&logo=c%2B%2B&logoColor=white" alt="Multi-Language" />
+  <img src="https://img.shields.io/badge/Engine-Deterministic_Snapshot-ec4899?style=flat-square" alt="Deterministic" />
+  <img src="https://img.shields.io/badge/Audio-Web_Audio_Synth-14b8a6?style=flat-square" alt="Web Audio" />
+  <img src="https://img.shields.io/badge/Architecture-Client--Side_Only-3b82f6?style=flat-square" alt="Client Only" />
+</p>
 
-[Explore Live Demo](https://ThanhNguyxnOrg.github.io/StepDSA/) · [Report Bug](https://github.com/ThanhNguyxnOrg/StepDSA/issues) · [Request Algorithm](https://github.com/ThanhNguyxnOrg/StepDSA/issues/new?template=new_algorithm.md)
+**Interactive Textbook** &nbsp;•&nbsp; **Deterministic Step Visualizer** &nbsp;•&nbsp; **Multi-Language Inspector** &nbsp;•&nbsp; **DSA Playground**
+
+[🌐 Live Web Demo](https://ThanhNguyxnOrg.github.io/StepDSA/) · [📖 Algorithm Catalog](docs/ALGORITHMS.md) · [🏗️ Architecture Spec](ARCHITECTURE.md) · [💻 CLI Guide](docs/CLI.md) · [🐛 Report Bug](.github/ISSUE_TEMPLATE/bug_report.yml)
 
 </div>
 
@@ -23,16 +33,42 @@
 
 Most existing algorithm visualizers suffer from the same fundamental flaws:
 1. **Passive Watching:** Users sit through non-scrubbable, imperative animation loops without truly building intuition.
-2. **Disconnected Theory:** Visualization is separated from the code and mathematical invariants that actually matter in technical interviews and computer science curricula.
-3. **Dated Aesthetics:** Cluttered interfaces with 2010s canvas elements and confusing modal settings.
+2. **Disconnected Theory:** Visualization is separated from the actual code invariants and mental models required in ICPC and technical interviews.
+3. **Dated Aesthetics:** Cluttered interfaces with canvas-only graphics, lack of variable tracking, and confusing modal settings.
 
-**StepDSA solves this by combining three core modalities into a single developer workbench:**
-* 📖 **Interactive Narrative Textbook:** Clear mental models, invariant breakdowns, and Big-O proofs before showing the code.
-* ⏱️ **Deterministic Time-Travel Engine:** Instant scrubbable timeline with zero-lag reverse stepping (`←`), speed controls (`0.25x` to `2x`), and annotated execution milestones.
-* 💻 **Synchronized Multi-Language Code:** Live execution line tracking across **Python, TypeScript, C++, Java, and Pseudocode**.
+**StepDSA reimagines algorithm education as an interactive workbench:**
+* ⏱️ **Deterministic Time-Travel Engine:** Instant scrubbable timeline with zero-lag reverse stepping (`←`), speed controls (`0.25x` to `2x`), and step narration.
+* 💻 **Synchronized Multi-Language Code:** Live execution line tracking across **C++ (ICPC Standard), Python, TypeScript, Java, and Pseudocode**.
 * 🧪 **Interactive Playground & Edge Cases:** Stress-test algorithms with custom arrays, reverse-sorted inputs, duplicates, and worst-case patterns.
-* 📐 **2.5D Isometric Mode:** Stylized spatial projection toggle bringing depth and elegance to data structures.
+* 📖 **Invariant-Driven Theory Panel:** Clear mental models, invariant breakdowns, and Big-O proofs alongside every step.
 * 🎵 **Auditory Sonification:** Web Audio API synth tones mapped to element values—hear entropy decrease in real time as arrays sort.
+* 🛠️ **Developer Studio & CLI:** Run your own C++ or Python code offline, export execution traces, and replay them visually in the browser.
+
+---
+
+## 🧩 Supported Algorithms & Curriculum
+
+| Category | Algorithm / Structure | Time Complexity | Space Complexity | Status |
+| 🔄 **Sorting** | **Quicksort (Lomuto Partition)** | $\mathcal{O}(n \log n)$ / $\mathcal{O}(n^2)$ | $\mathcal{O}(\log n)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🔄 **Sorting** | **Mergesort (Divide & Conquer)** | $\mathcal{O}(n \log n)$ | $\mathcal{O}(n)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🔄 **Sorting** | **Insertion Sort (Incremental Build)** | $\mathcal{O}(n)$ / $\mathcal{O}(n^2)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🔄 **Sorting** | **Selection Sort (Minimum Scan)** | $\mathcal{O}(n^2)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🔄 **Sorting** | **Bubble Sort (Adaptive Invariant)** | $\mathcal{O}(n)$ / $\mathcal{O}(n^2)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🔍 **Searching** | **Binary Search (Invariant Halving)** | $\mathcal{O}(\log n)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🎯 **Arrays** | **Sliding Window (Max Sum Subarray)** | $\mathcal{O}(n)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🎯 **Arrays** | **Two Pointers (Container With Most Water)**| $\mathcal{O}(n)$ | $\mathcal{O}(1)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🔗 **Lists** | **Singly Linked List (Insert, Delete, Reverse)** | $\mathcal{O}(1)$ / $\mathcal{O}(n)$ | $\mathcal{O}(n)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🌲 **Trees** | **Binary Search Tree (BST Construction & Traversal)** | $\mathcal{O}(\log n)$ / $\mathcal{O}(n)$ | $\mathcal{O}(n)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🌲 **Trees** | **Trie (Prefix Tree & Autocomplete)** | $\mathcal{O}(L)$ | $\mathcal{O}(\Sigma \cdot L \cdot N)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🌲 **Trees** | **Binary Heap (Priority Queue Push & Sift-Down)** | $\mathcal{O}(\log n)$ | $\mathcal{O}(n)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🌐 **Graphs** | **BFS Wavefront (Level-Order Queue Traversal)** | $\mathcal{O}(V + E)$ | $\mathcal{O}(V)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🌐 **Graphs** | **DFS Traversal (Call Stack & Cycle Detection)** | $\mathcal{O}(V + E)$ | $\mathcal{O}(V)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🌐 **Graphs** | **Topological Sort (Kahn's In-Degree DAG)** | $\mathcal{O}(V + E)$ | $\mathcal{O}(V)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 🌐 **Graphs** | **Dijkstra's Algorithm (Min-Heap Shortest Path)** | $\mathcal{O}((V + E) \log V)$ | $\mathcal{O}(V + E)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 📊 **DP** | **0/1 Knapsack Problem (2D Table & Backtrack)** | $\mathcal{O}(n \cdot W)$ | $\mathcal{O}(n \cdot W)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+| 📐 **Spatial 3D** | **Octree (3D Spatial Decomposition)** | $\mathcal{O}(\log n)$ | $\mathcal{O}(n)$ | ![Complete](https://img.shields.io/badge/Ready-10b981?style=flat-square) |
+
+*For complete pedagogical notes, see [Algorithm Roadmap & Guide](docs/ALGORITHMS.md).*
 
 ---
 
@@ -42,7 +78,7 @@ StepDSA is built upon the **Deterministic Snapshot Timeline Pattern**:
 
 ```mermaid
 graph LR
-    Input[Data Input / Preset] --> Generator[Deterministic Generator]
+    Input[Data Input / Presets] --> Generator[Deterministic Generator]
     Generator --> Timeline[Immutable ExecutionFrames Array]
     Timeline --> Controller[Playback Controller]
     Controller --> Stage[Visual Stage: SVG / DOM + FLIP]
@@ -50,42 +86,34 @@ graph LR
     Controller --> Sound[Web Audio Sonification]
 ```
 
-Every algorithm is implemented as a self-contained, typed **`AlgorithmModule`**:
+### Module Interface Contract
 
 ```typescript
-export interface AlgorithmModule<TInput, TState> {
+export interface AlgorithmModule<TInput = any, TState = any> {
   id: string;
   title: string;
   category: 'sorting' | 'searching' | 'arrays' | 'trees' | 'graphs' | 'dp';
-  complexity: { timeBest: string; timeWorst: string; space: string };
-  theory: { overview: string; whyItWorks: string; invariant: string };
-  codeImplementations: Record<'python' | 'typescript' | 'cpp' | 'java' | 'pseudocode', string>;
+  complexity: { timeBest: string; timeAverage: string; timeWorst: string; space: string };
+  theory: { overview: string; invariant: string; whyItWorks: string; pitfalls: string };
+  codeSnippets: Record<'cpp' | 'python' | 'typescript' | 'java' | 'pseudocode', string>;
+  defaultInput: TInput;
+  presets: { name: string; description: string; data: TInput }[];
   generateTimeline: (input: TInput) => ExecutionFrame<TState>[];
-  renderStage: (frame: ExecutionFrame<TState>, projection: '2d' | 'isometric') => React.ReactNode;
+  renderStage: (frame: ExecutionFrame<TState>, projection?: '2d' | 'isometric') => React.ReactNode;
 }
 ```
 
 ---
 
-## 🗺️ Roadmap & Curriculum Matrix
+## ⌨️ Global Keyboard Shortcuts
 
-### 🟢 Tier 1: Core Essentials (Active Milestone)
-- [x] **Quicksort:** Lomuto & Hoare partition schemes, pivot dynamics, recursive tree.
-- [x] **Mergesort:** Auxiliary buffer visualization, divide-and-conquer recursion tree.
-- [x] **Binary Search:** Continuous search-range halving, invariant boundaries `[L...R]`.
-- [x] **Two Pointers:** Search space elimination (Container With Most Water, 2-Sum II).
-- [x] **Binary Search Tree (BST):** Node insertion, search path, in-order/pre-order traversal.
-
-### 🟡 Tier 2: Graphs & Dynamic Programming
-- [ ] **Breadth-First Search (BFS) & Depth-First Search (DFS)**
-- [ ] **Dijkstra's Shortest Path:** Min-heap priority queue state & edge relaxation.
-- [ ] **Kahn's Topological Sort:** In-degree array updates and DAG dependency resolution.
-- [ ] **0/1 Knapsack & Grid Traveler:** 2D DP table matrix computation with back-tracking.
-
-### 🟣 Tier 3: Advanced Trees & Strings
-- [ ] **AVL Trees & Red-Black Trees:** Tree balancing & rotations.
-- [ ] **Trie (Prefix Tree):** Autocomplete word tree.
-- [ ] **A* Pathfinding & Disjoint Set Union (DSU)**
+| Shortcut | Action | Description |
+| :---: | :--- | :--- |
+| <kbd>Space</kbd> | **Play / Pause** | Toggle continuous timeline playback |
+| <kbd>→</kbd> | **Step Forward** | Advance exactly one deterministic execution frame |
+| <kbd>←</kbd> | **Step Backward**| Revert exactly one execution frame with zero lag |
+| <kbd>R</kbd> | **Reset** | Return to initial frame (`step = 0`) |
+| <kbd>M</kbd> | **Mute / Unmute** | Toggle Web Audio synth feedback |
 
 ---
 
@@ -114,28 +142,31 @@ npm test
 
 ---
 
-## 🎨 Design System
+## 💻 Offline Developer CLI
 
-StepDSA follows a custom high-contrast dark OLED palette optimized for prolonged study:
-* **Background:** Deep OLED Slate (`#0B0F19`)
-* **Surfaces:** Elevated Charcoal (`#111827`, `#1F2937`)
-* **Accents:** Emerald (`#10B981`), Electric Cyan (`#06B6D4`), Amber Pivot (`#F59E0B`), Rose Collision (`#F43F5E`)
-* **Fonts:** `Plus Jakarta Sans` (UI / Prose) + `JetBrains Mono` (Code & Pointers)
+StepDSA includes an offline tracer CLI in `cli/` enabling competitive programmers and students to run C++ or Python code locally and generate StepDSA visual snapshot files:
 
-For complete token specifications, see [`design-system/stepdsa/MASTER.md`](design-system/stepdsa/MASTER.md).
+```bash
+# Run C++ tracer with custom array
+node cli/stepdsa.js trace --lang cpp --src cli/sample_bubble_sort.cpp --out trace.stepdsa.json
+
+# Launch visualizer and load snapshot directly in the browser
+```
+
+For full CLI documentation, see [docs/CLI.md](docs/CLI.md).
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcomed and deeply appreciated! Whether adding a new algorithm module, optimizing animation curves, or writing clearer conceptual explanations:
+We welcome contributions of new algorithms, refined explanations, and animation polish!
 
-1. Check out our [Contributing Guide](CONTRIBUTING.md).
-2. Choose an algorithm from the [Roadmap](#-roadmap--curriculum-matrix) or open an issue.
-3. Submit a Pull Request following the [PR Template](.github/pull_request_template.md).
+1. Check our [Contributing Guide](CONTRIBUTING.md).
+2. Choose an algorithm from [docs/ALGORITHMS.md](docs/ALGORITHMS.md) or open an issue using the [Algorithm Request Form](.github/ISSUE_TEMPLATE/new_algorithm.yml).
+3. Submit a Pull Request following our [PR Template](.github/pull_request_template.md).
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+StepDSA is open-source software licensed under the [MIT License](LICENSE).

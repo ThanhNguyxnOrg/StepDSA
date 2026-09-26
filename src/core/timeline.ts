@@ -69,6 +69,30 @@ export function useTimelinePlayback(frames: ExecutionFrame[]): PlaybackControlle
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   }, [pause]);
 
+  const stepToNextAction = useCallback(() => {
+    pause();
+    for (let i = currentStep + 1; i < totalSteps; i++) {
+      const f = frames[i];
+      if (f.soundCue || f.isMilestone || f.milestoneTitle || f.invariantStatus || i === totalSteps - 1) {
+        setCurrentStep(i);
+        return;
+      }
+    }
+    setCurrentStep(totalSteps - 1);
+  }, [currentStep, totalSteps, frames, pause]);
+
+  const stepToPrevAction = useCallback(() => {
+    pause();
+    for (let i = currentStep - 1; i >= 0; i--) {
+      const f = frames[i];
+      if (f.soundCue || f.isMilestone || f.milestoneTitle || f.invariantStatus || i === 0) {
+        setCurrentStep(i);
+        return;
+      }
+    }
+    setCurrentStep(0);
+  }, [currentStep, frames, pause]);
+
   const seekTo = useCallback((step: number) => {
     pause();
     const clamped = Math.max(0, Math.min(step, totalSteps - 1));
@@ -119,6 +143,8 @@ export function useTimelinePlayback(frames: ExecutionFrame[]): PlaybackControlle
     pause,
     stepForward,
     stepBackward,
+    stepToNextAction,
+    stepToPrevAction,
     seekTo,
     setSpeed,
     reset,

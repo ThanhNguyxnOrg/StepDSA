@@ -87,6 +87,30 @@ const ALGO_METADATA: Record<
     tags: ['fifo-queue', 'shortest-path', 'wavefront'],
     themeColor: 'purple',
   },
+  'graph-dfs': {
+    shortTitle: 'Graph DFS',
+    subtitle: 'Call Stack & Cycle Detection',
+    tags: ['call-stack', 'recursion', 'back-edge'],
+    themeColor: 'rose',
+  },
+  'trie-prefix': {
+    shortTitle: 'Trie Tree',
+    subtitle: 'Prefix & Autocomplete',
+    tags: ['prefix-tree', 'autocomplete', 'strings'],
+    themeColor: 'teal',
+  },
+  'dijkstra': {
+    shortTitle: "Dijkstra's Algorithm",
+    subtitle: 'Min-Heap Shortest Path',
+    tags: ['priority-queue', 'relaxation', 'greedy'],
+    themeColor: 'sky',
+  },
+  'knapsack-01': {
+    shortTitle: '0/1 Knapsack',
+    subtitle: '2D DP Table & Backtrack',
+    tags: ['dynamic-programming', 'matrix', 'subset-choice'],
+    themeColor: 'emerald',
+  },
   'octree-3d': {
     shortTitle: 'Octree',
     subtitle: '3D Spatial Partitioning',
@@ -111,6 +135,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     { id: 'linked-lists', label: 'Linked Lists' },
     { id: 'trees-bst', label: 'Trees & Heaps' },
     { id: 'graphs', label: 'Graphs' },
+    { id: 'dynamic-programming', label: 'Dynamic Programming' },
   ];
 
   const filteredModules = useMemo(() => {

@@ -9,19 +9,34 @@ import { bstModule } from './trees/bst';
 import { singlyLinkedListModule } from './linkedList/singlyLinkedList';
 import { binaryHeapModule } from './trees/binaryHeap';
 import { bfsTraversalModule } from './graphs/bfsTraversal';
+import { dfsTraversalModule } from './graphs/dfsTraversal';
+import { dijkstraModule } from './graphs/dijkstra';
+import { trieModule } from './trees/trie';
+import { knapsackModule } from './dp/knapsack';
 import { octree3dModule } from './trees/octree3d';
+
+import { insertionSortModule } from './sorting/insertionSort';
+import { selectionSortModule } from './sorting/selectionSort';
+import { topologicalSortModule } from './graphs/topologicalSort';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
   mergesortModule,
+  insertionSortModule,
+  selectionSortModule,
   bubbleSortModule,
   binarySearchModule,
   twoPointersModule,
   slidingWindowModule,
   bstModule,
+  trieModule,
   singlyLinkedListModule,
   binaryHeapModule,
   bfsTraversalModule,
+  dfsTraversalModule,
+  topologicalSortModule,
+  dijkstraModule,
+  knapsackModule,
   octree3dModule,
 ];
 

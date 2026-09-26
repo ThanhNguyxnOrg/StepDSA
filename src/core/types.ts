@@ -28,6 +28,14 @@ export interface ComplexityProfile {
   worstCaseCondition: string;
 }
 
+export interface CallStackFrame {
+  id?: string;
+  name: string;
+  params: Record<string, string | number>;
+  line?: number;
+  isCurrent?: boolean;
+}
+
 export interface InvariantStatus {
   label: string;
   isValid: boolean;
@@ -38,6 +46,12 @@ export interface ExecutionFrame<TState = any> {
   totalSteps: number;
   codeLine: number;
   explanation: string;
+  callStack?: CallStackFrame[];
+  conditionEval?: {
+    expr: string;
+    result: boolean | string;
+  };
+  variables?: Record<string, string | number | boolean>;
   invariantStatus?: InvariantStatus;
   isMilestone?: boolean;
   milestoneTitle?: string;
@@ -88,6 +102,8 @@ export interface PlaybackController {
   pause: () => void;
   stepForward: () => void;
   stepBackward: () => void;
+  stepToNextAction?: () => void;
+  stepToPrevAction?: () => void;
   seekTo: (step: number) => void;
   setSpeed: (multiplier: number) => void;
   reset: () => void;

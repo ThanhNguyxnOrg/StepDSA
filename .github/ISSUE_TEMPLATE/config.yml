@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 StepDSA Community Discussions
+    url: https://github.com/ThanhNguyxnOrg/StepDSA/discussions
+    about: Ask questions, share feedback, or discuss algorithm intuition with other developers.
+  - name: 📖 Algorithm Roadmap & Documentation
+    url: https://github.com/ThanhNguyxnOrg/StepDSA/blob/main/docs/ALGORITHMS.md
+    about: Check the current status of all planned algorithms before requesting.

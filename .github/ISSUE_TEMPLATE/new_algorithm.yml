@@ -1,0 +1,72 @@
+name: "🚀 Algorithm & Feature Request"
+description: "Propose a new data structure or algorithm module for StepDSA"
+title: "[ALGO]: "
+labels: ["algorithm-request", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Propose a New Algorithm for StepDSA
+        StepDSA focuses on pedagogical clarity, step-by-step invariants, and high-fidelity visualization suitable for technical interviews and ICPC training.
+  - type: input
+    id: algo-name
+    attributes:
+      label: Algorithm / Data Structure Name
+      description: The canonical name of the algorithm or data structure.
+      placeholder: "e.g. Dijkstra's Shortest Path, AVL Tree Rotations, Trie Prefix Matching, Floyd-Warshall"
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Primary classification in computer science curriculum.
+      options:
+        - "Sorting & Order Statistics"
+        - "Searching & Binary Partition"
+        - "Arrays, Pointers & Two-Pointers"
+        - "Trees, BST & Balanced Trees (AVL / Red-Black)"
+        - "Graphs & Shortest Path (BFS, DFS, Dijkstra, Bellman-Ford)"
+        - "Dynamic Programming & Memoization"
+        - "Greedy Algorithms"
+        - "Strings & Pattern Matching (KMP, Trie, Suffix Automaton)"
+        - "Disjoint Set Union (DSU / Union-Find)"
+    validations:
+      required: true
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Target Difficulty
+      description: General interview / contest level.
+      options:
+        - "🟢 Beginner (LeetCode Easy / Fundamental Data Structures)"
+        - "🟡 Intermediate (LeetCode Medium / ICPC Div 2)"
+        - "🔴 Advanced (LeetCode Hard / ICPC Regional Level)"
+    validations:
+      required: true
+  - type: textarea
+    id: pedagogical-value
+    attributes:
+      label: Key Pedagogical Value & Invariant
+      description: Why is this algorithm important? What visual invariant or mental model should the visualizer bring to life?
+      placeholder: "e.g. In Dijkstra, visualizing the unvisited set and how relaxing an edge immediately updates tentative distances in the min-heap."
+    validations:
+      required: true
+  - type: textarea
+    id: sample-edge-cases
+    attributes:
+      label: Suggested Presets & Edge Cases
+      description: What inputs or corner cases should be available in the Playground menu?
+      placeholder: |
+        - Empty or 1-element input
+        - Disconnected graph / negative cycle (or detection)
+        - Skewed tree / sorted insertion
+        - Duplicate keys
+    validations:
+      required: true
+  - type: checkboxes
+    id: willing-to-contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: "I am interested in contributing the code/module for this algorithm!"
