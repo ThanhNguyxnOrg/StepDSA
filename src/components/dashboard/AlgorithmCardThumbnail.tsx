@@ -5,7 +5,7 @@ interface AlgorithmCardThumbnailProps {
   category: string;
 }
 
-export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ moduleId }) => {
+export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ moduleId, category }) => {
   switch (moduleId) {
     case 'bubble-sort':
       return (
@@ -352,6 +352,7 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
       );
 
     case 'two-pointers':
+    case 'two-pointers-water':
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#D97706] to-[#B45309] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
           <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-100 uppercase tracking-wider">
@@ -377,6 +378,7 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
       );
 
     case 'sliding-window':
+    case 'sliding-window-max-sum':
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#0F766E] to-[#115E59] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
           <div className="flex items-center justify-between text-[11px] font-mono font-bold text-teal-100 uppercase tracking-wider">
@@ -713,11 +715,606 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
         </div>
       );
 
-    default:
+    case 'heapsort':
       return (
-        <div className="w-full h-40 bg-slate-800 rounded-xl flex items-center justify-center">
-          <span className="text-xs font-mono text-slate-400">Interactive Sandbox</span>
+        <div className="w-full h-40 bg-gradient-to-b from-[#D97706] to-[#B45309] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-100 uppercase tracking-wider">
+            <span>Max-Heap In-Place Sort</span>
+            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="w-7 h-7 rounded-full bg-white text-amber-950 text-xs font-extrabold flex items-center justify-center shadow-md animate-bounce">
+              99
+            </div>
+            <div className="flex gap-8">
+              <div className="w-6 h-6 rounded-full bg-amber-200 text-amber-950 text-[10px] font-bold flex items-center justify-center shadow">72</div>
+              <div className="w-6 h-6 rounded-full bg-amber-200 text-amber-950 text-[10px] font-bold flex items-center justify-center shadow">64</div>
+            </div>
+            <div className="text-[10px] text-amber-100 font-semibold">siftDown(0) & swap root</div>
+          </div>
         </div>
       );
+
+    case 'doubly-linked-list':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#1D4ED8] to-[#1E40AF] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-blue-100 uppercase tracking-wider">
+            <span>Bidirectional Pointers</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-2 h-24 font-mono text-xs">
+            <span className="text-[10px] text-blue-300">NULL</span>
+            <span className="text-white font-bold">⇄</span>
+            <div className="px-2 py-1 bg-white text-blue-950 rounded shadow font-bold">[10]</div>
+            <span className="text-cyan-300 font-bold anim-arrow-flow">⇄</span>
+            <div className="px-2 py-1 bg-cyan-300 text-blue-950 rounded shadow font-bold">[25]</div>
+            <span className="text-white font-bold">⇄</span>
+            <div className="px-2 py-1 bg-white text-blue-950 rounded shadow font-bold">[40]</div>
+          </div>
+        </div>
+      );
+
+    case 'queue-fifo':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0891B2] to-[#0E7490] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-cyan-100 uppercase tracking-wider">
+            <span>FIFO Enqueue & Dequeue</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-2 h-24 font-mono">
+            <div className="text-[10px] text-cyan-200 flex flex-col items-center">
+              <span>HEAD</span>
+              <span className="anim-arrow-flow">↓ pop</span>
+            </div>
+            <div className="flex border-y-2 border-cyan-300/80 px-2 py-1 gap-1.5 bg-black/20 rounded">
+              <span className="w-7 h-7 bg-white text-cyan-950 font-bold rounded flex items-center justify-center text-xs shadow">1</span>
+              <span className="w-7 h-7 bg-cyan-200 text-cyan-950 font-bold rounded flex items-center justify-center text-xs shadow">2</span>
+              <span className="w-7 h-7 bg-cyan-300 text-cyan-950 font-bold rounded flex items-center justify-center text-xs shadow">3</span>
+            </div>
+            <div className="text-[10px] text-cyan-200 flex flex-col items-center">
+              <span>TAIL</span>
+              <span className="anim-arrow-flow">push →</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'avl-tree':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#4338CA] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>AVL Balance Factor & Rotations</span>
+            <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24">
+            <div className="flex items-center gap-1.5">
+              <div className="w-7 h-7 rounded-full bg-white text-indigo-950 font-mono text-xs font-bold flex items-center justify-center shadow">40</div>
+              <span className="text-[9px] px-1 bg-amber-400 text-indigo-950 rounded font-mono font-bold">BF: +2</span>
+            </div>
+            <div className="flex gap-6 items-center">
+              <div className="w-6 h-6 rounded-full bg-indigo-200 text-indigo-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">20</div>
+              <div className="w-6 h-6 rounded-full bg-indigo-200 text-indigo-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">50</div>
+            </div>
+            <span className="text-[10px] font-mono text-indigo-200 font-semibold animate-pulse">↻ LL Rotation Rebalance</span>
+          </div>
+        </div>
+      );
+
+    case 'tree-traversals':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0D9488] to-[#0F766E] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-teal-100 uppercase tracking-wider">
+            <span>Inorder Preorder Postorder</span>
+            <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24">
+            <div className="w-6 h-6 rounded-full bg-white text-teal-950 font-mono text-xs font-bold flex items-center justify-center shadow">A</div>
+            <div className="flex gap-8">
+              <div className="w-6 h-6 rounded-full bg-teal-200 text-teal-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">B</div>
+              <div className="w-6 h-6 rounded-full bg-teal-200 text-teal-950 font-mono text-[10px] font-bold flex items-center justify-center shadow">C</div>
+            </div>
+            <div className="flex gap-1 text-[10px] font-mono text-teal-100 bg-black/20 px-2 py-0.5 rounded">
+              <span className="text-amber-300 font-bold">L</span> → <span className="text-white font-bold">Root</span> → <span className="text-cyan-300 font-bold">R</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'prim-mst':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#059669] to-[#047857] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>Greedy MST Cut Property</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-3 h-24 font-mono">
+            <div className="w-8 h-8 rounded-full bg-emerald-400 text-emerald-950 font-bold text-xs flex items-center justify-center shadow">U</div>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-amber-300 font-bold">w=2</span>
+              <span className="text-white text-xs font-bold">───▶</span>
+              <span className="text-[9px] text-emerald-200">min edge</span>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-white text-emerald-950 font-bold text-xs flex items-center justify-center shadow animate-pulse">V</div>
+          </div>
+        </div>
+      );
+
+    case 'rabin-karp':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#9333EA] to-[#7E22CE] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-purple-100 uppercase tracking-wider">
+            <span>Rolling Hash Pattern Search</span>
+            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="px-2 py-0.5 bg-black/40 rounded border border-purple-400/40 text-purple-200">Text: "A B C D E"</span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-purple-100">
+              <span className="px-1.5 py-0.5 bg-amber-400 text-purple-950 rounded font-bold">Hash = 412</span>
+              <span>==</span>
+              <span className="px-1.5 py-0.5 bg-emerald-400 text-purple-950 rounded font-bold">Target = 412</span>
+            </div>
+            <div className="text-[10px] text-purple-200/80">O(1) Rolling Window Update</div>
+          </div>
+        </div>
+      );
+
+    case 'coin-change':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#D97706] to-[#B45309] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-100 uppercase tracking-wider">
+            <span>Fewest Coins Bottom-Up DP</span>
+            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-2">
+              <span className="w-7 h-7 rounded-full bg-amber-300 text-amber-950 font-bold text-xs flex items-center justify-center shadow">1¢</span>
+              <span className="w-7 h-7 rounded-full bg-amber-200 text-amber-950 font-bold text-xs flex items-center justify-center shadow">2¢</span>
+              <span className="w-7 h-7 rounded-full bg-white text-amber-950 font-bold text-xs flex items-center justify-center shadow">5¢</span>
+            </div>
+            <div className="text-xs text-amber-100 bg-black/30 px-2.5 py-1 rounded border border-amber-400/40">
+              dp[11] = <strong className="text-emerald-300">3</strong> <span className="text-[10px] text-amber-200">(5 + 5 + 1)</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'longest-increasing-subsequence':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0284C7] to-[#0369A1] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-sky-100 uppercase tracking-wider">
+            <span>Longest Increasing Subsequence</span>
+            <span className="w-2 h-2 rounded-full bg-sky-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-1.5 text-xs">
+              <span className="w-6 h-6 rounded bg-sky-950/60 text-slate-400 flex items-center justify-center">10</span>
+              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-bold flex items-center justify-center shadow">2</span>
+              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-bold flex items-center justify-center shadow">5</span>
+              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-bold flex items-center justify-center shadow">7</span>
+              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-bold flex items-center justify-center shadow">18</span>
+            </div>
+            <div className="text-xs text-sky-100 font-bold">LIS Length = 4</div>
+          </div>
+        </div>
+      );
+
+    case 'tower-of-hanoi':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#E11D48] to-[#BE123C] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-rose-100 uppercase tracking-wider">
+            <span>Recursive Disk Transfer</span>
+            <span className="w-2 h-2 rounded-full bg-rose-300 animate-ping" />
+          </div>
+          <div className="flex items-end justify-center gap-6 h-24 pb-1">
+            <div className="flex flex-col items-center">
+              <div className="w-1 h-14 bg-rose-300/60 relative flex flex-col-reverse items-center">
+                <div className="w-10 h-3 bg-white rounded-sm shadow-md" />
+                <div className="w-7 h-3 bg-amber-300 rounded-sm shadow-md" />
+              </div>
+              <span className="text-[10px] font-mono text-rose-200 mt-1 font-bold">A</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-1 h-14 bg-rose-300/60 relative flex flex-col-reverse items-center" />
+              <span className="text-[10px] font-mono text-rose-200 mt-1 font-bold">B</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-1 h-14 bg-rose-300/60 relative flex flex-col-reverse items-center">
+                <div className="w-4 h-3 bg-emerald-300 rounded-sm shadow-md animate-bounce" />
+              </div>
+              <span className="text-[10px] font-mono text-rose-200 mt-1 font-bold">C</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'disjoint-set-union':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#4338CA] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>Path Compression & Union by Rank</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="w-8 h-8 rounded-full bg-emerald-400 text-indigo-950 font-bold text-xs flex items-center justify-center shadow">Root: 1</div>
+            <div className="flex gap-6">
+              <div className="flex flex-col items-center">
+                <span className="text-xs text-indigo-200">↑</span>
+                <div className="w-6 h-6 rounded-full bg-white text-indigo-950 font-bold text-[10px] flex items-center justify-center shadow">2</div>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-xs text-cyan-300 animate-pulse">⇡ direct</span>
+                <div className="w-6 h-6 rounded-full bg-cyan-300 text-indigo-950 font-bold text-[10px] flex items-center justify-center shadow">4</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'bellman-ford':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#BE123C] to-[#9F1239] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-rose-100 uppercase tracking-wider">
+            <span>Negative Weights & Cycle Check</span>
+            <span className="w-2 h-2 rounded-full bg-rose-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-3 h-24 font-mono">
+            <div className="w-8 h-8 rounded-full bg-white text-rose-950 font-bold text-xs flex items-center justify-center shadow">u: 5</div>
+            <div className="flex flex-col items-center">
+              <span className="text-amber-300 text-[10px] font-bold">w = -3</span>
+              <span className="text-white text-xs font-bold anim-arrow-flow">───▶</span>
+              <span className="text-[9px] text-rose-200">relax: 5 + (-3)</span>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-emerald-400 text-rose-950 font-bold text-xs flex items-center justify-center shadow">v: 2</div>
+          </div>
+        </div>
+      );
+
+    case 'floyd-warshall':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#7E22CE] to-[#6B21A8] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-purple-100 uppercase tracking-wider">
+            <span>All-Pairs Shortest Path Matrix</span>
+            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="grid grid-cols-3 gap-1 bg-black/30 p-1.5 rounded border border-purple-400/40">
+              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">3</span>
+              <span className="w-6 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">5</span>
+              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">2</span>
+              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">4</span>
+            </div>
+            <div className="text-[10px] text-purple-200">D[i][j] = min(D[i][j], D[i][k] + D[k][j])</div>
+          </div>
+        </div>
+      );
+
+    case 'a-star-search':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#059669] to-[#047857] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>Heuristic Pathfinding (f = g + h)</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-3 h-24 font-mono">
+            <div className="w-8 h-8 rounded bg-emerald-300 text-emerald-950 font-bold text-xs flex items-center justify-center shadow">S</div>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-amber-300 font-bold">f = 4 + 2</span>
+              <span className="text-white text-xs font-bold anim-arrow-flow">─────▶</span>
+              <span className="text-[9px] text-emerald-200">optimal hop</span>
+            </div>
+            <div className="w-8 h-8 rounded bg-white text-emerald-950 font-bold text-xs flex items-center justify-center shadow animate-pulse">🎯</div>
+          </div>
+        </div>
+      );
+
+    case 'kadanes-algorithm':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0D9488] to-[#0F766E] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-teal-100 uppercase tracking-wider">
+            <span>Maximum Subarray Sum</span>
+            <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-1 items-center">
+              <span className="w-6 h-7 rounded bg-black/30 text-teal-200 text-xs flex items-center justify-center">-2</span>
+              <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-bold text-xs flex items-center justify-center shadow">4</span>
+              <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-bold text-xs flex items-center justify-center shadow">-1</span>
+              <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-bold text-xs flex items-center justify-center shadow">2</span>
+              <span className="w-6 h-7 rounded bg-emerald-400 text-teal-950 font-bold text-xs flex items-center justify-center shadow">1</span>
+              <span className="w-6 h-7 rounded bg-black/30 text-teal-200 text-xs flex items-center justify-center">-5</span>
+            </div>
+            <div className="text-xs text-white font-bold bg-black/30 px-2 py-0.5 rounded">Max Subarray Sum = 6</div>
+          </div>
+        </div>
+      );
+
+    case 'edit-distance':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#4338CA] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>Levenshtein Distance Matrix</span>
+            <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="grid grid-cols-3 gap-1 bg-black/30 p-1.5 rounded border border-indigo-400/40">
+              <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">1</span>
+              <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">2</span>
+              <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">1</span>
+              <span className="w-6 h-6 bg-emerald-400 text-indigo-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
+              <span className="w-6 h-6 bg-indigo-950/60 text-indigo-300 rounded text-xs flex items-center justify-center">2</span>
+            </div>
+            <div className="text-[10px] text-indigo-200">insert / delete / replace</div>
+          </div>
+        </div>
+      );
+
+    case 'z-algorithm':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0284C7] to-[#0369A1] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-sky-100 uppercase tracking-wider">
+            <span>Linear Z-Box Match</span>
+            <span className="w-2 h-2 rounded-full bg-sky-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-1">
+              <span className="w-6 h-6 bg-black/40 text-slate-300 rounded text-xs flex items-center justify-center">a</span>
+              <span className="w-6 h-6 bg-black/40 text-slate-300 rounded text-xs flex items-center justify-center">a</span>
+              <span className="w-6 h-6 bg-sky-950 text-sky-200 border border-sky-300 rounded text-xs flex items-center justify-center font-bold">b</span>
+              <span className="w-6 h-6 bg-amber-400 text-sky-950 rounded text-xs flex items-center justify-center font-bold shadow">a</span>
+              <span className="w-6 h-6 bg-amber-400 text-sky-950 rounded text-xs flex items-center justify-center font-bold shadow">a</span>
+            </div>
+            <div className="text-[10px] text-sky-100 font-bold">Z[i] = 2 (matches prefix [0..1])</div>
+          </div>
+        </div>
+      );
+
+    case 'house-robber':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#D97706] to-[#B45309] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-100 uppercase tracking-wider">
+            <span>Non-Adjacent Max Sum DP</span>
+            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-2">
+              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center"><span>🏠</span><span>2</span></div>
+              <div className="px-2 py-1 bg-emerald-400 text-amber-950 rounded text-xs font-bold flex flex-col items-center shadow"><span>💰</span><span>7</span></div>
+              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center"><span>🏠</span><span>9</span></div>
+              <div className="px-2 py-1 bg-emerald-400 text-amber-950 rounded text-xs font-bold flex flex-col items-center shadow"><span>💰</span><span>3</span></div>
+              <div className="px-2 py-1 bg-black/30 rounded text-xs text-amber-200 flex flex-col items-center"><span>🏠</span><span>1</span></div>
+            </div>
+            <div className="text-[10px] text-amber-100 font-bold">Max Loot = 10 (non-adjacent)</div>
+          </div>
+        </div>
+      );
+
+    case 'n-queens':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#7E22CE] to-[#6B21A8] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-purple-100 uppercase tracking-wider">
+            <span>Backtracking Board Constraints</span>
+            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-2 h-24">
+            <div className="grid grid-cols-4 gap-0.5 p-1 bg-black/40 rounded border border-purple-400/40">
+              <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
+              <span className="w-5 h-5 bg-amber-400 text-purple-950 rounded-xs flex items-center justify-center text-xs font-bold shadow">♛</span>
+              <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
+              <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
+              <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
+              <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
+              <span className="w-5 h-5 bg-purple-900/60 rounded-xs flex items-center justify-center text-xs">·</span>
+              <span className="w-5 h-5 bg-amber-400 text-purple-950 rounded-xs flex items-center justify-center text-xs font-bold shadow">♛</span>
+            </div>
+            <div className="text-[10px] font-mono text-purple-200">Safe rows, cols & diagonals</div>
+          </div>
+        </div>
+      );
+
+    case 'reverse-linked-list':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#1D4ED8] to-[#1E40AF] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-blue-100 uppercase tracking-wider">
+            <span>In-Place Pointer Inversion</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-2 h-24 font-mono">
+            <span className="px-2 py-1 bg-white text-blue-950 rounded font-bold text-xs">1</span>
+            <span className="text-amber-300 font-bold text-sm">◀──</span>
+            <span className="px-2 py-1 bg-cyan-300 text-blue-950 rounded font-bold text-xs shadow">2</span>
+            <span className="text-amber-300 font-bold text-sm">◀──</span>
+            <span className="px-2 py-1 bg-white text-blue-950 rounded font-bold text-xs">3</span>
+          </div>
+        </div>
+      );
+
+    case 'monotonic-stack':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#4338CA] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>Next Greater Element</span>
+            <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-4 h-24 font-mono">
+            <div className="w-16 h-20 bg-black/30 border-2 border-indigo-300 rounded-b-xl flex flex-col-reverse p-1 gap-1 items-center">
+              <span className="w-full py-0.5 bg-white text-indigo-950 font-bold text-xs rounded text-center">80</span>
+              <span className="w-full py-0.5 bg-indigo-200 text-indigo-950 font-bold text-xs rounded text-center">60</span>
+              <span className="w-full py-0.5 bg-amber-300 text-indigo-950 font-bold text-xs rounded text-center animate-pulse">40</span>
+            </div>
+            <div className="text-[10px] text-indigo-200 flex flex-col gap-0.5">
+              <span>Stack: Monotonic ↓</span>
+              <span className="text-emerald-300 font-bold">pop 40 on 75</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'binary-exponentiation':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#D97706] to-[#B45309] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-100 uppercase tracking-wider">
+            <span>Fast Modular Power a^b mod m</span>
+            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="text-xs font-bold text-white bg-black/30 px-3 py-1 rounded border border-amber-400/40">
+              3<sup>13</sup> = 3<sup>8</sup> · 3<sup>4</sup> · 3<sup>1</sup>
+            </div>
+            <div className="text-[10px] text-amber-200 font-bold">b & 1 ? ans = (ans · base) : square</div>
+          </div>
+        </div>
+      );
+
+    case 'rotated-sorted-array':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0891B2] to-[#0E7490] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-cyan-100 uppercase tracking-wider">
+            <span>Pivot Invariant Binary Search</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-1 items-end">
+              <span className="w-5 h-9 bg-white text-cyan-950 font-bold text-xs flex items-center justify-center rounded">4</span>
+              <span className="w-5 h-12 bg-white text-cyan-950 font-bold text-xs flex items-center justify-center rounded">5</span>
+              <span className="w-5 h-14 bg-white text-cyan-950 font-bold text-xs flex items-center justify-center rounded">6</span>
+              <span className="w-1 h-14 bg-rose-400/60 mx-1" />
+              <span className="w-5 h-6 bg-cyan-200 text-cyan-950 font-bold text-xs flex items-center justify-center rounded">0</span>
+              <span className="w-5 h-8 bg-cyan-200 text-cyan-950 font-bold text-xs flex items-center justify-center rounded">1</span>
+              <span className="w-5 h-10 bg-cyan-200 text-cyan-950 font-bold text-xs flex items-center justify-center rounded">2</span>
+            </div>
+            <div className="text-[10px] text-cyan-100 font-bold">Determine which half is sorted</div>
+          </div>
+        </div>
+      );
+
+    case 'longest-palindromic-substring':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#059669] to-[#047857] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>Expand Around Center</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-1.5 items-center">
+              <span className="text-emerald-300 text-xs font-bold">b</span>
+              <span className="w-6 h-6 rounded bg-emerald-300 text-emerald-950 font-bold text-xs flex items-center justify-center">a</span>
+              <span className="w-6 h-6 rounded bg-white text-emerald-950 font-bold text-xs flex items-center justify-center shadow animate-pulse">b</span>
+              <span className="w-6 h-6 rounded bg-emerald-300 text-emerald-950 font-bold text-xs flex items-center justify-center">a</span>
+              <span className="text-emerald-300 text-xs font-bold">d</span>
+            </div>
+            <div className="text-[10px] text-emerald-100 font-bold">← expand (L, R) → match "aba"</div>
+          </div>
+        </div>
+      );
+
+    case 'floyd-cycle-detection':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#059669] to-[#047857] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>Tortoise & Hare Cycle Pointer</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-3 h-24 font-mono">
+            <div className="w-7 h-7 rounded-full bg-white text-emerald-950 font-bold text-xs flex items-center justify-center shadow">1</div>
+            <span className="text-white text-xs">→</span>
+            <div className="w-16 h-16 rounded-full border-2 border-emerald-300 border-dashed flex items-center justify-center relative">
+              <span className="absolute top-0 text-[10px] bg-amber-300 text-emerald-950 px-1 rounded font-bold">🐢 1x</span>
+              <span className="absolute bottom-0 text-[10px] bg-cyan-300 text-emerald-950 px-1 rounded font-bold">🐇 2x</span>
+              <span className="text-[9px] text-white font-bold">CYCLE</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'activity-selection-greedy':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0D9488] to-[#0F766E] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-teal-100 uppercase tracking-wider">
+            <span>Interval Scheduling Greedy</span>
+            <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
+          </div>
+          <div className="flex flex-col justify-center gap-1.5 h-24 font-mono px-4">
+            <div className="h-4 bg-emerald-400 text-teal-950 rounded text-[9px] font-bold px-2 flex items-center justify-between shadow w-3/4">
+              <span>[1..4] ✓</span>
+            </div>
+            <div className="h-4 bg-rose-400/40 text-rose-200 line-through rounded text-[9px] font-bold px-2 flex items-center justify-between w-2/3 ml-6">
+              <span>[3..5] ✗</span>
+            </div>
+            <div className="h-4 bg-emerald-400 text-teal-950 rounded text-[9px] font-bold px-2 flex items-center justify-between shadow w-1/2 ml-20">
+              <span>[5..7] ✓</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'bitwise-operations':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#7E22CE] to-[#6B21A8] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-purple-100 uppercase tracking-wider">
+            <span>8-Bit Register Manipulation</span>
+            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
+            <div className="flex gap-1">
+              <span className="w-5 h-6 bg-black/40 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-5 h-6 bg-black/40 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-5 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
+              <span className="w-5 h-6 bg-black/40 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-5 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
+              <span className="w-5 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
+              <span className="w-5 h-6 bg-black/40 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-5 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">1</span>
+            </div>
+            <div className="text-[10px] text-purple-200">x & (x - 1) = drops lowest bit</div>
+          </div>
+        </div>
+      );
+
+    default: {
+      const getCategoryGradient = (cat: string) => {
+        switch (cat) {
+          case 'sorting':
+            return 'from-[#059669] to-[#047857] text-emerald-100';
+          case 'searching':
+            return 'from-[#0284C7] to-[#0369A1] text-sky-100';
+          case 'linked-lists':
+            return 'from-[#1D4ED8] to-[#1E40AF] text-blue-100';
+          case 'trees-bst':
+            return 'from-[#4F46E5] to-[#4338CA] text-indigo-100';
+          case 'graphs':
+            return 'from-[#0E7490] to-[#155E75] text-cyan-100';
+          case 'dynamic-programming':
+            return 'from-[#9333EA] to-[#7E22CE] text-purple-100';
+          case 'math':
+            return 'from-[#D97706] to-[#B45309] text-amber-100';
+          case 'stack-queue':
+            return 'from-[#6366F1] to-[#4F46E5] text-indigo-100';
+          default:
+            return 'from-[#1F2937] to-[#111827] text-slate-200';
+        }
+      };
+
+      const grad = getCategoryGradient(category);
+
+      return (
+        <div className={`w-full h-40 bg-gradient-to-b ${grad} rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform`}>
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase tracking-wider">
+            <span>{category.replace('-', ' ')}</span>
+            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+          </div>
+          <div className="flex items-center justify-center h-24">
+            <div className="px-3 py-1.5 rounded-lg bg-black/30 border border-white/20 text-xs font-mono font-bold text-white shadow-md flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Interactive StepDSA Sandbox</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 };
