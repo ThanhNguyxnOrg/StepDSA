@@ -117,6 +117,66 @@ const ALGO_METADATA: Record<
     tags: ['3D-space', 'octants', 'collision-detection'],
     themeColor: 'indigo',
   },
+  'linear-search': {
+    shortTitle: 'Linear Search',
+    subtitle: 'Sequential Scan',
+    tags: ['sequential', 'unsorted-array', 'O(N)'],
+    themeColor: 'emerald',
+  },
+  'insertion-sort': {
+    shortTitle: 'Insertion Sort',
+    subtitle: 'Incremental Build & Shift',
+    tags: ['in-place', 'adaptive', 'online-sort'],
+    themeColor: 'amber',
+  },
+  'selection-sort': {
+    shortTitle: 'Selection Sort',
+    subtitle: 'Minimum Element Scan',
+    tags: ['minimum-scan', 'minimal-swaps', 'O(N²)'],
+    themeColor: 'amber',
+  },
+  'counting-sort': {
+    shortTitle: 'Counting Sort',
+    subtitle: 'Frequency Bucket Indexing',
+    tags: ['non-comparison', 'prefix-sums', 'linear-time'],
+    themeColor: 'indigo',
+  },
+  'topological-sort': {
+    shortTitle: 'Topological Sort',
+    subtitle: "Kahn's In-Degree Queue",
+    tags: ['DAG', 'in-degree', 'dependency-resolution'],
+    themeColor: 'teal',
+  },
+  'valid-parentheses': {
+    shortTitle: 'Balanced Parentheses',
+    subtitle: 'Stack LIFO Validation',
+    tags: ['stack', 'LIFO', 'bracket-matching'],
+    themeColor: 'cyan',
+  },
+  'lcs': {
+    shortTitle: 'LCS (Longest Common Subsequence)',
+    subtitle: '2D DP Matrix & Backtrack',
+    tags: ['dynamic-programming', 'string-diff', 'optimal-substructure'],
+    themeColor: 'purple',
+  },
+  'sieve-of-eratosthenes': {
+    shortTitle: 'Sieve of Eratosthenes',
+    subtitle: 'Prime Elimination Grid',
+    tags: ['number-theory', 'primes', 'O(N log log N)'],
+    themeColor: 'emerald',
+  },
+  'euclidean-gcd': {
+    shortTitle: 'Euclidean Algorithm',
+    subtitle: 'Greatest Common Divisor',
+    tags: ['number-theory', 'modulo', 'Lamé-theorem'],
+    themeColor: 'amber',
+  },
+  'kruskal-mst': {
+    shortTitle: "Kruskal's MST",
+    subtitle: 'Disjoint Set Union (DSU)',
+    tags: ['greedy', 'minimum-spanning-tree', 'cycle-detection'],
+    themeColor: 'teal',
+  },
 };
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -128,14 +188,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const categories: { id: string; label: string }[] = [
-    { id: 'all', label: 'All Algorithms' },
+    { id: 'all', label: 'All Modules' },
     { id: 'sorting', label: 'Sorting' },
     { id: 'searching', label: 'Searching' },
     { id: 'arrays-pointers', label: 'Pointers & Arrays' },
+    { id: 'stack-queue', label: 'Stacks & Queues' },
     { id: 'linked-lists', label: 'Linked Lists' },
     { id: 'trees-bst', label: 'Trees & Heaps' },
     { id: 'graphs', label: 'Graphs' },
     { id: 'dynamic-programming', label: 'Dynamic Programming' },
+    { id: 'math', label: 'Math & Number Theory' },
   ];
 
   const filteredModules = useMemo(() => {
@@ -186,7 +248,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-3xl">
             <div className="p-3.5 rounded-xl bg-[#111827]/80 border border-[#1F293D] flex flex-col items-center">
               <span className="text-xl sm:text-2xl font-mono font-bold text-[#10B981]">{modules.length}</span>
-              <span className="text-[11px] text-slate-400 font-medium">Core Algorithms</span>
+              <span className="text-[11px] text-slate-400 font-medium">Curriculum Modules</span>
             </div>
             <div className="p-3.5 rounded-xl bg-[#111827]/80 border border-[#1F293D] flex flex-col items-center">
               <span className="text-xl sm:text-2xl font-mono font-bold text-[#06B6D4]">0ms</span>

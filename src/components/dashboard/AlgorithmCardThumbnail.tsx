@@ -596,6 +596,59 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
         </div>
       );
 
+    case 'counting-sort':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#4F46E5] to-[#3730A3] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>Frequency Bucket Indexing</span>
+            <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 h-24">
+            <div className="flex gap-2">
+              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200">
+                1: <span className="text-emerald-300 ml-1">2</span>
+              </div>
+              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200">
+                2: <span className="text-amber-300 ml-1">3</span>
+              </div>
+              <div className="w-8 h-8 rounded bg-indigo-950/70 border border-indigo-400/50 flex items-center justify-center text-xs font-mono font-bold text-indigo-200">
+                3: <span className="text-sky-300 ml-1">1</span>
+              </div>
+            </div>
+            <div className="text-[10px] font-mono text-indigo-200/80 bg-indigo-950/50 px-2 py-0.5 rounded">
+              count[x] → prefix_sum → output[pos]
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'kruskal-mst':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0F766E] to-[#115E59] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-teal-100 uppercase tracking-wider">
+            <span>Disjoint Set MST Union</span>
+            <span className="w-2 h-2 rounded-full bg-teal-300 animate-ping" />
+          </div>
+          <svg viewBox="0 0 160 80" className="w-48 h-24 mx-auto">
+            <line x1="30" y1="25" x2="80" y2="20" stroke="#34D399" strokeWidth="2.5" />
+            <line x1="80" y1="20" x2="130" y2="35" stroke="#34D399" strokeWidth="2.5" />
+            <line x1="30" y1="25" x2="60" y2="60" stroke="#34D399" strokeWidth="2.5" />
+            <line x1="80" y1="20" x2="60" y2="60" stroke="#F87171" strokeWidth="1.5" strokeDasharray="3,3" />
+            <line x1="60" y1="60" x2="130" y2="35" stroke="#34D399" strokeWidth="2.5" />
+
+            <circle cx="30" cy="25" r="7" fill="#14B8A6" stroke="#FFFFFF" strokeWidth="1.5" />
+            <circle cx="80" cy="20" r="7" fill="#14B8A6" stroke="#FFFFFF" strokeWidth="1.5" />
+            <circle cx="130" cy="35" r="7" fill="#14B8A6" stroke="#FFFFFF" strokeWidth="1.5" />
+            <circle cx="60" cy="60" r="7" fill="#14B8A6" stroke="#FFFFFF" strokeWidth="1.5" />
+
+            <text x="30" y="28" textAnchor="middle" fill="#FFFFFF" fontSize="7" fontWeight="bold">A</text>
+            <text x="80" y="23" textAnchor="middle" fill="#FFFFFF" fontSize="7" fontWeight="bold">B</text>
+            <text x="130" y="38" textAnchor="middle" fill="#FFFFFF" fontSize="7" fontWeight="bold">C</text>
+            <text x="60" y="63" textAnchor="middle" fill="#FFFFFF" fontSize="7" fontWeight="bold">D</text>
+          </svg>
+        </div>
+      );
+
     default:
       return (
         <div className="w-full h-40 bg-slate-800 rounded-xl flex items-center justify-center">

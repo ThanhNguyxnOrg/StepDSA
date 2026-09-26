@@ -30,22 +30,28 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({ frame 
         </div>
 
         {/* Invariant Assertion Badge (if provided) */}
-        {frame.invariantStatus && (
-          <div
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium ${
-              frame.invariantStatus.isValid
-                ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]'
-                : 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B]'
-            }`}
-          >
-            {frame.invariantStatus.isValid ? (
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            ) : (
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-            )}
-            <span>{frame.invariantStatus.label}</span>
-          </div>
-        )}
+        {frame.invariantStatus && (() => {
+          const inv = typeof frame.invariantStatus === 'string'
+            ? { isValid: true, label: frame.invariantStatus }
+            : frame.invariantStatus;
+
+          return (
+            <div
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium ${
+                inv.isValid
+                  ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]'
+                  : 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B]'
+              }`}
+            >
+              {inv.isValid ? (
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              )}
+              <span>{inv.label}</span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Bottom Row: Live Variable Watcher Chips */}

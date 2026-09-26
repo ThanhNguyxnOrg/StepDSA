@@ -17,7 +17,7 @@ export interface ParenthesesState {
 export const balancedParenthesesModule: AlgorithmModule<string, ParenthesesState> = {
   id: 'valid-parentheses',
   title: 'Balanced Parentheses (Stack LIFO)',
-  category: 'arrays-pointers',
+  category: 'stack-queue',
   difficulty: 'Beginner',
   complexity: {
     timeBest: 'O(1)',

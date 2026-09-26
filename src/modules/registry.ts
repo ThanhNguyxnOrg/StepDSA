@@ -22,6 +22,9 @@ import { topologicalSortModule } from './graphs/topologicalSort';
 import { balancedParenthesesModule } from './stack/balancedParentheses';
 import { lcsModule } from './dp/lcs';
 import { sieveModule } from './math/sieveOfEratosthenes';
+import { countingSortModule } from './sorting/countingSort';
+import { kruskalMSTModule } from './graphs/kruskalMST';
+import { euclideanGcdModule } from './math/euclideanGcd';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -29,10 +32,12 @@ export const allModules: AlgorithmModule[] = [
   insertionSortModule,
   selectionSortModule,
   bubbleSortModule,
+  countingSortModule,
   linearSearchModule,
   binarySearchModule,
   balancedParenthesesModule,
   sieveModule,
+  euclideanGcdModule,
   lcsModule,
   twoPointersModule,
   slidingWindowModule,
@@ -44,6 +49,7 @@ export const allModules: AlgorithmModule[] = [
   dfsTraversalModule,
   topologicalSortModule,
   dijkstraModule,
+  kruskalMSTModule,
   knapsackModule,
   octree3dModule,
 ];

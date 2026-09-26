@@ -19,7 +19,7 @@ export interface SieveState {
 export const sieveModule: AlgorithmModule<number, SieveState> = {
   id: 'sieve-of-eratosthenes',
   title: 'Sieve of Eratosthenes (Prime Grid)',
-  category: 'arrays-pointers',
+  category: 'math',
   difficulty: 'Beginner',
   complexity: {
     timeBest: 'O(N log log N)',

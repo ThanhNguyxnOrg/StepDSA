@@ -7,7 +7,9 @@ export type AlgorithmCategory =
   | 'linked-lists'
   | 'trees-bst'
   | 'graphs'
-  | 'dynamic-programming';
+  | 'dynamic-programming'
+  | 'math'
+  | 'stack-queue';
 
 export type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -33,6 +35,7 @@ export interface CallStackFrame {
   name: string;
   params: Record<string, string | number>;
   line?: number;
+  file?: string;
   isCurrent?: boolean;
 }
 
@@ -41,24 +44,42 @@ export interface InvariantStatus {
   isValid: boolean;
 }
 
+export type SoundCueType =
+  | 'compare'
+  | 'swap'
+  | 'sorted'
+  | 'pivot'
+  | 'discard'
+  | 'step'
+  | 'start'
+  | 'success'
+  | 'complete';
+
+export interface SoundCueObj {
+  frequency?: number;
+  type: SoundCueType;
+}
+
+export type SoundCue = SoundCueType | SoundCueObj;
+
 export interface ExecutionFrame<TState = any> {
   stepIndex: number;
   totalSteps: number;
   codeLine: number;
   explanation: string;
+  action?: string;
   callStack?: CallStackFrame[];
   conditionEval?: {
     expr: string;
     result: boolean | string;
   };
   variables?: Record<string, string | number | boolean>;
-  invariantStatus?: InvariantStatus;
+  scopeVariables?: Record<string, string | number | boolean>;
+  codeHighlights?: Record<string, number[]>;
+  invariantStatus?: InvariantStatus | string;
   isMilestone?: boolean;
   milestoneTitle?: string;
-  soundCue?: {
-    frequency?: number;
-    type: 'compare' | 'swap' | 'sorted' | 'pivot' | 'discard';
-  };
+  soundCue?: SoundCue;
   state: TState;
 }
 

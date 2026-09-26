@@ -36,6 +36,8 @@ export const Header: React.FC<HeaderProps> = ({
     'graphs': [],
     'dynamic-programming': [],
     'linked-lists': [],
+    'math': [],
+    'stack-queue': [],
   };
 
   modules.forEach((mod) => {
@@ -52,6 +54,8 @@ export const Header: React.FC<HeaderProps> = ({
     'graphs': 'Graph Algorithms',
     'dynamic-programming': 'Dynamic Programming',
     'linked-lists': 'Linked Lists',
+    'math': 'Math & Number Theory',
+    'stack-queue': 'Stacks & Queues',
   };
 
   return (
