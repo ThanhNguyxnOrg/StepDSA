@@ -58,6 +58,13 @@ import { binaryExponentiationModule } from './math/binaryExponentiation';
 import { rotatedSortedArrayModule } from './searching/rotatedSortedArray';
 import { longestPalindromicSubstringModule } from './dp/longestPalindromicSubstring';
 
+// Level-4 Canonical Algorithms & Interview Paradigms
+import { twoPointersModule } from './arrays/twoPointers';
+import { slidingWindowModule } from './arrays/slidingWindow';
+import { floydCycleDetectionModule } from './linkedList/floydCycleDetection';
+import { activitySelectionModule } from './arrays/activitySelection';
+import { bitwiseOperationsModule } from './math/bitwiseOperations';
+
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
   mergesortModule,
@@ -108,6 +115,11 @@ export const allModules: AlgorithmModule[] = [
   binaryExponentiationModule,
   rotatedSortedArrayModule,
   longestPalindromicSubstringModule,
+  twoPointersModule,
+  slidingWindowModule,
+  floydCycleDetectionModule,
+  activitySelectionModule,
+  bitwiseOperationsModule,
 ];
 
 export const defaultModule = quicksortModule;

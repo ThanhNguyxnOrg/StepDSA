@@ -1,8 +1,17 @@
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
-import { ArrayStage, ArrayStageState } from '../../components/stage/ArrayStage';
 
-export const twoPointersModule: AlgorithmModule<number[], ArrayStageState> = {
-  id: 'two-pointers',
+export interface TwoPointersState {
+  heights: number[];
+  left: number;
+  right: number;
+  currentArea: number;
+  maxArea: number;
+  bestLeft: number;
+  bestRight: number;
+}
+
+export const twoPointersModule: AlgorithmModule<number[], TwoPointersState> = {
+  id: 'two-pointers-water',
   title: 'Two Pointers (Container With Most Water)',
   category: 'arrays-pointers',
   difficulty: 'Beginner',
@@ -11,133 +20,120 @@ export const twoPointersModule: AlgorithmModule<number[], ArrayStageState> = {
     timeAverage: 'O(N)',
     timeWorst: 'O(N)',
     spaceAuxiliary: 'O(1)',
-    worstCaseCondition: 'Strictly linear O(N) single pass',
+    worstCaseCondition: 'Pointers meet in the middle after N - 1 steps',
   },
   theory: {
     overview:
-      'Given an array representing vertical line heights, find two lines that together with the x-axis form a container holding the maximum water. The two-pointer technique starts at opposite boundaries and moves inward.',
+      'Given an array of heights, find two vertical lines that together with the x-axis form a container holding the maximum amount of water. Area = min(height[left], height[right]) * (right - left).',
     whyItWorks:
-      'The width between pointers decreases monotonically with every step. The only way to find a container with greater area is to search for a taller line than the current limiting shorter boundary.',
+      'Starting at the widest endpoints (0 and N-1), we shrink the width. The container height is limited by the shorter line, so moving the taller line inward could only decrease area. Moving the shorter line is the only way to potentially find a taller line.',
     invariant:
-      'Pruning Invariant: Moving the taller boundary could only reduce the width without any chance of increasing the limiting height. Therefore, discarding the shorter boundary eliminates no potential global optimum.',
+      'Any container involving the discarded shorter line with any inner boundary cannot exceed the current container area.',
     pitfalls: [
-      'Naive brute-force checks all pairs in O(N²). Two pointers reduces this to O(N).',
-      'Both pointers must start at the outermost bounds (0 and N-1) to preserve search completeness.',
+      'Moving the taller pointer inward, which is strictly suboptimal.',
+      'Using quadratic O(N²) nested loops to check all pairs.',
     ],
   },
-  presets: [
-    { id: 'standard', label: 'Classic Heights', description: 'Standard interview example', data: [1, 8, 6, 2, 5, 4, 8, 3, 7] },
-    { id: 'descending', label: 'Descending Heights', description: 'Shifting left pointer', data: [9, 8, 7, 6, 5, 4, 3, 2, 1] },
-    { id: 'peaks', label: 'Twin Peaks', description: 'Two tall walls at center', data: [2, 3, 10, 5, 7, 10, 4, 2] },
-  ],
-  defaultInput: [1, 8, 6, 2, 5, 4, 8, 3, 7],
   codeSnippets: {
-    python: `def max_area(heights):
-    left = 0
-    right = len(heights) - 1
+    python: `def max_area(height):
+    left, right = 0, len(height) - 1
     max_water = 0
-    
     while left < right:
         width = right - left
-        h = min(heights[left], heights[right])
-        current_water = width * h
-        max_water = max(max_water, current_water)
-        
-        if heights[left] < heights[right]:
+        h = min(height[left], height[right])
+        max_water = max(max_water, width * h)
+        if height[left] < height[right]:
             left += 1
         else:
             right -= 1
-            
     return max_water`,
-    typescript: `function maxArea(heights: number[]): number {
-  let left = 0;
-  let right = heights.length - 1;
+    typescript: `function maxArea(height: number[]): number {
+  let left = 0, right = height.length - 1;
   let maxWater = 0;
-
   while (left < right) {
     const width = right - left;
-    const h = Math.min(heights[left], heights[right]);
-    const currentWater = width * h;
-    maxWater = Math.max(maxWater, currentWater);
-
-    if (heights[left] < heights[right]) {
+    const h = Math.min(height[left], height[right]);
+    maxWater = Math.max(maxWater, width * h);
+    if (height[left] < height[right]) {
       left++;
     } else {
       right--;
     }
   }
-
   return maxWater;
 }`,
-    cpp: `int maxArea(vector<int>& heights) {
-    int left = 0;
-    int right = heights.size() - 1;
+    cpp: `int maxArea(vector<int>& height) {
+    int left = 0, right = height.size() - 1;
     int maxWater = 0;
     while (left < right) {
         int width = right - left;
-        int h = min(heights[left], heights[right]);
+        int h = min(height[left], height[right]);
         maxWater = max(maxWater, width * h);
-        if (heights[left] < heights[right]) left++;
+        if (height[left] < height[right]) left++;
         else right--;
     }
     return maxWater;
 }`,
-    java: `public int maxArea(int[] heights) {
-    int left = 0;
-    int right = heights.length - 1;
+    java: `public int maxArea(int[] height) {
+    int left = 0, right = height.length - 1;
     int maxWater = 0;
     while (left < right) {
         int width = right - left;
-        int h = Math.min(heights[left], heights[right]);
+        int h = Math.min(height[left], height[right]);
         maxWater = Math.max(maxWater, width * h);
-        if (heights[left] < heights[right]) left++;
+        if (height[left] < height[right]) left++;
         else right--;
     }
     return maxWater;
 }`,
-    pseudocode: `function maxArea(heights):
-    left = 0
-    right = length(heights) - 1
-    maxWater = 0
+    pseudocode: `function maxArea(height):
+    left <- 0, right <- N - 1
+    maxWater <- 0
     while left < right:
-        width = right - left
-        h = min(heights[left], heights[right])
-        maxWater = max(maxWater, width * h)
-        if heights[left] < heights[right]:
-            left = left + 1
-        else:
-            right = right - 1
+        area <- (right - left) * min(height[left], height[right])
+        maxWater <- max(maxWater, area)
+        if height[left] < height[right]: left <- left + 1
+        else: right <- right - 1
     return maxWater`,
   },
-
-  generateTimeline: (input: number[]): ExecutionFrame<ArrayStageState>[] => {
-    const frames: ExecutionFrame<ArrayStageState>[] = [];
-    const heights = [...input];
+  defaultInput: [1, 8, 6, 2, 5, 4, 8, 3, 7],
+  presets: [
+    { id: 'classic', label: 'Classic LeetCode 11', description: '[1, 8, 6, 2, 5, 4, 8, 3, 7]', data: [1, 8, 6, 2, 5, 4, 8, 3, 7] },
+    { id: 'pyramid', label: 'Pyramid', description: '[1, 3, 5, 7, 6, 4, 2]', data: [1, 3, 5, 7, 6, 4, 2] },
+    { id: 'plateau', label: 'Twin Towers', description: '[9, 1, 1, 1, 1, 1, 9]', data: [9, 1, 1, 1, 1, 1, 9] },
+  ],
+  generateTimeline: (input: number[]): ExecutionFrame<TwoPointersState>[] => {
+    const frames: ExecutionFrame<TwoPointersState>[] = [];
+    const heights = input;
     let left = 0;
     let right = heights.length - 1;
-    let maxWater = 0;
+    let maxArea = 0;
     let bestLeft = 0;
     let bestRight = right;
 
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
-      explanation: `Initialized two pointers: left at index 0 (h=${heights[left]}), right at index ${right} (h=${heights[right]}).`,
+      codeLine: 2,
+      explanation: `Initialize two pointers: left = 0 (height ${heights[left]}), right = ${right} (height ${heights[right]}).`,
       state: {
-        array: heights.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
-        pointers: { left, right },
+        heights: [...heights],
+        left,
+        right,
+        currentArea: 0,
+        maxArea: 0,
+        bestLeft,
+        bestRight,
       },
     });
 
     while (left < right) {
       const width = right - left;
-      const h = Math.min(heights[left], heights[right]);
-      const currentWater = width * h;
-      const isNewMax = currentWater > maxWater;
+      const minH = Math.min(heights[left], heights[right]);
+      const area = width * minH;
 
-      if (isNewMax) {
-        maxWater = currentWater;
+      if (area > maxArea) {
+        maxArea = area;
         bestLeft = left;
         bestRight = right;
       }
@@ -145,23 +141,16 @@ export const twoPointersModule: AlgorithmModule<number[], ArrayStageState> = {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 7,
-        explanation: `Width = ${width}, Limiting Height = min(${heights[left]}, ${heights[right]}) = ${h}. Current Area = ${width} × ${h} = ${currentWater}. ${
-          isNewMax ? `🎉 New Maximum Area: ${maxWater}!` : `Current max remains ${maxWater}.`
-        }`,
-        invariantStatus: {
-          label: `Max Water so far: ${maxWater} (between [${bestLeft}] and [${bestRight}])`,
-          isValid: true,
-        },
-        isMilestone: isNewMax,
-        milestoneTitle: isNewMax ? `New Max Area (${maxWater})` : undefined,
+        codeLine: 6,
+        explanation: `Width = ${right} - ${left} = ${width}, height = min(${heights[left]}, ${heights[right]}) = ${minH}. Water area = ${area}. Max area = ${maxArea}.`,
         state: {
-          array: heights.map((v, idx) => ({
-            id: idx,
-            value: v,
-            status: idx === left || idx === right ? 'comparing' : idx === bestLeft || idx === bestRight ? 'sorted' : 'default',
-          })),
-          pointers: { left, right },
+          heights: [...heights],
+          left,
+          right,
+          currentArea: area,
+          maxArea,
+          bestLeft,
+          bestRight,
         },
       });
 
@@ -169,15 +158,16 @@ export const twoPointersModule: AlgorithmModule<number[], ArrayStageState> = {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 12,
-          explanation: `height[left] (${heights[left]}) < height[right] (${heights[right]}). The left wall limits the container. Advancing left pointer inward to index ${left + 1}.`,
+          codeLine: 8,
+          explanation: `height[left] (${heights[left]}) < height[right] (${heights[right]}): move left pointer inward (left = ${left + 1}).`,
           state: {
-            array: heights.map((v, idx) => ({
-              id: idx,
-              value: v,
-              status: idx === left ? 'discarded' : 'default',
-            })),
-            pointers: { left, right },
+            heights: [...heights],
+            left,
+            right,
+            currentArea: area,
+            maxArea,
+            bestLeft,
+            bestRight,
           },
         });
         left++;
@@ -185,44 +175,102 @@ export const twoPointersModule: AlgorithmModule<number[], ArrayStageState> = {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 14,
-          explanation: `height[right] (${heights[right]}) <= height[left] (${heights[left]}). The right wall limits the container. Advancing right pointer inward to index ${right - 1}.`,
+          codeLine: 10,
+          explanation: `height[left] (${heights[left]}) >= height[right] (${heights[right]}): move right pointer inward (right = ${right - 1}).`,
           state: {
-            array: heights.map((v, idx) => ({
-              id: idx,
-              value: v,
-              status: idx === right ? 'discarded' : 'default',
-            })),
-            pointers: { left, right },
+            heights: [...heights],
+            left,
+            right,
+            currentArea: area,
+            maxArea,
+            bestLeft,
+            bestRight,
           },
         });
         right--;
       }
     }
 
-    // Final result frame
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 17,
-      explanation: `Pointers met at index ${left}. Maximum water container found with area ${maxWater} between index [${bestLeft}] (h=${heights[bestLeft]}) and [${bestRight}] (h=${heights[bestRight]}).`,
-      isMilestone: true,
-      milestoneTitle: `Global Optimum Found (${maxWater})`,
+      codeLine: 12,
+      explanation: `Pointers met at index ${left}. Maximum water area found is ${maxArea} between indices [${bestLeft}, ${bestRight}].`,
       state: {
-        array: heights.map((v, idx) => ({
-          id: idx,
-          value: v,
-          status: idx === bestLeft || idx === bestRight ? 'sorted' : 'discarded',
-        })),
-        pointers: { bestL: bestLeft, bestR: bestRight },
+        heights: [...heights],
+        left,
+        right,
+        currentArea: 0,
+        maxArea,
+        bestLeft,
+        bestRight,
       },
     });
 
     const total = frames.length;
-    return frames.map((f, i) => ({ ...f, stepIndex: i, totalSteps: total }));
-  },
+    frames.forEach((f, idx) => {
+      f.stepIndex = idx;
+      f.totalSteps = total;
+    });
 
-  renderStage: (frame, projection) => {
-    return <ArrayStage state={frame.state} projection={projection} />;
+    return frames;
+  },
+  renderStage: (frame: ExecutionFrame<TwoPointersState>) => {
+    const { heights, left, right, currentArea, maxArea, bestLeft, bestRight } = frame.state;
+    const maxVal = Math.max(...heights, 10);
+
+    return (
+      <div className="flex flex-col items-center justify-center p-6 w-full min-h-[380px] gap-6">
+        {/* Metric Badges */}
+        <div className="flex items-center gap-6 bg-slate-900/80 border border-slate-700 px-6 py-3 rounded-2xl">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-mono text-slate-400">CURRENT AREA</span>
+            <span className="text-xl font-bold font-mono text-sky-400">{currentArea}</span>
+          </div>
+          <div className="w-px h-8 bg-slate-700"></div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-mono text-slate-400">MAX WATER AREA</span>
+            <span className="text-xl font-bold font-mono text-emerald-400">{maxArea}</span>
+          </div>
+          <div className="w-px h-8 bg-slate-700"></div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-mono text-slate-400">BEST BOUNDS</span>
+            <span className="text-sm font-bold font-mono text-indigo-300">[{bestLeft} .. {bestRight}]</span>
+          </div>
+        </div>
+
+        {/* Vertical Bars and Water Visualization */}
+        <div className="relative flex items-end justify-center gap-3 h-52 px-6 pb-2 border-b-2 border-slate-600 w-full max-w-2xl">
+          {heights.map((h, idx) => {
+            const isLeft = left === idx;
+            const isRight = right === idx;
+            const inWindow = idx >= left && idx <= right;
+            const heightPercent = Math.round((h / maxVal) * 100);
+
+            let barBg = 'bg-slate-700 hover:bg-slate-600';
+            if (isLeft || isRight) barBg = 'bg-amber-400 ring-2 ring-amber-300';
+            else if (inWindow) barBg = 'bg-sky-600/80';
+
+            return (
+              <div key={idx} className="flex flex-col items-center flex-1 max-w-[42px] h-full justify-end">
+                {/* Pointer Badge */}
+                <div className="h-5 flex items-center justify-center">
+                  {isLeft && <span className="bg-amber-500 text-slate-950 text-[9px] px-1 rounded font-mono font-bold">L</span>}
+                  {isRight && <span className="bg-amber-500 text-slate-950 text-[9px] px-1 rounded font-mono font-bold">R</span>}
+                </div>
+
+                <div
+                  style={{ height: `${heightPercent}%` }}
+                  className={`w-full rounded-t transition-all duration-200 flex items-center justify-center ${barBg}`}
+                >
+                  <span className="text-[11px] font-mono font-bold text-white mb-1 drop-shadow">{h}</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 mt-1">[{idx}]</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   },
 };

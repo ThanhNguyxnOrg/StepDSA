@@ -81,7 +81,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Doubly Linked List (Bidirectional Pointers)** `[ACTIVE]`
 - [x] **Reverse Linked List (In-Place Iterative & Recursive)** `[ACTIVE]`
 - [ ] Circular Linked List (Ring Buffer Traversal)
-- [ ] Floyd's Cycle Detection (Tortoise and Hare Fast & Slow Pointers)
+- [x] **Floyd's Cycle Detection (Tortoise and Hare Fast & Slow Pointers)** `[ACTIVE]`
 - [ ] Middle of the Linked List (Two-Pointer Midpoint Finding)
 - [ ] Merge Two Sorted Linked Lists (Splice & Merge Pointers)
 - [ ] Remove N-th Node From End of List (Window Pointer Offset)
@@ -233,10 +233,10 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 
 ---
 
-### N. Greedy Algorithms
-- [ ] Two Pointers Technique (Opposite-End & Same-Direction Convergence)
-- [ ] Sliding Window Technique (Fixed & Variable Length Window Invariants)
-- [ ] Activity Selection / Interval Scheduling (Earliest Deadline First)
+### N. Greedy & Array Techniques
+- [x] **Two Pointers Technique (Container With Most Water)** `[ACTIVE]`
+- [x] **Sliding Window Technique (Fixed & Variable Length Window Invariants)** `[ACTIVE]`
+- [x] **Activity Selection / Interval Scheduling (Earliest Deadline First)** `[ACTIVE]`
 - [ ] Fractional Knapsack (Value-to-Weight Ratio Greedy Choice)
 - [ ] Huffman Coding (Greedy Min-Heap Optimal Prefix Tree)
 - [ ] Gas Station Circuit (Greedy Cumulative Deficit Check)
@@ -282,7 +282,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ---
 
 ### S. Bit Manipulation
-- [ ] Bitwise Operations Interactive Visualizer (AND, OR, XOR, NOT, Bitwise Shifts)
+- [x] **Bitwise Operations Interactive Visualizer (AND, OR, XOR, NOT, Bitwise Shifts)** `[ACTIVE]`
 - [ ] Count Set Bits (Brian Kernighan's Algorithm & Popcount Lookup)
 - [ ] Power of Two & Single Number Detection (XOR Cancellation Properties)
 - [ ] Submask Enumeration (Submask Traversal via Bit Tricks)

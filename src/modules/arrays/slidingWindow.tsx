@@ -1,9 +1,24 @@
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
-import { ArrayStage, ArrayStageState } from '../../components/stage/ArrayStage';
 
-export const slidingWindowModule: AlgorithmModule<{ array: number[]; k: number }, ArrayStageState> = {
-  id: 'sliding-window',
-  title: 'Sliding Window (Max Sum Subarray of Size K)',
+export interface SlidingWindowInput {
+  array: number[];
+  k: number;
+}
+
+export interface SlidingWindowState {
+  array: number[];
+  k: number;
+  windowStart: number;
+  windowEnd: number;
+  currentSum: number;
+  maxSum: number;
+  bestStart: number;
+  phase: 'init' | 'slide' | 'done';
+}
+
+export const slidingWindowModule: AlgorithmModule<SlidingWindowInput, SlidingWindowState> = {
+  id: 'sliding-window-max-sum',
+  title: 'Sliding Window (Max Sum Subarray Size K)',
   category: 'arrays-pointers',
   difficulty: 'Beginner',
   complexity: {
@@ -11,184 +26,213 @@ export const slidingWindowModule: AlgorithmModule<{ array: number[]; k: number }
     timeAverage: 'O(N)',
     timeWorst: 'O(N)',
     spaceAuxiliary: 'O(1)',
-    worstCaseCondition: 'Strictly linear single-pass O(N)',
+    worstCaseCondition: 'Constant window sliding across entire N elements',
   },
   theory: {
     overview:
-      'The Sliding Window technique is used to perform operations on a specific window size of a given array or string, avoiding redundant re-computations when the window shifts.',
+      'Finds the maximum sum of any contiguous subarray of fixed size K. Instead of recomputing each subarray sum in O(K) time, sliding window updates the sum in O(1) time by adding the incoming element and subtracting the outgoing element.',
     whyItWorks:
-      'Instead of recalculating the sum of K elements from scratch at each position in O(K), we subtract the element leaving the window and add the new element entering the window in O(1) time.',
+      'Adjacent windows of length K share K - 1 overlapping elements. windowSum[i] = windowSum[i - 1] - array[i - 1] + array[i + K - 1].',
     invariant:
-      'At step i, current_sum = previous_sum - arr[i - k] + arr[i], maintaining exact window sum in O(1).',
+      'currentSum accurately reflects the exact sum of elements from array[windowStart] to array[windowEnd].',
     pitfalls: [
-      'Window size K must be <= array length.',
-      'Remember to initialize the first window of size K before sliding.',
+      'Off-by-one errors when establishing the initial window of size K.',
+      'Assuming K is always strictly smaller than array length without boundary checks.',
     ],
   },
-  presets: [
-    { id: 'standard', label: 'Classic Array (k=3)', description: 'Window of size 3', data: { array: [2, 1, 5, 1, 3, 2, 8, 4], k: 3 } },
-    { id: 'all-positive', label: 'Rising Array (k=4)', description: 'Window of size 4', data: { array: [1, 4, 2, 10, 23, 3, 1, 0, 20], k: 4 } },
-  ],
-  defaultInput: { array: [2, 1, 5, 1, 3, 2, 8, 4], k: 3 },
   codeSnippets: {
-    python: `def max_sub_array_of_size_k(k, arr):
-    max_sum = 0
-    window_sum = 0
-    window_start = 0
-
-    for window_end in range(len(arr)):
-        window_sum += arr[window_end] # add next element
-        # slide window once we hit size k
-        if window_end >= k - 1:
-            max_sum = max(max_sum, window_sum)
-            window_sum -= arr[window_start] # subtract leaving element
-            window_start += 1 # slide window forward
-            
+    python: `def max_sub_array_sum(arr, k):
+    n = len(arr)
+    if n < k: return 0
+    window_sum = sum(arr[:k])
+    max_sum = window_sum
+    for i in range(k, n):
+        window_sum += arr[i] - arr[i - k]
+        max_sum = max(max_sum, window_sum)
     return max_sum`,
-    typescript: `function maxSubArrayOfSizeK(k: number, arr: number[]): number {
-  let maxSum = 0;
+    typescript: `function maxSubArraySum(arr: number[], k: number): number {
+  if (arr.length < k) return 0;
   let windowSum = 0;
-  let windowStart = 0;
-
-  for (let windowEnd = 0; windowEnd < arr.length; windowEnd++) {
-    windowSum += arr[windowEnd];
-    if (windowEnd >= k - 1) {
-      maxSum = Math.max(maxSum, windowSum);
-      windowSum -= arr[windowStart];
-      windowStart++;
-    }
+  for (let i = 0; i < k; i++) windowSum += arr[i];
+  let maxSum = windowSum;
+  for (let i = k; i < arr.length; i++) {
+    windowSum += arr[i] - arr[i - k];
+    maxSum = Math.max(maxSum, windowSum);
   }
   return maxSum;
 }`,
-    cpp: `int maxSubArrayOfSizeK(int k, const vector<int>& arr) {
-    int maxSum = 0, windowSum = 0, windowStart = 0;
-    for (int windowEnd = 0; windowEnd < arr.size(); windowEnd++) {
-        windowSum += arr[windowEnd];
-        if (windowEnd >= k - 1) {
-            maxSum = max(maxSum, windowSum);
-            windowSum -= arr[windowStart];
-            windowStart++;
-        }
+    cpp: `int maxSubArraySum(vector<int>& arr, int k) {
+    if (arr.size() < k) return 0;
+    int windowSum = 0;
+    for (int i = 0; i < k; i++) windowSum += arr[i];
+    int maxSum = windowSum;
+    for (size_t i = k; i < arr.size(); i++) {
+        windowSum += arr[i] - arr[i - k];
+        maxSum = max(maxSum, windowSum);
     }
     return maxSum;
 }`,
-    java: `public int maxSubArrayOfSizeK(int k, int[] arr) {
-    int maxSum = 0, windowSum = 0, windowStart = 0;
-    for (int windowEnd = 0; windowEnd < arr.length; windowEnd++) {
-        windowSum += arr[windowEnd];
-        if (windowEnd >= k - 1) {
-            maxSum = Math.max(maxSum, windowSum);
-            windowSum -= arr[windowStart++];
-        }
+    java: `public int maxSubArraySum(int[] arr, int k) {
+    if (arr.length < k) return 0;
+    int windowSum = 0;
+    for (int i = 0; i < k; i++) windowSum += arr[i];
+    int maxSum = windowSum;
+    for (int i = k; i < arr.length; i++) {
+        windowSum += arr[i] - arr[i - k];
+        maxSum = Math.max(maxSum, windowSum);
     }
     return maxSum;
 }`,
-    pseudocode: `function maxSubArrayOfSizeK(k, arr):
-    maxSum = 0, windowSum = 0, windowStart = 0
-    for windowEnd = 0 to length(arr) - 1:
-        windowSum += arr[windowEnd]
-        if windowEnd >= k - 1:
-            maxSum = max(maxSum, windowSum)
-            windowSum -= arr[windowStart]
-            windowStart++
+    pseudocode: `function maxSubArraySum(arr, k):
+    windowSum <- sum(arr[0..k-1])
+    maxSum <- windowSum
+    for i from k to N - 1:
+        windowSum <- windowSum + arr[i] - arr[i - k]
+        maxSum <- max(maxSum, windowSum)
     return maxSum`,
   },
+  defaultInput: { array: [2, 1, 5, 1, 3, 2, 8, 4], k: 3 },
+  presets: [
+    { id: 'standard', label: 'Array of 8 (K=3)', description: '[2, 1, 5, 1, 3, 2, 8, 4], K = 3', data: { array: [2, 1, 5, 1, 3, 2, 8, 4], k: 3 } },
+    { id: 'alternating', label: 'Peaks (K=2)', description: '[10, 2, 15, 3, 20, 1], K = 2', data: { array: [10, 2, 15, 3, 20, 1], k: 2 } },
+    { id: 'large_k', label: 'Wide Window (K=4)', description: '[1, 4, 2, 10, 23, 3, 1, 0, 20], K = 4', data: { array: [1, 4, 2, 10, 23, 3, 1, 0, 20], k: 4 } },
+  ],
+  generateTimeline: (input: SlidingWindowInput): ExecutionFrame<SlidingWindowState>[] => {
+    const frames: ExecutionFrame<SlidingWindowState>[] = [];
+    const arr = input.array;
+    const k = input.k;
+    const n = arr.length;
 
-  generateTimeline: (input: { array: number[]; k: number }): ExecutionFrame<ArrayStageState>[] => {
-    const frames: ExecutionFrame<ArrayStageState>[] = [];
-    const arr = [...input.array];
-    const k = Math.min(input.k, arr.length);
-    let maxSum = 0;
     let windowSum = 0;
-    let windowStart = 0;
-    let bestWindow: [number, number] = [0, k - 1];
+    for (let i = 0; i < k; i++) windowSum += arr[i];
+    let maxSum = windowSum;
+    let bestStart = 0;
 
+    // Frame 0: Initial window
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
-      explanation: `Starting Sliding Window of size k=${k} over array of length ${arr.length}.`,
+      codeLine: 4,
+      explanation: `Build initial window of size K = ${k}: sum of indices [0..${k - 1}] is ${windowSum}.`,
       state: {
-        array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
-        pointers: {},
+        array: [...arr],
+        k,
+        windowStart: 0,
+        windowEnd: k - 1,
+        currentSum: windowSum,
+        maxSum: windowSum,
+        bestStart: 0,
+        phase: 'init',
       },
     });
 
-    for (let windowEnd = 0; windowEnd < arr.length; windowEnd++) {
-      windowSum += arr[windowEnd];
+    for (let i = k; i < n; i++) {
+      const incoming = arr[i];
+      const outgoing = arr[i - k];
+      windowSum += incoming - outgoing;
+      const start = i - k + 1;
+
+      if (windowSum > maxSum) {
+        maxSum = windowSum;
+        bestStart = start;
+      }
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 7,
-        explanation: `Added arr[${windowEnd}] (${arr[windowEnd]}) to window. Current window sum = ${windowSum}.`,
+        codeLine: 6,
+        explanation: `Slide window to [${start}..${i}]: subtract outgoing arr[${i - k}]=${outgoing}, add incoming arr[${i}]=${incoming}. currentSum = ${windowSum}, maxSum = ${maxSum}.`,
         state: {
-          array: arr.map((v, idx) => ({
-            id: idx,
-            value: v,
-            status: idx >= windowStart && idx <= windowEnd ? 'comparing' : 'default',
-          })),
-          pointers: { start: windowStart, end: windowEnd },
+          array: [...arr],
+          k,
+          windowStart: start,
+          windowEnd: i,
+          currentSum: windowSum,
+          maxSum,
+          bestStart,
+          phase: 'slide',
         },
       });
-
-      if (windowEnd >= k - 1) {
-        const isNewMax = windowSum > maxSum;
-        if (isNewMax) {
-          maxSum = windowSum;
-          bestWindow = [windowStart, windowEnd];
-        }
-
-        frames.push({
-          stepIndex: frames.length,
-          totalSteps: 1,
-          codeLine: 9,
-          explanation: `Window size reached k=${k}. Window [${windowStart}..${windowEnd}] sum = ${windowSum}. ${
-            isNewMax ? `🎉 New Max Sum found: ${maxSum}!` : `Max sum remains ${maxSum}.`
-          }`,
-          invariantStatus: {
-            label: `Max Window Sum: ${maxSum}`,
-            isValid: true,
-          },
-          isMilestone: isNewMax,
-          milestoneTitle: isNewMax ? `New Max Sum (${maxSum})` : undefined,
-          state: {
-            array: arr.map((v, idx) => ({
-              id: idx,
-              value: v,
-              status: idx >= windowStart && idx <= windowEnd ? (isNewMax ? 'sorted' : 'active') : 'default',
-            })),
-            pointers: { start: windowStart, end: windowEnd },
-          },
-        });
-
-        windowSum -= arr[windowStart];
-        windowStart++;
-      }
     }
 
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 12,
-      explanation: `Completed array scan in single pass O(N). Maximum sum subarray of size k=${k} is ${maxSum} in range [${bestWindow[0]}..${bestWindow[1]}].`,
-      isMilestone: true,
-      milestoneTitle: `Max Sum: ${maxSum}`,
+      codeLine: 8,
+      explanation: `Traversal complete. Maximum sum subarray of size ${k} is ${maxSum} starting at index ${bestStart}.`,
       state: {
-        array: arr.map((v, idx) => ({
-          id: idx,
-          value: v,
-          status: idx >= bestWindow[0] && idx <= bestWindow[1] ? 'sorted' : 'default',
-        })),
-        pointers: { bestStart: bestWindow[0], bestEnd: bestWindow[1] },
+        array: [...arr],
+        k,
+        windowStart: bestStart,
+        windowEnd: bestStart + k - 1,
+        currentSum: maxSum,
+        maxSum,
+        bestStart,
+        phase: 'done',
       },
     });
 
     const total = frames.length;
-    return frames.map((f, idx) => ({ ...f, stepIndex: idx, totalSteps: total }));
-  },
+    frames.forEach((f, idx) => {
+      f.stepIndex = idx;
+      f.totalSteps = total;
+    });
 
-  renderStage: (frame, projection) => {
-    return <ArrayStage state={frame.state} projection={projection} />;
+    return frames;
+  },
+  renderStage: (frame: ExecutionFrame<SlidingWindowState>) => {
+    const { array, k, windowStart, windowEnd, currentSum, maxSum, bestStart } = frame.state;
+
+    return (
+      <div className="flex flex-col items-center justify-center p-6 w-full min-h-[380px] gap-6">
+        {/* Metric Badges */}
+        <div className="flex items-center gap-6 bg-slate-900/80 border border-slate-700 px-6 py-3 rounded-2xl">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-mono text-slate-400">WINDOW SIZE (K)</span>
+            <span className="text-xl font-bold font-mono text-amber-400">{k}</span>
+          </div>
+          <div className="w-px h-8 bg-slate-700"></div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-mono text-slate-400">CURRENT WINDOW SUM</span>
+            <span className="text-xl font-bold font-mono text-sky-400">{currentSum}</span>
+          </div>
+          <div className="w-px h-8 bg-slate-700"></div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-mono text-slate-400">MAX SUBARRAY SUM</span>
+            <span className="text-xl font-bold font-mono text-emerald-400">{maxSum}</span>
+          </div>
+        </div>
+
+        {/* Array Cells with Sliding Frame Highlight */}
+        <div className="flex flex-wrap items-center justify-center gap-2 max-w-4xl">
+          {array.map((val, idx) => {
+            const inCurrentWindow = idx >= windowStart && idx <= windowEnd;
+            const inBestWindow = idx >= bestStart && idx < bestStart + k;
+
+            let borderStyle = 'border-slate-800 bg-slate-900/40 text-slate-400';
+            if (inCurrentWindow) {
+              borderStyle = 'border-sky-400 bg-sky-950/60 text-white ring-2 ring-sky-400 font-bold';
+            } else if (inBestWindow) {
+              borderStyle = 'border-emerald-600 bg-emerald-950/30 text-emerald-200';
+            }
+
+            return (
+              <div key={idx} className="flex flex-col items-center gap-1">
+                <div className={`relative flex flex-col items-center justify-center w-14 h-20 rounded-xl border-2 transition-all ${borderStyle}`}>
+                  <span className="text-xl font-mono">{val}</span>
+                  <span className="text-[10px] font-mono text-slate-500 mt-1">[{idx}]</span>
+                  {idx === windowStart && (
+                    <span className="absolute -top-3 bg-sky-500 text-slate-950 text-[8px] px-1 rounded font-mono font-bold">START</span>
+                  )}
+                  {idx === windowEnd && (
+                    <span className="absolute -bottom-3 bg-sky-500 text-slate-950 text-[8px] px-1 rounded font-mono font-bold">END</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   },
 };
