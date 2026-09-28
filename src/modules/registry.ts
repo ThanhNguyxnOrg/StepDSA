@@ -98,6 +98,12 @@ import { postfixEvaluationModule } from './stack/postfixEvaluation';
 import { slidingWindowMaxModule } from './stack/slidingWindowMax';
 import { bstDeleteModule } from './trees/bstDelete';
 import { subsetSumModule } from './dp/subsetSum';
+import { naiveSearchModule } from './strings/naiveSearch';
+import { boyerMooreModule } from './strings/boyerMoore';
+import { gasStationModule } from './arrays/gasStation';
+import { zeroOneBFSModule } from './graphs/zeroOneBFS';
+import { unboundedKnapsackModule } from './dp/unboundedKnapsack';
+import { bogosortModule } from './sorting/bogosort';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -187,6 +193,12 @@ export const allModules: AlgorithmModule[] = [
   slidingWindowMaxModule,
   bstDeleteModule,
   subsetSumModule,
+  naiveSearchModule,
+  boyerMooreModule,
+  gasStationModule,
+  zeroOneBFSModule,
+  unboundedKnapsackModule,
+  bogosortModule,
 ];
 
 export const defaultModule = quicksortModule;
