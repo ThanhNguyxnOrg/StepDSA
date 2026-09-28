@@ -110,6 +110,11 @@ import { tarjanSCCModule } from './graphs/tarjanSCC';
 import { huffmanCodingModule } from './trees/huffmanCoding';
 import { countSetBitsModule } from './math/countSetBits';
 import { subsetsModule } from './arrays/subsets';
+import { dropSortModule } from './sorting/dropSort';
+import { stoogeSortModule } from './sorting/stoogeSort';
+import { sleepSortModule } from './sorting/sleepSort';
+import { introsortModule } from './sorting/introsort';
+import { timsortModule } from './sorting/timsort';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -211,6 +216,11 @@ export const allModules: AlgorithmModule[] = [
   huffmanCodingModule,
   countSetBitsModule,
   subsetsModule,
+  dropSortModule,
+  stoogeSortModule,
+  sleepSortModule,
+  introsortModule,
+  timsortModule,
 ];
 
 export const defaultModule = quicksortModule;
