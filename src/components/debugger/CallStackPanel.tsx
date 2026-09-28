@@ -12,11 +12,12 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
 
   if (!frame) return null;
 
-  // Derive scope variables from frame.variables or frame.state
+  // Derive scope variables from frame.variables or frame.scopeVariables or frame.state
   const extractedParams: Record<string, string | number> = {};
 
-  if (frame.variables && Object.keys(frame.variables).length > 0) {
-    Object.entries(frame.variables).forEach(([k, v]) => {
+  const rawVars = frame.variables || frame.scopeVariables;
+  if (rawVars && Object.keys(rawVars).length > 0) {
+    Object.entries(rawVars).forEach(([k, v]) => {
       extractedParams[k] = typeof v === 'boolean' ? String(v) : (v as string | number);
     });
   }
@@ -34,6 +35,10 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
       });
     }
     if (s.target !== undefined) extractedParams['target'] = s.target;
+    if (s.targetValue !== undefined) extractedParams['target'] = s.targetValue;
+    if (s.nextKey !== undefined) extractedParams['nextKey'] = s.nextKey;
+    if (s.val !== undefined) extractedParams['val'] = s.val;
+    if (s.value !== undefined) extractedParams['value'] = s.value;
     if (s.k !== undefined) extractedParams['k'] = s.k;
     if (s.windowSum !== undefined) extractedParams['windowSum'] = s.windowSum;
     if (s.maxSum !== undefined) extractedParams['maxSum'] = s.maxSum;
@@ -41,7 +46,36 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
     if (s.maxArea !== undefined) extractedParams['maxArea'] = s.maxArea;
     if (s.current !== undefined) extractedParams['current'] = s.current;
     if (s.insertingValue !== undefined) extractedParams['inserting'] = s.insertingValue;
+    if (s.currentIndex !== undefined) extractedParams['index'] = s.currentIndex;
+    if (s.maxReach !== undefined) extractedParams['maxReach'] = s.maxReach;
+    if (s.currentStair !== undefined) extractedParams['stair'] = s.currentStair;
+    if (s.filledCount !== undefined) extractedParams['filled'] = s.filledCount;
+    if (s.isBipartite !== undefined) extractedParams['bipartite'] = String(s.isBipartite);
+    if (s.currentCell) extractedParams['cell'] = `(${s.currentCell[0]}, ${s.currentCell[1]})`;
+    if (Array.isArray(s.nodes) && extractedParams['nodeCount'] === undefined) {
+      extractedParams['nodes'] = s.nodes.length;
+    }
   }
+
+  const getCleanFuncName = (name: string): string => {
+    const lower = name.toLowerCase();
+    if (lower.includes('bst') || lower.includes('avl')) return 'insert';
+    if (lower.includes('search')) return 'search';
+    if (lower.includes('sort')) return 'sort';
+    if (lower.includes('traversal')) return 'traverse';
+    if (lower.includes('parentheses')) return 'isValid';
+    if (lower.includes('queue')) return 'enqueue';
+    if (lower.includes('stack')) return 'push';
+    if (lower.includes('climb')) return 'climbStairs';
+    if (lower.includes('path')) return 'uniquePaths';
+    if (lower.includes('jump')) return 'canJump';
+    if (lower.includes('bipartite')) return 'isBipartite';
+    if (lower.includes('flood')) return 'floodFill';
+    if (lower.includes('tree')) return 'insert';
+    if (lower.includes('heap')) return 'heapify';
+    const firstWord = name.split(/[\s(]/)[0].toLowerCase();
+    return firstWord.length > 2 ? firstWord : 'execute';
+  };
 
   // Build active call stack: from frame.callStack, or synthesize realistic frames
   let stack: CallStackFrame[] = [];
@@ -50,7 +84,7 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
     stack = frame.callStack;
   } else {
     const s = frame.state as any;
-    const cleanModName = moduleName.split(' ')[0].toLowerCase();
+    const cleanModName = getCleanFuncName(moduleName);
 
     if (s && s.pointers && s.pointers.low !== undefined && s.pointers.high !== undefined) {
       stack = [
@@ -89,10 +123,24 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
   }
 
   const activeFrame = stack[selectedFrameIndex] || stack[0];
-  const activeParams =
+  const activeParams: Record<string, string | number> =
     activeFrame.params && Object.keys(activeFrame.params).length > 0
-      ? activeFrame.params
-      : extractedParams;
+      ? { ...activeFrame.params }
+      : { ...extractedParams };
+
+  // Guaranteed fallback telemetry so Scope Variables is never blank
+  if (Object.keys(activeParams).length === 0) {
+    if (activeFrame.name.startsWith('main')) {
+      activeParams['status'] = 'running';
+      activeParams['step'] = `${frame.stepIndex + 1}/${frame.totalSteps || '?'}`;
+      if (frame.codeLine) activeParams['line'] = frame.codeLine;
+    } else {
+      activeParams['step'] = `${frame.stepIndex + 1}/${frame.totalSteps || '?'}`;
+      if (frame.codeLine) activeParams['line'] = frame.codeLine;
+      if (frame.isMilestone) activeParams['phase'] = 'milestone';
+      else activeParams['phase'] = 'executing';
+    }
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#0E1420] border-t border-[#1F293D]">

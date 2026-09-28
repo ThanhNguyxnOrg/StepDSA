@@ -42,7 +42,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Jump Search (Block Hopping O(sqrt(N)))** `[ACTIVE]`
 - [x] **Interpolation Search (Uniformly Distributed Probing)** `[ACTIVE]`
 - [x] **Exponential Search (Doubling Range Search)** `[ACTIVE]`
-- [ ] Ternary Search (Unimodal Function Extremum Optimization)
+- [x] **Ternary Search (Tri-Sectioning O(log3 N))** `[ACTIVE]`
 - [ ] Binary Search on Answer Space (Monotonic Predicate Optimization)
 
 ---
@@ -82,8 +82,8 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Floyd's Cycle Detection (Tortoise and Hare Fast & Slow Pointers)** `[ACTIVE]`
 - [x] **Circular Linked List (Ring Buffer Traversal)** `[ACTIVE]`
 - [x] **Middle of the Linked List (Two-Pointer Midpoint Finding)** `[ACTIVE]`
-- [ ] Merge Two Sorted Linked Lists (Splice & Merge Pointers)
-- [ ] Remove N-th Node From End of List (Window Pointer Offset)
+- [x] **Merge Two Sorted Linked Lists (Splice & Merge Pointers O(N + M))** `[ACTIVE]`
+- [x] **Remove N-th Node From End of List (Two-Pointer Window O(N))** `[ACTIVE]`
 - [ ] Intersection of Two Linked Lists (Pointer Alignment Traversal)
 
 ---
@@ -97,7 +97,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 * **Algorithmic Applications:**
   - [x] **Balanced Parentheses (Stack LIFO Syntax Validator)** `[ACTIVE]`
   - [x] **Monotonic Stack (Next Greater Element / Histogram Rectangles)** `[ACTIVE]`
-  - [ ] Infix to Postfix Conversion (Dijkstra's Shunting-Yard Algorithm)
+  - [x] **Infix to Postfix Conversion (Dijkstra's Shunting-Yard Algorithm)** `[ACTIVE]`
   - [ ] Postfix Expression Evaluation (Operand Stack Evaluator)
   - [ ] Monotonic Queue (Sliding Window Maximum O(N))
 
@@ -236,11 +236,11 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Two Pointers Technique (Convergent Pointer Traversal)** `[ACTIVE]`
 - [x] **Sliding Window Technique (Fixed & Variable Length Window Invariants)** `[ACTIVE]`
 - [x] **Activity Selection / Interval Scheduling (Earliest Deadline First)** `[ACTIVE]`
-- [ ] Fractional Knapsack (Value-to-Weight Ratio Greedy Choice)
+- [x] **Fractional Knapsack (Value-to-Weight Ratio Greedy Choice O(N log N))** `[ACTIVE]`
 - [ ] Huffman Coding (Greedy Min-Heap Optimal Prefix Tree)
 - [ ] Gas Station Circuit (Greedy Cumulative Deficit Check)
 - [x] **Jump Game (Greedy Maximum Reachable Index)** `[ACTIVE]`
-- [ ] Merge Overlapping Intervals (Sort by Start Time Sweep)
+- [x] **Merge Overlapping Intervals (Sort by Start Time Sweep O(N log N))** `[ACTIVE]`
 
 ---
 
@@ -392,7 +392,7 @@ graph TD
 
 ---
 
-## Current StepDSA Implementation Status (74 Active Modules)
+## Current StepDSA Implementation Status (80 Active Modules)
 
 ### Sorting & Selection (12 modules)
 1. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx)
@@ -408,86 +408,93 @@ graph TD
 11. [Shellsort (Diminishing Increment Gap)](../src/modules/sorting/shellsort.tsx)
 12. [Bucket Sort (Scatter-Gather Distribution)](../src/modules/sorting/bucketSort.tsx)
 
-### Searching (6 modules)
+### Searching (7 modules)
 13. [Linear Search (Sequential Scan)](../src/modules/searching/linearSearch.tsx)
 14. [Binary Search (Boundary Halving)](../src/modules/searching/binarySearch.tsx)
 15. [Search in Rotated Sorted Array](../src/modules/searching/rotatedSortedArray.tsx)
 16. [Jump Search (Block Hopping O(√N))](../src/modules/searching/jumpSearch.tsx)
 17. [Interpolation Search (Probing O(log log N))](../src/modules/searching/interpolationSearch.tsx)
 18. [Exponential Search (Doubling Range)](../src/modules/searching/exponentialSearch.tsx)
+19. [Ternary Search (Tri-Sectioning O(log3 N))](../src/modules/searching/ternarySearch.tsx)
 
 ### Strings & Pattern Matching (3 modules)
-19. [KMP Pattern Search (Knuth-Morris-Pratt)](../src/modules/strings/kmpSearch.tsx)
-20. [Rabin-Karp (Rolling Hash Match)](../src/modules/strings/rabinKarp.tsx)
-21. [Z-Algorithm (Linear Z-Box Match)](../src/modules/strings/zAlgorithm.tsx)
+20. [KMP Pattern Search (Knuth-Morris-Pratt)](../src/modules/strings/kmpSearch.tsx)
+21. [Rabin-Karp (Rolling Hash Match)](../src/modules/strings/rabinKarp.tsx)
+22. [Z-Algorithm (Linear Z-Box Match)](../src/modules/strings/zAlgorithm.tsx)
 
-### Stacks & Queues (6 modules)
-22. [Balanced Parentheses (Stack LIFO)](../src/modules/stack/balancedParentheses.tsx)
-23. [Queue (FIFO Operations)](../src/modules/stack/queueVisualizer.tsx)
-24. [Monotonic Stack (Next Greater Element)](../src/modules/stack/monotonicStack.tsx)
-25. [Stack (LIFO Dynamic Operations)](../src/modules/stack/stackVisualizer.tsx)
-26. [Circular Queue (Ring Buffer Modulo)](../src/modules/stack/circularQueue.tsx)
-27. [Deque (Double-Ended Queue)](../src/modules/stack/dequeVisualizer.tsx)
+### Stacks & Queues (7 modules)
+23. [Balanced Parentheses (Stack LIFO)](../src/modules/stack/balancedParentheses.tsx)
+24. [Queue (FIFO Operations)](../src/modules/stack/queueVisualizer.tsx)
+25. [Monotonic Stack (Next Greater Element)](../src/modules/stack/monotonicStack.tsx)
+26. [Stack (LIFO Dynamic Operations)](../src/modules/stack/stackVisualizer.tsx)
+27. [Circular Queue (Ring Buffer Modulo)](../src/modules/stack/circularQueue.tsx)
+28. [Deque (Double-Ended Queue)](../src/modules/stack/dequeVisualizer.tsx)
+29. [Dijkstra's Shunting-Yard (Infix to Postfix)](../src/modules/stack/shuntingYard.tsx)
 
-### Linked Lists (6 modules)
-28. [Singly Linked List (Pointers & Mutations)](../src/modules/linkedList/singlyLinkedList.tsx)
-29. [Doubly Linked List (Bidirectional Pointers)](../src/modules/linkedList/doublyLinkedList.tsx)
-30. [Reverse Linked List (In-Place)](../src/modules/linkedList/reverseLinkedList.tsx)
-31. [Floyd's Cycle Detection (Fast & Slow)](../src/modules/linkedList/floydCycleDetection.tsx)
-32. [Circular Linked List (Ring Buffer)](../src/modules/linkedList/circularLinkedList.tsx)
-33. [Middle of the Linked List (Two-Pointer)](../src/modules/linkedList/middleLinkedList.tsx)
+### Linked Lists (8 modules)
+30. [Singly Linked List (Pointers & Mutations)](../src/modules/linkedList/singlyLinkedList.tsx)
+31. [Doubly Linked List (Bidirectional Pointers)](../src/modules/linkedList/doublyLinkedList.tsx)
+32. [Reverse Linked List (In-Place)](../src/modules/linkedList/reverseLinkedList.tsx)
+33. [Floyd's Cycle Detection (Fast & Slow)](../src/modules/linkedList/floydCycleDetection.tsx)
+34. [Circular Linked List (Ring Buffer)](../src/modules/linkedList/circularLinkedList.tsx)
+35. [Middle of the Linked List (Two-Pointer)](../src/modules/linkedList/middleLinkedList.tsx)
+36. [Merge Two Sorted Linked Lists](../src/modules/linkedList/mergeTwoLists.tsx)
+37. [Remove N-th Node From End](../src/modules/linkedList/removeNthFromEnd.tsx)
 
 ### Trees & Advanced Hierarchies (9 modules)
-34. [Binary Search Tree (BST)](../src/modules/trees/bst.tsx)
-35. [AVL Tree (Self-Balancing Rotations)](../src/modules/trees/avlTree.tsx)
-36. [Binary Tree Traversals (Inorder, Preorder, Postorder)](../src/modules/trees/treeTraversals.tsx)
-37. [Trie (Prefix Search & Autocomplete)](../src/modules/trees/trie.tsx)
-38. [Binary Heap (Min-Heap Priority Queue)](../src/modules/trees/binaryHeap.tsx)
-39. [Level-Order Traversal (BFS Tree)](../src/modules/trees/levelOrderTraversal.tsx)
-40. [Max-Heap & Floyd's Build-Heap O(N)](../src/modules/trees/maxHeap.tsx)
-41. [Segment Tree (Range Sum Query & Updates)](../src/modules/trees/segmentTree.tsx)
-42. [Octree 3D (Spatial Octant Partitioning)](../src/modules/trees/octree3d.tsx)
+38. [Binary Search Tree (BST)](../src/modules/trees/bst.tsx)
+39. [AVL Tree (Self-Balancing Rotations)](../src/modules/trees/avlTree.tsx)
+40. [Binary Tree Traversals (Inorder, Preorder, Postorder)](../src/modules/trees/treeTraversals.tsx)
+41. [Trie (Prefix Search & Autocomplete)](../src/modules/trees/trie.tsx)
+42. [Binary Heap (Min-Heap Priority Queue)](../src/modules/trees/binaryHeap.tsx)
+43. [Level-Order Traversal (BFS Tree)](../src/modules/trees/levelOrderTraversal.tsx)
+44. [Max-Heap & Floyd's Build-Heap O(N)](../src/modules/trees/maxHeap.tsx)
+45. [Segment Tree (Range Sum Query & Updates)](../src/modules/trees/segmentTree.tsx)
+46. [Octree 3D (Spatial Octant Partitioning)](../src/modules/trees/octree3d.tsx)
 
 ### Graphs & Network Connectivity (12 modules)
-43. [BFS Wavefront (Queue Shortest Path)](../src/modules/graphs/bfsTraversal.tsx)
-44. [DFS Traversal (Call Stack & Cycle Detection)](../src/modules/graphs/dfsTraversal.tsx)
-45. [Topological Sort (Kahn's In-Degree DAG)](../src/modules/graphs/topologicalSort.tsx)
-46. [Dijkstra's Algorithm (Min-Heap Shortest Path)](../src/modules/graphs/dijkstra.tsx)
-47. [Bellman-Ford (Negative Weights & Cycles)](../src/modules/graphs/bellmanFord.tsx)
-48. [Floyd-Warshall (All-Pairs Shortest Path DP)](../src/modules/graphs/floydWarshall.tsx)
-49. [A* Search (Heuristic Pathfinding)](../src/modules/graphs/aStarSearch.tsx)
-50. [Kruskal's MST (DSU Edge Sorting)](../src/modules/graphs/kruskalMST.tsx)
-51. [Prim's Algorithm (Minimum Spanning Tree)](../src/modules/graphs/primMST.tsx)
-52. [Disjoint Set Union (DSU / Union-Find)](../src/modules/graphs/dsu.tsx)
-53. [Bipartite Graph Verification (2-Coloring)](../src/modules/graphs/bipartiteCheck.tsx)
-54. [Connected Components & Flood Fill (Grid)](../src/modules/graphs/floodFill.tsx)
+47. [BFS Wavefront (Queue Shortest Path)](../src/modules/graphs/bfsTraversal.tsx)
+48. [DFS Traversal (Call Stack & Cycle Detection)](../src/modules/graphs/dfsTraversal.tsx)
+49. [Topological Sort (Kahn's In-Degree DAG)](../src/modules/graphs/topologicalSort.tsx)
+50. [Dijkstra's Algorithm (Min-Heap Shortest Path)](../src/modules/graphs/dijkstra.tsx)
+51. [Bellman-Ford (Negative Weights & Cycles)](../src/modules/graphs/bellmanFord.tsx)
+52. [Floyd-Warshall (All-Pairs Shortest Path DP)](../src/modules/graphs/floydWarshall.tsx)
+53. [A* Search (Heuristic Pathfinding)](../src/modules/graphs/aStarSearch.tsx)
+54. [Kruskal's MST (DSU Edge Sorting)](../src/modules/graphs/kruskalMST.tsx)
+55. [Prim's Algorithm (Minimum Spanning Tree)](../src/modules/graphs/primMST.tsx)
+56. [Disjoint Set Union (DSU / Union-Find)](../src/modules/graphs/dsu.tsx)
+57. [Bipartite Graph Verification (2-Coloring)](../src/modules/graphs/bipartiteCheck.tsx)
+58. [Connected Components & Flood Fill (Grid)](../src/modules/graphs/floodFill.tsx)
 
 ### Dynamic Programming (10 modules)
-55. [Kadane's Algorithm (Max Subarray Sum)](../src/modules/dp/kadanesAlgorithm.tsx)
-56. [House Robber (Non-Adjacent Max Sum)](../src/modules/dp/houseRobber.tsx)
-57. [Longest Common Subsequence (LCS)](../src/modules/dp/lcs.tsx)
-58. [Coin Change (Fewest Coins DP)](../src/modules/dp/coinChange.tsx)
-59. [Longest Increasing Subsequence (LIS)](../src/modules/dp/lis.tsx)
-60. [Edit Distance (Levenshtein Distance)](../src/modules/dp/editDistance.tsx)
-61. [0/1 Knapsack Problem (2D DP Matrix)](../src/modules/dp/knapsack.tsx)
-62. [Longest Palindromic Substring](../src/modules/dp/longestPalindromicSubstring.tsx)
-63. [Fibonacci & Climbing Stairs](../src/modules/dp/climbingStairs.tsx)
-64. [Unique Paths in 2D Grid](../src/modules/dp/uniquePaths.tsx)
+59. [Kadane's Algorithm (Max Subarray Sum)](../src/modules/dp/kadanesAlgorithm.tsx)
+60. [House Robber (Non-Adjacent Max Sum)](../src/modules/dp/houseRobber.tsx)
+61. [Longest Common Subsequence (LCS)](../src/modules/dp/lcs.tsx)
+62. [Coin Change (Fewest Coins DP)](../src/modules/dp/coinChange.tsx)
+63. [Longest Increasing Subsequence (LIS)](../src/modules/dp/lis.tsx)
+64. [Edit Distance (Levenshtein Distance)](../src/modules/dp/editDistance.tsx)
+65. [0/1 Knapsack Problem (2D DP Matrix)](../src/modules/dp/knapsack.tsx)
+66. [Longest Palindromic Substring](../src/modules/dp/longestPalindromicSubstring.tsx)
+67. [Fibonacci & Climbing Stairs](../src/modules/dp/climbingStairs.tsx)
+68. [Unique Paths in 2D Grid](../src/modules/dp/uniquePaths.tsx)
 
-### Greedy & Array Techniques (4 modules)
-65. [Two Pointers Technique](../src/modules/arrays/twoPointers.tsx)
-66. [Sliding Window Technique](../src/modules/arrays/slidingWindow.tsx)
-67. [Activity Selection / Interval Scheduling](../src/modules/arrays/activitySelection.tsx)
-68. [Jump Game (Greedy Reachable Frontier)](../src/modules/arrays/jumpGame.tsx)
+### Greedy & Array Techniques (6 modules)
+69. [Two Pointers Technique](../src/modules/arrays/twoPointers.tsx)
+70. [Sliding Window Technique](../src/modules/arrays/slidingWindow.tsx)
+71. [Activity Selection / Interval Scheduling](../src/modules/arrays/activitySelection.tsx)
+72. [Jump Game (Greedy Reachable Frontier)](../src/modules/arrays/jumpGame.tsx)
+73. [Merge Overlapping Intervals](../src/modules/arrays/mergeIntervals.tsx)
+74. [Fractional Knapsack (Greedy Density Sort)](../src/modules/arrays/fractionalKnapsack.tsx)
 
 ### Number Theory & Math (3 modules)
-69. [Sieve of Eratosthenes (Prime Grid)](../src/modules/math/sieveOfEratosthenes.tsx)
-70. [Euclidean Algorithm (GCD)](../src/modules/math/euclideanGcd.tsx)
-71. [Fast Binary Exponentiation](../src/modules/math/binaryExponentiation.tsx)
+75. [Sieve of Eratosthenes (Prime Grid)](../src/modules/math/sieveOfEratosthenes.tsx)
+76. [Euclidean Algorithm (GCD)](../src/modules/math/euclideanGcd.tsx)
+77. [Fast Binary Exponentiation](../src/modules/math/binaryExponentiation.tsx)
 
 ### Recursion & Backtracking (2 modules)
-72. [Tower of Hanoi (Recursive Call Stack)](../src/modules/math/towerOfHanoi.tsx)
-73. [N-Queens Problem (Backtracking)](../src/modules/math/nQueens.tsx)
+78. [Tower of Hanoi (Recursive Call Stack)](../src/modules/math/towerOfHanoi.tsx)
+79. [N-Queens Problem (Backtracking)](../src/modules/math/nQueens.tsx)
 
 ### Bit Manipulation (1 module)
-74. [Bitwise Operations Visualizer](../src/modules/math/bitwiseOperations.tsx)
+80. [Bitwise Operations Visualizer](../src/modules/math/bitwiseOperations.tsx)
+

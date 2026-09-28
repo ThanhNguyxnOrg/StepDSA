@@ -198,8 +198,12 @@ Node leftRotate(Node x) {
       isMilestone: true,
       milestoneTitle: 'AVL Start',
       soundCue: 'start',
-      scopeVariables: { totalKeys: values.length },
-      state: { nodes: [] },
+      scopeVariables: { totalKeys: values.length, nextKey: values[0] ?? 0 },
+      callStack: [
+        { name: `insert(root, ${values[0] ?? 0})`, params: { val: values[0] ?? 0 }, line: 5, isCurrent: true },
+        { name: 'main()', params: { totalKeys: values.length }, line: 1 },
+      ],
+      state: { nodes: [], targetValue: values[0] },
     });
 
     const rightRotate = (y: AVLNodeInternal): AVLNodeInternal => {

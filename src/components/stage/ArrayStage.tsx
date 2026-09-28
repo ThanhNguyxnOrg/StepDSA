@@ -26,8 +26,18 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({ state, projection }) => 
 
   if (array.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-500 font-mono text-xs">
-        No elements to display
+      <div className="w-full flex-1 flex flex-col items-center justify-center p-8 min-h-[320px]">
+        <div className="flex flex-col items-center justify-center max-w-sm p-6 rounded-2xl bg-slate-950/70 border border-slate-800 text-center">
+          <div className="w-12 h-12 rounded-xl border border-slate-700 bg-slate-900 flex items-center justify-center text-slate-500 mb-3 text-lg">
+            📊
+          </div>
+          <span className="text-xs font-mono font-bold text-slate-300 mb-1">
+            Array Workspace Ready
+          </span>
+          <span className="text-[11px] font-mono text-slate-500">
+            Apply a preset above or press Step to populate elements.
+          </span>
+        </div>
       </div>
     );
   }

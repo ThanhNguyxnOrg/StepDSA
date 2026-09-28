@@ -27,8 +27,27 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
 
   if (nodes.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-500 font-mono text-xs">
-        Empty tree. Insert a node to begin.
+      <div className="w-full flex-1 flex flex-col items-center justify-center p-8 min-h-[340px]">
+        <div className="flex flex-col items-center justify-center max-w-md w-full p-8 rounded-3xl bg-slate-950/70 border border-slate-800 shadow-2xl text-center">
+          {/* Ghost Root Insertion Slot */}
+          <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-cyan-500/50 bg-cyan-950/20 flex flex-col items-center justify-center mb-4 text-cyan-400 animate-pulse">
+            <span className="text-xl">➕</span>
+            <span className="text-[8px] font-mono font-bold tracking-wider">ROOT</span>
+          </div>
+
+          <h4 className="text-sm font-bold text-white font-mono mb-1">
+            Tree Insertion Stage
+          </h4>
+          <p className="text-xs text-slate-400 font-mono mb-4 leading-relaxed">
+            Tree contains 0 nodes. Press <span className="text-emerald-400 font-bold">Line &gt;</span> (F10) or <span className="text-cyan-400 font-bold">Action ▷</span> to begin inserting elements into the root.
+          </p>
+
+          {state.targetValue !== undefined && (
+            <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-300">
+              Next Value: <strong className="text-white">{state.targetValue}</strong>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

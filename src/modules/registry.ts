@@ -86,6 +86,12 @@ import { floodFillModule } from './graphs/floodFill';
 import { climbingStairsModule } from './dp/climbingStairs';
 import { uniquePathsModule } from './dp/uniquePaths';
 import { jumpGameModule } from './arrays/jumpGame';
+import { ternarySearchModule } from './searching/ternarySearch';
+import { mergeTwoListsModule } from './linkedList/mergeTwoLists';
+import { removeNthFromEndModule } from './linkedList/removeNthFromEnd';
+import { shuntingYardModule } from './stack/shuntingYard';
+import { mergeIntervalsModule } from './arrays/mergeIntervals';
+import { fractionalKnapsackModule } from './arrays/fractionalKnapsack';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -163,6 +169,12 @@ export const allModules: AlgorithmModule[] = [
   climbingStairsModule,
   uniquePathsModule,
   jumpGameModule,
+  ternarySearchModule,
+  mergeTwoListsModule,
+  removeNthFromEndModule,
+  shuntingYardModule,
+  mergeIntervalsModule,
+  fractionalKnapsackModule,
 ];
 
 export const defaultModule = quicksortModule;

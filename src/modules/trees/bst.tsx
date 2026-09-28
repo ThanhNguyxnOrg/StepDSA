@@ -136,7 +136,12 @@ public TreeNode insert(TreeNode root, int val) {
       totalSteps: 1,
       codeLine: 1,
       explanation: `Starting BST construction for sequence [${values.join(', ')}].`,
-      state: { nodes: [] },
+      variables: { nextVal: values[0] ?? 0, totalToInsert: values.length, treeSize: 0 },
+      callStack: [
+        { name: `insert(root, ${values[0] ?? 0})`, params: { val: values[0] ?? 0 }, line: 8, isCurrent: true },
+        { name: 'main()', params: { sequenceLength: values.length }, line: 1 },
+      ],
+      state: { nodes: [], targetValue: values[0] },
     });
 
     let nodeCounter = 0;
@@ -154,11 +159,17 @@ public TreeNode insert(TreeNode root, int val) {
           explanation: `Tree is empty. Inserting root node with value ${val}.`,
           isMilestone: true,
           milestoneTitle: `Root Inserted (${val})`,
+          variables: { val, rootVal: val, treeSize: 1, isRoot: true },
+          callStack: [
+            { name: `insert(root, ${val})`, params: { root: 'null', val }, line: 7, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
           state: {
             nodes: positioned.map((n) => ({
               ...n,
               status: n.id === newNodeId ? 'sorted' : 'default',
             })),
+            targetValue: val,
           },
         });
       } else {
@@ -175,11 +186,30 @@ public TreeNode insert(TreeNode root, int val) {
             totalSteps: 1,
             codeLine: 9,
             explanation: `Comparing insert value ${val} with current node ${curr.value}.`,
+            variables: {
+              insertVal: val,
+              currNode: curr.value,
+              direction: val < curr.value ? 'left' : 'right',
+            },
+            callStack: [
+              {
+                name: `insert(${curr.value}, ${val})`,
+                params: { curr: curr.value, val },
+                line: 9,
+                isCurrent: true,
+              },
+              { name: 'main()', params: {}, line: 1 },
+            ],
+            conditionEval: {
+              expr: `${val} < ${curr.value}`,
+              result: val < curr.value,
+            },
             state: {
               nodes: currentPos.map((n) => ({
                 ...n,
                 status: n.id === curr.id ? 'comparing' : 'default',
               })),
+              targetValue: val,
             },
           });
 
@@ -209,11 +239,27 @@ public TreeNode insert(TreeNode root, int val) {
           explanation: `Attached new node ${val} as ${branch} child of parent ${parent?.value}.`,
           isMilestone: true,
           milestoneTitle: `Inserted ${val}`,
+          variables: {
+            insertedVal: val,
+            parentVal: parent?.value ?? 0,
+            branch,
+            treeSize: nodeCounter,
+          },
+          callStack: [
+            {
+              name: `insert(${parent?.value}, ${val})`,
+              params: { parent: parent?.value ?? 0, val, branch },
+              line: 11,
+              isCurrent: true,
+            },
+            { name: 'main()', params: {}, line: 1 },
+          ],
           state: {
             nodes: updatedPos.map((n) => ({
               ...n,
               status: n.id === newNodeId ? 'sorted' : 'default',
             })),
+            targetValue: val,
           },
         });
       }
