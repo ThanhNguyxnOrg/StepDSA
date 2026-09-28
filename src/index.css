@@ -144,3 +144,22 @@
   stroke-dasharray: 4 2;
   animation: dashFlowStroke 1.2s linear infinite;
 }
+
+@keyframes slideInQueue {
+  0% { transform: translateX(10px); opacity: 0; }
+  25%, 75% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-10px); opacity: 0; }
+}
+
+.anim-queue-flow {
+  animation: slideInQueue 2.2s ease-in-out infinite;
+}
+
+@keyframes arcHop {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(32px, -16px); }
+}
+
+.anim-arc-hop {
+  animation: arcHop 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}

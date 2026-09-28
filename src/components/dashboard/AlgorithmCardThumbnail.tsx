@@ -201,18 +201,54 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
 
-          <div className="flex items-center justify-center gap-3 h-24">
-            <div className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-emerald-400/20 flex items-center justify-center font-mono font-bold text-xs text-emerald-200 shadow-md">
-              0
-            </div>
-            <span className="text-white text-xs font-mono font-bold anim-arrow-flow">→</span>
-            <div className="w-10 h-10 rounded-full border-2 border-amber-400 bg-amber-400/20 flex items-center justify-center font-mono font-bold text-xs text-amber-200 shadow-md">
-              1
-            </div>
-            <span className="text-white text-xs font-mono font-bold anim-arrow-flow">→</span>
-            <div className="w-10 h-10 rounded-full border-2 border-cyan-400 bg-cyan-400/20 flex items-center justify-center font-mono font-bold text-xs text-cyan-200 shadow-md">
-              2
-            </div>
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            {/* Edges with directional arrows */}
+            <defs>
+              <marker id="topo-arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <polygon points="0 0, 6 3, 0 6" fill="#67E8F9" />
+              </marker>
+              <marker id="topo-arr-active" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <polygon points="0 0, 6 3, 0 6" fill="#FDE047" />
+              </marker>
+            </defs>
+
+            {/* Edge 0 -> 1 (active relaxing) */}
+            <line x1="28" y1="35" x2="60" y2="22" stroke="#FDE047" strokeWidth="2" strokeDasharray="3 2" className="anim-dash" markerEnd="url(#topo-arr-active)" />
+            {/* Edge 0 -> 2 (active relaxing) */}
+            <line x1="28" y1="35" x2="60" y2="48" stroke="#FDE047" strokeWidth="2" strokeDasharray="3 2" className="anim-dash" markerEnd="url(#topo-arr-active)" />
+            {/* Edge 1 -> 3 */}
+            <line x1="74" y1="20" x2="108" y2="33" stroke="#67E8F9" strokeWidth="1.8" markerEnd="url(#topo-arr)" />
+            {/* Edge 2 -> 3 */}
+            <line x1="74" y1="50" x2="108" y2="37" stroke="#67E8F9" strokeWidth="1.8" markerEnd="url(#topo-arr)" />
+
+            {/* Node 0 (In-degree 0 -> Pop from Queue) */}
+            <circle cx="24" cy="35" r="9" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" className="anim-pulse-fade" />
+            <text x="24" y="38" textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="extrabold" fontFamily="monospace">0</text>
+            <rect x="12" y="16" width="24" height="8" rx="2" fill="#042F2E" opacity="0.85" />
+            <text x="24" y="22.5" textAnchor="middle" fill="#34D399" fontSize="6" fontWeight="bold" fontFamily="monospace">in:0</text>
+
+            {/* Node 1 */}
+            <circle cx="68" cy="20" r="8" fill="#CFFAFE" stroke="#0891B2" strokeWidth="1.5" />
+            <text x="68" y="23" textAnchor="middle" fill="#155E75" fontSize="7.5" fontWeight="bold" fontFamily="monospace">1</text>
+            <rect x="58" y="4" width="20" height="7.5" rx="2" fill="#042F2E" opacity="0.85" />
+            <text x="68" y="10" textAnchor="middle" fill="#67E8F9" fontSize="5.5" fontWeight="bold" fontFamily="monospace">in:1</text>
+
+            {/* Node 2 */}
+            <circle cx="68" cy="50" r="8" fill="#CFFAFE" stroke="#0891B2" strokeWidth="1.5" />
+            <text x="68" y="53" textAnchor="middle" fill="#155E75" fontSize="7.5" fontWeight="bold" fontFamily="monospace">2</text>
+            <rect x="58" y="60" width="20" height="7.5" rx="2" fill="#042F2E" opacity="0.85" />
+            <text x="68" y="66" textAnchor="middle" fill="#67E8F9" fontSize="5.5" fontWeight="bold" fontFamily="monospace">in:1</text>
+
+            {/* Node 3 */}
+            <circle cx="116" cy="35" r="8" fill="#CFFAFE" stroke="#0891B2" strokeWidth="1.5" />
+            <text x="116" y="38" textAnchor="middle" fill="#155E75" fontSize="7.5" fontWeight="bold" fontFamily="monospace">3</text>
+            <rect x="106" y="19" width="20" height="7.5" rx="2" fill="#042F2E" opacity="0.85" />
+            <text x="116" y="25" textAnchor="middle" fill="#A5F3FC" fontSize="5.5" fontWeight="bold" fontFamily="monospace">in:2</text>
+          </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-cyan-100">
+            <span className="text-amber-300 font-bold">pop 0 (in:0)</span>
+            <span>→ relax [1, 2] in-degrees</span>
           </div>
         </div>
       );
@@ -226,20 +262,29 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
           </div>
 
           <div className="flex items-center justify-center gap-2 h-24">
-            <div className="flex items-stretch rounded-lg bg-white shadow-md overflow-hidden border border-blue-300">
-              <span className="px-2.5 py-1.5 font-mono text-xs font-bold text-blue-950">HEAD</span>
+            <div className="flex items-stretch rounded-lg bg-white/90 shadow-md overflow-hidden border border-blue-300">
+              <span className="px-2 py-1.5 font-mono text-xs font-bold text-blue-950">HEAD</span>
               <span className="px-2 py-1.5 bg-blue-100 font-mono text-xs text-blue-800">12</span>
             </div>
             <span className="font-mono text-white text-sm font-bold anim-arrow-flow">→</span>
-            <div className="flex items-stretch rounded-lg bg-white shadow-md overflow-hidden border border-blue-300">
-              <span className="px-2.5 py-1.5 font-mono text-xs font-bold text-blue-950">45</span>
+            <div className="flex flex-col items-center relative">
+              <span className="absolute -top-5 text-[9px] font-mono font-extrabold text-amber-300 anim-pulse-fade">curr ▼</span>
+              <div className="flex items-stretch rounded-lg bg-white shadow-lg overflow-hidden border-2 border-amber-300 ring-2 ring-amber-300/40">
+                <span className="px-2.5 py-1.5 font-mono text-xs font-extrabold text-blue-950">45</span>
+                <span className="px-1.5 py-1.5 bg-blue-100 font-mono text-[10px] text-blue-800 font-bold">nxt</span>
+              </div>
             </div>
-            <span className="font-mono text-white text-sm font-bold anim-arrow-flow">→</span>
+            <span className="font-mono text-amber-300 text-sm font-bold anim-arrow-flow">→</span>
             <div className="flex items-stretch rounded-lg bg-emerald-400 text-emerald-950 shadow-md overflow-hidden border border-white font-bold">
-              <span className="px-2 py-1.5 font-mono text-xs">99</span>
+              <span className="px-2.5 py-1.5 font-mono text-xs">99</span>
             </div>
             <span className="font-mono text-white text-sm font-bold">→</span>
             <span className="text-[10px] font-mono text-blue-200">NULL</span>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-blue-200">
+            <span className="text-amber-300 font-bold">curr = curr.next</span>
+            <span>(O(N) traversal)</span>
           </div>
         </div>
       );
@@ -317,23 +362,44 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#4338CA] to-[#3730A3] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
           <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
-            <span>Sequential Scan</span>
+            <span>Sequential Scan O(N)</span>
             <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
 
-          <div className="flex items-center justify-center gap-2 h-24">
-            <div className="w-8 h-10 rounded bg-white/20 opacity-40 flex items-center justify-center text-xs font-mono text-white/50">
-              14
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 relative overflow-hidden">
+            {/* Sweeping scan beam */}
+            <div className="absolute inset-y-0 w-8 bg-white/20 blur-sm anim-scan pointer-events-none" />
+
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] font-mono text-indigo-300">idx:0</span>
+                <div className="w-8 h-10 rounded bg-white/20 opacity-40 flex items-center justify-center text-xs font-mono text-white/70">
+                  14
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] font-mono text-indigo-300">idx:1</span>
+                <div className="w-8 h-10 rounded bg-white/20 opacity-40 flex items-center justify-center text-xs font-mono text-white/70">
+                  33
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] font-mono text-amber-300 font-bold anim-pulse-fade">idx:2 ▼</span>
+                <div className="w-9 h-11 rounded bg-amber-400 border-2 border-white flex flex-col items-center justify-center text-xs font-mono font-bold text-slate-900 shadow-lg shadow-black/40 anim-pulse-fade">
+                  <span>35</span>
+                  <span className="text-[7px] uppercase font-mono font-extrabold text-amber-950">FOUND</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] font-mono text-indigo-300">idx:3</span>
+                <div className="w-8 h-10 rounded bg-white/40 flex items-center justify-center text-xs font-mono text-white">
+                  19
+                </div>
+              </div>
             </div>
-            <div className="w-8 h-10 rounded bg-white/20 opacity-40 flex items-center justify-center text-xs font-mono text-white/50">
-              33
-            </div>
-            <div className="w-9 h-11 rounded bg-amber-400 border-2 border-white flex flex-col items-center justify-center text-xs font-mono font-bold text-slate-900 shadow-lg shadow-black/40 animate-bounce">
-              <span>35</span>
-              <span className="text-[7px] uppercase font-mono font-extrabold text-amber-950">MATCH</span>
-            </div>
-            <div className="w-8 h-10 rounded bg-white/40 flex items-center justify-center text-xs font-mono text-white">
-              19
+
+            <div className="text-[10px] font-mono text-indigo-200">
+              <span className="text-amber-300 font-bold">i = 2: arr[2] == target (35)</span>
             </div>
           </div>
         </div>
@@ -425,31 +491,53 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#6366F1] to-[#4F46E5] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
           <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
-            <span>Binary Search Tree</span>
+            <span>BST Search & Insert</span>
             <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
 
-          <svg viewBox="0 0 120 60" className="w-36 h-24 mx-auto">
-            <line x1="60" y1="12" x2="30" y2="34" stroke="#E0E7FF" strokeWidth="2" />
-            <line x1="60" y1="12" x2="90" y2="34" stroke="#E0E7FF" strokeWidth="2" />
-            <line x1="30" y1="34" x2="15" y2="52" stroke="#E0E7FF" strokeWidth="1.5" />
-            <line x1="90" y1="34" x2="105" y2="52" stroke="#E0E7FF" strokeWidth="1.5" />
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            {/* Tree Branch Lines */}
+            <line x1="70" y1="16" x2="38" y2="38" stroke="#C7D2FE" strokeWidth="2" />
+            <line x1="70" y1="16" x2="102" y2="38" stroke="#C7D2FE" strokeWidth="2" />
+            <line x1="38" y1="38" x2="22" y2="58" stroke="#818CF8" strokeWidth="1.5" />
+            <line x1="38" y1="38" x2="54" y2="58" stroke="#818CF8" strokeWidth="1.5" />
+            <line x1="102" y1="38" x2="86" y2="58" stroke="#818CF8" strokeWidth="1.5" />
+            <line x1="102" y1="38" x2="118" y2="58" stroke="#818CF8" strokeWidth="1.5" />
 
-            <circle cx="60" cy="12" r="8" fill="#FFFFFF" />
-            <text x="60" y="15.5" fill="#3730A3" fontSize="8" fontWeight="bold" textAnchor="middle">50</text>
+            {/* Insertion Path Highlight (50 -> 75 -> 85) */}
+            <path d="M 70 16 L 102 38 L 118 58" fill="none" stroke="#FDE047" strokeWidth="2.5" strokeDasharray="3 2" className="anim-dash" />
 
-            <circle cx="30" cy="34" r="7" fill="#E0E7FF" />
-            <text x="30" y="37" fill="#3730A3" fontSize="7" fontWeight="bold" textAnchor="middle">30</text>
+            {/* Root 50 */}
+            <circle cx="70" cy="16" r="8.5" fill="#FFFFFF" />
+            <text x="70" y="19" textAnchor="middle" fill="#312E81" fontSize="8" fontWeight="bold" fontFamily="monospace">50</text>
 
-            <circle cx="90" cy="34" r="7" fill="#FDE047" className="anim-pulse-fade" />
-            <text x="90" y="37" fill="#000" fontSize="7" fontWeight="extrabold" textAnchor="middle">70</text>
+            {/* Level 1: Left 25 */}
+            <circle cx="38" cy="38" r="8" fill="#E0E7FF" />
+            <text x="38" y="41" textAnchor="middle" fill="#312E81" fontSize="7.5" fontWeight="bold" fontFamily="monospace">25</text>
 
-            <circle cx="15" cy="52" r="5.5" fill="#E0E7FF" />
-            <text x="15" y="54.5" fill="#3730A3" fontSize="6" textAnchor="middle">20</text>
+            {/* Level 1: Right 75 */}
+            <circle cx="102" cy="38" r="8" fill="#E0E7FF" />
+            <text x="102" y="41" textAnchor="middle" fill="#312E81" fontSize="7.5" fontWeight="bold" fontFamily="monospace">75</text>
 
-            <circle cx="105" cy="52" r="5.5" fill="#E0E7FF" />
-            <text x="105" y="54.5" fill="#3730A3" fontSize="6" textAnchor="middle">85</text>
+            {/* Level 2 Leaves */}
+            <circle cx="22" cy="58" r="6.5" fill="#C7D2FE" />
+            <text x="22" y="60.5" textAnchor="middle" fill="#312E81" fontSize="6.5" fontFamily="monospace">15</text>
+
+            <circle cx="54" cy="58" r="6.5" fill="#C7D2FE" />
+            <text x="54" y="60.5" textAnchor="middle" fill="#312E81" fontSize="6.5" fontFamily="monospace">35</text>
+
+            <circle cx="86" cy="58" r="6.5" fill="#C7D2FE" />
+            <text x="86" y="60.5" textAnchor="middle" fill="#312E81" fontSize="6.5" fontFamily="monospace">65</text>
+
+            {/* Newly Inserted Node 85 */}
+            <circle cx="118" cy="58" r="7.5" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" className="anim-pulse-fade" />
+            <text x="118" y="61" textAnchor="middle" fill="#FFFFFF" fontSize="7" fontWeight="extrabold" fontFamily="monospace">85</text>
           </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-indigo-100">
+            <span className="text-amber-300 font-bold">insert(85):</span>
+            <span>50 → 75 → [85] (O(log N))</span>
+          </div>
         </div>
       );
 
@@ -461,19 +549,33 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
 
-          <svg viewBox="0 0 120 70" className="w-36 h-24 mx-auto">
-            {/* 3D Wireframe Cube with Split Planes */}
-            <polygon points="60,10 95,25 60,40 25,25" fill="rgba(99,102,241,0.15)" stroke="#818CF8" strokeWidth="1.5" />
-            <polygon points="25,25 60,40 60,65 25,50" fill="rgba(79,70,229,0.2)" stroke="#818CF8" strokeWidth="1.5" />
-            <polygon points="95,25 60,40 60,65 95,50" fill="rgba(67,56,202,0.25)" stroke="#818CF8" strokeWidth="1.5" />
-            {/* Subdividing Midlines */}
-            <line x1="60" y1="10" x2="60" y2="40" stroke="#38BDF8" strokeWidth="1" strokeDasharray="2 2" />
-            <line x1="42.5" y1="17.5" x2="77.5" y2="32.5" stroke="#38BDF8" strokeWidth="1" strokeDasharray="2 2" />
-            {/* 3D Points */}
-            <circle cx="48" cy="28" r="3.5" fill="#34D399" className="anim-pulse-fade" />
-            <circle cx="75" cy="42" r="3" fill="#F43F5E" />
-            <circle cx="35" cy="45" r="3" fill="#38BDF8" />
-          </svg>
+          <div className="relative w-full flex items-center justify-center">
+            {/* Animated Laser Scanning Plane */}
+            <div className="absolute inset-x-8 h-0.5 bg-gradient-to-r from-transparent via-cyan-300 to-transparent anim-scan pointer-events-none shadow-sm shadow-cyan-300" />
+
+            <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+              {/* 3D Wireframe Cube with Split Planes */}
+              <polygon points="70,10 108,24 70,38 32,24" fill="rgba(99,102,241,0.2)" stroke="#818CF8" strokeWidth="1.5" />
+              <polygon points="32,24 70,38 70,62 32,48" fill="rgba(79,70,229,0.25)" stroke="#818CF8" strokeWidth="1.5" />
+              <polygon points="108,24 70,38 70,62 108,48" fill="rgba(67,56,202,0.3)" stroke="#818CF8" strokeWidth="1.5" />
+
+              {/* Subdividing Midlines */}
+              <line x1="70" y1="10" x2="70" y2="38" stroke="#38BDF8" strokeWidth="1" strokeDasharray="2 2" />
+              <line x1="51" y1="17" x2="89" y2="31" stroke="#38BDF8" strokeWidth="1" strokeDasharray="2 2" />
+              <line x1="70" y1="38" x2="70" y2="62" stroke="#38BDF8" strokeWidth="1" strokeDasharray="2 2" />
+
+              {/* 3D Points across octants */}
+              <circle cx="56" cy="26" r="3.5" fill="#34D399" className="anim-pulse-fade" />
+              <circle cx="88" cy="42" r="3" fill="#F43F5E" />
+              <circle cx="44" cy="46" r="3" fill="#38BDF8" />
+              <circle cx="78" cy="54" r="3.5" fill="#FDE047" className="anim-pulse-fade" />
+            </svg>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-indigo-200">
+            <span className="text-cyan-300 font-bold">8 Octants</span>
+            <span>(O(log₈ N) spatial prune)</span>
+          </div>
         </div>
       );
 
@@ -586,36 +688,48 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
 
-          <svg viewBox="0 0 160 80" className="w-48 h-24 mx-auto">
-            {/* Trie Branches */}
-            <line x1="80" y1="12" x2="45" y2="35" stroke="#CFFAFE" strokeWidth="2" />
-            <line x1="80" y1="12" x2="115" y2="35" stroke="#CFFAFE" strokeWidth="2" />
-            <line x1="45" y1="35" x2="25" y2="60" stroke="#CFFAFE" strokeWidth="1.5" />
-            <line x1="45" y1="35" x2="65" y2="60" stroke="#22D3EE" strokeWidth="2.5" />
-            <line x1="115" y1="35" x2="115" y2="60" stroke="#CFFAFE" strokeWidth="1.5" />
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            {/* Standard Branches */}
+            <line x1="70" y1="14" x2="42" y2="36" stroke="#CFFAFE" strokeWidth="2" />
+            <line x1="70" y1="14" x2="98" y2="36" stroke="#CFFAFE" strokeWidth="2" />
+            <line x1="42" y1="36" x2="26" y2="58" stroke="#CFFAFE" strokeWidth="1.8" />
+            <line x1="42" y1="36" x2="58" y2="58" stroke="#CFFAFE" strokeWidth="1.5" />
+            <line x1="98" y1="36" x2="82" y2="58" stroke="#CFFAFE" strokeWidth="1.5" />
+            <line x1="98" y1="36" x2="114" y2="58" stroke="#CFFAFE" strokeWidth="1.5" />
 
-            {/* Root */}
-            <circle cx="80" cy="12" r="7" fill="#FFFFFF" />
-            <text x="80" y="15" textAnchor="middle" fill="#155E75" fontSize="7" fontWeight="bold">*</text>
+            {/* Active Query Match Path ("cat"): Root -> 'c' -> 't' */}
+            <path d="M 70 14 L 42 36 L 26 58" fill="none" stroke="#FDE047" strokeWidth="2.5" strokeDasharray="3 2" className="anim-dash" />
 
-            {/* Level 1 */}
-            <circle cx="45" cy="35" r="8" fill="#A5F3FC" stroke="#FFFFFF" strokeWidth="1.5" />
-            <text x="45" y="38" textAnchor="middle" fill="#155E75" fontSize="8" fontWeight="bold" fontFamily="monospace">c</text>
+            {/* Root Node */}
+            <circle cx="70" cy="14" r="8" fill="#FFFFFF" />
+            <text x="70" y="17.5" textAnchor="middle" fill="#155E75" fontSize="8" fontWeight="extrabold" fontFamily="monospace">root</text>
 
-            <circle cx="115" cy="35" r="8" fill="#CFFAFE" stroke="#FFFFFF" strokeWidth="1.5" />
-            <text x="115" y="38" textAnchor="middle" fill="#155E75" fontSize="8" fontWeight="bold" fontFamily="monospace">d</text>
+            {/* Level 1: 'c' & 'd' */}
+            <circle cx="42" cy="36" r="8" fill="#A5F3FC" stroke="#FFFFFF" strokeWidth="1.5" />
+            <text x="42" y="39" textAnchor="middle" fill="#155E75" fontSize="8" fontWeight="bold" fontFamily="monospace">c</text>
+
+            <circle cx="98" cy="36" r="8" fill="#CFFAFE" stroke="#0E7490" strokeWidth="1.5" />
+            <text x="98" y="39" textAnchor="middle" fill="#155E75" fontSize="8" fontWeight="bold" fontFamily="monospace">d</text>
 
             {/* Level 2 Leaves */}
-            <circle cx="25" cy="60" r="7" fill="#A5F3FC" />
-            <text x="25" y="63" textAnchor="middle" fill="#155E75" fontSize="7" fontWeight="bold" fontFamily="monospace">a</text>
+            {/* 'cat' terminal leaf */}
+            <circle cx="26" cy="58" r="7.5" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" className="anim-pulse-fade" />
+            <text x="26" y="60.5" textAnchor="middle" fill="#FFFFFF" fontSize="6.5" fontWeight="extrabold" fontFamily="monospace">t★</text>
 
-            {/* Word endings with green star */}
-            <circle cx="65" cy="60" r="8" fill="#34D399" stroke="#FFFFFF" strokeWidth="2" className="anim-pulse-fade" />
-            <text x="65" y="63" textAnchor="middle" fill="#064E3B" fontSize="8" fontWeight="extrabold" fontFamily="monospace">t★</text>
+            <circle cx="58" cy="58" r="6.5" fill="#CFFAFE" />
+            <text x="58" y="60.5" textAnchor="middle" fill="#155E75" fontSize="6.5" fontFamily="monospace">w★</text>
 
-            <circle cx="115" cy="60" r="8" fill="#34D399" stroke="#FFFFFF" strokeWidth="1.5" />
-            <text x="115" y="63" textAnchor="middle" fill="#064E3B" fontSize="8" fontWeight="bold" fontFamily="monospace">o★</text>
+            <circle cx="82" cy="58" r="6.5" fill="#CFFAFE" />
+            <text x="82" y="60.5" textAnchor="middle" fill="#155E75" fontSize="6.5" fontFamily="monospace">g★</text>
+
+            <circle cx="114" cy="58" r="6.5" fill="#CFFAFE" />
+            <text x="114" y="60.5" textAnchor="middle" fill="#155E75" fontSize="6.5" fontFamily="monospace">e★</text>
           </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-cyan-100">
+            <span className="text-amber-300 font-bold">query("cat"):</span>
+            <span>root → c → [t★] (O(L) search)</span>
+          </div>
         </div>
       );
 
@@ -782,14 +896,22 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Bidirectional Pointers</span>
             <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
+
           <div className="flex items-center justify-center gap-2 h-24 font-mono text-xs">
             <span className="text-[10px] text-blue-300">NULL</span>
-            <span className="text-white font-bold">⇄</span>
-            <div className="px-2 py-1 bg-white text-blue-950 rounded shadow font-bold">[10]</div>
-            <span className="text-cyan-300 font-bold anim-arrow-flow">⇄</span>
-            <div className="px-2 py-1 bg-cyan-300 text-blue-950 rounded shadow font-bold">[25]</div>
-            <span className="text-white font-bold">⇄</span>
-            <div className="px-2 py-1 bg-white text-blue-950 rounded shadow font-bold">[40]</div>
+            <span className="text-white font-bold anim-arrow-flow">⇄</span>
+            <div className="px-2.5 py-1 bg-white text-blue-950 rounded shadow font-bold">[10]</div>
+            <span className="text-amber-300 font-bold anim-arrow-flow">⇄</span>
+            <div className="px-2.5 py-1 bg-cyan-300 text-blue-950 rounded shadow-lg font-extrabold border-2 border-white anim-pulse-fade">[25]</div>
+            <span className="text-amber-300 font-bold anim-arrow-flow">⇄</span>
+            <div className="px-2.5 py-1 bg-white text-blue-950 rounded shadow font-bold">[40]</div>
+            <span className="text-white font-bold anim-arrow-flow">⇄</span>
+            <span className="text-[10px] text-blue-300">NULL</span>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-blue-200">
+            <span className="text-cyan-300 font-bold">prev ⇄ next:</span>
+            <span>node.next.prev == node (O(1) remove)</span>
           </div>
         </div>
       );
@@ -801,20 +923,36 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>FIFO Enqueue & Dequeue</span>
             <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
           </div>
+
           <div className="flex items-center justify-center gap-2 h-24 font-mono">
-            <div className="text-[10px] text-cyan-200 flex flex-col items-center">
-              <span>HEAD</span>
-              <span className="anim-arrow-flow">↓ pop</span>
+            {/* Pop out at Head */}
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] text-amber-300 font-bold anim-arrow-flow">dequeue()</span>
+              <span className="w-7 h-7 bg-amber-300 text-cyan-950 font-extrabold rounded flex items-center justify-center text-xs shadow anim-queue-flow">1</span>
+              <span className="text-[9px] text-cyan-200">HEAD</span>
             </div>
-            <div className="flex border-y-2 border-cyan-300/80 px-2 py-1 gap-1.5 bg-black/20 rounded">
-              <span className="w-7 h-7 bg-white text-cyan-950 font-bold rounded flex items-center justify-center text-xs shadow">1</span>
-              <span className="w-7 h-7 bg-cyan-200 text-cyan-950 font-bold rounded flex items-center justify-center text-xs shadow">2</span>
-              <span className="w-7 h-7 bg-cyan-300 text-cyan-950 font-bold rounded flex items-center justify-center text-xs shadow">3</span>
+
+            <span className="text-white text-xs font-bold anim-arrow-flow">←</span>
+
+            {/* Queue Body */}
+            <div className="flex border-y-2 border-cyan-300/80 px-2 py-1 gap-1.5 bg-black/30 rounded shadow-inner">
+              <span className="w-7 h-7 bg-white text-cyan-950 font-bold rounded flex items-center justify-center text-xs shadow">2</span>
+              <span className="w-7 h-7 bg-white text-cyan-950 font-bold rounded flex items-center justify-center text-xs shadow">3</span>
             </div>
-            <div className="text-[10px] text-cyan-200 flex flex-col items-center">
-              <span>TAIL</span>
-              <span className="anim-arrow-flow">push →</span>
+
+            <span className="text-white text-xs font-bold anim-arrow-flow">←</span>
+
+            {/* Push in at Tail */}
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] text-emerald-300 font-bold anim-arrow-flow">enqueue(4)</span>
+              <span className="w-7 h-7 bg-emerald-400 text-cyan-950 font-extrabold rounded flex items-center justify-center text-xs shadow anim-queue-flow">4</span>
+              <span className="text-[9px] text-cyan-200">TAIL</span>
             </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-cyan-100">
+            <span className="text-amber-300 font-bold">FIFO:</span>
+            <span>First-In First-Out (O(1) operations)</span>
           </div>
         </div>
       );
@@ -914,14 +1052,45 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Greedy MST Cut Property</span>
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
-          <div className="flex items-center justify-center gap-3 h-24 font-mono">
-            <div className="w-8 h-8 rounded-full bg-emerald-400 text-emerald-950 font-bold text-xs flex items-center justify-center shadow">U</div>
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] text-amber-300 font-bold">w=2</span>
-              <span className="text-white text-xs font-bold">───▶</span>
-              <span className="text-[9px] text-emerald-200">min edge</span>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-white text-emerald-950 font-bold text-xs flex items-center justify-center shadow animate-pulse">V</div>
+
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            {/* Cut partition boundaries */}
+            <rect x="8" y="10" width="56" height="50" rx="8" fill="rgba(16,185,129,0.25)" stroke="#34D399" strokeWidth="1" strokeDasharray="2 2" />
+            <text x="36" y="18" textAnchor="middle" fill="#A7F3D0" fontSize="5.5" fontWeight="bold" fontFamily="monospace">CUT SET S</text>
+
+            <rect x="76" y="10" width="56" height="50" rx="8" fill="rgba(0,0,0,0.25)" stroke="#6EE7B7" strokeWidth="1" strokeDasharray="2 2" />
+            <text x="104" y="18" textAnchor="middle" fill="#D1FAE5" fontSize="5.5" fontWeight="bold" fontFamily="monospace">UNVISITED V\S</text>
+
+            {/* Tree internal edge in S */}
+            <line x1="24" y1="42" x2="48" y2="42" stroke="#FFFFFF" strokeWidth="2.5" />
+
+            {/* Candidate cross-cut edges */}
+            <line x1="48" y1="42" x2="114" y2="28" stroke="#A7F3D0" strokeWidth="1.5" opacity="0.6" />
+            <text x="76" y="32" fill="#E0F2FE" fontSize="6" fontFamily="monospace">w=5</text>
+
+            {/* Min cross-cut edge (w=2) - Glowing & Animated */}
+            <line x1="48" y1="42" x2="92" y2="46" stroke="#FDE047" strokeWidth="2.5" strokeDasharray="3 2" className="anim-dash" />
+            <text x="68" y="52" fill="#FDE047" fontSize="7" fontWeight="extrabold" fontFamily="monospace">w=2★</text>
+
+            {/* Nodes in S */}
+            <circle cx="24" cy="42" r="7.5" fill="#FFFFFF" />
+            <text x="24" y="44.5" textAnchor="middle" fill="#065F46" fontSize="7" fontWeight="bold" fontFamily="monospace">A</text>
+
+            <circle cx="48" cy="42" r="7.5" fill="#FFFFFF" />
+            <text x="48" y="44.5" textAnchor="middle" fill="#065F46" fontSize="7" fontWeight="bold" fontFamily="monospace">B</text>
+
+            {/* Target node C getting relaxed into S */}
+            <circle cx="92" cy="46" r="8" fill="#FDE047" stroke="#FFFFFF" strokeWidth="2" className="anim-pulse-fade" />
+            <text x="92" y="48.5" textAnchor="middle" fill="#000" fontSize="7" fontWeight="extrabold" fontFamily="monospace">C</text>
+
+            {/* Other unvisited node D */}
+            <circle cx="114" cy="28" r="6.5" fill="#A7F3D0" />
+            <text x="114" y="30.5" textAnchor="middle" fill="#065F46" fontSize="6.5" fontFamily="monospace">D</text>
+          </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-emerald-100">
+            <span className="text-amber-300 font-bold">cut(S, V\S):</span>
+            <span>min-edge w=2 added to MST</span>
           </div>
         </div>
       );
@@ -933,16 +1102,27 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Rolling Hash Pattern Search</span>
             <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
           </div>
+
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="px-2 py-0.5 bg-black/40 rounded border border-purple-400/40 text-purple-200">Text: "A B C D E"</span>
+            {/* Text characters with sliding window box */}
+            <div className="flex items-center gap-1.5 relative p-1 bg-black/35 rounded border border-purple-400/40">
+              <span className="w-6 h-6 flex items-center justify-center text-xs text-purple-300">A</span>
+              <div className="flex gap-1.5 p-0.5 rounded border border-amber-300 bg-amber-400/20 anim-pulse-fade shadow">
+                <span className="w-6 h-6 flex items-center justify-center text-xs text-white font-extrabold bg-purple-900/80 rounded">B</span>
+                <span className="w-6 h-6 flex items-center justify-center text-xs text-white font-extrabold bg-purple-900/80 rounded">C</span>
+                <span className="w-6 h-6 flex items-center justify-center text-xs text-white font-extrabold bg-purple-900/80 rounded">D</span>
+              </div>
+              <span className="w-6 h-6 flex items-center justify-center text-xs text-purple-300">E</span>
             </div>
+
+            {/* Rolling Hash Equivalence Badge */}
             <div className="flex items-center gap-2 text-[11px] text-purple-100">
-              <span className="px-1.5 py-0.5 bg-amber-400 text-purple-950 rounded font-bold">Hash = 412</span>
-              <span>==</span>
-              <span className="px-1.5 py-0.5 bg-emerald-400 text-purple-950 rounded font-bold">Target = 412</span>
+              <span className="px-2 py-0.5 bg-amber-400 text-purple-950 rounded font-bold shadow">Hash = 412</span>
+              <span className="text-white font-bold">==</span>
+              <span className="px-2 py-0.5 bg-emerald-400 text-purple-950 rounded font-bold shadow anim-pulse-fade">Target = 412 ✓</span>
             </div>
-            <div className="text-[10px] text-purple-200/80">O(1) Rolling Window Update</div>
+
+            <div className="text-[10px] text-purple-200">H = (H - old)·B + new mod M (O(1) slide)</div>
           </div>
         </div>
       );
@@ -954,15 +1134,24 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Fewest Coins Bottom-Up DP</span>
             <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
           </div>
+
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="flex gap-2">
-              <span className="w-7 h-7 rounded-full bg-amber-300 text-amber-950 font-bold text-xs flex items-center justify-center shadow">1¢</span>
-              <span className="w-7 h-7 rounded-full bg-amber-200 text-amber-950 font-bold text-xs flex items-center justify-center shadow">2¢</span>
-              <span className="w-7 h-7 rounded-full bg-white text-amber-950 font-bold text-xs flex items-center justify-center shadow">5¢</span>
+            {/* Coin options with optimal 5c highlighted */}
+            <div className="flex items-center gap-2">
+              <span className="w-7 h-7 rounded-full bg-amber-200/60 text-amber-950 font-bold text-xs flex items-center justify-center">1¢</span>
+              <span className="w-7 h-7 rounded-full bg-amber-200/60 text-amber-950 font-bold text-xs flex items-center justify-center">2¢</span>
+              <span className="w-8 h-8 rounded-full bg-amber-300 text-amber-950 font-extrabold text-sm flex items-center justify-center shadow-lg border-2 border-white anim-pulse-fade">
+                5¢
+              </span>
             </div>
-            <div className="text-xs text-amber-100 bg-black/30 px-2.5 py-1 rounded border border-amber-400/40">
-              dp[11] = <strong className="text-emerald-300">3</strong> <span className="text-[10px] text-amber-200">(5 + 5 + 1)</span>
+
+            {/* DP Transition calculation */}
+            <div className="text-xs text-amber-100 bg-black/40 px-3 py-1 rounded border border-amber-400/40 flex items-center gap-1.5 shadow">
+              <span>dp[11] = dp[11-5] + 1 =</span>
+              <strong className="text-emerald-300 text-sm font-extrabold anim-pulse-fade">3</strong>
             </div>
+
+            <div className="text-[10px] text-amber-200">Optimal set: 5¢ + 5¢ + 1¢ (3 coins)</div>
           </div>
         </div>
       );
@@ -974,15 +1163,26 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Longest Increasing Subsequence</span>
             <span className="w-2 h-2 rounded-full bg-sky-300 animate-ping" />
           </div>
+
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono">
-            <div className="flex gap-1.5 text-xs">
-              <span className="w-6 h-6 rounded bg-sky-950/60 text-slate-400 flex items-center justify-center">10</span>
-              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-bold flex items-center justify-center shadow">2</span>
-              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-bold flex items-center justify-center shadow">5</span>
-              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-bold flex items-center justify-center shadow">7</span>
-              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-bold flex items-center justify-center shadow">18</span>
+            {/* LIS sequence with ascending arrow connectors */}
+            <div className="flex items-center gap-1 text-xs">
+              <span className="w-6 h-6 rounded bg-sky-950/60 text-slate-400 flex items-center justify-center opacity-60">10</span>
+              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-extrabold flex items-center justify-center shadow">2</span>
+              <span className="text-emerald-300 text-[10px] font-bold anim-arrow-flow">↗</span>
+              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-extrabold flex items-center justify-center shadow">5</span>
+              <span className="text-emerald-300 text-[10px] font-bold anim-arrow-flow">↗</span>
+              <span className="w-6 h-6 rounded bg-emerald-400 text-sky-950 font-extrabold flex items-center justify-center shadow">7</span>
+              <span className="text-amber-300 text-[10px] font-bold anim-arrow-flow">↗</span>
+              <span className="w-6 h-6 rounded bg-amber-400 text-sky-950 font-extrabold flex items-center justify-center shadow-lg border border-white anim-pulse-fade">18</span>
             </div>
-            <div className="text-xs text-sky-100 font-bold">LIS Length = 4</div>
+
+            <div className="text-xs text-white font-bold bg-black/35 px-2.5 py-0.5 rounded border border-sky-300/30 flex items-center gap-1.5">
+              <span className="text-amber-300 font-bold">18 &gt; tail(7):</span>
+              <span>LIS Length = 4</span>
+            </div>
+
+            <div className="text-[10px] text-sky-200">Patience sorting O(N log N)</div>
           </div>
         </div>
       );
@@ -994,24 +1194,37 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Recursive Disk Transfer</span>
             <span className="w-2 h-2 rounded-full bg-rose-300 animate-ping" />
           </div>
-          <div className="flex items-end justify-center gap-6 h-24 pb-1">
-            <div className="flex flex-col items-center">
-              <div className="w-1 h-14 bg-rose-300/60 relative flex flex-col-reverse items-center">
-                <div className="w-10 h-3 bg-white rounded-sm shadow-md" />
-                <div className="w-7 h-3 bg-amber-300 rounded-sm shadow-md" />
-              </div>
-              <span className="text-[10px] font-mono text-rose-200 mt-1 font-bold">A</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="w-1 h-14 bg-rose-300/60 relative flex flex-col-reverse items-center" />
-              <span className="text-[10px] font-mono text-rose-200 mt-1 font-bold">B</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="w-1 h-14 bg-rose-300/60 relative flex flex-col-reverse items-center">
-                <div className="w-4 h-3 bg-emerald-300 rounded-sm shadow-md animate-bounce" />
-              </div>
-              <span className="text-[10px] font-mono text-rose-200 mt-1 font-bold">C</span>
-            </div>
+
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            {/* Base platform */}
+            <line x1="16" y1="62" x2="124" y2="62" stroke="#FECDD3" strokeWidth="2.5" strokeLinecap="round" />
+
+            {/* Peg A */}
+            <line x1="30" y1="26" x2="30" y2="62" stroke="#FDA4AF" strokeWidth="2" />
+            <text x="30" y="69" textAnchor="middle" fill="#FFE4E6" fontSize="6.5" fontWeight="bold" fontFamily="monospace">A</text>
+
+            {/* Peg B */}
+            <line x1="70" y1="26" x2="70" y2="62" stroke="#FDA4AF" strokeWidth="2" />
+            <text x="70" y="69" textAnchor="middle" fill="#FFE4E6" fontSize="6.5" fontWeight="bold" fontFamily="monospace">B</text>
+
+            {/* Peg C */}
+            <line x1="110" y1="26" x2="110" y2="62" stroke="#FDA4AF" strokeWidth="2" />
+            <text x="110" y="69" textAnchor="middle" fill="#FFE4E6" fontSize="6.5" fontWeight="bold" fontFamily="monospace">C</text>
+
+            {/* Peg A Disks */}
+            <rect x="15" y="56" width="30" height="5" rx="1.5" fill="#FFFFFF" />
+            <rect x="20" y="50" width="20" height="5" rx="1.5" fill="#FEF08A" />
+
+            {/* Flying disk arc trajectory from A to C */}
+            <path d="M 30 46 C 45 10, 95 10, 110 52" fill="none" stroke="#FDE047" strokeWidth="2" strokeDasharray="3 2" className="anim-dash" />
+
+            {/* Target Small Disk landing on Peg C */}
+            <rect x="104" y="56" width="12" height="5" rx="1.5" fill="#34D399" className="anim-pulse-fade" />
+          </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-rose-100">
+            <span className="text-amber-300 font-bold">transfer(1): A ↷ C</span>
+            <span>(2ⁿ - 1 = 7 moves)</span>
           </div>
         </div>
       );
@@ -1084,16 +1297,26 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>All-Pairs Shortest Path Matrix</span>
             <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
           </div>
-          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
-            <div className="grid grid-cols-3 gap-1 bg-black/30 p-1.5 rounded border border-purple-400/40">
-              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
-              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">3</span>
-              <span className="w-6 h-6 bg-emerald-400 text-purple-950 font-bold rounded text-xs flex items-center justify-center shadow">5</span>
-              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">2</span>
-              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
-              <span className="w-6 h-6 bg-purple-950/60 text-purple-300 rounded text-xs flex items-center justify-center">4</span>
+
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono relative overflow-hidden">
+            {/* Animated Scanning Beam across DP Matrix */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent anim-scan pointer-events-none" />
+
+            <div className="grid grid-cols-3 gap-1 bg-black/40 p-1.5 rounded border border-purple-400/40 shadow-inner">
+              <span className="w-6 h-6 bg-purple-950/70 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-6 h-6 bg-purple-950/70 text-purple-300 rounded text-xs flex items-center justify-center">3</span>
+              <span className="w-6 h-6 bg-emerald-400 text-purple-950 font-extrabold rounded text-xs flex items-center justify-center shadow anim-pulse-fade">5</span>
+              <span className="w-6 h-6 bg-purple-950/70 text-purple-300 rounded text-xs flex items-center justify-center">2</span>
+              <span className="w-6 h-6 bg-purple-950/70 text-purple-300 rounded text-xs flex items-center justify-center">0</span>
+              <span className="w-6 h-6 bg-purple-950/70 text-purple-300 rounded text-xs flex items-center justify-center">4</span>
             </div>
-            <div className="text-[10px] text-purple-200">D[i][j] = min(D[i][j], D[i][k] + D[k][j])</div>
+
+            <div className="text-[10px] text-purple-100 flex items-center gap-1">
+              <span className="text-amber-300 font-bold">pivot k=1:</span>
+              <span>D[i][j] = min(D[i][j], D[i][k] + D[k][j])</span>
+            </div>
+
+            <div className="text-[9px] text-purple-200/80">O(V³) All-Pairs Dynamic Programming</div>
           </div>
         </div>
       );
@@ -1105,14 +1328,39 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Heuristic Pathfinding (f = g + h)</span>
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
-          <div className="flex items-center justify-center gap-3 h-24 font-mono">
-            <div className="w-8 h-8 rounded bg-emerald-300 text-emerald-950 font-bold text-xs flex items-center justify-center shadow">S</div>
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] text-amber-300 font-bold">f = 4 + 2</span>
-              <span className="text-white text-xs font-bold anim-arrow-flow">─────▶</span>
-              <span className="text-[9px] text-emerald-200">optimal hop</span>
-            </div>
-            <div className="w-8 h-8 rounded bg-white text-emerald-950 font-bold text-xs flex items-center justify-center shadow animate-pulse">🎯</div>
+
+          <svg viewBox="0 0 140 70" className="w-40 h-24 mx-auto">
+            {/* Grid cell lines */}
+            <line x1="20" y1="18" x2="120" y2="18" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+            <line x1="20" y1="36" x2="120" y2="36" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+            <line x1="20" y1="54" x2="120" y2="54" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+
+            {/* Obstacle barrier wall in the center */}
+            <rect x="56" y="16" width="16" height="16" rx="3" fill="#F43F5E" opacity="0.85" />
+            <text x="64" y="26" textAnchor="middle" fill="#FFFFFF" fontSize="6.5" fontWeight="bold">WALL</text>
+
+            <rect x="56" y="34" width="16" height="16" rx="3" fill="#F43F5E" opacity="0.85" />
+            <text x="64" y="44" textAnchor="middle" fill="#FFFFFF" fontSize="6.5" fontWeight="bold">WALL</text>
+
+            {/* Optimal path curve bypassing wall */}
+            <path d="M 22 36 L 64 54 L 118 36" fill="none" stroke="#FDE047" strokeWidth="2.5" strokeDasharray="3 2" className="anim-dash" />
+
+            {/* Start Node S */}
+            <circle cx="22" cy="36" r="8" fill="#FFFFFF" stroke="#047857" strokeWidth="2" />
+            <text x="22" y="39" textAnchor="middle" fill="#065F46" fontSize="8" fontWeight="extrabold" fontFamily="monospace">S</text>
+
+            {/* Open Set evaluated node (f = g + h) */}
+            <circle cx="64" cy="54" r="8" fill="#34D399" stroke="#FFFFFF" strokeWidth="2" className="anim-pulse-fade" />
+            <text x="64" y="56.5" textAnchor="middle" fill="#064E3B" fontSize="7" fontWeight="extrabold" fontFamily="monospace">f:6</text>
+
+            {/* Goal Node Target */}
+            <circle cx="118" cy="36" r="9" fill="#FDE047" stroke="#FFFFFF" strokeWidth="2" className="anim-pulse-fade" />
+            <text x="118" y="39.5" textAnchor="middle" fill="#000" fontSize="8" fontWeight="extrabold" fontFamily="monospace">🎯</text>
+          </svg>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-emerald-100">
+            <span className="text-amber-300 font-bold">f = g(4) + h(2) = 6</span>
+            <span>(optimal heuristic prune)</span>
           </div>
         </div>
       );
@@ -1261,16 +1509,32 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
             <span>Next Greater Element</span>
             <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
+
           <div className="flex items-center justify-center gap-4 h-24 font-mono">
-            <div className="w-16 h-20 bg-black/30 border-2 border-indigo-300 rounded-b-xl flex flex-col-reverse p-1 gap-1 items-center">
-              <span className="w-full py-0.5 bg-white text-indigo-950 font-bold text-xs rounded text-center">80</span>
-              <span className="w-full py-0.5 bg-indigo-200 text-indigo-950 font-bold text-xs rounded text-center">60</span>
-              <span className="w-full py-0.5 bg-amber-300 text-indigo-950 font-bold text-xs rounded text-center animate-pulse">40</span>
+            {/* LIFO Container */}
+            <div className="w-16 h-20 bg-black/40 border-2 border-indigo-300 rounded-b-xl flex flex-col-reverse p-1 gap-1 items-center relative shadow-inner">
+              <span className="w-full py-0.5 bg-white text-indigo-950 font-extrabold text-xs rounded text-center shadow">80</span>
+              <span className="w-full py-0.5 bg-indigo-200 text-indigo-950 font-bold text-xs rounded text-center shadow">60</span>
+              {/* Ejected Element 40 flying out */}
+              <span className="w-full py-0.5 bg-rose-400 text-white font-bold text-xs rounded text-center shadow line-through opacity-75">
+                40
+              </span>
             </div>
-            <div className="text-[10px] text-indigo-200 flex flex-col gap-0.5">
-              <span>Stack: Monotonic ↓</span>
-              <span className="text-emerald-300 font-bold">pop 40 on 75</span>
+
+            {/* Incoming Element 75 Action */}
+            <div className="text-[10px] text-indigo-100 flex flex-col gap-1">
+              <div className="flex items-center gap-1">
+                <span className="text-amber-300 font-bold anim-arrow-flow">incoming:</span>
+                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-indigo-950 font-extrabold text-xs shadow anim-pulse-fade">75</span>
+              </div>
+              <span className="text-rose-300 font-bold">pop 40 &lt; 75</span>
+              <span className="text-emerald-300 font-bold">NGE(40) = 75</span>
             </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-indigo-200">
+            <span className="text-amber-300 font-bold">while (top &lt; elem) pop()</span>
+            <span>(O(N) monotonic)</span>
           </div>
         </div>
       );

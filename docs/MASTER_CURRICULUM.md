@@ -1,11 +1,11 @@
-# 🗺️ StepDSA Master Curriculum & Specification (100+ Algorithms)
+# StepDSA Master Curriculum & Specification (100+ Algorithms)
 
-> **Architectural Mission:**  
+> **Architectural Mission:**
 > Distinct from rudimentary classroom visualizers (such as CSVizTool, which strictly confines itself to Georgia Tech's introductory CS 1332 syllabus), **StepDSA** is architected as a professional **Interactive IDE-Grade Algorithm Workbench**: serving university computer science students, software engineers mastering technical interview patterns (LeetCode patterns), and competitive programmers (ICPC / IOI).
 
 ---
 
-## 💎 The StepDSA Pedagogical Standard (7-Pillar Contract)
+## The StepDSA Pedagogical Standard (7-Pillar Contract)
 
 Every algorithm implemented within StepDSA must adhere to the 7 core architectural pillars:
 
@@ -15,13 +15,13 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
    - `Action` (Shift + F10 / Milestone): Fast-forwards to macro-level visual milestones (Swap, Merge, Enqueue, Backtrack, Tree Rotation).
 3. **IDE Debugger Pane:** Real-time execution telemetry featuring a concrete **Call Stack** (recursive frame depth `#3, #2, #1`), **Scope Variables** (real-time local/global state tracking), and branch evaluation inspectors (`85 <= 98 -> TRUE`).
 4. **Synchronized Multi-Language Code:** Live line-synchronized syntax highlighting across 5 formal representations: **C++** (ICPC Standard), **Python**, **TypeScript**, **Java**, and **Pseudocode**.
-5. **Mathematical Invariants & Theoretical Proofs:** In-line invariant status banners and a slide-out Invariant Drawer detailing correctness proofs, asymptotic Big-$\mathcal{O}$ complexities, and real-world edge cases.
+5. **Mathematical Invariants & Theoretical Proofs:** In-line invariant status banners and a slide-out Invariant Drawer detailing correctness proofs, asymptotic Big-O complexities, and real-world edge cases.
 6. **Web Audio Sonification:** Frequency-synthesized audio feedback (Web Audio API) mapped to element values, memory reads, writes, and partition barriers.
 7. **Custom Sandbox & Presets:** User-defined custom inputs (Array, Graph, Tree) alongside preconfigured datasets (Random, Reversed Worst-Case, Nearly Sorted, Few Unique).
 
 ---
 
-## 📊 Comparative Analysis: CSVizTool (Baseline) vs. StepDSA (Full Spectrum)
+## Comparative Analysis: CSVizTool (Baseline) vs. StepDSA (Full Spectrum)
 
 | Criteria | CSVizTool (CS 1332 Baseline) | StepDSA (Professional Visualizer) |
 |---|---|---|
@@ -33,13 +33,13 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 
 ---
 
-## 🏛️ Master Curriculum Roadmap (20 Taxonomic Categories A → T)
+## Master Curriculum Roadmap (21 Taxonomic Categories A through U)
 
 ### A. Searching
 - [x] **Linear Search (Sequential Scan)** `[ACTIVE]`
 - [x] **Binary Search (Invariant Boundary Halving)** `[ACTIVE]`
 - [x] **Search in Rotated Sorted Array (Pivot Invariant Halving)** `[ACTIVE]`
-- [ ] Jump Search (Block Hopping $\mathcal{O}(\sqrt{N})$)
+- [ ] Jump Search (Block Hopping O(sqrt(N)))
 - [ ] Interpolation Search (Uniformly Distributed Probing)
 - [ ] Exponential Search (Doubling Range Search)
 - [ ] Ternary Search (Unimodal Function Extremum Optimization)
@@ -56,7 +56,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 * **Divide & Conquer:**
   - [x] **Quicksort (Lomuto & Hoare Partitioning)** `[ACTIVE]`
   - [x] **Mergesort (Divide & Conquer Two-Way Merge)** `[ACTIVE]`
-  - [ ] Quickselect ($k^{\text{th}}$ Order Statistic / Median of Medians)
+  - [ ] Quickselect (k-th Order Statistic / Median of Medians)
 * **Heap-Based:**
   - [x] **Heapsort (Max-Heap In-Place)** `[ACTIVE]`
 * **Non-Comparison Sorts:**
@@ -71,7 +71,6 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [ ] Bogosort (Permutation Random Shuffle)
   - [ ] Sleep Sort (Thread-Based Timer Scheduling)
   - [ ] Drop Sort (Non-Decreasing Lossy Extraction)
-  - [ ] Miracle Sort (External State Transition Waiting)
   - [ ] Stooge Sort (Recursive 2/3 Overlapping Segment Sort)
 
 ---
@@ -80,8 +79,8 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Singly Linked List (Insert, Delete, Reverse)** `[ACTIVE]`
 - [x] **Doubly Linked List (Bidirectional Pointers)** `[ACTIVE]`
 - [x] **Reverse Linked List (In-Place Iterative & Recursive)** `[ACTIVE]`
-- [ ] Circular Linked List (Ring Buffer Traversal)
 - [x] **Floyd's Cycle Detection (Tortoise and Hare Fast & Slow Pointers)** `[ACTIVE]`
+- [ ] Circular Linked List (Ring Buffer Traversal)
 - [ ] Middle of the Linked List (Two-Pointer Midpoint Finding)
 - [ ] Merge Two Sorted Linked Lists (Splice & Merge Pointers)
 - [ ] Remove N-th Node From End of List (Window Pointer Offset)
@@ -91,16 +90,16 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 
 ### D. Linear Data Structures (Stack / Queue / Deque)
 * **Core Structures:**
-  - [ ] Stack (Array-Based & Node-Based Dynamic Implementations)
   - [x] **Queue (FIFO Operations)** `[ACTIVE]`
+  - [ ] Stack (Array-Based & Node-Based Dynamic Implementations)
   - [ ] Circular Queue (Modulo Indexing Ring Buffer)
-  - [ ] Deque (Double-Ended Queue with Head/Tail $\mathcal{O}(1)$ Operations)
+  - [ ] Deque (Double-Ended Queue with Head/Tail O(1) Operations)
 * **Algorithmic Applications:**
   - [x] **Balanced Parentheses (Stack LIFO Syntax Validator)** `[ACTIVE]`
   - [x] **Monotonic Stack (Next Greater Element / Histogram Rectangles)** `[ACTIVE]`
   - [ ] Infix to Postfix Conversion (Dijkstra's Shunting-Yard Algorithm)
   - [ ] Postfix Expression Evaluation (Operand Stack Evaluator)
-  - [ ] Monotonic Queue (Sliding Window Maximum $\mathcal{O}(N)$)
+  - [ ] Monotonic Queue (Sliding Window Maximum O(N))
 
 ---
 
@@ -121,7 +120,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [ ] B-Tree & B+ Tree (High-Fanout Database Block Indexing)
 * **Heaps & Priority Queues:**
   - [x] **Binary Heap (Min-Heap Insert, Sift-Down, Extract-Min)** `[ACTIVE]`
-  - [ ] Max-Heap & Floyd's Linear-Time Build-Heap $\mathcal{O}(N)$
+  - [ ] Max-Heap & Floyd's Linear-Time Build-Heap O(N)
 * **Specialized & Probabilistic Trees:**
   - [ ] SkipList (Probabilistic Multi-Level Express Lanes)
   - [ ] Treap (Cartesian Randomized BST Heap Hybrid)
@@ -149,9 +148,9 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ### H. Graph Traversals & Connectivity
 - [x] **Breadth-First Search (BFS Wavefront & Shortest Path)** `[ACTIVE]`
 - [x] **Depth-First Search (DFS & Cycle Detection)** `[ACTIVE]`
+- [x] **Topological Sort (Kahn's In-Degree Queue Algorithm)** `[ACTIVE]`
 - [ ] Connected Components & Flood Fill (Grid & Adjacency Scan)
 - [ ] Bipartite Graph Verification (2-Coloring via BFS / DFS)
-- [x] **Topological Sort (Kahn's In-Degree Queue Algorithm)** `[ACTIVE]`
 - [ ] Topological Sort (DFS Post-Order Finish Times & Cycle Guard)
 
 ---
@@ -168,8 +167,8 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ### J. Minimum Spanning Tree (MST) & Disjoint Set
 - [x] **Disjoint Set Union (DSU / Union-Find with Path Compression & Union-by-Rank)** `[ACTIVE]`
 - [x] **Kruskal's Algorithm (Greedy Edge Sorting + DSU Cycle Elimination)** `[ACTIVE]`
-- [x] **Prim's Algorithm (Minimum Spanning Tree)** `[ACTIVE]`
-- [ ] Borůvka's Algorithm (Parallel Component Contraction)
+- [x] **Prim's Algorithm (Priority Queue Cut Property MST)** `[ACTIVE]`
+- [ ] Boruvka's Algorithm (Parallel Component Contraction)
 
 ---
 
@@ -184,9 +183,9 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [ ] Hierholzer's Algorithm (Eulerian Path & Circuit Backtracking)
   - [ ] Hamiltonian Path & Cycle (NP-Complete Backtracking & State Pruning)
 * **Network Flow & Bipartite Matching:**
-  - [ ] Ford-Fulkerson & Edmonds-Karp (Augmenting Paths via BFS $\mathcal{O}(V E^2)$)
-  - [ ] Dinic's Algorithm (Level Graph & Blocking Flow $\mathcal{O}(V^2 E)$)
-  - [ ] Hopcroft-Karp Algorithm (Maximum Bipartite Matching $\mathcal{O}(E \sqrt{V})$)
+  - [ ] Ford-Fulkerson & Edmonds-Karp (Augmenting Paths via BFS O(VE^2))
+  - [ ] Dinic's Algorithm (Level Graph & Blocking Flow O(V^2 E))
+  - [ ] Hopcroft-Karp Algorithm (Maximum Bipartite Matching O(E sqrt(V)))
 * **Graph Coloring & Transitive Closure:**
   - [ ] Transitive Closure (Warshall's Reachability Matrix)
   - [ ] Graph Coloring (Greedy Welsh-Powell & Backtracking Chromatic Solver)
@@ -195,12 +194,12 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 
 ### L. String Algorithms & Pattern Matching
 * **Pattern Matching:**
-  - [ ] Naive Brute Force Matching (Slide-and-Compare Baseline)
-  - [x] **Knuth-Morris-Pratt (KMP with Longest Prefix Suffix Failure Function)** `[ACTIVE]`
-  - [x] **Rabin-Karp (Rolling Hash Match)** `[ACTIVE]`
+  - [x] **Knuth-Morris-Pratt / KMP (Longest Prefix Suffix Failure Function)** `[ACTIVE]`
+  - [x] **Rabin-Karp (Rolling Hash Pattern Match)** `[ACTIVE]`
   - [x] **Z-Algorithm (Linear Z-Box Substring Pattern Matching)** `[ACTIVE]`
+  - [ ] Naive Brute Force Matching (Slide-and-Compare Baseline)
   - [ ] Boyer-Moore Algorithm (Bad Character & Good Suffix Shift Heuristics)
-  - [ ] Aho-Corasick Algorithm (Dictionary Trie with Failure Links $\mathcal{O}(N + M + Z)$)
+  - [ ] Aho-Corasick Algorithm (Dictionary Trie with Failure Links O(N + M + Z))
 * **Advanced String Algorithms:**
   - [ ] Manacher's Algorithm (Linear-Time Longest Palindromic Substring)
   - [ ] Suffix Automaton (SAM Minimal Directed Acyclic Word Graph)
@@ -209,17 +208,17 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 
 ### M. Dynamic Programming (DP)
 * **Fundamental & Linear DP:**
-  - [ ] Fibonacci & Climbing Stairs (State Transition & Memoization Foundations)
+  - [x] **Kadane's Algorithm (Maximum Contiguous Subarray Sum O(N))** `[ACTIVE]`
   - [x] **House Robber (Non-Adjacent Maximum Sum Subsequence)** `[ACTIVE]`
-  - [x] **Kadane's Algorithm (Maximum Contiguous Subarray Sum $\mathcal{O}(N)$)** `[ACTIVE]`
+  - [ ] Fibonacci & Climbing Stairs (State Transition & Memoization Foundations)
 * **Knapsack Family:**
   - [x] **0/1 Knapsack Problem (2D DP Matrix & Backtrack Reconstitution)** `[ACTIVE]`
-  - [ ] Unbounded Knapsack Problem (Repetitive Item Choice Optimization)
   - [x] **Coin Change (Fewest Coins DP)** `[ACTIVE]`
+  - [ ] Unbounded Knapsack Problem (Repetitive Item Choice Optimization)
   - [ ] Subset Sum & Partition Equal Subset Sum
 * **Sequence DP:**
   - [x] **Longest Common Subsequence (LCS 2D DP Table & Backtrack)** `[ACTIVE]`
-  - [x] **Longest Increasing Subsequence (LIS)** `[ACTIVE]`
+  - [x] **Longest Increasing Subsequence (LIS Patience Sorting O(N log N))** `[ACTIVE]`
   - [x] **Edit Distance (Levenshtein Distance Matrix Alignment)** `[ACTIVE]`
   - [x] **Longest Palindromic Substring (Expand Around Center / DP)** `[ACTIVE]`
   - [ ] Longest Palindromic Subsequence (Interval Matrix DP)
@@ -228,13 +227,13 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [ ] Matrix Chain Multiplication (MCM Optimal Parenthesization)
   - [ ] Burst Balloons (Reverse Interval DP Decomposition)
 * **Bitmask & Tree DP:**
-  - [ ] Traveling Salesperson Problem (TSP Held-Karp $\mathcal{O}(2^N N^2)$ Bitmask DP)
+  - [ ] Traveling Salesperson Problem (TSP Held-Karp O(2^N * N^2) Bitmask DP)
   - [ ] Tree DP (Tree Diameter, Maximum Independent Set, Rerooting Technique)
 
 ---
 
 ### N. Greedy & Array Techniques
-- [x] **Two Pointers Technique (Container With Most Water)** `[ACTIVE]`
+- [x] **Two Pointers Technique (Convergent Pointer Traversal)** `[ACTIVE]`
 - [x] **Sliding Window Technique (Fixed & Variable Length Window Invariants)** `[ACTIVE]`
 - [x] **Activity Selection / Interval Scheduling (Earliest Deadline First)** `[ACTIVE]`
 - [ ] Fractional Knapsack (Value-to-Weight Ratio Greedy Choice)
@@ -248,9 +247,9 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ### O. Divide & Conquer
 - [x] **Mergesort (Two-Way Array Partition & Inversion Count)** `[ACTIVE]`
 - [x] **Quicksort (Pivot Partition & Recursive Subarray Sort)** `[ACTIVE]`
-- [ ] Closest Pair of Points ($\mathcal{O}(N \log N)$ Geometric Divide & Conquer)
+- [ ] Closest Pair of Points (O(N log N) Geometric Divide & Conquer)
 - [ ] Count Inversions in Array (Modified Mergesort Cross-Inversion Counting)
-- [ ] Strassen's Matrix Multiplication (Sub-Cubic $\mathcal{O}(N^{2.807})$ Matrix Block Algebra)
+- [ ] Strassen's Matrix Multiplication (Sub-Cubic O(N^2.807) Matrix Block Algebra)
 
 ---
 
@@ -265,7 +264,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ---
 
 ### Q. Recursion & Call Trees
-- [x] **Tower of Hanoi (Recursive Call Stack)** `[ACTIVE]`
+- [x] **Tower of Hanoi (Recursive Call Stack Visualization)** `[ACTIVE]`
 - [ ] Mergesort Recursion Call Tree (Visual Frame Depth & Split Tree)
 - [ ] Quicksort Partition Tree (Pivot-Selection Tree Topology)
 - [ ] Backtracking State-Space Decision Tree Visualizer
@@ -282,7 +281,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ---
 
 ### S. Bit Manipulation
-- [x] **Bitwise Operations Interactive Visualizer (AND, OR, XOR, NOT, Bitwise Shifts)** `[ACTIVE]`
+- [x] **Bitwise Operations Interactive Visualizer (AND, OR, XOR, NOT, Shifts)** `[ACTIVE]`
 - [ ] Count Set Bits (Brian Kernighan's Algorithm & Popcount Lookup)
 - [ ] Power of Two & Single Number Detection (XOR Cancellation Properties)
 - [ ] Submask Enumeration (Submask Traversal via Bit Tricks)
@@ -300,136 +299,173 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 
 ### U. Data Structures Taxonomy (Complete Structural Inventory)
 * **Linear Structures:**
-  - [ ] Static Array & Dynamic Array (Contiguous Memory Allocation & Amortized Doubling)
   - [x] **Singly Linked List (Forward-Linked Pointer Node Chains)** `[ACTIVE]`
   - [x] **Doubly Linked List (Bidirectional Prev/Next Pointer Nodes)** `[ACTIVE]`
+  - [x] **Queue (FIFO Array-Backed Circular Buffer & Node-Backed)** `[ACTIVE]`
+  - [ ] Static Array & Dynamic Array (Contiguous Memory Allocation & Amortized Doubling)
   - [ ] Circular Linked List (Endless Ring Buffer Traversal)
   - [ ] Stack (LIFO Array-Backed & Node-Backed Structures)
-  - [x] **Queue (FIFO Array-Backed Circular Buffer & Node-Backed Structures)** `[ACTIVE]`
   - [ ] Deque (Double-Ended Queue with Head/Tail Pointer Buffers)
 * **Hash-Based Structures:**
   - [ ] Hash Table (Separate Chaining with Dynamic Overflow Buckets)
   - [ ] Hash Table (Open Addressing: Linear Probing, Quadratic Probing, Double Hashing)
   - [ ] TreeMap / Ordered Map (Red-Black Key-Value Search Structure)
 * **Trees & Heaps:**
-  - [ ] Binary Tree (Full, Complete, Perfect, Degenerate Topologies)
   - [x] **Binary Search Tree (BST Invariant Binary Hierarchy)** `[ACTIVE]`
   - [x] **AVL Tree (Strict Height-Balanced Search Tree)** `[ACTIVE]`
-  - [ ] Red-Black Tree (Relaxed Color-Balanced Search Tree)
   - [x] **Binary Heap (Min-Heap / Max-Heap Array-Backed Complete Binary Tree)** `[ACTIVE]`
   - [x] **Trie (Prefix Character Retrieval Tree)** `[ACTIVE]`
+  - [x] **Octree 3D (3D Spatial Octant Decomposition Engine)** `[ACTIVE]`
+  - [ ] Red-Black Tree (Relaxed Color-Balanced Search Tree)
+  - [ ] Binary Tree (Full, Complete, Perfect, Degenerate Topologies)
   - [ ] 2-3 Tree & 2-3-4 Tree (B-Tree Multiway Node Groupings)
   - [ ] B-Tree & B+ Tree (High-Order Clustered & Non-Clustered Storage)
   - [ ] Splay Tree (Self-Adjusting Access-Frequency Restructuring)
-  - [ ] Segment Tree & Segment Tree with Lazy Propagation (Range Queries & Updates)
-  - [ ] Fenwick Tree / Binary Indexed Tree (Prefix Sum Updates in $\mathcal{O}(\log N)$)
+  - [ ] Segment Tree & Lazy Propagation (Range Queries & Updates)
+  - [ ] Fenwick Tree / Binary Indexed Tree (Prefix Sum Updates in O(log N))
   - [ ] Treap (Cartesian Priority Randomized Search Tree)
-  - [x] **Octree 3D (3D Spatial Octant Decomposition Engine)** `[ACTIVE]`
   - [ ] KD-Tree (K-Dimensional Spatial Point Partitioning)
 * **Graph & Set Structures:**
-  - [ ] Adjacency Matrix (Dense $V \times V$ Constant-Time Edge Representation)
-  - [ ] Adjacency List (Sparse $V + E$ Dynamic Bucket Representation)
-  - [ ] Edge List (Flat Weighted Edge Array for Kruskal / Bellman-Ford)
   - [x] **Disjoint Set Union (DSU / Union-Find with Path Compression & Rank)** `[ACTIVE]`
+  - [ ] Adjacency Matrix (Dense V x V Constant-Time Edge Representation)
+  - [ ] Adjacency List (Sparse V + E Dynamic Bucket Representation)
+  - [ ] Edge List (Flat Weighted Edge Array for Kruskal / Bellman-Ford)
 * **Specialized & Advanced Structures:**
   - [ ] SkipList (Probabilistic Multi-Layered Index)
-  - [ ] Sparse Table (Range Minimum Query RMQ in $\mathcal{O}(1)$ Time)
+  - [ ] Sparse Table (Range Minimum Query RMQ in O(1) Time)
   - [ ] Interval Tree (Augmented 1D Range Overlap Detection)
 
 ---
 
-## 🎯 Scope Allocation across 3 Development Tiers (Levels 1 → 3)
+## Scope Allocation across 3 Development Tiers
 
 ```mermaid
 graph TD
-    subgraph Level 1: Must Have Core
-        L1[35 Algorithms - 100% COMPLETE<br/>Foundational CS Curriculum]
+    subgraph "Level 1: Must-Have Core"
+        L1["~35 Algorithms - COMPLETE<br/>Foundational CS Curriculum"]
     end
-    subgraph Level 2: Strong DSA
-        L2[~75 Algorithms<br/>University + LeetCode Medium/Hard]
+    subgraph "Level 2: Strong DSA"
+        L2["~54 Algorithms - COMPLETE<br/>University + LeetCode Medium/Hard"]
     end
-    subgraph Level 3: Advanced & CP
-        L3[~100+ Algorithms<br/>Competitive Programming, Geometry & Flow]
+    subgraph "Level 3: Advanced & CP"
+        L3["~100+ Algorithms<br/>Competitive Programming, Geometry & Flow"]
     end
     L1 --> L2 --> L3
 ```
 
-### 🏆 Level 1 — Must-Have Core (35 Modules — 100% Implemented)
+### Level 1 — Must-Have Core (~35 Modules — Complete)
 * **Target Objective:** Comprehensively satisfy all foundational curriculum requirements for 1st & 2nd year university Computer Science (CS1 / CS2).
-* **Coverage Scope (All Active):**
-  - **Sorting (7):** Bubble, Selection, Insertion, Merge, Quick, Heap, Counting, Radix LSD.
-  - **Searching (3):** Linear Search, Binary Search, KMP, Rabin-Karp.
-  - **Lists & Linear (4):** Singly Linked List, Doubly Linked List, Queue FIFO, Balanced Parentheses Stack.
+* **Coverage Scope:**
+  - **Sorting (9):** Bubble, Selection, Insertion, Merge, Quick, Heap, Counting, Radix LSD.
+  - **Searching (3):** Linear Search, Binary Search, Rotated Sorted Array.
+  - **Strings (3):** KMP, Rabin-Karp, Z-Algorithm.
+  - **Lists & Linear (5):** Singly Linked List, Doubly Linked List, Queue FIFO, Balanced Parentheses Stack, Monotonic Stack.
   - **Trees & Heaps (5):** Binary Search Tree, AVL Tree, Binary Heap, Tree Traversals, Trie.
-  - **Graphs (6):** BFS, DFS, Dijkstra, Prim's MST, Kruskal's MST, Kahn's Topological Sort.
-  - **Dynamic Programming (4):** 0/1 Knapsack, Longest Common Subsequence, Coin Change, Longest Increasing Subsequence.
-  - **Math & Recursion (4):** Sieve of Eratosthenes, Euclidean GCD, Tower of Hanoi, Octree 3D.
+  - **Graphs (7):** BFS, DFS, Dijkstra, Bellman-Ford, Prim's MST, Kruskal's MST, Kahn's Topological Sort.
+  - **Dynamic Programming (5):** 0/1 Knapsack, LCS, Coin Change, LIS, Edit Distance.
+  - **Math & Recursion (3):** Sieve of Eratosthenes, Euclidean GCD, Tower of Hanoi.
 
-### 🚀 Level 2 — Strong DSA (~75 Modules)
+### Level 2 — Strong DSA (~54 Modules — Complete)
 * **Target Objective:** Technical interview readiness for Big Tech (Google, Meta, Amazon) and ICPC National Contests.
-* **Additional Coverage:**
-  - **Graphs:** Bellman-Ford, Floyd-Warshall, A*, 0-1 BFS, Tarjan SCC, Kosaraju, Bridges, Articulation Points.
-  - **Data Structures:** Disjoint Set Union (DSU), Segment Tree, Fenwick Tree (BIT), Splay Tree, Monotonic Stack / Queue.
-  - **Strings:** Z-Algorithm, Aho-Corasick, Manacher's Algorithm, Suffix Array.
-  - **Dynamic Programming:** Edit Distance, Matrix Chain Multiplication, Bitmask DP (TSP), Tree DP.
-  - **Backtracking:** N-Queens, Sudoku, Subsets.
-  - **Number Theory & Math:** Fast Modular Exponentiation, Modular Inverse, Prime Factorization.
+* **Additional Coverage Beyond Level 1:**
+  - **Graphs:** Floyd-Warshall, A* Search, DSU / Union-Find.
+  - **Dynamic Programming:** Kadane's Algorithm, House Robber, Longest Palindromic Substring.
+  - **Greedy & Array Techniques:** Two Pointers, Sliding Window, Activity Selection.
+  - **Linked Lists:** Reverse Linked List, Floyd's Cycle Detection.
+  - **Backtracking:** N-Queens.
+  - **Math & Bit Manipulation:** Fast Binary Exponentiation, Bitwise Operations Visualizer.
+  - **Spatial:** Octree 3D.
 
-### 🌟 Level 3 — Advanced & Competitive Programming (~100+ Modules)
+### Level 3 — Advanced & Competitive Programming (~100+ Modules)
 * **Target Objective:** ICPC Regional / World Finals competitive readiness and high-performance systems engineering.
 * **Additional Coverage:**
   - **Network Flow:** Dinic's Algorithm, Edmonds-Karp, Min-Cost Max-Flow.
   - **Bipartite Matching:** Hopcroft-Karp Bipartite Matching.
   - **Advanced Trees:** Heavy-Light Decomposition (HLD), Centroid Decomposition, Treap, B-Tree, KD-Tree.
-  - **Advanced Queries:** Mo's Algorithm, Sparse Table RMQ $\mathcal{O}(1)$.
+  - **Advanced Queries:** Mo's Algorithm, Sparse Table RMQ O(1).
   - **Geometry:** Convex Hull (Graham Scan), Sweep-Line, Closest Pair of Points.
   - **Advanced Mathematics:** Fast Fourier Transform (FFT / NTT).
 
 ---
 
-## 📈 Current StepDSA Implementation Status (44 Active Modules)
+## Current StepDSA Implementation Status (54 Active Modules)
 
-1. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx) — Sorting
-2. [Mergesort (Divide & Conquer)](../src/modules/sorting/mergesort.tsx) — Sorting
-3. [Insertion Sort (Incremental Build)](../src/modules/sorting/insertionSort.tsx) — Sorting
-4. [Selection Sort (Minimum Scan)](../src/modules/sorting/selectionSort.tsx) — Sorting
-5. [Bubble Sort (Adjacent Swaps)](../src/modules/sorting/bubbleSort.tsx) — Sorting
-6. [Counting Sort (Frequency Bucket Indexing)](../src/modules/sorting/countingSort.tsx) — Sorting
-7. [Radix Sort LSD (Digit Bucket Passes)](../src/modules/sorting/radixSort.tsx) — Sorting
-8. [Heapsort (Max-Heap In-Place)](../src/modules/sorting/heapsort.tsx) — Sorting
-9. [Linear Search (Sequential Scan)](../src/modules/searching/linearSearch.tsx) — Searching
-10. [Binary Search (Boundary Halving)](../src/modules/searching/binarySearch.tsx) — Searching
-11. [KMP Pattern Search (Knuth-Morris-Pratt)](../src/modules/strings/kmpSearch.tsx) — Strings
-12. [Rabin-Karp (Rolling Hash Match)](../src/modules/strings/rabinKarp.tsx) — Strings & Searching
-13. [Z-Algorithm (Linear Z-Box Match)](../src/modules/strings/zAlgorithm.tsx) — Strings & Searching
-14. [Balanced Parentheses (Stack LIFO)](../src/modules/stack/balancedParentheses.tsx) — Linear DS & Stack
-15. [Queue (FIFO Operations)](../src/modules/stack/queueVisualizer.tsx) — Stacks & Queues
-16. [Sieve of Eratosthenes (Prime Grid)](../src/modules/math/sieveOfEratosthenes.tsx) — Number Theory & Math
-17. [Euclidean Algorithm (GCD)](../src/modules/math/euclideanGcd.tsx) — Number Theory & Math
-18. [Tower of Hanoi (Recursive Call Stack)](../src/modules/math/towerOfHanoi.tsx) — Recursion & Math
-19. [N-Queens Problem (Backtracking State-Space)](../src/modules/math/nQueens.tsx) — Backtracking & Math
-20. [Kadane's Algorithm (Max Subarray Sum)](../src/modules/dp/kadanesAlgorithm.tsx) — Dynamic Programming
-21. [House Robber (Non-Adjacent Max Sum)](../src/modules/dp/houseRobber.tsx) — Dynamic Programming
-22. [Longest Common Subsequence (LCS 2D DP)](../src/modules/dp/lcs.tsx) — Dynamic Programming
-23. [Coin Change (Fewest Coins DP)](../src/modules/dp/coinChange.tsx) — Dynamic Programming
-24. [Longest Increasing Subsequence (LIS)](../src/modules/dp/lis.tsx) — Dynamic Programming
-25. [Edit Distance (Levenshtein Distance)](../src/modules/dp/editDistance.tsx) — Dynamic Programming
-26. [0/1 Knapsack Problem (2D DP Matrix)](../src/modules/dp/knapsack.tsx) — Dynamic Programming
-27. [Binary Search Tree (BST Construction)](../src/modules/trees/bst.tsx) — Trees
-28. [AVL Tree (Self-Balancing Rotations)](../src/modules/trees/avlTree.tsx) — Trees & BST
-29. [Binary Tree Traversals (Inorder, Preorder, Postorder)](../src/modules/trees/treeTraversals.tsx) — Trees & BST
-30. [Trie (Prefix Search & Autocomplete)](../src/modules/trees/trie.tsx) — Trees & Strings
-31. [Singly Linked List (Pointers & Mutations)](../src/modules/linkedList/singlyLinkedList.tsx) — Linked Lists
-32. [Doubly Linked List (Bidirectional Pointers)](../src/modules/linkedList/doublyLinkedList.tsx) — Linked Lists
-33. [Binary Heap (Min-Heap Priority Queue)](../src/modules/trees/binaryHeap.tsx) — Priority Queues
-34. [BFS Wavefront (Queue Shortest Path)](../src/modules/graphs/bfsTraversal.tsx) — Graphs
-35. [DFS Traversal (Call Stack & Cycle Detection)](../src/modules/graphs/dfsTraversal.tsx) — Graphs
-36. [Topological Sort (Kahn's In-Degree DAG)](../src/modules/graphs/topologicalSort.tsx) — Graphs
-37. [Dijkstra's Algorithm (Min-Heap Shortest Path)](../src/modules/graphs/dijkstra.tsx) — Graphs
-38. [Bellman-Ford (Negative Weights & Cycles)](../src/modules/graphs/bellmanFord.tsx) — Graphs
-39. [Floyd-Warshall (All-Pairs Shortest Path DP)](../src/modules/graphs/floydWarshall.tsx) — Graphs
-40. [A* Search (Heuristic Pathfinding)](../src/modules/graphs/aStarSearch.tsx) — Graphs & Searching
-41. [Kruskal's MST (DSU Edge Sorting)](../src/modules/graphs/kruskalMST.tsx) — Graphs
-42. [Prim's Algorithm (Minimum Spanning Tree)](../src/modules/graphs/primMST.tsx) — Graphs
-43. [Disjoint Set Union (DSU / Union-Find)](../src/modules/graphs/dsu.tsx) — Graphs & Sets
-44. [Octree 3D (Spatial Octant Partitioning)](../src/modules/trees/octree3d.tsx) — Spatial 3D
+### Sorting (8 modules)
+1. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx)
+2. [Mergesort (Divide & Conquer)](../src/modules/sorting/mergesort.tsx)
+3. [Insertion Sort (Incremental Build)](../src/modules/sorting/insertionSort.tsx)
+4. [Selection Sort (Minimum Scan)](../src/modules/sorting/selectionSort.tsx)
+5. [Bubble Sort (Adjacent Swaps)](../src/modules/sorting/bubbleSort.tsx)
+6. [Counting Sort (Frequency Bucket Indexing)](../src/modules/sorting/countingSort.tsx)
+7. [Radix Sort LSD (Digit Bucket Passes)](../src/modules/sorting/radixSort.tsx)
+8. [Heapsort (Max-Heap In-Place)](../src/modules/sorting/heapsort.tsx)
+
+### Searching (3 modules)
+9. [Linear Search (Sequential Scan)](../src/modules/searching/linearSearch.tsx)
+10. [Binary Search (Boundary Halving)](../src/modules/searching/binarySearch.tsx)
+11. [Search in Rotated Sorted Array](../src/modules/searching/rotatedSortedArray.tsx)
+
+### Strings & Pattern Matching (3 modules)
+12. [KMP Pattern Search (Knuth-Morris-Pratt)](../src/modules/strings/kmpSearch.tsx)
+13. [Rabin-Karp (Rolling Hash Match)](../src/modules/strings/rabinKarp.tsx)
+14. [Z-Algorithm (Linear Z-Box Match)](../src/modules/strings/zAlgorithm.tsx)
+
+### Stacks & Queues (3 modules)
+15. [Balanced Parentheses (Stack LIFO)](../src/modules/stack/balancedParentheses.tsx)
+16. [Queue (FIFO Operations)](../src/modules/stack/queueVisualizer.tsx)
+17. [Monotonic Stack (Next Greater Element)](../src/modules/stack/monotonicStack.tsx)
+
+### Number Theory & Math (3 modules)
+18. [Sieve of Eratosthenes (Prime Grid)](../src/modules/math/sieveOfEratosthenes.tsx)
+19. [Euclidean Algorithm (GCD)](../src/modules/math/euclideanGcd.tsx)
+20. [Fast Binary Exponentiation](../src/modules/math/binaryExponentiation.tsx)
+
+### Recursion & Backtracking (2 modules)
+21. [Tower of Hanoi (Recursive Call Stack)](../src/modules/math/towerOfHanoi.tsx)
+22. [N-Queens Problem (Backtracking)](../src/modules/math/nQueens.tsx)
+
+### Bit Manipulation (1 module)
+23. [Bitwise Operations Visualizer](../src/modules/math/bitwiseOperations.tsx)
+
+### Dynamic Programming (8 modules)
+24. [Kadane's Algorithm (Max Subarray Sum)](../src/modules/dp/kadanesAlgorithm.tsx)
+25. [House Robber (Non-Adjacent Max Sum)](../src/modules/dp/houseRobber.tsx)
+26. [Longest Common Subsequence (LCS)](../src/modules/dp/lcs.tsx)
+27. [Coin Change (Fewest Coins DP)](../src/modules/dp/coinChange.tsx)
+28. [Longest Increasing Subsequence (LIS)](../src/modules/dp/lis.tsx)
+29. [Edit Distance (Levenshtein Distance)](../src/modules/dp/editDistance.tsx)
+30. [0/1 Knapsack Problem (2D DP Matrix)](../src/modules/dp/knapsack.tsx)
+31. [Longest Palindromic Substring](../src/modules/dp/longestPalindromicSubstring.tsx)
+
+### Trees & Data Structures (5 modules)
+32. [Binary Search Tree (BST)](../src/modules/trees/bst.tsx)
+33. [AVL Tree (Self-Balancing Rotations)](../src/modules/trees/avlTree.tsx)
+34. [Binary Tree Traversals (Inorder, Preorder, Postorder)](../src/modules/trees/treeTraversals.tsx)
+35. [Trie (Prefix Search & Autocomplete)](../src/modules/trees/trie.tsx)
+36. [Binary Heap (Min-Heap Priority Queue)](../src/modules/trees/binaryHeap.tsx)
+
+### Linked Lists (4 modules)
+37. [Singly Linked List (Pointers & Mutations)](../src/modules/linkedList/singlyLinkedList.tsx)
+38. [Doubly Linked List (Bidirectional Pointers)](../src/modules/linkedList/doublyLinkedList.tsx)
+39. [Reverse Linked List (In-Place)](../src/modules/linkedList/reverseLinkedList.tsx)
+40. [Floyd's Cycle Detection (Fast & Slow)](../src/modules/linkedList/floydCycleDetection.tsx)
+
+### Graphs (10 modules)
+41. [BFS Wavefront (Queue Shortest Path)](../src/modules/graphs/bfsTraversal.tsx)
+42. [DFS Traversal (Call Stack & Cycle Detection)](../src/modules/graphs/dfsTraversal.tsx)
+43. [Topological Sort (Kahn's In-Degree DAG)](../src/modules/graphs/topologicalSort.tsx)
+44. [Dijkstra's Algorithm (Min-Heap Shortest Path)](../src/modules/graphs/dijkstra.tsx)
+45. [Bellman-Ford (Negative Weights & Cycles)](../src/modules/graphs/bellmanFord.tsx)
+46. [Floyd-Warshall (All-Pairs Shortest Path DP)](../src/modules/graphs/floydWarshall.tsx)
+47. [A* Search (Heuristic Pathfinding)](../src/modules/graphs/aStarSearch.tsx)
+48. [Kruskal's MST (DSU Edge Sorting)](../src/modules/graphs/kruskalMST.tsx)
+49. [Prim's Algorithm (Minimum Spanning Tree)](../src/modules/graphs/primMST.tsx)
+50. [Disjoint Set Union (DSU / Union-Find)](../src/modules/graphs/dsu.tsx)
+
+### Greedy & Array Techniques (3 modules)
+51. [Two Pointers Technique](../src/modules/arrays/twoPointers.tsx)
+52. [Sliding Window Technique](../src/modules/arrays/slidingWindow.tsx)
+53. [Activity Selection / Interval Scheduling](../src/modules/arrays/activitySelection.tsx)
+
+### Spatial 3D (1 module)
+54. [Octree 3D (Spatial Octant Partitioning)](../src/modules/trees/octree3d.tsx)
