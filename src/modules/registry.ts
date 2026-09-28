@@ -92,6 +92,12 @@ import { removeNthFromEndModule } from './linkedList/removeNthFromEnd';
 import { shuntingYardModule } from './stack/shuntingYard';
 import { mergeIntervalsModule } from './arrays/mergeIntervals';
 import { fractionalKnapsackModule } from './arrays/fractionalKnapsack';
+import { binarySearchAnswerModule } from './searching/binarySearchAnswer';
+import { intersectionLinkedListModule } from './linkedList/intersectionLinkedList';
+import { postfixEvaluationModule } from './stack/postfixEvaluation';
+import { slidingWindowMaxModule } from './stack/slidingWindowMax';
+import { bstDeleteModule } from './trees/bstDelete';
+import { subsetSumModule } from './dp/subsetSum';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -175,6 +181,12 @@ export const allModules: AlgorithmModule[] = [
   shuntingYardModule,
   mergeIntervalsModule,
   fractionalKnapsackModule,
+  binarySearchAnswerModule,
+  intersectionLinkedListModule,
+  postfixEvaluationModule,
+  slidingWindowMaxModule,
+  bstDeleteModule,
+  subsetSumModule,
 ];
 
 export const defaultModule = quicksortModule;
