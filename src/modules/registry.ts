@@ -104,6 +104,12 @@ import { gasStationModule } from './arrays/gasStation';
 import { zeroOneBFSModule } from './graphs/zeroOneBFS';
 import { unboundedKnapsackModule } from './dp/unboundedKnapsack';
 import { bogosortModule } from './sorting/bogosort';
+import { lpsModule } from './dp/lps';
+import { matrixChainMultiplicationModule } from './dp/matrixChainMultiplication';
+import { tarjanSCCModule } from './graphs/tarjanSCC';
+import { huffmanCodingModule } from './trees/huffmanCoding';
+import { countSetBitsModule } from './math/countSetBits';
+import { subsetsModule } from './arrays/subsets';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -199,6 +205,12 @@ export const allModules: AlgorithmModule[] = [
   zeroOneBFSModule,
   unboundedKnapsackModule,
   bogosortModule,
+  lpsModule,
+  matrixChainMultiplicationModule,
+  tarjanSCCModule,
+  huffmanCodingModule,
+  countSetBitsModule,
+  subsetsModule,
 ];
 
 export const defaultModule = quicksortModule;
