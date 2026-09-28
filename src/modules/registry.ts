@@ -65,6 +65,28 @@ import { floydCycleDetectionModule } from './linkedList/floydCycleDetection';
 import { activitySelectionModule } from './arrays/activitySelection';
 import { bitwiseOperationsModule } from './math/bitwiseOperations';
 
+// Level-5 Comprehensive Curriculum Expansions
+import { jumpSearchModule } from './searching/jumpSearch';
+import { interpolationSearchModule } from './searching/interpolationSearch';
+import { exponentialSearchModule } from './searching/exponentialSearch';
+import { cocktailShakerSortModule } from './sorting/cocktailShakerSort';
+import { quickselectModule } from './sorting/quickselect';
+import { shellsortModule } from './sorting/shellsort';
+import { bucketSortModule } from './sorting/bucketSort';
+import { stackVisualizerModule } from './stack/stackVisualizer';
+import { circularQueueModule } from './stack/circularQueue';
+import { dequeVisualizerModule } from './stack/dequeVisualizer';
+import { circularLinkedListModule } from './linkedList/circularLinkedList';
+import { middleLinkedListModule } from './linkedList/middleLinkedList';
+import { levelOrderTraversalModule } from './trees/levelOrderTraversal';
+import { maxHeapModule } from './trees/maxHeap';
+import { segmentTreeModule } from './trees/segmentTree';
+import { bipartiteCheckModule } from './graphs/bipartiteCheck';
+import { floodFillModule } from './graphs/floodFill';
+import { climbingStairsModule } from './dp/climbingStairs';
+import { uniquePathsModule } from './dp/uniquePaths';
+import { jumpGameModule } from './arrays/jumpGame';
+
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
   mergesortModule,
@@ -120,6 +142,27 @@ export const allModules: AlgorithmModule[] = [
   floydCycleDetectionModule,
   activitySelectionModule,
   bitwiseOperationsModule,
+  // New Curriculum Modules
+  jumpSearchModule,
+  interpolationSearchModule,
+  exponentialSearchModule,
+  cocktailShakerSortModule,
+  quickselectModule,
+  shellsortModule,
+  bucketSortModule,
+  stackVisualizerModule,
+  circularQueueModule,
+  dequeVisualizerModule,
+  circularLinkedListModule,
+  middleLinkedListModule,
+  levelOrderTraversalModule,
+  maxHeapModule,
+  segmentTreeModule,
+  bipartiteCheckModule,
+  floodFillModule,
+  climbingStairsModule,
+  uniquePathsModule,
+  jumpGameModule,
 ];
 
 export const defaultModule = quicksortModule;
