@@ -121,6 +121,12 @@ import { extendedGcdModule } from './math/extendedGcd';
 import { bridgeFindingModule } from './graphs/bridgeFinding';
 import { ratInAMazeModule } from './arrays/ratInAMaze';
 import { fenwickTreeModule } from './trees/fenwickTree';
+import { countInversionsModule } from './arrays/countInversions';
+import { articulationPointsModule } from './graphs/articulationPoints';
+import { kosarajuModule } from './graphs/kosaraju';
+import { wordSearchModule } from './arrays/wordSearch';
+import { transitiveClosureModule } from './graphs/transitiveClosure';
+import { graphColoringModule } from './graphs/graphColoring';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -233,6 +239,12 @@ export const allModules: AlgorithmModule[] = [
   bridgeFindingModule,
   ratInAMazeModule,
   fenwickTreeModule,
+  countInversionsModule,
+  articulationPointsModule,
+  kosarajuModule,
+  wordSearchModule,
+  transitiveClosureModule,
+  graphColoringModule,
 ];
 
 export const defaultModule = quicksortModule;
