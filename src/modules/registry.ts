@@ -127,6 +127,12 @@ import { kosarajuModule } from './graphs/kosaraju';
 import { wordSearchModule } from './arrays/wordSearch';
 import { transitiveClosureModule } from './graphs/transitiveClosure';
 import { graphColoringModule } from './graphs/graphColoring';
+import { edmondsKarpModule } from './graphs/edmondsKarp';
+import { hierholzerModule } from './graphs/hierholzer';
+import { treapModule } from './trees/treap';
+import { splayTreeModule } from './trees/splayTree';
+import { manacherModule } from './strings/manacher';
+import { primeFactorizationModule } from './math/primeFactorization';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -245,6 +251,12 @@ export const allModules: AlgorithmModule[] = [
   wordSearchModule,
   transitiveClosureModule,
   graphColoringModule,
+  edmondsKarpModule,
+  hierholzerModule,
+  treapModule,
+  splayTreeModule,
+  manacherModule,
+  primeFactorizationModule,
 ];
 
 export const defaultModule = quicksortModule;
