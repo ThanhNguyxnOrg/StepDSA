@@ -145,6 +145,12 @@ import { hopcroftKarpModule } from './graphs/hopcroftKarp';
 import { burstBalloonsModule } from './dp/burstBalloons';
 import { suffixAutomatonModule } from './strings/suffixAutomaton';
 import { lineIntersectionModule } from './geometry/lineIntersection';
+import { hashTableChainingModule } from './arrays/hashTableChaining';
+import { hashTableOpenAddressingModule } from './arrays/hashTableOpenAddressing';
+import { tstModule } from './trees/tst';
+import { radixTreeModule } from './trees/radixTree';
+import { boruvkaMSTModule } from './graphs/boruvkaMST';
+import { sparseTableModule } from './arrays/sparseTable';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -281,6 +287,12 @@ export const allModules: AlgorithmModule[] = [
   burstBalloonsModule,
   suffixAutomatonModule,
   lineIntersectionModule,
+  hashTableChainingModule,
+  hashTableOpenAddressingModule,
+  tstModule,
+  radixTreeModule,
+  boruvkaMSTModule,
+  sparseTableModule,
 ];
 
 export const defaultModule = quicksortModule;
