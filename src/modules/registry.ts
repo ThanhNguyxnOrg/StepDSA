@@ -115,6 +115,12 @@ import { stoogeSortModule } from './sorting/stoogeSort';
 import { sleepSortModule } from './sorting/sleepSort';
 import { introsortModule } from './sorting/introsort';
 import { timsortModule } from './sorting/timsort';
+import { singleNumberModule } from './math/singleNumber';
+import { topologicalSortDFSModule } from './graphs/topologicalSortDFS';
+import { extendedGcdModule } from './math/extendedGcd';
+import { bridgeFindingModule } from './graphs/bridgeFinding';
+import { ratInAMazeModule } from './arrays/ratInAMaze';
+import { fenwickTreeModule } from './trees/fenwickTree';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -221,6 +227,12 @@ export const allModules: AlgorithmModule[] = [
   sleepSortModule,
   introsortModule,
   timsortModule,
+  singleNumberModule,
+  topologicalSortDFSModule,
+  extendedGcdModule,
+  bridgeFindingModule,
+  ratInAMazeModule,
+  fenwickTreeModule,
 ];
 
 export const defaultModule = quicksortModule;

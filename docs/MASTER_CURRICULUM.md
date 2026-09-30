@@ -151,7 +151,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Topological Sort (Kahn's In-Degree Queue Algorithm)** `[ACTIVE]`
 - [x] **Connected Components & Flood Fill (Grid & Adjacency Scan)** `[ACTIVE]`
 - [x] **Bipartite Graph Verification (2-Coloring via BFS / DFS)** `[ACTIVE]`
-- [ ] Topological Sort (DFS Post-Order Finish Times & Cycle Guard)
+- [x] **Topological Sort (DFS Post-Order Finish Times O(V + E))** `[ACTIVE]`
 
 ---
 
@@ -177,7 +177,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [x] **Tarjan's SCC Algorithm (Low-Link DFS Timestamps & Explicit Stack O(V + E))** `[ACTIVE]`
   - [ ] Kosaraju's Algorithm (Two-Pass Transposed DFS Decomposition)
 * **Bridges & Articulation Points:**
-  - [ ] Bridge Finding in Undirected Graphs (DFS Discovery & Low-Point Bounds)
+  - [x] **Bridge Finding in Undirected Graphs (DFS Discovery & Low-Point Bounds O(V + E))** `[ACTIVE]`
   - [ ] Articulation Points (Cut Vertices & Root-Degree Checks)
 * **Eulerian & Hamiltonian Paths:**
   - [ ] Hierholzer's Algorithm (Eulerian Path & Circuit Backtracking)
@@ -258,7 +258,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [ ] Sudoku Solver (Exact Cover Constraint Backtracking)
 - [ ] Permutations & Combinations Generator (State-Space Exploration)
 - [x] **Subsets / Power Set (Recursive Include/Exclude Decision Tree O(2^N))** `[ACTIVE]`
-- [ ] Rat in a Maze (Grid Pathfinding with Visited Cell Backtracking)
+- [x] **Rat in a Maze (Grid Pathfinding Backtracking O(4^(N^2)))** `[ACTIVE]`
 - [ ] Word Search in 2D Grid (Directional DFS with Board Character Restoration)
 
 ---
@@ -275,7 +275,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Euclidean Algorithm (Greatest Common Divisor via Modulo)** `[ACTIVE]`
 - [x] **Sieve of Eratosthenes (Composite Grid Elimination)** `[ACTIVE]`
 - [x] **Fast Binary Modular Exponentiation (Logarithmic Exponent Halving)** `[ACTIVE]`
-- [ ] Modular Multiplicative Inverse (Extended Euclidean Algorithm)
+- [x] **Modular Multiplicative Inverse (Extended Euclidean Algorithm O(log min(A, B)))** `[ACTIVE]`
 - [ ] Integer Prime Factorization (Trial Division & Pollard's Rho)
 
 ---
@@ -283,7 +283,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ### S. Bit Manipulation
 - [x] **Bitwise Operations Interactive Visualizer (AND, OR, XOR, NOT, Shifts)** `[ACTIVE]`
 - [x] **Count Set Bits (Brian Kernighan's Algorithm O(K))** `[ACTIVE]`
-- [ ] Power of Two & Single Number Detection (XOR Cancellation Properties)
+- [x] **Single Number & XOR Cancellation Detection O(N)** `[ACTIVE]`
 - [ ] Submask Enumeration (Submask Traversal via Bit Tricks)
 
 ---
@@ -324,7 +324,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [ ] B-Tree & B+ Tree (High-Order Clustered & Non-Clustered Storage)
   - [ ] Splay Tree (Self-Adjusting Access-Frequency Restructuring)
   - [x] **Segment Tree & Lazy Propagation (Range Queries & Updates)** `[ACTIVE]`
-  - [ ] Fenwick Tree / Binary Indexed Tree (Prefix Sum Updates in O(log N))
+  - [x] **Fenwick Tree / Binary Indexed Tree (Prefix Sum Updates in O(log N))** `[ACTIVE]`
   - [ ] Treap (Cartesian Priority Randomized Search Tree)
   - [ ] KD-Tree (K-Dimensional Spatial Point Partitioning)
 * **Graph & Set Structures:**
@@ -392,7 +392,7 @@ graph TD
 
 ---
 
-## Current StepDSA Implementation Status (103 Active Modules)
+## Current StepDSA Implementation Status (109 Active Modules)
 
 ### Sorting & Selection (18 modules) — 100% COMPLETE
 1. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx)
@@ -453,7 +453,7 @@ graph TD
 48. [Remove N-th Node From End](../src/modules/linkedList/removeNthFromEnd.tsx)
 49. [Intersection of Two Linked Lists](../src/modules/linkedList/intersectionLinkedList.tsx)
 
-### Trees & Advanced Hierarchies (11 modules)
+### Trees & Advanced Hierarchies (12 modules)
 50. [Binary Search Tree (BST Construction)](../src/modules/trees/bst.tsx)
 51. [BST Deletion (Inorder Successor Re-linking)](../src/modules/trees/bstDelete.tsx)
 52. [AVL Tree (Self-Balancing Rotations)](../src/modules/trees/avlTree.tsx)
@@ -465,61 +465,67 @@ graph TD
 58. [Segment Tree (Range Sum Query & Updates)](../src/modules/trees/segmentTree.tsx)
 59. [Octree 3D (Spatial Octant Partitioning)](../src/modules/trees/octree3d.tsx)
 60. [Huffman Coding (Greedy Min-Heap Prefix Tree)](../src/modules/trees/huffmanCoding.tsx)
+61. [Fenwick Tree / Binary Indexed Tree (Prefix Sums)](../src/modules/trees/fenwickTree.tsx)
 
-### Graphs & Network Connectivity (14 modules)
-61. [BFS Wavefront (Queue Shortest Path)](../src/modules/graphs/bfsTraversal.tsx)
-62. [DFS Traversal (Call Stack & Cycle Detection)](../src/modules/graphs/dfsTraversal.tsx)
-63. [Topological Sort (Kahn's In-Degree DAG)](../src/modules/graphs/topologicalSort.tsx)
-64. [Dijkstra's Algorithm (Min-Heap Shortest Path)](../src/modules/graphs/dijkstra.tsx)
-65. [Bellman-Ford (Negative Weights & Cycles)](../src/modules/graphs/bellmanFord.tsx)
-66. [Floyd-Warshall (All-Pairs Shortest Path DP)](../src/modules/graphs/floydWarshall.tsx)
-67. [A* Search (Heuristic Pathfinding)](../src/modules/graphs/aStarSearch.tsx)
-68. [Kruskal's MST (DSU Edge Sorting)](../src/modules/graphs/kruskalMST.tsx)
-69. [Prim's Algorithm (Minimum Spanning Tree)](../src/modules/graphs/primMST.tsx)
-70. [Disjoint Set Union (DSU / Union-Find)](../src/modules/graphs/dsu.tsx)
-71. [Bipartite Graph Verification (2-Coloring)](../src/modules/graphs/bipartiteCheck.tsx)
-72. [Connected Components & Flood Fill (Grid)](../src/modules/graphs/floodFill.tsx)
-73. [0-1 BFS (Double-Ended Queue Shortest Path)](../src/modules/graphs/zeroOneBFS.tsx)
-74. [Tarjan's SCC Algorithm (Low-Link DFS)](../src/modules/graphs/tarjanSCC.tsx)
+### Graphs & Network Connectivity (16 modules)
+62. [BFS Wavefront (Queue Shortest Path)](../src/modules/graphs/bfsTraversal.tsx)
+63. [DFS Traversal (Call Stack & Cycle Detection)](../src/modules/graphs/dfsTraversal.tsx)
+64. [Topological Sort (Kahn's In-Degree DAG)](../src/modules/graphs/topologicalSort.tsx)
+65. [Topological Sort (DFS Post-Order Finish Times)](../src/modules/graphs/topologicalSortDFS.tsx)
+66. [Dijkstra's Algorithm (Min-Heap Shortest Path)](../src/modules/graphs/dijkstra.tsx)
+67. [Bellman-Ford (Negative Weights & Cycles)](../src/modules/graphs/bellmanFord.tsx)
+68. [Floyd-Warshall (All-Pairs Shortest Path DP)](../src/modules/graphs/floydWarshall.tsx)
+69. [A* Search (Heuristic Pathfinding)](../src/modules/graphs/aStarSearch.tsx)
+70. [Kruskal's MST (DSU Edge Sorting)](../src/modules/graphs/kruskalMST.tsx)
+71. [Prim's Algorithm (Minimum Spanning Tree)](../src/modules/graphs/primMST.tsx)
+72. [Disjoint Set Union (DSU / Union-Find)](../src/modules/graphs/dsu.tsx)
+73. [Bipartite Graph Verification (2-Coloring)](../src/modules/graphs/bipartiteCheck.tsx)
+74. [Connected Components & Flood Fill (Grid)](../src/modules/graphs/floodFill.tsx)
+75. [0-1 BFS (Double-Ended Queue Shortest Path)](../src/modules/graphs/zeroOneBFS.tsx)
+76. [Tarjan's SCC Algorithm (Low-Link DFS)](../src/modules/graphs/tarjanSCC.tsx)
+77. [Bridge Finding in Undirected Graphs (DFS Cut-Edges)](../src/modules/graphs/bridgeFinding.tsx)
 
 ### Dynamic Programming (14 modules)
-75. [Kadane's Algorithm (Max Subarray Sum)](../src/modules/dp/kadanesAlgorithm.tsx)
-76. [House Robber (Non-Adjacent Max Sum)](../src/modules/dp/houseRobber.tsx)
-77. [Longest Common Subsequence (LCS)](../src/modules/dp/lcs.tsx)
-78. [Coin Change (Fewest Coins DP)](../src/modules/dp/coinChange.tsx)
-79. [Longest Increasing Subsequence (LIS)](../src/modules/dp/lis.tsx)
-80. [Edit Distance (Levenshtein Distance)](../src/modules/dp/editDistance.tsx)
-81. [0/1 Knapsack Problem (2D DP Matrix)](../src/modules/dp/knapsack.tsx)
-82. [Subset Sum Problem (Boolean DP Matrix)](../src/modules/dp/subsetSum.tsx)
-83. [Unbounded Knapsack Problem (1D DP)](../src/modules/dp/unboundedKnapsack.tsx)
-84. [Longest Palindromic Substring](../src/modules/dp/longestPalindromicSubstring.tsx)
-85. [Fibonacci & Climbing Stairs](../src/modules/dp/climbingStairs.tsx)
-86. [Unique Paths in 2D Grid](../src/modules/dp/uniquePaths.tsx)
-87. [Longest Palindromic Subsequence (Interval DP)](../src/modules/dp/lps.tsx)
-88. [Matrix Chain Multiplication (Interval DP)](../src/modules/dp/matrixChainMultiplication.tsx)
+78. [Kadane's Algorithm (Max Subarray Sum)](../src/modules/dp/kadanesAlgorithm.tsx)
+79. [House Robber (Non-Adjacent Max Sum)](../src/modules/dp/houseRobber.tsx)
+80. [Longest Common Subsequence (LCS)](../src/modules/dp/lcs.tsx)
+81. [Coin Change (Fewest Coins DP)](../src/modules/dp/coinChange.tsx)
+82. [Longest Increasing Subsequence (LIS)](../src/modules/dp/lis.tsx)
+83. [Edit Distance (Levenshtein Distance)](../src/modules/dp/editDistance.tsx)
+84. [0/1 Knapsack Problem (2D DP Matrix)](../src/modules/dp/knapsack.tsx)
+85. [Subset Sum Problem (Boolean DP Matrix)](../src/modules/dp/subsetSum.tsx)
+86. [Unbounded Knapsack Problem (1D DP)](../src/modules/dp/unboundedKnapsack.tsx)
+87. [Longest Palindromic Substring](../src/modules/dp/longestPalindromicSubstring.tsx)
+88. [Fibonacci & Climbing Stairs](../src/modules/dp/climbingStairs.tsx)
+89. [Unique Paths in 2D Grid](../src/modules/dp/uniquePaths.tsx)
+90. [Longest Palindromic Subsequence (Interval DP)](../src/modules/dp/lps.tsx)
+91. [Matrix Chain Multiplication (Interval DP)](../src/modules/dp/matrixChainMultiplication.tsx)
 
-### Greedy & Array Techniques (8 modules)
-89. [Two Pointers Technique](../src/modules/arrays/twoPointers.tsx)
-90. [Sliding Window Technique](../src/modules/arrays/slidingWindow.tsx)
-91. [Activity Selection / Interval Scheduling](../src/modules/arrays/activitySelection.tsx)
-92. [Jump Game (Greedy Reachable Frontier)](../src/modules/arrays/jumpGame.tsx)
-93. [Merge Overlapping Intervals](../src/modules/arrays/mergeIntervals.tsx)
-94. [Fractional Knapsack (Greedy Density Sort)](../src/modules/arrays/fractionalKnapsack.tsx)
-95. [Gas Station Circuit (Greedy Cumulative Deficit)](../src/modules/arrays/gasStation.tsx)
-96. [Subsets / Power Set (Include/Exclude Backtracking)](../src/modules/arrays/subsets.tsx)
+### Greedy & Array Techniques (9 modules)
+92. [Two Pointers Technique](../src/modules/arrays/twoPointers.tsx)
+93. [Sliding Window Technique](../src/modules/arrays/slidingWindow.tsx)
+94. [Activity Selection / Interval Scheduling](../src/modules/arrays/activitySelection.tsx)
+95. [Jump Game (Greedy Reachable Frontier)](../src/modules/arrays/jumpGame.tsx)
+96. [Merge Overlapping Intervals](../src/modules/arrays/mergeIntervals.tsx)
+97. [Fractional Knapsack (Greedy Density Sort)](../src/modules/arrays/fractionalKnapsack.tsx)
+98. [Gas Station Circuit (Greedy Cumulative Deficit)](../src/modules/arrays/gasStation.tsx)
+99. [Subsets / Power Set (Include/Exclude Backtracking)](../src/modules/arrays/subsets.tsx)
+100. [Rat in a Maze (Grid Pathfinding Backtracking)](../src/modules/arrays/ratInAMaze.tsx)
 
-### Number Theory & Math (3 modules)
-97. [Sieve of Eratosthenes (Prime Grid)](../src/modules/math/sieveOfEratosthenes.tsx)
-98. [Euclidean Algorithm (GCD)](../src/modules/math/euclideanGcd.tsx)
-99. [Fast Binary Exponentiation](../src/modules/math/binaryExponentiation.tsx)
+### Number Theory & Math (4 modules)
+101. [Sieve of Eratosthenes (Prime Grid)](../src/modules/math/sieveOfEratosthenes.tsx)
+102. [Euclidean Algorithm (GCD)](../src/modules/math/euclideanGcd.tsx)
+103. [Extended Euclidean Algorithm (Bezout & Inverse)](../src/modules/math/extendedGcd.tsx)
+104. [Fast Binary Exponentiation](../src/modules/math/binaryExponentiation.tsx)
 
 ### Recursion & Backtracking (2 modules)
-100. [Tower of Hanoi (Recursive Call Stack)](../src/modules/math/towerOfHanoi.tsx)
-101. [N-Queens Problem (Backtracking)](../src/modules/math/nQueens.tsx)
+105. [Tower of Hanoi (Recursive Call Stack)](../src/modules/math/towerOfHanoi.tsx)
+106. [N-Queens Problem (Backtracking)](../src/modules/math/nQueens.tsx)
 
-### Bit Manipulation (2 modules)
-102. [Bitwise Operations Visualizer](../src/modules/math/bitwiseOperations.tsx)
-103. [Count Set Bits (Brian Kernighan's Algorithm)](../src/modules/math/countSetBits.tsx)
+### Bit Manipulation (3 modules)
+107. [Bitwise Operations Visualizer](../src/modules/math/bitwiseOperations.tsx)
+108. [Count Set Bits (Brian Kernighan's Algorithm)](../src/modules/math/countSetBits.tsx)
+109. [Single Number & XOR Cancellation Detection](../src/modules/math/singleNumber.tsx)
 
 
 
