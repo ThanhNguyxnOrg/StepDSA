@@ -133,6 +133,18 @@ import { treapModule } from './trees/treap';
 import { splayTreeModule } from './trees/splayTree';
 import { manacherModule } from './strings/manacher';
 import { primeFactorizationModule } from './math/primeFactorization';
+import { redBlackTreeModule } from './trees/redBlackTree';
+import { dinicModule } from './graphs/dinic';
+import { convexHullModule } from './geometry/convexHull';
+import { ahoCorasickModule } from './strings/ahoCorasick';
+import { tspHeldKarpModule } from './dp/tspHeldKarp';
+import { sudokuSolverModule } from './arrays/sudokuSolver';
+import { bTreeModule } from './trees/bTree';
+import { skipListModule } from './trees/skipList';
+import { hopcroftKarpModule } from './graphs/hopcroftKarp';
+import { burstBalloonsModule } from './dp/burstBalloons';
+import { suffixAutomatonModule } from './strings/suffixAutomaton';
+import { lineIntersectionModule } from './geometry/lineIntersection';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -257,6 +269,18 @@ export const allModules: AlgorithmModule[] = [
   splayTreeModule,
   manacherModule,
   primeFactorizationModule,
+  redBlackTreeModule,
+  dinicModule,
+  convexHullModule,
+  ahoCorasickModule,
+  tspHeldKarpModule,
+  sudokuSolverModule,
+  bTreeModule,
+  skipListModule,
+  hopcroftKarpModule,
+  burstBalloonsModule,
+  suffixAutomatonModule,
+  lineIntersectionModule,
 ];
 
 export const defaultModule = quicksortModule;
