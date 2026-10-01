@@ -145,6 +145,12 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
       totalSteps: 1,
       codeLine: 3,
       explanation: `Initialized Bucket Sort with ${numBuckets} buckets. Range: [${minVal} .. ${maxVal}], bucket size = ${bucketRange}.`,
+      isMilestone: true,
+      milestoneTitle: 'Bucket Sort Initialized',
+      soundCue: { type: 'start' },
+      variables: { n, numBuckets, minVal, maxVal, bucketRange },
+      callStack: [{ name: 'bucketSort', params: { n, numBuckets }, line: 3, isCurrent: true }],
+      conditionEval: { expr: `numBuckets > 0`, result: true },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: {},
@@ -164,6 +170,10 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
         totalSteps: 1,
         codeLine: 9,
         explanation: `Scatter: element arr[${i}] = ${val} placed into Bucket #${bIdx} ([${bIdx * bucketRange + minVal}..${(bIdx + 1) * bucketRange + minVal - 1}]).`,
+        soundCue: { type: 'step' },
+        variables: { i, val, bIdx, bucketSize: buckets[bIdx].length },
+        callStack: [{ name: 'scatterElement', params: { i, val, bucket: bIdx }, line: 9, isCurrent: true }],
+        conditionEval: { expr: `bIdx < numBuckets (${bIdx} < ${numBuckets})`, result: true },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -182,6 +192,10 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
       explanation: `All ${n} elements scattered into ${numBuckets} buckets. Beginning internal bucket sorting and concatenation.`,
       isMilestone: true,
       milestoneTitle: 'Scatter Phase Complete',
+      soundCue: { type: 'step' },
+      variables: { totalScattered: n, bucketsCount: numBuckets },
+      callStack: [{ name: 'bucketSort', params: { phase: 'scatterComplete' }, line: 12, isCurrent: true }],
+      conditionEval: { expr: `allScattered == true`, result: true },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: {},
@@ -201,6 +215,10 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
           totalSteps: 1,
           codeLine: 16,
           explanation: `Gather: sorted element ${val} from Bucket #${b} placed into position ${writeIdx}.`,
+          soundCue: { type: 'swap' },
+          variables: { b, writeIdx, val, bucketItemsCount: currentBucket.length },
+          callStack: [{ name: 'gatherBucket', params: { bucket: b, writeIdx, val }, line: 16, isCurrent: true }],
+          conditionEval: { expr: `writeIdx < n (${writeIdx} < ${n})`, result: true },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -221,6 +239,10 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
       explanation: 'All buckets gathered. Array is completely sorted!',
       isMilestone: true,
       milestoneTitle: 'Bucket Sort Completed',
+      soundCue: { type: 'complete' },
+      variables: { totalSorted: writeIdx, n, isSorted: true },
+      callStack: [{ name: 'bucketSort', params: { done: true }, line: 18, isCurrent: true }],
+      conditionEval: { expr: `writeIdx == n (${writeIdx} == ${n})`, result: true },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
         pointers: {},

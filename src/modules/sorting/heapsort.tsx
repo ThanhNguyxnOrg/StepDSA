@@ -166,6 +166,8 @@ private void siftDown(int[] arr, int n, int i) {
       };
     };
 
+    const baseCallStack = [{ name: 'heapSort', params: { n }, line: 1, isCurrent: true }];
+
     // Initial frame
     frames.push({
       stepIndex: 0,
@@ -175,7 +177,9 @@ private void siftDown(int[] arr, int n, int i) {
       isMilestone: true,
       milestoneTitle: 'Build Max-Heap Start',
       soundCue: 'start',
-      scopeVariables: { n, phase: 'build-heap' },
+      variables: { n, phase: 'build-heap' },
+      callStack: baseCallStack,
+      conditionEval: { expr: `n > 1`, result: n > 1 },
       state: makeState(),
     });
 
@@ -192,7 +196,12 @@ private void siftDown(int[] arr, int n, int i) {
           codeLine: 18,
           explanation: `Inspecting node index ${current} (val: ${arr[current]}). Left child: ${left < heapLimit ? `index ${left} (val: ${arr[left]})` : 'none'}, Right child: ${right < heapLimit ? `index ${right} (val: ${arr[right]})` : 'none'}.`,
           soundCue: 'compare',
-          scopeVariables: { current, largest, left, right, heapLimit },
+          variables: { current, largest, left, right, heapLimit },
+          callStack: [
+            ...baseCallStack,
+            { name: 'siftDown', params: { root: rootIdx, heapLimit, current }, line: 18, isCurrent: true },
+          ],
+          conditionEval: { expr: `current < heapLimit`, result: current < heapLimit },
           state: makeState([current], [left, right].filter((idx) => idx < heapLimit), current, heapLimit),
         });
 
@@ -210,7 +219,12 @@ private void siftDown(int[] arr, int n, int i) {
             codeLine: 24,
             explanation: `Child at index ${largest} (val: ${arr[largest]}) > parent at index ${current} (val: ${arr[current]}). Swapping to restore max-heap.`,
             soundCue: 'swap',
-            scopeVariables: { current, largest, heapLimit },
+            variables: { current, largest, heapLimit },
+            callStack: [
+              ...baseCallStack,
+              { name: 'siftDown', params: { root: rootIdx, heapLimit, swapWith: largest }, line: 24, isCurrent: true },
+            ],
+            conditionEval: { expr: `largest !== current (${largest} !== ${current})`, result: true },
             state: makeState([current, largest], [], largest, heapLimit),
           });
 
@@ -226,7 +240,12 @@ private void siftDown(int[] arr, int n, int i) {
             codeLine: 27,
             explanation: `Subtree rooted at index ${current} satisfies max-heap invariant.`,
             soundCue: 'step',
-            scopeVariables: { current, heapLimit },
+            variables: { current, heapLimit },
+            callStack: [
+              ...baseCallStack,
+              { name: 'siftDown', params: { root: rootIdx, heapLimit }, line: 27, isCurrent: true },
+            ],
+            conditionEval: { expr: `largest === current`, result: true },
             state: makeState([], [], undefined, heapLimit),
           });
           break;
@@ -243,7 +262,12 @@ private void siftDown(int[] arr, int n, int i) {
         explanation: `Phase 1: Sifting down internal node at index ${i} (value: ${arr[i]}).`,
         isMilestone: true,
         milestoneTitle: `Sift Down node ${i}`,
-        scopeVariables: { i, heapSize: n },
+        variables: { i, heapSize: n },
+        callStack: [
+          ...baseCallStack,
+          { name: 'buildHeap', params: { i, n }, line: 4, isCurrent: true },
+        ],
+        conditionEval: { expr: `i >= 0`, result: true },
         state: makeState([i], [], i, n),
       });
       siftDown(n, i);
@@ -257,7 +281,9 @@ private void siftDown(int[] arr, int n, int i) {
       isMilestone: true,
       milestoneTitle: 'Max-Heap Ready',
       soundCue: 'success',
-      scopeVariables: { max: arr[0], phase: 'extract-max' },
+      variables: { max: arr[0], phase: 'extract-max' },
+      callStack: baseCallStack,
+      conditionEval: { expr: `isMaxHeap(arr)`, result: true },
       state: makeState([], [], 0, n),
     });
 
@@ -271,7 +297,12 @@ private void siftDown(int[] arr, int n, int i) {
         soundCue: 'swap',
         isMilestone: true,
         milestoneTitle: `Extract Max (${arr[0]})`,
-        scopeVariables: { rootMax: arr[0], targetIdx: i, heapSize: i },
+        variables: { rootMax: arr[0], targetIdx: i, heapSize: i },
+        callStack: [
+          ...baseCallStack,
+          { name: 'extractMax', params: { remainingHeap: i }, line: 8, isCurrent: true },
+        ],
+        conditionEval: { expr: `i > 0`, result: true },
         state: makeState([0, i], [], 0, i + 1),
       });
 
@@ -286,7 +317,12 @@ private void siftDown(int[] arr, int n, int i) {
         codeLine: 9,
         explanation: `Element ${temp} locked in sorted partition at index ${i}. Re-sifting new root ${arr[0]} down heap of size ${i}.`,
         soundCue: 'sorted',
-        scopeVariables: { sortedIndex: i, newRoot: arr[0], heapSize: i },
+        variables: { sortedIndex: i, newRoot: arr[0], heapSize: i },
+        callStack: [
+          ...baseCallStack,
+          { name: 'lockSorted', params: { sortedIndex: i }, line: 9, isCurrent: true },
+        ],
+        conditionEval: { expr: `isLocked(i)`, result: true },
         state: makeState([0], [], 0, i),
       });
 
@@ -302,7 +338,9 @@ private void siftDown(int[] arr, int n, int i) {
       isMilestone: true,
       milestoneTitle: 'Sorted Complete',
       soundCue: 'complete',
-      scopeVariables: { finalArray: arr.join(', ') },
+      variables: { completed: true, totalSorted: n },
+      callStack: baseCallStack,
+      conditionEval: { expr: `isSorted(arr)`, result: true },
       state: {
         array: arr.map((val, idx) => ({ id: idx, value: val, status: 'sorted' })),
         pointers: {},

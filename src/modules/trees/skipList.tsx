@@ -148,6 +148,8 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
+      isMilestone: true,
+      milestoneTitle: `Init SkipList Express Lanes (Max L${maxLevel})`,
       action: 'INIT',
       state: {
         elements: rawElements,
@@ -158,9 +160,11 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
         visitedNodes: [],
         found: null,
       },
-      callStack: [{ name: 'skipListSearch', params: { target, maxLevel } }],
-      variables: { target, maxLevel, totalKeys: rawElements.length },
-      explanation: `Initialized SkipList with ${rawElements.length} elements across ${maxLevel + 1} levels (L0 to L3). Target to search: ${target}.`,
+      callStack: [{ name: 'skipListSearch', params: { target, maxLevel }, line: 1, isCurrent: true }],
+      variables: { target, maxLevel, totalKeys: rawElements.length, towers: Object.entries(heights).map(([k, v]) => `${k}:h${v}`).join(', ') },
+      conditionEval: { expr: 'elements.length > 0', result: true },
+      soundCue: { type: 'step' },
+      explanation: `Initialized SkipList with ${rawElements.length} elements across ${maxLevel + 1} levels (L0 to L3). Higher levels act as express lanes to bypass sequences of nodes. Target search key: ${target}.`,
     });
 
     let currentKey: number | null = null; // null represents head
@@ -169,8 +173,10 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
     for (let level = maxLevel; level >= 0; level--) {
       frames.push({
         stepIndex: frames.length,
-        totalSteps: frames.length + 1,
+        totalSteps: 1,
         codeLine: 8,
+        isMilestone: true,
+        milestoneTitle: `Enter Express Level ${level}`,
         action: 'LEVEL_START',
         state: {
           elements: rawElements,
@@ -181,14 +187,15 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
           visitedNodes: [...visited],
           found: null,
         },
-        callStack: [{ name: 'scanLevel', params: { level, current: currentKey ?? 'HEAD' } }],
+        callStack: [{ name: 'scanLevel', params: { level, current: currentKey ?? 'HEAD' }, line: 8, isCurrent: true }],
         variables: { currentLevel: level, currentKey: currentKey ?? 'HEAD' },
-        explanation: `Scanning along express Level ${level} starting from ${currentKey !== null ? `key ${currentKey}` : 'HEAD'}.`,
+        conditionEval: { expr: `level >= 0`, result: true },
+        soundCue: { type: 'select' },
+        explanation: `Scanning along express Level ${level} starting from ${currentKey !== null ? `key ${currentKey}` : 'HEAD pointer'}.`,
       });
 
       // Find candidates at this level after currentKey
       while (true) {
-        // Find next node at this level with key > currentKey
         const nextNode = rawElements.find(
           (k) => (currentKey === null || k > currentKey) && (heights[k] ?? 1) >= level
         );
@@ -196,7 +203,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
         if (!nextNode) {
           frames.push({
             stepIndex: frames.length,
-            totalSteps: frames.length + 1,
+            totalSteps: 1,
             codeLine: 12,
             action: 'DROP_DOWN',
             state: {
@@ -208,21 +215,45 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
               visitedNodes: [...visited],
               found: null,
             },
-            callStack: [{ name: 'dropDown', params: { fromLevel: level, toLevel: level - 1 } }],
-            variables: { droppedToLevel: level - 1 },
-            explanation: `No further forward nodes at Level ${level}. Dropping down to Level ${level - 1}.`,
+            callStack: [{ name: 'dropDown', params: { fromLevel: level, toLevel: level - 1 }, line: 12, isCurrent: true }],
+            variables: { droppedToLevel: level - 1, atKey: currentKey ?? 'HEAD' },
+            conditionEval: { expr: `forward[${level}] === null`, result: true },
+            soundCue: { type: 'step' },
+            explanation: `No further forward express pointers exist at Level ${level}. Dropping vertically down to Level ${level - 1}.`,
           });
           break;
         }
 
         visited.push({ key: nextNode, level });
 
+        // Compare nextNode with target
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 9,
+          action: 'COMPARE_NODE',
+          state: {
+            elements: rawElements,
+            nodeHeights: { ...heights },
+            activeKey: nextNode,
+            activeLevel: level,
+            targetKey: target,
+            visitedNodes: [...visited],
+            found: null,
+          },
+          callStack: [{ name: 'compareKey', params: { candidateKey: nextNode, target, level }, line: 9, isCurrent: true }],
+          variables: { candidateKey: nextNode, target, comparison: `${nextNode} vs ${target}` },
+          conditionEval: { expr: `nextNode.key (${nextNode}) < target (${target})`, result: nextNode < target },
+          soundCue: { type: 'compare' },
+          explanation: `Inspecting next node in Level ${level} express lane: Key ${nextNode}. Comparing against target ${target}.`,
+        });
+
         if (nextNode < target) {
           currentKey = nextNode;
           frames.push({
             stepIndex: frames.length,
-            totalSteps: frames.length + 1,
-            codeLine: 9,
+            totalSteps: 1,
+            codeLine: 10,
             action: 'FORWARD_STEP',
             state: {
               elements: rawElements,
@@ -233,17 +264,21 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
               visitedNodes: [...visited],
               found: null,
             },
-            callStack: [{ name: 'stepForward', params: { key: currentKey, level } }],
-            variables: { currentKey, target, comparison: `${currentKey} < ${target}` },
-            explanation: `Next key ${currentKey} < ${target}. Advancing forward along express Level ${level}.`,
+            callStack: [{ name: 'stepForward', params: { key: currentKey, level }, line: 10, isCurrent: true }],
+            variables: { currentKey, target, status: 'Advanced forward' },
+            conditionEval: { expr: `${nextNode} < ${target}`, result: true },
+            soundCue: { type: 'swap' },
+            explanation: `Since ${nextNode} < ${target}, advance forward to node ${currentKey} at Level ${level}.`,
           });
         } else if (nextNode === target) {
           currentKey = nextNode;
           found = true;
           frames.push({
             stepIndex: frames.length,
-            totalSteps: frames.length + 1,
+            totalSteps: 1,
             codeLine: 14,
+            isMilestone: true,
+            milestoneTitle: `Target Key ${target} Found at L${level}!`,
             action: 'FOUND',
             state: {
               elements: rawElements,
@@ -254,16 +289,18 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
               visitedNodes: [...visited],
               found: true,
             },
-            callStack: [{ name: 'matchFound', params: { key: currentKey, level } }],
-            variables: { matchedKey: currentKey, levelFound: level },
-            explanation: `Target key ${target} located directly at Level ${level}!`,
+            callStack: [{ name: 'matchFound', params: { key: currentKey, level }, line: 14, isCurrent: true }],
+            variables: { matchedKey: currentKey, levelFound: level, searchSuccessful: true },
+            conditionEval: { expr: `${nextNode} === ${target}`, result: true },
+            soundCue: { type: 'complete' },
+            explanation: `Target key ${target} located directly in Level ${level} express lane! Search terminated in O(log N) operations.`,
           });
           break;
         } else {
           // nextNode > target
           frames.push({
             stepIndex: frames.length,
-            totalSteps: frames.length + 1,
+            totalSteps: 1,
             codeLine: 11,
             action: 'OVERSHOOT',
             state: {
@@ -275,9 +312,11 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
               visitedNodes: [...visited],
               found: null,
             },
-            callStack: [{ name: 'overshoot', params: { nextNode, target, level } }],
+            callStack: [{ name: 'overshoot', params: { nextNode, target, level }, line: 11, isCurrent: true }],
             variables: { nextNode, target, comparison: `${nextNode} > ${target}` },
-            explanation: `Key ${nextNode} exceeds target ${target}. Halting forward advance at Level ${level} to drop down.`,
+            conditionEval: { expr: `${nextNode} > ${target}`, result: true },
+            soundCue: { type: 'step' },
+            explanation: `Key ${nextNode} exceeds target ${target}. Halting forward advance at Level ${level} to drop down to Level ${level - 1}.`,
           });
           break;
         }
@@ -289,8 +328,10 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
     if (!found) {
       frames.push({
         stepIndex: frames.length,
-        totalSteps: frames.length + 1,
+        totalSteps: 1,
         codeLine: 16,
+        isMilestone: true,
+        milestoneTitle: `Key ${target} Not Found`,
         action: 'NOT_FOUND',
         state: {
           elements: rawElements,
@@ -301,15 +342,18 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
           visitedNodes: [...visited],
           found: false,
         },
-        callStack: [{ name: 'searchFailed', params: { target } }],
-        variables: { target, result: 'NOT_FOUND' },
-        explanation: `Reached bottom Level 0. Target key ${target} does not exist in SkipList.`,
+        callStack: [{ name: 'searchFailed', params: { target }, line: 16, isCurrent: true }],
+        variables: { target, result: 'NOT_FOUND', finalKey: currentKey },
+        conditionEval: { expr: 'targetFound', result: false },
+        soundCue: { type: 'complete' },
+        explanation: `Reached bottom Level 0 without finding key ${target}. Target key does not exist in SkipList.`,
       });
     }
 
     frames.forEach((f) => {
       f.totalSteps = frames.length;
     });
+
     return frames;
   },
   renderStage: (frame: ExecutionFrame<SkipListState>) => {

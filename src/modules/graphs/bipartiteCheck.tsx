@@ -208,6 +208,12 @@ def is_bipartite(graph):
       explanation: `Initialized Bipartite Verification on ${
         isOdd ? 'Triangle Graph with Odd Cycle' : '4-Cycle Bipartite Graph'
       }. All 4 vertices uncolored (Color 0).`,
+      isMilestone: true,
+      milestoneTitle: 'Bipartite Initialized',
+      soundCue: { type: 'start' },
+      variables: { totalNodes: nodes.length, totalEdges: edges.length, isOddPreset: isOdd },
+      callStack: [{ name: 'isBipartite', params: { V: nodes.length }, line: 4, isCurrent: true }],
+      conditionEval: { expr: `nodes.length > 0`, result: true },
       state: {
         nodes: nodes.map((n) => ({ ...n })),
         edges: [...edges],
@@ -226,6 +232,10 @@ def is_bipartite(graph):
       explanation: 'Assigned Color 1 (Cyan / Set A) to starting vertex 0. Enqueued vertex 0.',
       isMilestone: true,
       milestoneTitle: 'Color Vertex 0: Cyan',
+      soundCue: { type: 'step' },
+      variables: { seedVertex: 0, assignedColor: 1, colorName: 'Cyan' },
+      callStack: [{ name: 'bfsSeed', params: { u: 0, color: 1 }, line: 6, isCurrent: true }],
+      conditionEval: { expr: `queue.length > 0`, result: true },
       state: {
         nodes: nodes.map((n) => ({
           ...n,
@@ -250,6 +260,10 @@ def is_bipartite(graph):
           explanation: `Inspecting edge (${u} ↔ ${v}). Vertex ${u} has Color ${colors[u]} (${
             colors[u] === 1 ? 'Cyan' : 'Rose'
           }).`,
+          soundCue: { type: 'compare' },
+          variables: { u, v, uColor: colors[u], vColor: colors[v] },
+          callStack: [{ name: 'checkEdge', params: { u, v }, line: 10, isCurrent: true }],
+          conditionEval: { expr: `color[${v}] == 0 (${colors[v] === 0})`, result: colors[v] === 0 },
           state: {
             nodes: nodes.map((n) => ({
               ...n,
@@ -275,6 +289,10 @@ def is_bipartite(graph):
             }) and enqueued.`,
             isMilestone: true,
             milestoneTitle: `Color Vertex ${v}: ${nextColor === 1 ? 'Cyan' : 'Rose'}`,
+            soundCue: { type: 'swap' },
+            variables: { vertex: v, color: nextColor, colorName: nextColor === 1 ? 'Cyan' : 'Rose' },
+            callStack: [{ name: 'assignColor', params: { v, color: nextColor }, line: 12, isCurrent: true }],
+            conditionEval: { expr: `color[${v}] == 0`, result: true },
             state: {
               nodes: nodes.map((n) => ({
                 ...n,
@@ -294,6 +312,10 @@ def is_bipartite(graph):
             explanation: `COLOR CONFLICT! Adjacent vertices ${u} and ${v} share identical Color ${colors[u]}! Graph contains an odd cycle and is NOT bipartite.`,
             isMilestone: true,
             milestoneTitle: 'Conflict Detected: Non-Bipartite',
+            soundCue: { type: 'complete' },
+            variables: { u, v, sharedColor: colors[u], isBipartite: false, conflict: true },
+            callStack: [{ name: 'conflictDetected', params: { u, v, color: colors[u] }, line: 15, isCurrent: true }],
+            conditionEval: { expr: `color[${v}] == color[${u}] (${colors[v]} == ${colors[u]})`, result: true },
             state: {
               nodes: nodes.map((n) => ({
                 ...n,
@@ -322,6 +344,10 @@ def is_bipartite(graph):
         explanation: 'BFS completed with zero color conflicts across all edges. Graph is strictly BIPARTITE (2-colorable)!',
         isMilestone: true,
         milestoneTitle: 'Graph is Bipartite',
+        soundCue: { type: 'complete' },
+        variables: { isBipartite: true, conflict: false },
+        callStack: [{ name: 'bipartite.verified', params: { result: true }, line: 18, isCurrent: true }],
+        conditionEval: { expr: `!conflict`, result: true },
         state: {
           nodes: nodes.map((n) => ({
             ...n,

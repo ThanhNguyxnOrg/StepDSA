@@ -20,7 +20,8 @@ export type ElementStatus =
   | 'active'
   | 'sorted'
   | 'discarded'
-  | 'pivot';
+  | 'pivot'
+  | 'selected';
 
 export interface ComplexityProfile {
   timeBest: string;
@@ -33,7 +34,7 @@ export interface ComplexityProfile {
 export interface CallStackFrame {
   id?: string;
   name: string;
-  params: Record<string, string | number>;
+  params: Record<string, any>;
   line?: number;
   file?: string;
   isCurrent?: boolean;
@@ -53,7 +54,12 @@ export type SoundCueType =
   | 'step'
   | 'start'
   | 'success'
-  | 'complete';
+  | 'complete'
+  | 'pop'
+  | 'fail'
+  | 'finish'
+  | 'select'
+  | 'insert';
 
 export interface SoundCueObj {
   frequency?: number;
@@ -68,13 +74,14 @@ export interface ExecutionFrame<TState = any> {
   codeLine: number;
   explanation: string;
   action?: string;
-  callStack?: CallStackFrame[];
+  callStack?: (CallStackFrame | string)[];
   conditionEval?: {
-    expr: string;
-    result: boolean | string;
+    expr?: string;
+    condition?: string;
+    result: any;
   };
-  variables?: Record<string, string | number | boolean>;
-  scopeVariables?: Record<string, string | number | boolean>;
+  variables?: Record<string, any>;
+  scopeVariables?: Record<string, any>;
   codeHighlights?: Record<string, number[]>;
   invariantStatus?: InvariantStatus | string;
   isMilestone?: boolean;

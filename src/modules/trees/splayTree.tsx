@@ -249,12 +249,67 @@ SplayNode splay(SplayNode root, int key) {
         tree: cloneSplay(root),
         splayedKey: null,
         operation: 'NONE',
-        description: 'Tree constructed from keys',
+        description: `BST constructed from keys [${rawKeys.join(', ')}]`,
       },
       callStack: [{ name: 'initSplay', params: { searchKey: targetKey, totalNodes: rawKeys.length } }],
-      variables: { searchKey: targetKey, initialRoot: initialRootVal },
-      explanation: `Initialized BST with keys [${rawKeys.join(', ')}]. Now splaying target key ${targetKey} to the root.`,
+      variables: { searchKey: targetKey, initialRoot: initialRootVal, totalKeys: rawKeys.length },
+      explanation: `Initialized BST with keys [${rawKeys.join(', ')}]. Beginning search and splay for target key ${targetKey}.`,
     });
+
+    // Phase 1: Search traversal to target node
+    let searchCurr: SplayNode | null = root;
+    const path: SplayNode[] = [];
+
+    while (searchCurr) {
+      path.push(searchCurr);
+      const isTarget = searchCurr.key === targetKey;
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        action: 'SEARCH',
+        state: {
+          tree: cloneSplay(root),
+          splayedKey: targetKey,
+          operation: 'SEARCH',
+          description: `Inspecting node ${searchCurr.key} (searching for ${targetKey})`,
+        },
+        callStack: [{ name: 'splaySearch', params: { current: searchCurr.key, target: targetKey } }],
+        variables: { currentNode: searchCurr.key, targetKey, pathLength: path.length },
+        conditionEval: {
+          expr: `${targetKey} === ${searchCurr.key}`,
+          result: isTarget,
+        },
+        explanation: isTarget
+          ? `🎯 Located target key ${targetKey}! Ready to commence bottom-up splay rotations.`
+          : targetKey < searchCurr.key
+          ? `Target key ${targetKey} < node ${searchCurr.key}. Descending into left subtree.`
+          : `Target key ${targetKey} > node ${searchCurr.key}. Descending into right subtree.`,
+      });
+
+      if (isTarget) break;
+      searchCurr = targetKey < searchCurr.key ? searchCurr.left : searchCurr.right;
+    }
+
+    if (!searchCurr) {
+      // Key not present in tree, splay last accessed node
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 6,
+        action: 'SEARCH',
+        state: {
+          tree: cloneSplay(root),
+          splayedKey: targetKey,
+          operation: 'NONE',
+          description: `Key ${targetKey} not found in tree`,
+        },
+        callStack: [{ name: 'splaySearch', params: { status: 'NOT_FOUND' } }],
+        variables: { targetKey, found: false },
+        explanation: `Key ${targetKey} does not exist in BST. Splaying last accessed node to root.`,
+      });
+    }
 
     function rightRotate(x: SplayNode): SplayNode {
       const y = x.left!;
@@ -270,122 +325,328 @@ SplayNode splay(SplayNode root, int key) {
       return y;
     }
 
-    function splay(current: SplayNode | null, key: number): SplayNode | null {
-      if (!current || current.key === key) return current;
+    // Helper to reconnect rotated subtree to great-grandparent or root
+    function attach(parentSub: SplayNode | null, oldNode: SplayNode, newNode: SplayNode) {
+      if (!parentSub) {
+        root = newNode;
+      } else if (parentSub.left === oldNode) {
+        parentSub.left = newNode;
+      } else if (parentSub.right === oldNode) {
+        parentSub.right = newNode;
+      }
+    }
 
-      if (key < current.key) {
-        if (!current.left) return current;
+    // Phase 2: Bottom-up splay rotations
+    while (path.length > 1) {
+      const curr = path[path.length - 1];
+      const parent = path[path.length - 2];
 
-        // Zig-Zig (Left-Left)
-        if (key < current.left.key) {
-          current.left.left = splay(current.left.left, key);
-          current = rightRotate(current);
+      if (path.length === 2) {
+        // Case: ZIG / ZAG (Parent is Root)
+        if (parent.left === curr) {
+          root = rightRotate(parent);
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 10,
+            action: 'ZIG',
+            isMilestone: true,
+            milestoneTitle: `Zig (Right Rotate) Root ${parent.key}`,
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG',
+              description: `Zig (right rotation) around root ${parent.key}`,
+            },
+            callStack: [{ name: 'zig', params: { root: parent.key, child: curr.key } }],
+            variables: { step: 'Zig', newRoot: root.key },
+            explanation: `Zig (single right rotation) applied on root ${parent.key}. Target ${curr.key} is now at root!`,
+          });
+        } else {
+          root = leftRotate(parent);
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 12,
+            action: 'ZIG',
+            isMilestone: true,
+            milestoneTitle: `Zag (Left Rotate) Root ${parent.key}`,
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG',
+              description: `Zag (left rotation) around root ${parent.key}`,
+            },
+            callStack: [{ name: 'zag', params: { root: parent.key, child: curr.key } }],
+            variables: { step: 'Zag', newRoot: root.key },
+            explanation: `Zag (single left rotation) applied on root ${parent.key}. Target ${curr.key} is now at root!`,
+          });
+        }
+        path.pop();
+        path[0] = curr;
+      } else {
+        // Case: Double rotation (Grandparent exists)
+        const grandparent = path[path.length - 3];
+        const greatGrandparent = path.length >= 4 ? path[path.length - 4] : null;
+
+        const isParentLeft = grandparent.left === parent;
+        const isCurrLeft = parent.left === curr;
+
+        if (isParentLeft && isCurrLeft) {
+          // Zig-Zig (Left-Left)
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 16,
+            action: 'ZIG_ZIG',
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZIG',
+              description: `Identified Zig-Zig (Left-Left) on G=${grandparent.key}, P=${parent.key}, N=${curr.key}`,
+            },
+            callStack: [{ name: 'splayZigZig', params: { G: grandparent.key, P: parent.key, N: curr.key } }],
+            variables: { case: 'Zig-Zig (LL)', grandparent: grandparent.key, parent: parent.key, node: curr.key },
+            explanation: `Identified Zig-Zig (Left-Left). Rule: rotate Grandparent ${grandparent.key} right FIRST, then rotate Parent ${parent.key} right.`,
+          });
+
+          // Step 1: Rotate grandparent right
+          const newGSub = rightRotate(grandparent);
+          attach(greatGrandparent, grandparent, newGSub);
+
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
             codeLine: 18,
             action: 'ZIG_ZIG',
             state: {
-              tree: cloneSplay(current),
-              splayedKey: key,
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
               operation: 'ZIG_ZIG',
-              description: `Zig-Zig rotation around root ${current.key}`,
+              description: `Zig-Zig Part 1: Right rotated Grandparent ${grandparent.key}`,
             },
-            callStack: [{ name: 'splay', params: { step: 'Zig-Zig', rootKey: current.key } }],
-            variables: { step: 'Zig-Zig', newSubtreeRoot: current.key },
-            explanation: `Zig-Zig (Left-Left) rotation performed. Halving path depth towards ${key}.`,
+            callStack: [{ name: 'rotateG', params: { rotated: grandparent.key, newSubRoot: newGSub.key } }],
+            variables: { step: 'Zig-Zig Part 1', newSubRoot: newGSub.key },
+            explanation: `Zig-Zig Part 1 complete: Grandparent ${grandparent.key} right-rotated around ${newGSub.key}.`,
           });
-        }
-        // Zig-Zag (Left-Right)
-        else if (key > current.left.key) {
-          current.left.right = splay(current.left.right, key);
-          if (current.left.right) {
-            current.left = leftRotate(current.left);
-            frames.push({
-              stepIndex: frames.length,
-              totalSteps: 1,
-              codeLine: 22,
-              action: 'ZIG_ZAG',
-              state: {
-                tree: cloneSplay(current),
-                splayedKey: key,
-                operation: 'ZIG_ZAG',
-                description: `Zig-Zag inner left-rotation on ${current.left.key}`,
-              },
-              callStack: [{ name: 'splay', params: { step: 'Zig-Zag Part 1', child: current.left.key } }],
-              variables: { step: 'Zig-Zag 1', child: current.left.key },
-              explanation: `Zig-Zag (Left-Right) inner left-rotation completed.`,
-            });
-          }
-        }
 
-        return current.left ? rightRotate(current) : current;
-      } else {
-        if (!current.right) return current;
+          // Step 2: Rotate parent right
+          const finalSub = rightRotate(newGSub);
+          attach(greatGrandparent, newGSub, finalSub);
 
-        // Zig-Zig (Right-Right)
-        if (key > current.right.key) {
-          current.right.right = splay(current.right.right, key);
-          current = leftRotate(current);
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 20,
+            action: 'ZIG_ZIG',
+            isMilestone: true,
+            milestoneTitle: `Zig-Zig Complete -> Subtree Root ${finalSub.key}`,
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZIG',
+              description: `Zig-Zig Part 2: Right rotated Parent ${parent.key}`,
+            },
+            callStack: [{ name: 'rotateP', params: { rotated: parent.key, newSubRoot: finalSub.key } }],
+            variables: { step: 'Zig-Zig Part 2', subtreeRoot: finalSub.key },
+            explanation: `Zig-Zig Part 2 complete: Parent right-rotated. Node ${curr.key} ascended 2 levels closer to root!`,
+          });
+        } else if (!isParentLeft && !isCurrLeft) {
+          // Zag-Zag (Right-Right)
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 22,
+            action: 'ZIG_ZIG',
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZIG',
+              description: `Identified Zag-Zag (Right-Right) on G=${grandparent.key}, P=${parent.key}, N=${curr.key}`,
+            },
+            callStack: [{ name: 'splayZagZag', params: { G: grandparent.key, P: parent.key, N: curr.key } }],
+            variables: { case: 'Zag-Zag (RR)', grandparent: grandparent.key, parent: parent.key, node: curr.key },
+            explanation: `Identified Zag-Zag (Right-Right). Rule: rotate Grandparent ${grandparent.key} left FIRST, then rotate Parent ${parent.key} left.`,
+          });
+
+          const newGSub = leftRotate(grandparent);
+          attach(greatGrandparent, grandparent, newGSub);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 24,
+            action: 'ZIG_ZIG',
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZIG',
+              description: `Zag-Zag Part 1: Left rotated Grandparent ${grandparent.key}`,
+            },
+            callStack: [{ name: 'rotateG', params: { rotated: grandparent.key, newSubRoot: newGSub.key } }],
+            variables: { step: 'Zag-Zag Part 1', newSubRoot: newGSub.key },
+            explanation: `Zag-Zag Part 1 complete: Grandparent ${grandparent.key} left-rotated around ${newGSub.key}.`,
+          });
+
+          const finalSub = leftRotate(newGSub);
+          attach(greatGrandparent, newGSub, finalSub);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 26,
+            action: 'ZIG_ZIG',
+            isMilestone: true,
+            milestoneTitle: `Zag-Zag Complete -> Subtree Root ${finalSub.key}`,
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZIG',
+              description: `Zag-Zag Part 2: Left rotated Parent ${parent.key}`,
+            },
+            callStack: [{ name: 'rotateP', params: { rotated: parent.key, newSubRoot: finalSub.key } }],
+            variables: { step: 'Zag-Zag Part 2', subtreeRoot: finalSub.key },
+            explanation: `Zag-Zag Part 2 complete: Parent left-rotated. Node ${curr.key} ascended 2 levels closer to root!`,
+          });
+        } else if (isParentLeft && !isCurrLeft) {
+          // Zig-Zag (Left-Right)
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
             codeLine: 28,
-            action: 'ZIG_ZIG',
+            action: 'ZIG_ZAG',
             state: {
-              tree: cloneSplay(current),
-              splayedKey: key,
-              operation: 'ZIG_ZIG',
-              description: `Zig-Zig right-rotation on root ${current.key}`,
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZAG',
+              description: `Identified Zig-Zag (Left-Right) on G=${grandparent.key}, P=${parent.key}, N=${curr.key}`,
             },
-            callStack: [{ name: 'splay', params: { step: 'Zig-Zig', rootKey: current.key } }],
-            variables: { step: 'Zig-Zig', newSubtreeRoot: current.key },
-            explanation: `Zig-Zig (Right-Right) rotation performed.`,
+            callStack: [{ name: 'splayZigZag', params: { G: grandparent.key, P: parent.key, N: curr.key } }],
+            variables: { case: 'Zig-Zag (LR)', grandparent: grandparent.key, parent: parent.key, node: curr.key },
+            explanation: `Identified Zig-Zag (Left-Right). Rule: rotate Parent ${parent.key} left FIRST, then rotate Grandparent ${grandparent.key} right.`,
+          });
+
+          const newPSub = leftRotate(parent);
+          grandparent.left = newPSub;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 30,
+            action: 'ZIG_ZAG',
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZAG',
+              description: `Zig-Zag Part 1: Left rotated Parent ${parent.key}`,
+            },
+            callStack: [{ name: 'innerRotate', params: { rotated: parent.key, child: newPSub.key } }],
+            variables: { step: 'Zig-Zag Part 1', child: newPSub.key },
+            explanation: `Zig-Zag Part 1: Inner left-rotation on Parent ${parent.key} straightened chain into Left-Left.`,
+          });
+
+          const finalSub = rightRotate(grandparent);
+          attach(greatGrandparent, grandparent, finalSub);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 32,
+            action: 'ZIG_ZAG',
+            isMilestone: true,
+            milestoneTitle: `Zig-Zag Complete -> Subtree Root ${finalSub.key}`,
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZAG',
+              description: `Zig-Zag Part 2: Right rotated Grandparent ${grandparent.key}`,
+            },
+            callStack: [{ name: 'outerRotate', params: { rotated: grandparent.key, root: finalSub.key } }],
+            variables: { step: 'Zig-Zag Part 2', subtreeRoot: finalSub.key },
+            explanation: `Zig-Zag Part 2: Outer right-rotation on Grandparent ${grandparent.key} completed. Node ${curr.key} is now subtree root!`,
+          });
+        } else {
+          // Zag-Zig (Right-Left)
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 34,
+            action: 'ZIG_ZAG',
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZAG',
+              description: `Identified Zag-Zig (Right-Left) on G=${grandparent.key}, P=${parent.key}, N=${curr.key}`,
+            },
+            callStack: [{ name: 'splayZagZig', params: { G: grandparent.key, P: parent.key, N: curr.key } }],
+            variables: { case: 'Zag-Zig (RL)', grandparent: grandparent.key, parent: parent.key, node: curr.key },
+            explanation: `Identified Zag-Zig (Right-Left). Rule: rotate Parent ${parent.key} right FIRST, then rotate Grandparent ${grandparent.key} left.`,
+          });
+
+          const newPSub = rightRotate(parent);
+          grandparent.right = newPSub;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 36,
+            action: 'ZIG_ZAG',
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZAG',
+              description: `Zag-Zig Part 1: Right rotated Parent ${parent.key}`,
+            },
+            callStack: [{ name: 'innerRotate', params: { rotated: parent.key, child: newPSub.key } }],
+            variables: { step: 'Zag-Zig Part 1', child: newPSub.key },
+            explanation: `Zag-Zig Part 1: Inner right-rotation on Parent ${parent.key} straightened chain into Right-Right.`,
+          });
+
+          const finalSub = leftRotate(grandparent);
+          attach(greatGrandparent, grandparent, finalSub);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 38,
+            action: 'ZIG_ZAG',
+            isMilestone: true,
+            milestoneTitle: `Zag-Zig Complete -> Subtree Root ${finalSub.key}`,
+            state: {
+              tree: cloneSplay(root),
+              splayedKey: curr.key,
+              operation: 'ZIG_ZAG',
+              description: `Zag-Zig Part 2: Left rotated Grandparent ${grandparent.key}`,
+            },
+            callStack: [{ name: 'outerRotate', params: { rotated: grandparent.key, root: finalSub.key } }],
+            variables: { step: 'Zag-Zig Part 2', subtreeRoot: finalSub.key },
+            explanation: `Zag-Zig Part 2: Outer left-rotation on Grandparent completed. Node ${curr.key} is now subtree root!`,
           });
         }
-        // Zig-Zag (Right-Left)
-        else if (key < current.right.key) {
-          current.right.left = splay(current.right.left, key);
-          if (current.right.left) {
-            current.right = rightRotate(current.right);
-            frames.push({
-              stepIndex: frames.length,
-              totalSteps: 1,
-              codeLine: 32,
-              action: 'ZIG_ZAG',
-              state: {
-                tree: cloneSplay(current),
-                splayedKey: key,
-                operation: 'ZIG_ZAG',
-                description: `Zig-Zag inner right-rotation on ${current.right.key}`,
-              },
-              callStack: [{ name: 'splay', params: { step: 'Zig-Zag Part 1', child: current.right.key } }],
-              variables: { step: 'Zig-Zag 1', child: current.right.key },
-              explanation: `Zig-Zag (Right-Left) inner right-rotation completed.`,
-            });
-          }
-        }
 
-        return current.right ? leftRotate(current) : current;
+        // Pop parent and grandparent; replace with curr
+        path.pop();
+        path.pop();
+        path[path.length - 1] = curr;
       }
     }
-
-    root = splay(root, targetKey);
 
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 36,
+      codeLine: 40,
       action: 'COMPLETE',
+      isMilestone: true,
+      milestoneTitle: `Splay Success: ${targetKey} is at Root`,
       state: {
         tree: cloneSplay(root),
         splayedKey: targetKey,
         operation: 'NONE',
-        description: `Key ${targetKey} now at tree root`,
+        description: `Key ${targetKey} successfully splayed to tree root`,
       },
-      callStack: [{ name: 'splay', params: { status: 'DONE', newRoot: root ? root.key : 'null' } }],
-      variables: { targetKey, newRoot: root ? root.key : 'null' },
-      explanation: `Splay complete! Key ${targetKey} is now the root of the tree. Subsequent lookups will be O(1).`,
+      callStack: [{ name: 'splay', params: { status: 'DONE', root: root ? root.key : 'null' } }],
+      variables: { targetKey, newRoot: root ? root.key : 'null', finalDepth: 0 },
+      explanation: `🎉 Splay complete! Target key ${targetKey} is now the root of the tree. Subsequent lookups for this key will now take O(1) time.`,
     });
 
     frames.forEach((f) => {

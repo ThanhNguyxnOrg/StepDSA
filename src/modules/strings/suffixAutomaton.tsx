@@ -202,6 +202,8 @@ function samExtend(st: State[], last: number, c: string): number {
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
+      isMilestone: true,
+      milestoneTitle: `Init Suffix Automaton (Text: "${text}")`,
       action: 'INIT',
       state: {
         str: text,
@@ -211,15 +213,39 @@ function samExtend(st: State[], last: number, c: string): number {
         activeChar: null,
         clonedNodeId: null,
       },
-      callStack: [{ name: 'samInit', params: { textLength: text.length } }],
+      callStack: [{ name: 'samInit', params: { textLength: text.length }, line: 1, isCurrent: true }],
       variables: { text, totalStates: 1, rootLink: -1 },
+      conditionEval: { expr: 'text.length > 0', result: true },
+      soundCue: { type: 'step' },
       explanation: `Initialized empty Suffix Automaton with root state 0 (len=0, link=-1). Ready to extend with text "${text}".`,
     });
 
     for (let i = 0; i < text.length; i++) {
       const c = text[i];
       const cur = nodes.length;
+
+      // Frame 1: Create new state
       nodes.push({ id: cur, len: nodes[last].len + 1, link: 0, next: {} });
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 2,
+        action: 'ALLOC_STATE',
+        state: {
+          str: text,
+          processedLength: i,
+          nodes: cloneNodes(),
+          lastNodeId: last,
+          activeChar: c,
+          clonedNodeId: null,
+        },
+        callStack: [{ name: 'allocState', params: { char: c, newId: cur, len: nodes[cur].len }, line: 2, isCurrent: true }],
+        variables: { char: c, stateId: cur, stateLen: nodes[cur].len, fromLast: last },
+        conditionEval: { expr: `st[${cur}].len === st[${last}].len + 1`, result: true },
+        soundCue: { type: 'insert' },
+        explanation: `Processing char[${i}] = '${c}'. Allocated new state ${cur} with len = ${nodes[cur].len} (extends last state ${last}).`,
+      });
 
       let p = last;
       while (p !== -1 && !(c in nodes[p].next)) {
@@ -227,13 +253,75 @@ function samExtend(st: State[], last: number, c: string): number {
         p = nodes[p].link;
       }
 
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 6,
+        action: 'ADD_TRANSITIONS',
+        state: {
+          str: text,
+          processedLength: i,
+          nodes: cloneNodes(),
+          lastNodeId: last,
+          activeChar: c,
+          clonedNodeId: null,
+        },
+        callStack: [{ name: 'addTransitions', params: { char: c, target: cur, ancestor: p }, line: 6, isCurrent: true }],
+        variables: { char: c, newTransitionTo: cur, stoppedAtAncestor: p },
+        conditionEval: { expr: `p === -1`, result: p === -1 },
+        soundCue: { type: 'compare' },
+        explanation: `Followed suffix link chain backward from state ${last}, adding transitions next['${c}'] = ${cur}.${
+          p === -1 ? ` Reached base (p = -1): state ${cur} has no prior occurrences of '${c}'.` : ` Stopped at ancestor state ${p} where transition '${c}' already exists.`
+        }`,
+      });
+
       let clonedId: number | null = null;
       if (p === -1) {
         nodes[cur].link = 0;
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 9,
+          action: 'LINK_ROOT',
+          state: {
+            str: text,
+            processedLength: i + 1,
+            nodes: cloneNodes(),
+            lastNodeId: cur,
+            activeChar: c,
+            clonedNodeId: null,
+          },
+          callStack: [{ name: 'linkRoot', params: { cur, root: 0 }, line: 9, isCurrent: true }],
+          variables: { state: cur, link: 0 },
+          conditionEval: { expr: 'p === -1', result: true },
+          soundCue: { type: 'step' },
+          explanation: `Linked state ${cur} directly to root state 0 (link[${cur}] = 0) because '${c}' is a brand new suffix.`,
+        });
       } else {
         const q = nodes[p].next[c];
-        if (nodes[p].len + 1 === nodes[q].len) {
+        const isContinuous = nodes[p].len + 1 === nodes[q].len;
+
+        if (isContinuous) {
           nodes[cur].link = q;
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 12,
+            action: 'LINK_EXISTING',
+            state: {
+              str: text,
+              processedLength: i + 1,
+              nodes: cloneNodes(),
+              lastNodeId: cur,
+              activeChar: c,
+              clonedNodeId: null,
+            },
+            callStack: [{ name: 'linkState', params: { cur, q }, line: 12, isCurrent: true }],
+            variables: { state: cur, linkedTo: q, lenP: nodes[p].len, lenQ: nodes[q].len },
+            conditionEval: { expr: `len[p] + 1 === len[q] (${nodes[p].len + 1} === ${nodes[q].len})`, result: true },
+            soundCue: { type: 'step' },
+            explanation: `Continuous transition detected: len[${p}] + 1 === len[${q}] (${nodes[p].len + 1} === ${nodes[q].len}). Directly linked state ${cur} to state ${q}.`,
+          });
         } else {
           clonedId = nodes.length;
           nodes.push({
@@ -243,12 +331,54 @@ function samExtend(st: State[], last: number, c: string): number {
             next: { ...nodes[q].next },
           });
 
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 15,
+            isMilestone: true,
+            milestoneTitle: `Cloned State ${q} -> ${clonedId}`,
+            action: 'CLONE_STATE',
+            state: {
+              str: text,
+              processedLength: i,
+              nodes: cloneNodes(),
+              lastNodeId: last,
+              activeChar: c,
+              clonedNodeId: clonedId,
+            },
+            callStack: [{ name: 'cloneState', params: { original: q, clone: clonedId, len: nodes[clonedId].len }, line: 15, isCurrent: true }],
+            variables: { originalState: q, clonedState: clonedId, cloneLen: nodes[clonedId].len, originalLen: nodes[q].len },
+            conditionEval: { expr: `len[p] + 1 !== len[q] (${nodes[p].len + 1} !== ${nodes[q].len})`, result: true },
+            soundCue: { type: 'select' },
+            explanation: `Discontinuous transition: len[${p}] + 1 (${nodes[p].len + 1}) < len[${q}] (${nodes[q].len}). Cloned state ${q} into state ${clonedId} with len=${nodes[clonedId].len} to preserve equivalence classes.`,
+          });
+
           while (p !== -1 && nodes[p].next[c] === q) {
             nodes[p].next[c] = clonedId;
             p = nodes[p].link;
           }
           nodes[q].link = clonedId;
           nodes[cur].link = clonedId;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 19,
+            action: 'REDIRECT_LINKS',
+            state: {
+              str: text,
+              processedLength: i + 1,
+              nodes: cloneNodes(),
+              lastNodeId: cur,
+              activeChar: c,
+              clonedNodeId: clonedId,
+            },
+            callStack: [{ name: 'redirectTransitions', params: { clone: clonedId, redirectedFrom: q }, line: 19, isCurrent: true }],
+            variables: { redirectedTo: clonedId, linkQ: clonedId, linkCur: clonedId },
+            conditionEval: { expr: `st[${q}].link === ${clonedId} && st[${cur}].link === ${clonedId}`, result: true },
+            soundCue: { type: 'swap' },
+            explanation: `Redirected ancestor transitions from ${q} to cloned state ${clonedId}. Updated links: link[${q}] = ${clonedId} and link[${cur}] = ${clonedId}.`,
+          });
         }
       }
 
@@ -256,8 +386,10 @@ function samExtend(st: State[], last: number, c: string): number {
 
       frames.push({
         stepIndex: frames.length,
-        totalSteps: frames.length + 1,
-        codeLine: 18,
+        totalSteps: 1,
+        codeLine: 22,
+        isMilestone: true,
+        milestoneTitle: `Extended Prefix "${text.slice(0, i + 1)}"`,
         action: 'EXTEND_CHAR',
         state: {
           str: text,
@@ -267,24 +399,27 @@ function samExtend(st: State[], last: number, c: string): number {
           activeChar: c,
           clonedNodeId: clonedId,
         },
-        callStack: [{ name: 'samExtend', params: { char: c, stateId: cur } }],
+        callStack: [{ name: 'samExtend', params: { char: c, stateId: cur }, line: 22, isCurrent: true }],
         variables: {
           currentChar: c,
+          prefix: text.slice(0, i + 1),
           newStateId: cur,
           totalStates: nodes.length,
           lastState: last,
           wasCloned: clonedId !== null,
         },
-        explanation: `Extended SAM with '${c}' (prefix "${text.slice(0, i + 1)}"). Created state ${cur}${
-          clonedId !== null ? ` and cloned intermediate state ${clonedId}` : ''
-        }. Total states: ${nodes.length}.`,
+        conditionEval: { expr: `processedLength === ${i + 1}`, result: true },
+        soundCue: { type: 'insert' },
+        explanation: `Prefix "${text.slice(0, i + 1)}" incorporated into SAM. Total states: ${nodes.length}. Last state is now ${last}.`,
       });
     }
 
     frames.push({
       stepIndex: frames.length,
-      totalSteps: frames.length + 1,
+      totalSteps: 1,
       codeLine: 35,
+      isMilestone: true,
+      milestoneTitle: `SAM Built: ${nodes.length} States`,
       action: 'COMPLETE',
       state: {
         str: text,
@@ -294,11 +429,13 @@ function samExtend(st: State[], last: number, c: string): number {
         activeChar: null,
         clonedNodeId: null,
       },
-      callStack: [{ name: 'complete', params: { totalStates: nodes.length } }],
-      variables: { completed: true, totalStates: nodes.length },
+      callStack: [{ name: 'complete', params: { totalStates: nodes.length }, line: 35, isCurrent: true }],
+      variables: { completed: true, totalStates: nodes.length, totalSubstrings: (text.length * (text.length + 1)) / 2 },
+      conditionEval: { expr: 'automatonComplete', result: true },
+      soundCue: { type: 'complete' },
       explanation: `Suffix Automaton successfully constructed for "${text}". Formed ${nodes.length} states encoding all ${
         (text.length * (text.length + 1)) / 2
-      } potential substrings.`,
+      } distinct and repeated substrings in O(N) linear time and space.`,
     });
 
     frames.forEach((f) => {

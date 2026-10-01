@@ -151,6 +151,29 @@ import { tstModule } from './trees/tst';
 import { radixTreeModule } from './trees/radixTree';
 import { boruvkaMSTModule } from './graphs/boruvkaMST';
 import { sparseTableModule } from './arrays/sparseTable';
+import { suffixArrayKasaiModule } from './strings/suffixArrayKasai';
+import { treeMapModule } from './trees/treeMap';
+import { hamiltonianPathModule } from './graphs/hamiltonianPath';
+import { treeDiameterDPModule } from './dp/treeDiameterDP';
+import { closestPairOfPointsModule } from './geometry/closestPairOfPoints';
+import { pointInPolygonModule } from './geometry/pointInPolygon';
+import { dynamicArrayModule } from './arrays/dynamicArray';
+import { graphRepresentationsModule } from './graphs/graphRepresentations';
+import { kdTreeModule } from './trees/kdTree';
+import { intervalTreeModule } from './trees/intervalTree';
+import { submaskEnumerationModule } from './math/submaskEnumeration';
+import { permutationsCombinationsModule } from './math/permutationsCombinations';
+import { twoThreeFourTreeModule } from './trees/twoThreeFourTree';
+import { binaryTreeTopologiesModule } from './trees/binaryTreeTopologies';
+import { suffixTreeModule } from './trees/suffixTree';
+import { dynamicRehashingModule } from './arrays/dynamicRehashing';
+import { strassenMatrixModule } from './math/strassenMatrix';
+import { recursionTreesModule } from './recursion/recursionTrees';
+import { sweepLineIntersectionsModule } from './geometry/sweepLineIntersections';
+import { twoThreeTreeModule } from './trees/twoThreeTree';
+import { mergesortRecursionTreeModule } from './recursion/mergesortRecursionTree';
+import { quicksortPartitionTreeModule } from './recursion/quicksortPartitionTree';
+import { backtrackingDecisionTreeModule } from './recursion/backtrackingDecisionTree';
 
 export const allModules: AlgorithmModule[] = [
   quicksortModule,
@@ -293,6 +316,29 @@ export const allModules: AlgorithmModule[] = [
   radixTreeModule,
   boruvkaMSTModule,
   sparseTableModule,
+  suffixArrayKasaiModule,
+  treeMapModule,
+  hamiltonianPathModule,
+  treeDiameterDPModule,
+  closestPairOfPointsModule,
+  pointInPolygonModule,
+  dynamicArrayModule,
+  graphRepresentationsModule,
+  kdTreeModule,
+  intervalTreeModule,
+  submaskEnumerationModule,
+  permutationsCombinationsModule,
+  twoThreeFourTreeModule,
+  binaryTreeTopologiesModule,
+  suffixTreeModule,
+  dynamicRehashingModule,
+  strassenMatrixModule,
+  recursionTreesModule,
+  sweepLineIntersectionsModule,
+  twoThreeTreeModule,
+  mergesortRecursionTreeModule,
+  quicksortPartitionTreeModule,
+  backtrackingDecisionTreeModule,
 ];
 
 export const defaultModule = quicksortModule;

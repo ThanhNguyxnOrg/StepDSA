@@ -229,6 +229,8 @@ bool dfs(int u) {
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
+      isMilestone: true,
+      milestoneTitle: `Init Hopcroft-Karp (|U|=${uCount}, |V|=${vCount})`,
       action: 'INIT',
       state: {
         uCount,
@@ -241,8 +243,10 @@ bool dfs(int u) {
         phase: 'BFS',
         matchingSize: 0,
       },
-      callStack: [{ name: 'hopcroftKarp', params: { uCount, vCount, edgeCount: edges.length } }],
+      callStack: [{ name: 'hopcroftKarp', params: { uCount, vCount, edgeCount: edges.length }, line: 1, isCurrent: true }],
       variables: { uCount, vCount, matchingSize: 0, phase: 'Initialization' },
+      conditionEval: { expr: 'uCount > 0 && vCount > 0', result: true },
+      soundCue: { type: 'step' },
       explanation: `Initialized bipartite graph with |U|=${uCount}, |V|=${vCount}, and ${edges.length} candidate edges. Matching size: 0.`,
     });
 
@@ -298,10 +302,13 @@ bool dfs(int u) {
     let iteration = 0;
     while (bfs()) {
       iteration++;
+
       frames.push({
         stepIndex: frames.length,
-        totalSteps: frames.length + 1,
+        totalSteps: 1,
         codeLine: 15,
+        isMilestone: true,
+        milestoneTitle: `BFS Phase ${iteration} Level Graph`,
         action: 'BFS_LAYER_BUILT',
         state: {
           uCount,
@@ -314,20 +321,49 @@ bool dfs(int u) {
           phase: 'BFS',
           matchingSize,
         },
-        callStack: [{ name: 'bfsPhase', params: { iteration } }],
+        callStack: [{ name: 'bfsPhase', params: { iteration }, line: 15, isCurrent: true }],
         variables: { iteration, shortestAugPathLength: dist[0], currentMatching: matchingSize },
-        explanation: `BFS Phase ${iteration}: Level graph constructed. Shortest augmenting path layer distance = ${dist[0]}.`,
+        conditionEval: { expr: `dist[0] !== INF`, result: true },
+        soundCue: { type: 'step' },
+        explanation: `BFS Phase ${iteration}: Level graph constructed. Shortest augmenting path layer distance = ${dist[0]}. DFS will now extract maximal vertex-disjoint paths.`,
       });
 
       for (let u = 1; u <= uCount; u++) {
         if (pairU[u] === 0) {
           const path: { u: number; v: number }[] = [];
+
+          // Frame: DFS search attempt from free vertex
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 22,
+            action: 'DFS_SEARCH',
+            state: {
+              uCount,
+              vCount,
+              edges,
+              pairU: { ...pairU },
+              pairV: { ...pairV },
+              dist: { ...dist },
+              activePath: [],
+              phase: 'DFS',
+              matchingSize,
+            },
+            callStack: [{ name: 'dfs', params: { u }, line: 22, isCurrent: true }],
+            variables: { startFreeU: u, matchingSize },
+            conditionEval: { expr: `pairU[${u}] === 0`, result: true },
+            soundCue: { type: 'compare' },
+            explanation: `DFS initiated from unmatched vertex U${u} exploring admissible alternating edges where dist[nextU] == dist[u] + 1.`,
+          });
+
           if (dfs(u, path)) {
             matchingSize++;
             frames.push({
               stepIndex: frames.length,
-              totalSteps: frames.length + 1,
+              totalSteps: 1,
               codeLine: 28,
+              isMilestone: true,
+              milestoneTitle: `Augmented: +1 Match (${matchingSize})`,
               action: 'AUGMENT_PATH',
               state: {
                 uCount,
@@ -340,9 +376,15 @@ bool dfs(int u) {
                 phase: 'DFS',
                 matchingSize,
               },
-              callStack: [{ name: 'dfsAugment', params: { startU: u, pathLength: path.length } }],
-              variables: { augmentedStartU: u, newMatchingSize: matchingSize },
-              explanation: `DFS Augmented matching along path of length ${path.length}. Total matches increased to ${matchingSize}.`,
+              callStack: [{ name: 'dfsAugment', params: { startU: u, pathLength: path.length }, line: 28, isCurrent: true }],
+              variables: {
+                augmentedStartU: u,
+                newMatchingSize: matchingSize,
+                pathSummary: path.map((e) => `U${e.u}-V${e.v}`).join(' -> '),
+              },
+              conditionEval: { expr: 'augmentingPathFound', result: true },
+              soundCue: { type: 'insert' },
+              explanation: `Augmented matching along path [${path.map((e) => `U${e.u}-V${e.v}`).join(' -> ')}]. Inverted edge matches, expanding matching cardinality to ${matchingSize}.`,
             });
           }
         }
@@ -351,8 +393,10 @@ bool dfs(int u) {
 
     frames.push({
       stepIndex: frames.length,
-      totalSteps: frames.length + 1,
+      totalSteps: 1,
       codeLine: 35,
+      isMilestone: true,
+      milestoneTitle: `Max Matching: ${matchingSize} Pairs`,
       action: 'COMPLETE',
       state: {
         uCount,
@@ -365,14 +409,17 @@ bool dfs(int u) {
         phase: 'COMPLETE',
         matchingSize,
       },
-      callStack: [{ name: 'complete', params: { maxMatching: matchingSize } }],
-      variables: { completed: true, maxMatching: matchingSize },
-      explanation: `Hopcroft-Karp algorithm terminated. Maximum Bipartite Matching cardinality = ${matchingSize}.`,
+      callStack: [{ name: 'complete', params: { maxMatching: matchingSize }, line: 35, isCurrent: true }],
+      variables: { completed: true, maxMatching: matchingSize, matchedPairs: Object.entries(pairU).filter(([, v]) => v > 0).map(([u, v]) => `U${u}=V${v}`).join(', ') },
+      conditionEval: { expr: 'bfsNoMoreAugmentingPaths', result: true },
+      soundCue: { type: 'complete' },
+      explanation: `Hopcroft-Karp algorithm terminated. No augmenting paths remain. Maximum Bipartite Matching cardinality = ${matchingSize}.`,
     });
 
     frames.forEach((f) => {
       f.totalSteps = frames.length;
     });
+
     return frames;
   },
   renderStage: (frame: ExecutionFrame<HopcroftKarpState>) => {

@@ -117,19 +117,46 @@ def sleep_sort(arr):
 
     const frames: ExecutionFrame<ArrayStageState>[] = [];
 
-    // Frame 0: Spawn threads
+    // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialize Sleep Sort: Spawned ${n} concurrent timer threads for values [${arr.join(', ')}]. Ticks needed: max(arr) = ${maxVal}.`,
-      variables: { totalThreads: n, maxDuration: maxVal, tick: 0 },
+      isMilestone: true,
+      milestoneTitle: `Init Sleep Sort (${n} threads)`,
+      explanation: `Initialize Sleep Sort: Preparing to schedule ${n} concurrent timer threads for values [${arr.join(', ')}].`,
+      variables: { totalElements: n, maxValue: maxVal, activeThreads: 0 },
+      conditionEval: { expr: 'arr.length > 0', result: true },
+      soundCue: { type: 'step' },
       callStack: [{ name: 'sleepSort()', params: { n, maxVal }, line: 2, isCurrent: true }],
       state: {
         array: elements.map((e) => ({ ...e })),
         pointers: {},
       },
     });
+
+    // Thread dispatch phase
+    for (let i = 0; i < n; i++) {
+      elements[i].status = 'selected';
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 3,
+        explanation: `Dispatch Thread #${i + 1}: Registered worker timer for value ${arr[i]} with sleep duration ${arr[i]} virtual ticks.`,
+        variables: { threadIndex: i, elementValue: arr[i], sleepDelay: `${arr[i]} ticks` },
+        conditionEval: { expr: `spawnWorker(val=${arr[i]})`, result: true },
+        soundCue: { type: 'select' },
+        callStack: [
+          { name: `spawnWorker(${arr[i]})`, params: { threadId: i, delay: arr[i] }, line: 3, isCurrent: true },
+          { name: 'sleepSort()', params: { n }, line: 2 },
+        ],
+        state: {
+          array: elements.map((e) => ({ ...e })),
+          pointers: { spawning: i },
+        },
+      });
+      elements[i].status = 'default';
+    }
 
     const wokeIndices = new Set<number>();
     const sortedOrder: number[] = [];
@@ -146,28 +173,57 @@ def sleep_sort(arr):
       });
 
       if (wakingThisTick.length > 0) {
-        wakingThisTick.forEach((idx) => {
-          elements[idx].status = 'sorted';
-        });
-
+        // Frame: Timer expired event
         const pointerMap: Record<string, number> = {};
         wakingThisTick.forEach((idx, pIdx) => {
           pointerMap[`wake_${pIdx + 1}`] = idx;
+          elements[idx].status = 'comparing';
+        });
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 4,
+          explanation: `Virtual tick t = ${tick}: Timer interrupt fired! Thread(s) for value(s) [${wakingThisTick.map((i) => arr[i]).join(', ')}] have reached expiry.`,
+          variables: {
+            currentTick: tick,
+            expiredThreadCount: wakingThisTick.length,
+            wakingValues: wakingThisTick.map((i) => arr[i]),
+          },
+          conditionEval: { expr: `tick (${tick}) === threadDelay`, result: true },
+          soundCue: { type: 'compare' },
+          callStack: [
+            { name: `onTimerTick(t=${tick})`, params: { tick }, line: 4, isCurrent: true },
+            { name: 'sleepSort()', params: { total: n }, line: 2 },
+          ],
+          state: {
+            array: elements.map((e) => ({ ...e })),
+            pointers: { ...pointerMap },
+          },
+        });
+
+        // Frame: Append and sort status update
+        wakingThisTick.forEach((idx) => {
+          elements[idx].status = 'sorted';
         });
 
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 5,
-          explanation: `Tick t = ${tick}: Timer expired for value(s) [${wakingThisTick.map((i) => arr[i]).join(', ')}]! Appended to sorted output. (${sortedOrder.length}/${n} collected).`,
+          isMilestone: true,
+          milestoneTitle: `Woke ${wakingThisTick.map((i) => arr[i]).join(', ')} at t=${tick}`,
+          explanation: `Appended [${wakingThisTick.map((i) => arr[i]).join(', ')}] to output stream. Total collected: ${sortedOrder.length}/${n} elements.`,
           variables: {
             currentTick: tick,
             wokenCount: wakingThisTick.length,
             sortedSoFar: `[${sortedOrder.join(', ')}]`,
           },
+          conditionEval: { expr: `output.push(${wakingThisTick.map((i) => arr[i]).join(', ')})`, result: true },
+          soundCue: { type: 'insert' },
           callStack: [
-            { name: `timerWake(tick=${tick})`, params: { tick, count: wakingThisTick.length }, line: 5, isCurrent: true },
-            { name: 'sleepSort()', params: { total: n }, line: 3 },
+            { name: `collectOutput(val=${wakingThisTick.map((i) => arr[i]).join(', ')})`, params: { tick, count: wakingThisTick.length }, line: 5, isCurrent: true },
+            { name: 'sleepSort()', params: { total: n }, line: 2 },
           ],
           state: {
             array: elements.map((e) => ({ ...e })),
@@ -180,8 +236,10 @@ def sleep_sort(arr):
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 4,
-          explanation: `Tick t = ${tick}: All sleeping threads awaiting timeouts... (${sortedOrder.length}/${n} awake).`,
+          explanation: `Virtual tick t = ${tick}: No timers expiring this cycle. All remaining threads still sleeping... (${sortedOrder.length}/${n} awake).`,
           variables: { currentTick: tick, awake: sortedOrder.length, sleeping: n - sortedOrder.length },
+          conditionEval: { expr: `hasExpiredTimers(t=${tick})`, result: false },
+          soundCue: { type: 'step' },
           callStack: [{ name: `sleep(tick=${tick})`, params: { tick }, line: 4, isCurrent: true }],
           state: {
             array: elements.map((e) => ({ ...e })),
@@ -196,11 +254,16 @@ def sleep_sort(arr):
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 7,
-      explanation: `All threads joined! Sleep Sort completed in ${maxVal} virtual ticks. Sorted array: [${sortedOrder.join(', ')}].`,
+      isMilestone: true,
+      milestoneTitle: `Sorted: [${sortedOrder.join(', ')}]`,
+      explanation: `All ${n} threads joined! Sleep Sort completed successfully in ${maxVal} virtual ticks. Sorted result: [${sortedOrder.join(', ')}].`,
       variables: {
         totalTicks: maxVal,
         sortedResult: `[${sortedOrder.join(', ')}]`,
+        allThreadsTerminated: true,
       },
+      conditionEval: { expr: 'threads.allJoined()', result: true },
+      soundCue: { type: 'complete' },
       callStack: [{ name: 'complete()', params: { ticks: maxVal }, line: 7, isCurrent: true }],
       state: {
         array: elements.map((e) => ({ ...e, status: 'sorted' })),

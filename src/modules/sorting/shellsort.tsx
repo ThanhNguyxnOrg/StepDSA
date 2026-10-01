@@ -129,6 +129,12 @@ export const shellsortModule: AlgorithmModule<number[], ArrayStageState> = {
       totalSteps: 1,
       codeLine: 3,
       explanation: `Starting Shellsort on array of length ${n}. Initial gap = floor(${n} / 2) = ${gap}.`,
+      variables: { n, gap },
+      callStack: [{ name: 'shellSort', params: { n, gap }, line: 3, isCurrent: true }],
+      conditionEval: { expr: `gap > 0 (${gap} > 0)`, result: gap > 0 },
+      soundCue: { type: 'start' },
+      isMilestone: true,
+      milestoneTitle: 'Shellsort Initialized',
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: { gap },
@@ -143,6 +149,10 @@ export const shellsortModule: AlgorithmModule<number[], ArrayStageState> = {
         explanation: `Starting pass with gap = ${gap}. Elements separated by ${gap} positions will be compared and sorted.`,
         isMilestone: true,
         milestoneTitle: `Starting Gap ${gap} Pass`,
+        soundCue: { type: 'step' },
+        variables: { gap, n },
+        callStack: [{ name: 'shellSort', params: { gap }, line: 4, isCurrent: true }],
+        conditionEval: { expr: `gap > 0 (${gap} > 0)`, result: true },
         state: {
           array: arr.map((v, idx) => ({ id: idx, value: v, status: 'active' })),
           pointers: { gap },
@@ -158,6 +168,10 @@ export const shellsortModule: AlgorithmModule<number[], ArrayStageState> = {
           totalSteps: 1,
           codeLine: 5,
           explanation: `Inspecting element arr[${i}] = ${temp} with respect to arr[${i - gap}] = ${arr[i - gap]}.`,
+          soundCue: { type: 'compare' },
+          variables: { gap, i, j, temp, 'arr[j-gap]': arr[i - gap] },
+          callStack: [{ name: 'shellSort', params: { gap, i, temp }, line: 5, isCurrent: true }],
+          conditionEval: { expr: `j >= gap && arr[j - gap] > temp (${i >= gap} && ${arr[i - gap]} > ${temp})`, result: arr[i - gap] > temp },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -175,6 +189,10 @@ export const shellsortModule: AlgorithmModule<number[], ArrayStageState> = {
             totalSteps: 1,
             codeLine: 8,
             explanation: `arr[${j - gap}] (${arr[j - gap]}) > ${temp}: shifting element rightward by ${gap} to index ${j}.`,
+            soundCue: { type: 'swap' },
+            variables: { gap, j, 'arr[j]': arr[j], temp, shiftedVal: arr[j - gap] },
+            callStack: [{ name: 'shellSort', params: { gap, j, shiftTo: j }, line: 8, isCurrent: true }],
+            conditionEval: { expr: `arr[${j - gap}] > temp (${arr[j - gap]} > ${temp})`, result: true },
             state: {
               array: arr.map((v, idx) => ({
                 id: idx,
@@ -193,6 +211,10 @@ export const shellsortModule: AlgorithmModule<number[], ArrayStageState> = {
           totalSteps: 1,
           codeLine: 10,
           explanation: `Placed temp (${temp}) at resolved index ${j}.`,
+          soundCue: { type: 'step' },
+          variables: { gap, i, j, insertedVal: temp },
+          callStack: [{ name: 'shellSort', params: { gap, insertedIndex: j }, line: 10, isCurrent: true }],
+          conditionEval: { expr: `j >= gap (${j} >= ${gap})`, result: j >= gap },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -213,6 +235,10 @@ export const shellsortModule: AlgorithmModule<number[], ArrayStageState> = {
         )}.`,
         isMilestone: true,
         milestoneTitle: `Completed Gap ${gap}`,
+        soundCue: { type: 'step' },
+        variables: { completedGap: gap, nextGap: Math.floor(gap / 2) },
+        callStack: [{ name: 'shellSort', params: { completedGap: gap }, line: 11, isCurrent: true }],
+        conditionEval: { expr: `nextGap > 0 (${Math.floor(gap / 2)} > 0)`, result: Math.floor(gap / 2) > 0 },
         state: {
           array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
           pointers: { prevGap: gap },
@@ -229,6 +255,10 @@ export const shellsortModule: AlgorithmModule<number[], ArrayStageState> = {
       explanation: 'Gap reduced to 0. All passes completed. Array is fully sorted!',
       isMilestone: true,
       milestoneTitle: 'Shellsort Completed',
+      soundCue: { type: 'complete' },
+      variables: { gap: 0, n, sorted: true },
+      callStack: [{ name: 'shellSort', params: { done: true }, line: 12, isCurrent: true }],
+      conditionEval: { expr: `gap == 0 (0 == 0)`, result: true },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
         pointers: {},

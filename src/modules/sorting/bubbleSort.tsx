@@ -98,11 +98,18 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
     const arr = [...input];
     const n = arr.length;
     const sortedIndices = new Set<number>();
+    const baseCallStack = [{ name: 'bubbleSort', params: { n }, line: 1, isCurrent: true }];
 
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
+      isMilestone: true,
+      milestoneTitle: 'Bubble Sort Initialized',
+      soundCue: { type: 'start' },
+      variables: { n, pass: 0 },
+      callStack: baseCallStack,
+      conditionEval: { expr: `n > 1`, result: n > 1 },
       explanation: 'Starting Bubble Sort. Ready to compare adjacent pairs.',
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
@@ -114,10 +121,15 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
       let swapped = false;
 
       for (let j = 0; j < n - i - 1; j++) {
+        const shouldSwap = arr[j] > arr[j + 1];
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 6,
+          soundCue: { type: 'compare' },
+          variables: { i, j, 'arr[j]': arr[j], 'arr[j+1]': arr[j + 1], shouldSwap },
+          callStack: [{ name: 'bubbleSort', params: { pass: i + 1, j, limit: n - i - 1 }, line: 6, isCurrent: true }],
+          conditionEval: { expr: `arr[${j}] > arr[${j + 1}] (${arr[j]} > ${arr[j + 1]})`, result: shouldSwap },
           explanation: `Comparing adjacent pair arr[${j}] (${arr[j]}) and arr[${j + 1}] (${arr[j + 1]}).`,
           state: {
             array: arr.map((v, idx) => ({
@@ -129,11 +141,15 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
           },
         });
 
-        if (arr[j] > arr[j + 1]) {
+        if (shouldSwap) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
             codeLine: 7,
+            soundCue: { type: 'swap' },
+            variables: { swapA: arr[j], swapB: arr[j + 1], indexA: j, indexB: j + 1 },
+            callStack: [{ name: 'swap', params: { j, next: j + 1 }, line: 7, isCurrent: true }],
+            conditionEval: { expr: `swapped = true`, result: true },
             explanation: `arr[${j}] (${arr[j]}) > arr[${j + 1}] (${arr[j + 1]}). Swapping them.`,
             state: {
               array: arr.map((v, idx) => ({
@@ -155,9 +171,13 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 9,
-        explanation: `Pass ${i + 1} complete. Largest unsorted element settled at index [${n - i - 1}].`,
         isMilestone: true,
         milestoneTitle: `Element ${arr[n - i - 1]} Settled`,
+        soundCue: { type: 'sorted' },
+        variables: { pass: i + 1, settledIndex: n - i - 1, settledValue: arr[n - i - 1] },
+        callStack: [{ name: 'bubbleSort', params: { pass: i + 1, settled: arr[n - i - 1] }, line: 9, isCurrent: true }],
+        conditionEval: { expr: `isSettled(n - i - 1)`, result: true },
+        explanation: `Pass ${i + 1} complete. Largest unsorted element settled at index [${n - i - 1}].`,
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -173,9 +193,13 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 10,
-          explanation: 'No swaps occurred in this pass. Array is already fully sorted (Early termination).',
           isMilestone: true,
           milestoneTitle: 'Early Exit (Sorted)',
+          soundCue: { type: 'complete' },
+          variables: { earlyExit: true, totalPasses: i + 1 },
+          callStack: baseCallStack,
+          conditionEval: { expr: `swapped === false`, result: true },
+          explanation: 'No swaps occurred in this pass. Array is already fully sorted (Early termination).',
           state: {
             array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
             pointers: {},
@@ -193,6 +217,10 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
       explanation: '🎉 Bubble Sort complete! All elements sorted.',
       isMilestone: true,
       milestoneTitle: 'Finished',
+      soundCue: { type: 'complete' },
+      variables: { completed: true, totalSorted: n },
+      callStack: baseCallStack,
+      conditionEval: { expr: `isSorted(arr)`, result: true },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
         pointers: {},

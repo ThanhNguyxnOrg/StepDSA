@@ -159,17 +159,43 @@ export const mergeIntervalsModule: AlgorithmModule<
       status: 'pending',
     }));
 
-    // Step 0: Initialization
+    // Step 0: Raw inspection & sorting invariant
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
+      codeLine: 1,
+      explanation: `Inspect ${raw.length} input intervals: [${raw.map((iv) => `[${iv[0]}, ${iv[1]}]`).join(', ')}]. Sorting intervals ascending by start time in O(N log N).`,
+      soundCue: { type: 'start' },
+      variables: { totalIntervals: raw.length, sortedOrder: false },
+      callStack: [
+        { name: `merge(${raw.length} intervals)`, params: { count: raw.length }, line: 1, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      conditionEval: { expr: `intervals.length > 0`, result: true },
+      state: {
+        original: raw.map((iv, i) => ({ id: `raw-${i}`, start: iv[0], end: iv[1], status: 'pending' })),
+        currentIndex: -1,
+        merged: [],
+        activeInterval: null,
+        overlapDetected: false,
+      },
+    });
+
+    // Step 1: Sorted confirmation milestone
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
       codeLine: 2,
-      explanation: `Sorted ${sorted.length} intervals by starting time: [${sorted.map((iv) => `[${iv[0]}, ${iv[1]}]`).join(', ')}].`,
-      variables: { totalIntervals: sorted.length, mergedCount: 0 },
+      isMilestone: true,
+      milestoneTitle: 'Intervals Sorted by Start',
+      soundCue: { type: 'pivot' },
+      explanation: `Sorted ${sorted.length} intervals by starting time: [${sorted.map((iv) => `[${iv[0]}, ${iv[1]}]`).join(', ')}]. Starting linear sweep.`,
+      variables: { totalIntervals: sorted.length, mergedCount: 0, firstStart: sorted[0][0] },
       callStack: [
         { name: `merge(${sorted.length} intervals)`, params: { count: sorted.length }, line: 2, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
+      conditionEval: { expr: `isSorted(intervals)`, result: true },
       state: {
         original: [...originalItems],
         currentIndex: -1,
@@ -204,11 +230,13 @@ export const mergeIntervalsModule: AlgorithmModule<
           totalSteps: 1,
           codeLine: 5,
           explanation: `Merged list is empty. Push first interval [${curr[0]}, ${curr[1]}] as initial anchor.`,
+          soundCue: { type: 'step' },
           variables: { current: `[${curr[0]}, ${curr[1]}]`, mergedSize: mergedList.length },
           callStack: [
             { name: `pushInitial([${curr[0]}, ${curr[1]}])`, params: { start: curr[0], end: curr[1] }, line: 5, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
           ],
+          conditionEval: { expr: `merged.length === 0`, result: true },
           state: {
             original: originalItems.map((item, idx) => ({
               ...item,

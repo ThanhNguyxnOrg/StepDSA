@@ -107,9 +107,17 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
     // Step 0: Initial valid heap
     frames.push({
       stepIndex: 0,
-      totalSteps: 5,
+      totalSteps: 1,
       codeLine: 1,
-      explanation: `Step 0: Existing Max Heap array: [${heap.join(', ')}]. Ready to insert ${newVal}.`,
+      explanation: `Step 0: Initialized Max Heap with [${heap.join(', ')}]. Parent invariant heap[i] >= heap[2i+1], heap[2i+2] holds. Ready to insert ${newVal}.`,
+      isMilestone: true,
+      milestoneTitle: 'Initialized Max Heap',
+      soundCue: { type: 'start' },
+      callStack: [
+        { name: 'insertMaxHeap(heap, val)', params: { size: heap.length, val: newVal }, line: 1, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { size: heap.length, root: heap[0], inserting: newVal },
       state: { heap: [...heap] },
     });
 
@@ -117,35 +125,55 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
     heap.push(newVal);
     let i = heap.length - 1;
     frames.push({
-      stepIndex: 1,
-      totalSteps: 5,
+      stepIndex: frames.length,
+      totalSteps: 1,
       codeLine: 2,
-      explanation: `Step 1: Appended ${newVal} at index ${i} (last position to keep tree complete). Now sifting up!`,
+      explanation: `Step 1: Appended ${newVal} at index ${i} (last position to preserve complete binary tree shape). Now sifting up!`,
+      soundCue: { type: 'step' },
+      callStack: [
+        { name: 'insertMaxHeap(heap, val)', params: { index: i, val: newVal }, line: 2, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { currentIndex: i, currentValue: newVal, heapSize: heap.length },
       state: { heap: [...heap], activeIndices: [i] },
     });
 
     // Step 2: Sift up loop
-    let step = 2;
     while (i > 0) {
       const parent = Math.floor((i - 1) / 2);
+      const needsSwap = heap[i] > heap[parent];
 
+      // Comparison frame
       frames.push({
-        stepIndex: step++,
-        totalSteps: 5,
+        stepIndex: frames.length,
+        totalSteps: 1,
         codeLine: 6,
-        explanation: `Step: Comparing child heap[${i}] (${heap[i]}) with parent heap[${parent}] (${heap[parent]}). Since ${heap[i]} > ${heap[parent]}, swap needed!`,
+        explanation: `Comparing child heap[${i}] (${heap[i]}) with parent heap[${parent}] (${heap[parent]}). Condition ${heap[i]} > ${heap[parent]} is ${needsSwap ? 'TRUE (swap needed)' : 'FALSE (heap invariant satisfied)'}.`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'siftUp(i)', params: { i, parent, childVal: heap[i], parentVal: heap[parent] }, line: 6, isCurrent: true },
+          { name: 'insertMaxHeap()', params: { val: newVal }, line: 4 },
+        ],
+        variables: { childIndex: i, parentIndex: parent, childVal: heap[i], parentVal: heap[parent], needsSwap },
+        conditionEval: { expr: `heap[${i}] (${heap[i]}) > heap[${parent}] (${heap[parent]})`, result: needsSwap },
         state: { heap: [...heap], swappingIndices: [i, parent] },
       });
 
-      if (heap[i] > heap[parent]) {
+      if (needsSwap) {
         [heap[i], heap[parent]] = [heap[parent], heap[i]];
         i = parent;
 
         frames.push({
-          stepIndex: step++,
-          totalSteps: 5,
+          stepIndex: frames.length,
+          totalSteps: 1,
           codeLine: 7,
-          explanation: `Step: Swapped! Value ${newVal} moved up to index ${i}.`,
+          explanation: `Swapped! Value ${newVal} climbed up to index ${i}.`,
+          soundCue: { type: 'swap' },
+          callStack: [
+            { name: 'siftUp(i)', params: { newPosition: i }, line: 7, isCurrent: true },
+            { name: 'insertMaxHeap()', params: { val: newVal }, line: 4 },
+          ],
+          variables: { currentIndex: i, currentValue: newVal },
           state: { heap: [...heap], activeIndices: [i] },
         });
       } else {
@@ -153,18 +181,103 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
       }
     }
 
-    // Milestone complete
+    // Insert complete milestone
     frames.push({
-      stepIndex: step,
-      totalSteps: step + 1,
+      stepIndex: frames.length,
+      totalSteps: 1,
       codeLine: 11,
       isMilestone: true,
-      milestoneTitle: 'Heap Property Satisfied',
-      explanation: `Final Step: Max Heap property restored! Root is now ${heap[0]}.`,
+      milestoneTitle: `Inserted ${newVal} Successfully`,
+      soundCue: { type: 'sorted' },
+      explanation: `Insertion complete! Max Heap invariant restored with ${newVal} positioned at index ${i}. Root is now ${heap[0]}.`,
+      callStack: [{ name: 'insertMaxHeap()', params: { root: heap[0] }, line: 11, isCurrent: true }],
+      variables: { root: heap[0], finalIndex: i, heapSize: heap.length },
+      state: { heap: [...heap], activeIndices: [i] },
+    });
+
+    // Step 3: Demonstrate Extract-Max
+    const maxExtracted = heap[0];
+    const lastElement = heap.pop()!;
+    heap[0] = lastElement;
+
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 14,
+      isMilestone: true,
+      milestoneTitle: `Extract-Max (${maxExtracted})`,
+      soundCue: { type: 'step' },
+      explanation: `Extract-Max: Removed root ${maxExtracted}. Replaced root with last element (${lastElement}). Now sifting down from root.`,
+      callStack: [
+        { name: 'extractMax(heap)', params: { extracted: maxExtracted, newRoot: lastElement }, line: 14, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { extractedMax: maxExtracted, temporaryRoot: lastElement, heapSize: heap.length },
       state: { heap: [...heap], activeIndices: [0] },
     });
 
-    // Normalize stepIndex and totalSteps to actual frame count
+    // Sift down loop
+    let curr = 0;
+    while (true) {
+      let largest = curr;
+      const left = 2 * curr + 1;
+      const right = 2 * curr + 2;
+
+      if (left < heap.length && heap[left] > heap[largest]) {
+        largest = left;
+      }
+      if (right < heap.length && heap[right] > heap[largest]) {
+        largest = right;
+      }
+
+      if (largest !== curr) {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 18,
+          explanation: `Sift-Down: Node heap[${curr}] (${heap[curr]}) is smaller than largest child heap[${largest}] (${heap[largest]}). Swapping!`,
+          soundCue: { type: 'compare' },
+          callStack: [
+            { name: 'siftDown(curr)', params: { curr, largestChild: largest }, line: 18, isCurrent: true },
+            { name: 'extractMax()', params: {}, line: 14 },
+          ],
+          variables: { currIndex: curr, largestChildIndex: largest, childVal: heap[largest] },
+          conditionEval: { expr: `heap[${largest}] > heap[${curr}]`, result: true },
+          state: { heap: [...heap], swappingIndices: [curr, largest] },
+        });
+
+        [heap[curr], heap[largest]] = [heap[largest], heap[curr]];
+        curr = largest;
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 19,
+          explanation: `Sift-Down: Swapped! Element moved down to index ${curr}.`,
+          soundCue: { type: 'swap' },
+          callStack: [{ name: 'siftDown(curr)', params: { newCurr: curr }, line: 19, isCurrent: true }],
+          variables: { currentIndex: curr, currentValue: heap[curr] },
+          state: { heap: [...heap], activeIndices: [curr] },
+        });
+      } else {
+        break;
+      }
+    }
+
+    // Final complete milestone
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 22,
+      isMilestone: true,
+      milestoneTitle: 'Heap Operations Complete',
+      soundCue: { type: 'complete' },
+      explanation: `🎉 Max Heap operations complete! Both O(log N) insert and extract-max verified. Final root = ${heap[0]}.`,
+      callStack: [{ name: 'main()', params: { finalRoot: heap[0], size: heap.length }, line: 22, isCurrent: true }],
+      variables: { finalRoot: heap[0], finalHeap: `[${heap.join(', ')}]`, finalSize: heap.length },
+      state: { heap: [...heap], activeIndices: [0] },
+    });
+
     const total = frames.length;
     return frames.map((f, idx) => ({ ...f, stepIndex: idx, totalSteps: total }));
   },

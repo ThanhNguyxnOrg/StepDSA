@@ -45,7 +45,7 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
       data: { array: [5, 12, 23, 34, 45, 56, 67, 78, 89, 99], target: 50 },
     },
   ],
-  defaultInput: { array: [5, 12, 23, 34, 45, 56, 67, 78, 89, 99], target: 45 },
+  defaultInput: { array: [5, 12, 23, 34, 45, 56, 67, 78, 89, 99], target: 78 },
   codeSnippets: {
     python: `def ternary_search(arr, target):
     low, high = 0, len(arr) - 1
@@ -125,13 +125,16 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
     let high = arr.length - 1;
     const frames: ExecutionFrame<ArrayStageState>[] = [];
 
+    const callStack = [{ name: 'ternarySearch', params: { target, low: 0, high }, line: 2, isCurrent: true }];
+
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialized Ternary Search on sorted array of size ${arr.length}. Target: ${target}.`,
-      variables: { low, high, target },
-      callStack: [{ name: 'ternarySearch(arr, target)', params: { target, low, high }, line: 2, isCurrent: true }, { name: 'main()', params: {}, line: 1 }],
+      action: 'INIT',
+      explanation: `Initialized Ternary Search on sorted array of size ${arr.length}. Boundaries set to [low=0, high=${high}]. Target: ${target}.`,
+      variables: { low, high, target, totalElements: arr.length },
+      callStack,
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: { low, high },
@@ -140,6 +143,29 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
     });
 
     while (low <= high) {
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        action: 'CHECK_BOUNDS',
+        callStack,
+        conditionEval: {
+          expr: `${low} <= ${high}`,
+          result: true,
+        },
+        variables: { low, high, target, candidateSpan: high - low + 1 },
+        explanation: `Checking search condition: low (${low}) <= high (${high}). Search interval contains ${high - low + 1} candidates.`,
+        state: {
+          array: arr.map((v, idx) => ({
+            id: idx,
+            value: v,
+            status: idx >= low && idx <= high ? 'active' : 'discarded',
+          })),
+          pointers: { low, high },
+          target,
+        },
+      });
+
       const mid1 = low + Math.floor((high - low) / 3);
       const mid2 = high - Math.floor((high - low) / 3);
 
@@ -147,9 +173,12 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 5,
-        explanation: `Tri-section points: mid1 = ${mid1} (val ${arr[mid1]}), mid2 = ${mid2} (val ${arr[mid2]}). Comparing with ${target}.`,
-        variables: { low, mid1, mid2, high, target },
-        callStack: [{ name: 'ternarySearch(arr, target)', params: { mid1, mid2, target }, line: 5, isCurrent: true }, { name: 'main()', params: {}, line: 1 }],
+        action: 'TRI_SECTION',
+        isMilestone: true,
+        milestoneTitle: `Tri-section: [${mid1}] & [${mid2}]`,
+        explanation: `Dividing search space into 3 equal partitions using probe indices: mid1 = ${low} + floor(${high - low}/3) = ${mid1} (val ${arr[mid1]}), mid2 = ${high} - floor(${high - low}/3) = ${mid2} (val ${arr[mid2]}).`,
+        variables: { low, mid1, mid2, high, 'arr[mid1]': arr[mid1], 'arr[mid2]': arr[mid2], target },
+        callStack,
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -166,14 +195,41 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         },
       });
 
-      if (arr[mid1] === target) {
+      // Comparison with mid1
+      const isMid1 = arr[mid1] === target;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 6,
+        action: 'COMPARE_MID1',
+        callStack,
+        conditionEval: {
+          expr: `arr[${mid1}] (${arr[mid1]}) === ${target}`,
+          result: isMid1,
+        },
+        variables: { mid1, 'arr[mid1]': arr[mid1], target, matchMid1: isMid1 },
+        explanation: `Evaluating 1st probe: arr[${mid1}] (${arr[mid1]}) vs target (${target}) -> ${isMid1 ? 'MATCH' : 'NO MATCH'}.`,
+        state: {
+          array: arr.map((v, idx) => ({
+            id: idx,
+            value: v,
+            status: idx === mid1 ? (isMid1 ? 'sorted' : 'comparing') : idx >= low && idx <= high ? 'active' : 'discarded',
+          })),
+          pointers: { low, mid1, mid2, high },
+          target,
+        },
+      });
+
+      if (isMid1) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 6,
-          explanation: `Target ${target} located at mid1 (index ${mid1})!`,
+          action: 'MATCH_FOUND',
+          explanation: `🎯 Target ${target} located at mid1 (index ${mid1})! Search terminates.`,
           isMilestone: true,
-          milestoneTitle: 'Target Found at mid1',
+          milestoneTitle: `Target Found at [${mid1}]`,
+          callStack,
           variables: { foundIndex: mid1, target },
           state: {
             array: arr.map((v, idx) => ({
@@ -189,14 +245,41 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         return frames.map((f, i) => ({ ...f, stepIndex: i, totalSteps: total }));
       }
 
-      if (arr[mid2] === target) {
+      // Comparison with mid2
+      const isMid2 = arr[mid2] === target;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 7,
+        action: 'COMPARE_MID2',
+        callStack,
+        conditionEval: {
+          expr: `arr[${mid2}] (${arr[mid2]}) === ${target}`,
+          result: isMid2,
+        },
+        variables: { mid2, 'arr[mid2]': arr[mid2], target, matchMid2: isMid2 },
+        explanation: `Evaluating 2nd probe: arr[${mid2}] (${arr[mid2]}) vs target (${target}) -> ${isMid2 ? 'MATCH' : 'NO MATCH'}.`,
+        state: {
+          array: arr.map((v, idx) => ({
+            id: idx,
+            value: v,
+            status: idx === mid2 ? (isMid2 ? 'sorted' : 'comparing') : idx >= low && idx <= high ? 'active' : 'discarded',
+          })),
+          pointers: { low, mid1, mid2, high },
+          target,
+        },
+      });
+
+      if (isMid2) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 7,
-          explanation: `Target ${target} located at mid2 (index ${mid2})!`,
+          action: 'MATCH_FOUND',
+          explanation: `🎯 Target ${target} located at mid2 (index ${mid2})! Search terminates.`,
           isMilestone: true,
-          milestoneTitle: 'Target Found at mid2',
+          milestoneTitle: `Target Found at [${mid2}]`,
+          callStack,
           variables: { foundIndex: mid2, target },
           state: {
             array: arr.map((v, idx) => ({
@@ -218,8 +301,10 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 9,
-          explanation: `Target ${target} < arr[mid1] (${arr[mid1]}): target must reside in 1st segment. New high = ${high}.`,
-          variables: { low, high, target },
+          action: 'DISCARD_PARTITIONS',
+          explanation: `Target ${target} < arr[mid1] (${arr[mid1]}): target must reside in 1st partition [${low}..${high}]. Discarding remaining 2/3!`,
+          callStack,
+          variables: { low, high, target, eliminatedFraction: '2/3' },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -236,8 +321,10 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 11,
-          explanation: `Target ${target} > arr[mid2] (${arr[mid2]}): target must reside in 3rd segment. New low = ${low}.`,
-          variables: { low, high, target },
+          action: 'DISCARD_PARTITIONS',
+          explanation: `Target ${target} > arr[mid2] (${arr[mid2]}): target must reside in 3rd partition [${low}..${high}]. Discarding remaining 2/3!`,
+          callStack,
+          variables: { low, high, target, eliminatedFraction: '2/3' },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -255,8 +342,10 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 13,
-          explanation: `arr[mid1] < ${target} < arr[mid2]: target must reside in middle segment [${low}..${high}].`,
-          variables: { low, high, target },
+          action: 'DISCARD_PARTITIONS',
+          explanation: `arr[mid1] (${arr[mid1]}) < ${target} < arr[mid2] (${arr[mid2]}): target resides in middle partition [${low}..${high}]. Discarding outer thirds!`,
+          callStack,
+          variables: { low, high, target, eliminatedFraction: '2/3' },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -274,11 +363,15 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 15,
-      explanation: `Search range exhausted (low > high). Target ${target} not found. Returning -1.`,
+      action: 'NOT_FOUND',
+      isMilestone: true,
+      milestoneTitle: 'Target Not Found',
+      explanation: `Search range exhausted (low > high). Target ${target} not found in array. Returning -1.`,
+      callStack,
       variables: { result: -1, target },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'discarded' })),
-        pointers: {},
+        pointers: { low, high },
         target,
       },
     });

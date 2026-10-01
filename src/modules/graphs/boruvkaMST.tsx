@@ -272,37 +272,98 @@ void boruvkaMST(int V, vector<Edge>& edges) {
       const candidateEdges = Object.values(cheapest);
       if (candidateEdges.length === 0) break; // Graph disconnected
 
-      frames.push({
-        stepIndex: frames.length,
-        totalSteps: frames.length + 1,
-        codeLine: 12,
-        action: 'PHASE_CHEAPEST_FOUND',
-        state: {
-          vertices,
-          edges,
-          mstEdges: [...mstEdges],
-          cheapestEdges: [...candidateEdges],
-          componentMap: getComponentMap(),
-          componentCount: countComponents(),
-          phase,
-          totalWeight: mstEdges.reduce((acc, e) => acc + e.weight, 0),
-        },
-        callStack: [{ name: 'parallelSelect', params: { phase, candidates: candidateEdges.length } }],
-        variables: { phase, candidatesCount: candidateEdges.length, componentsBefore: countComponents() },
-        explanation: `Phase ${phase}: Parallel scan identified ${candidateEdges.length} cheapest crossing edges for active components.`,
-      });
+      // Step 1: Show each component's selected cheapest crossing edge
+      for (const compId of Object.keys(cheapest)) {
+        const e = cheapest[Number(compId)];
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 12,
+          action: 'PHASE_CHEAPEST_FOUND',
+          soundCue: { type: 'compare' },
+          state: {
+            vertices,
+            edges,
+            mstEdges: [...mstEdges],
+            cheapestEdges: [e],
+            componentMap: getComponentMap(),
+            componentCount: countComponents(),
+            phase,
+            totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0),
+          },
+          callStack: [{ name: 'findCheapestEdge', params: { component: compId, edge: `(${e.u}-${e.v})`, weight: e.weight }, line: 12, isCurrent: true }],
+          variables: { phase, component: compId, cheapestEdge: `(${e.u}, ${e.v})`, weight: e.weight },
+          conditionEval: { expr: `find(${e.u}) != find(${e.v})`, result: true },
+          explanation: `Phase ${phase}: Component ${compId} selected its cheapest crossing edge (${e.u} <-> ${e.v}, weight ${e.weight}).`,
+        });
+      }
 
+      // Step 2: Unify candidate edges one by one
       for (const e of candidateEdges) {
-        if (union(e.u, e.v)) {
+        const uSet = find(e.u);
+        const vSet = find(e.v);
+        const canUnion = uSet !== vSet;
+
+        if (canUnion) {
+          union(e.u, e.v);
           mstEdges.push(e);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 18,
+            action: 'EDGE_ADDED_TO_MST',
+            isMilestone: true,
+            milestoneTitle: `Added (${e.u}-${e.v}, w=${e.weight})`,
+            soundCue: { type: 'swap' },
+            state: {
+              vertices,
+              edges,
+              mstEdges: [...mstEdges],
+              cheapestEdges: [e],
+              componentMap: getComponentMap(),
+              componentCount: countComponents(),
+              phase,
+              totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0),
+            },
+            callStack: [{ name: 'dsuUnion', params: { u: e.u, v: e.v, weight: e.weight }, line: 18, isCurrent: true }],
+            variables: { edge: `(${e.u}, ${e.v})`, weight: e.weight, newComponentCount: countComponents() },
+            conditionEval: { expr: `find(${e.u}) != find(${e.v})`, result: true },
+            explanation: `Added edge (${e.u} <-> ${e.v}, weight ${e.weight}) to MST! Unified components ${uSet} and ${vSet}.`,
+          });
+        } else {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 16,
+            action: 'CYCLE_AVOIDED',
+            soundCue: { type: 'step' },
+            state: {
+              vertices,
+              edges,
+              mstEdges: [...mstEdges],
+              cheapestEdges: [e],
+              componentMap: getComponentMap(),
+              componentCount: countComponents(),
+              phase,
+              totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0),
+            },
+            callStack: [{ name: 'dsuCheckCycle', params: { u: e.u, v: e.v }, line: 16, isCurrent: true }],
+            variables: { edge: `(${e.u}, ${e.v})`, uSet, vSet, cyclePrevented: true },
+            conditionEval: { expr: `find(${e.u}) == find(${e.v})`, result: true },
+            explanation: `Edge (${e.u} <-> ${e.v}) already unified by earlier parallel edge in this phase. Skipping to prevent cycle.`,
+          });
         }
       }
 
       frames.push({
         stepIndex: frames.length,
-        totalSteps: frames.length + 1,
+        totalSteps: 1,
         codeLine: 20,
         action: 'PHASE_CONTRACTED',
+        isMilestone: true,
+        milestoneTitle: `Phase ${phase} Completed`,
+        soundCue: { type: 'complete' },
         state: {
           vertices,
           edges,
@@ -313,9 +374,9 @@ void boruvkaMST(int V, vector<Edge>& edges) {
           phase,
           totalWeight: mstEdges.reduce((acc, e) => acc + e.weight, 0),
         },
-        callStack: [{ name: 'contractComponents', params: { phase, remainingComponents: countComponents() } }],
-        variables: { phase, newComponentCount: countComponents(), mstSize: mstEdges.length },
-        explanation: `Phase ${phase} complete: Contracted components. Remaining components: ${countComponents()}. Total MST weight: ${mstEdges.reduce(
+        callStack: [{ name: 'contractComponents', params: { phase, remainingComponents: countComponents() }, line: 20, isCurrent: true }],
+        variables: { phase, newComponentCount: countComponents(), mstSize: mstEdges.length, totalWeight: mstEdges.reduce((acc, e) => acc + e.weight, 0) },
+        explanation: `Phase ${phase} complete: Components contracted. Remaining components: ${countComponents()}. Total MST weight: ${mstEdges.reduce(
           (acc, e) => acc + e.weight,
           0
         )}.`,

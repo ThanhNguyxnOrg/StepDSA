@@ -101,46 +101,130 @@ export const middleLinkedListModule: AlgorithmModule<number[], MiddleLinkedListS
     let fast = 0;
     const frames: ExecutionFrame<MiddleLinkedListState>[] = [];
 
+    // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialize slow = 0 (val ${raw[0]}), fast = 0 (val ${raw[0]}).`,
+      explanation: `Initialize slow = 0 (val ${raw[0]}), fast = 0 (val ${raw[0]}). Both pointers start at head node.`,
+      isMilestone: true,
+      milestoneTitle: 'Initialized Pointers',
+      soundCue: { type: 'start' },
+      callStack: [
+        { name: 'middleNode(head)', params: { length: n, headVal: raw[0] }, line: 2, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { slow: 0, fast: 0, n, 'slow.val': raw[0], 'fast.val': raw[0] },
+      conditionEval: { expr: 'fast != null && fast.next != null', result: true },
       state: { nodes, slowIndex: 0, fastIndex: 0, isFinished: false },
     });
 
+    let iter = 1;
     while (fast < n && fast + 1 < n) {
+      // Step A: Condition verification
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 3,
-        explanation: `Checking condition: fast (node #${fast}) and fast.next (node #${fast + 1}) exist. Advance pointers.`,
+        explanation: `Iteration ${iter}: Checking while condition. fast (node #${fast}) and fast.next (node #${fast + 1}) exist. Condition is TRUE.`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'middleNode(head)', params: { iter, slow, fast }, line: 3, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { iter, slow, fast, 'fast.next': fast + 1 < n ? fast + 1 : 'null' },
+        conditionEval: { expr: `fast (${fast}) < ${n} && fast.next (${fast + 1}) < ${n}`, result: true },
         state: { nodes, slowIndex: slow, fastIndex: fast, isFinished: false },
       });
 
+      // Step B: Advance slow by 1
+      const oldSlow = slow;
       slow += 1;
-      fast += 2;
-
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Advanced slow by 1 -> node #${slow} (val ${raw[slow]}), advanced fast by 2 -> ${
-          fast >= n ? 'beyond tail (NULL)' : `node #${fast} (val ${raw[fast]})`
+        explanation: `Iteration ${iter}: Advance slow pointer 1 step: node #${oldSlow} -> node #${slow} (val ${raw[slow]}).`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'middleNode(head)', params: { iter, 'slow.next': slow }, line: 4, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { iter, slow, fast, 'slow.val': raw[slow] },
+        state: { nodes, slowIndex: slow, fastIndex: fast, isFinished: false },
+      });
+
+      // Step C: Advance fast hop 1
+      const oldFast = fast;
+      const hop1 = fast + 1;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        explanation: `Iteration ${iter}: Fast pointer leaps 1st hop: node #${oldFast} -> node #${hop1} (val ${raw[hop1]}).`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'middleNode(head)', params: { iter, fastHop: 1 }, line: 5, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { iter, slow, fast: hop1, hop: '1 of 2' },
+        state: { nodes, slowIndex: slow, fastIndex: hop1, isFinished: false },
+      });
+
+      // Step D: Advance fast hop 2
+      fast += 2;
+      const fastOut = fast >= n;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        explanation: `Iteration ${iter}: Fast pointer leaps 2nd hop: -> ${
+          fastOut ? `NULL (beyond index ${n - 1})` : `node #${fast} (val ${raw[fast]})`
         }.`,
+        soundCue: { type: 'step' },
         isMilestone: true,
-        milestoneTitle: `Step to Slow: #${slow}, Fast: #${fast}`,
+        milestoneTitle: `Iteration ${iter} Completed`,
+        callStack: [
+          { name: 'middleNode(head)', params: { iter, fast: fastOut ? 'NULL' : fast }, line: 5, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { iter, slow, fast: fastOut ? 'NULL' : fast, 'slow.val': raw[slow] },
         state: { nodes, slowIndex: slow, fastIndex: Math.min(fast, n), isFinished: false },
       });
+
+      iter++;
     }
 
+    // Step: Loop termination check
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 6,
-      explanation: `Fast reached tail boundary. Middle node identified at index #${slow} with value ${raw[slow]}!`,
+      codeLine: 3,
+      explanation: `Loop terminates: fast pointer (${fast >= n ? 'NULL' : `node #${fast}`}) cannot advance 2 steps. Condition is FALSE.`,
+      soundCue: { type: 'compare' },
+      callStack: [
+        { name: 'middleNode(head)', params: { slow, fast }, line: 3, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { slow, fast: fast >= n ? 'NULL' : fast, terminated: true },
+      conditionEval: { expr: `fast (${fast}) < ${n} && fast.next < ${n}`, result: false },
+      state: { nodes, slowIndex: slow, fastIndex: Math.min(fast, n), isFinished: false },
+    });
+
+    // Step: Final middle node result
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 7,
+      explanation: `🎉 Middle node identified at index #${slow} with value ${raw[slow]}! Tortoise & Hare invariant holds.`,
       isMilestone: true,
       milestoneTitle: `Middle Node Found (${raw[slow]})`,
+      soundCue: { type: 'complete' },
+      callStack: [
+        { name: 'middleNode(head)', params: { resultIndex: slow, resultVal: raw[slow] }, line: 7, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { middleIndex: slow, middleVal: raw[slow], isEvenLength: n % 2 === 0 },
       state: { nodes, slowIndex: slow, fastIndex: Math.min(fast, n), isFinished: true },
     });
 

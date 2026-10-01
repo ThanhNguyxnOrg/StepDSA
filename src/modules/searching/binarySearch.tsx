@@ -28,25 +28,31 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
   },
   presets: [
     {
-      id: 'target-present',
-      label: 'Target Present (Find 42)',
-      description: 'Standard successful search',
-      data: { array: [3, 8, 15, 23, 31, 42, 56, 68, 77, 89, 94], target: 42 },
+      id: 'target-multistep',
+      label: 'Find 89 (3 Iteration Halving)',
+      description: 'Search converges over 3 full bisection cycles',
+      data: { array: [3, 8, 15, 23, 31, 42, 56, 68, 77, 89, 94], target: 89 },
     },
     {
       id: 'target-left',
-      label: 'Target at Left (Find 8)',
+      label: 'Find 8 (Converges Left)',
       description: 'Search converges to left subarray',
       data: { array: [3, 8, 15, 23, 31, 42, 56, 68, 77, 89, 94], target: 8 },
     },
     {
+      id: 'target-mid',
+      label: 'Find 42 (Middle Hit)',
+      description: 'Target located on first mid probe',
+      data: { array: [3, 8, 15, 23, 31, 42, 56, 68, 77, 89, 94], target: 42 },
+    },
+    {
       id: 'target-absent',
-      label: 'Target Absent (Find 50)',
-      description: 'Search space reduces to zero',
+      label: 'Find 50 (Target Absent)',
+      description: 'Search space reduces to zero without match',
       data: { array: [3, 8, 15, 23, 31, 42, 56, 68, 77, 89, 94], target: 50 },
     },
   ],
-  defaultInput: { array: [3, 8, 15, 23, 31, 42, 56, 68, 77, 89, 94], target: 42 },
+  defaultInput: { array: [3, 8, 15, 23, 31, 42, 56, 68, 77, 89, 94], target: 89 },
   codeSnippets: {
     python: `def binary_search(arr, target):
     low = 0
@@ -119,11 +125,18 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
     let high = arr.length - 1;
     let foundIndex = -1;
 
+    const baseCallStack = [
+      { name: 'binarySearch', params: { n: arr.length, target }, line: 2, isCurrent: true },
+    ];
+
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
-      explanation: `Searching for target ${target} in sorted array of size ${arr.length}.`,
+      codeLine: 2,
+      explanation: `Initialized Binary Search for target ${target} across sorted array of size ${arr.length}. Boundaries set to [low=0, high=${high}].`,
+      action: 'INIT',
+      callStack: baseCallStack,
+      variables: { low, high, target, 'arr.length': arr.length, 'searchRange': `[${arr[low]} .. ${arr[high]}]` },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: { low, high },
@@ -131,19 +144,70 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
     });
 
     while (low <= high) {
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        explanation: `Checking loop invariant: low (${low}) <= high (${high}). Search window contains ${high - low + 1} candidate elements.`,
+        action: 'CHECK_BOUNDS',
+        callStack: baseCallStack,
+        conditionEval: {
+          expr: `${low} <= ${high}`,
+          result: true,
+        },
+        variables: { low, high, windowSize: high - low + 1, target },
+        invariantStatus: {
+          label: `Target ${target} must be in [${arr[low]}..${arr[high]}] if present`,
+          isValid: true,
+        },
+        state: {
+          array: arr.map((v, idx) => ({
+            id: idx,
+            value: v,
+            status: idx >= low && idx <= high ? 'active' : 'discarded',
+          })),
+          pointers: { low, high },
+        },
+      });
+
       const mid = low + Math.floor((high - low) / 2);
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 5,
-        explanation: `Calculated mid = ${low} + (${high} - ${low}) / 2 = index [${mid}]. Comparing arr[mid] (${arr[mid]}) with target (${target}).`,
-        invariantStatus: {
-          label: `Target ${target} is within arr[${low}..${high}]`,
-          isValid: true,
-        },
+        explanation: `Calculated probe index mid = ${low} + Math.floor((${high} - ${low}) / 2) = ${mid}. Inspecting candidate arr[${mid}] = ${arr[mid]}.`,
+        action: 'CALCULATE_MID',
         isMilestone: true,
         milestoneTitle: `Inspect Mid [${mid}] = ${arr[mid]}`,
+        callStack: baseCallStack,
+        variables: { low, high, mid, 'arr[mid]': arr[mid], target },
+        state: {
+          array: arr.map((v, idx) => ({
+            id: idx,
+            value: v,
+            status: idx === mid ? 'comparing' : idx >= low && idx <= high ? 'active' : 'discarded',
+          })),
+          pointers: { low, mid, high },
+        },
+      });
+
+      // Comparison check
+      const cmpResult = arr[mid] === target ? 'EQUAL' : arr[mid] < target ? 'LESS_THAN' : 'GREATER_THAN';
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 6,
+        explanation: `Evaluating comparison: arr[${mid}] (${arr[mid]}) vs target (${target}) -> ${
+          cmpResult === 'EQUAL' ? 'MATCH' : cmpResult === 'LESS_THAN' ? 'LESS (target is larger)' : 'GREATER (target is smaller)'
+        }.`,
+        action: 'COMPARE',
+        callStack: baseCallStack,
+        conditionEval: {
+          expr: `arr[${mid}] (${arr[mid]}) === ${target}`,
+          result: arr[mid] === target,
+        },
+        variables: { low, high, mid, 'arr[mid]': arr[mid], target, comparison: cmpResult },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -160,27 +224,41 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 7,
-          explanation: `🎯 Found target ${target} at index [${mid}]! Search terminates successfully.`,
+          explanation: `🎯 Comparison match! arr[${mid}] (${arr[mid]}) === target (${target}). Search succeeded at index ${mid}!`,
+          action: 'MATCH_FOUND',
           isMilestone: true,
           milestoneTitle: `Found Target at [${mid}]`,
+          callStack: baseCallStack,
+          conditionEval: {
+            expr: `arr[${mid}] (${arr[mid]}) === ${target}`,
+            result: true,
+          },
+          variables: { low, high, mid, 'arr[mid]': arr[mid], target, foundAt: mid },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
               value: v,
-              status: idx === mid ? 'sorted' : 'default',
+              status: idx === mid ? 'sorted' : idx >= low && idx <= high ? 'default' : 'discarded',
             })),
             pointers: { target: mid },
           },
         });
         break;
       } else if (arr[mid] < target) {
-        const discardedRange: [number, number] = [low, mid];
+        const prevLow = low;
         low = mid + 1;
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 9,
-          explanation: `Since arr[mid] (${arr[mid]}) < ${target}, target must be in right half. Discarding left range [${discardedRange[0]}..${discardedRange[1]}]. Setting low = ${low}.`,
+          explanation: `Since arr[mid] (${arr[mid]}) < target (${target}), target must lie to the right. Discarding left segment [${prevLow}..${mid}]. Updating low = ${low}.`,
+          action: 'DISCARD_LEFT',
+          callStack: baseCallStack,
+          conditionEval: {
+            expr: `arr[${mid}] (${arr[mid]}) < ${target}`,
+            result: true,
+          },
+          variables: { low, high, mid, 'arr[mid]': arr[mid], target, eliminatedCount: mid - prevLow + 1 },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -188,17 +266,24 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
               status: idx >= low && idx <= high ? 'active' : 'discarded',
             })),
             pointers: { low, high },
-            discardedRange,
+            discardedRange: [prevLow, mid],
           },
         });
       } else {
-        const discardedRange: [number, number] = [mid, high];
+        const prevHigh = high;
         high = mid - 1;
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 11,
-          explanation: `Since arr[mid] (${arr[mid]}) > ${target}, target must be in left half. Discarding right range [${discardedRange[0]}..${discardedRange[1]}]. Setting high = ${high}.`,
+          explanation: `Since arr[mid] (${arr[mid]}) > target (${target}), target must lie to the left. Discarding right segment [${mid}..${prevHigh}]. Updating high = ${high}.`,
+          action: 'DISCARD_RIGHT',
+          callStack: baseCallStack,
+          conditionEval: {
+            expr: `arr[${mid}] (${arr[mid]}) > ${target}`,
+            result: true,
+          },
+          variables: { low, high, mid, 'arr[mid]': arr[mid], target, eliminatedCount: prevHigh - mid + 1 },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -206,7 +291,7 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
               status: idx >= low && idx <= high ? 'active' : 'discarded',
             })),
             pointers: { low, high },
-            discardedRange,
+            discardedRange: [mid, prevHigh],
           },
         });
       }
@@ -217,9 +302,16 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 13,
-        explanation: `Search space exhausted (low > high). Target ${target} is not present in the array. Returning -1.`,
+        explanation: `Search space exhausted: low (${low}) > high (${high}). Target ${target} does not exist in the array. Returning -1.`,
+        action: 'NOT_FOUND',
         isMilestone: true,
         milestoneTitle: 'Target Not Found',
+        callStack: baseCallStack,
+        conditionEval: {
+          expr: `${low} <= ${high}`,
+          result: false,
+        },
+        variables: { low, high, target, result: -1 },
         state: {
           array: arr.map((v, idx) => ({ id: idx, value: v, status: 'discarded' })),
           pointers: { low, high },

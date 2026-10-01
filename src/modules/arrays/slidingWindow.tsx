@@ -103,24 +103,58 @@ export const slidingWindowModule: AlgorithmModule<SlidingWindowInput, SlidingWin
     const k = input.k;
     const n = arr.length;
 
-    let windowSum = 0;
-    for (let i = 0; i < k; i++) windowSum += arr[i];
-    let maxSum = windowSum;
+    // Step 0: Frame for initial window accumulation
+    let initialSum = 0;
+    for (let i = 0; i < k; i++) {
+      initialSum += arr[i];
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 2,
+        explanation: `Building initial window: Adding element arr[${i}] = ${arr[i]}. Cumulative sum = ${initialSum}.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'buildInitialWindow()', params: { i, 'arr[i]': arr[i], runningSum: initialSum }, line: 2, isCurrent: true },
+          { name: 'maxSubArraySum(arr, k)', params: { k, n }, line: 1 },
+        ],
+        variables: { windowEnd: i, currentElement: arr[i], initialSum, k },
+        state: {
+          array: [...arr],
+          k,
+          windowStart: 0,
+          windowEnd: i,
+          currentSum: initialSum,
+          maxSum: initialSum,
+          bestStart: 0,
+          phase: 'init',
+        },
+      });
+    }
+
+    let windowSum = initialSum;
+    let maxSum = initialSum;
     let bestStart = 0;
 
-    // Frame 0: Initial window
     frames.push({
-      stepIndex: 0,
+      stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 4,
-      explanation: `Build initial window of size K = ${k}: sum of indices [0..${k - 1}] is ${windowSum}.`,
+      explanation: `Initial window [0..${k - 1}] established! Base window sum = ${windowSum}. Initialized maxSum = ${maxSum}.`,
+      isMilestone: true,
+      milestoneTitle: `Initial Window Sum = ${windowSum}`,
+      soundCue: { type: 'sorted' },
+      callStack: [
+        { name: 'maxSubArraySum(arr, k)', params: { windowSum, maxSum }, line: 4, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { windowRange: `[0..${k - 1}]`, windowSum, maxSum, bestStart: 0 },
       state: {
         array: [...arr],
         k,
         windowStart: 0,
         windowEnd: k - 1,
         currentSum: windowSum,
-        maxSum: windowSum,
+        maxSum,
         bestStart: 0,
         phase: 'init',
       },
@@ -129,23 +163,68 @@ export const slidingWindowModule: AlgorithmModule<SlidingWindowInput, SlidingWin
     for (let i = k; i < n; i++) {
       const incoming = arr[i];
       const outgoing = arr[i - k];
-      windowSum += incoming - outgoing;
-      const start = i - k + 1;
+      const newStart = i - k + 1;
 
-      if (windowSum > maxSum) {
+      // Sub-step 1: Expel outgoing element
+      const sumAfterDrop = windowSum - outgoing;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        explanation: `[Slide to index ${i}] Dropping outgoing left element arr[${i - k}] (${outgoing}). Intermediate sum: ${windowSum} - ${outgoing} = ${sumAfterDrop}.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'slideWindow(i)', params: { outgoingIdx: i - k, outgoingVal: outgoing }, line: 5, isCurrent: true },
+          { name: 'maxSubArraySum(arr, k)', params: { i }, line: 5 },
+        ],
+        variables: { outgoingIndex: i - k, outgoingValue: outgoing, intermediateSum: sumAfterDrop, maxSum },
+        state: {
+          array: [...arr],
+          k,
+          windowStart: newStart,
+          windowEnd: i - 1,
+          currentSum: sumAfterDrop,
+          maxSum,
+          bestStart,
+          phase: 'slide',
+        },
+      });
+
+      // Sub-step 2: Admit incoming element
+      windowSum = sumAfterDrop + incoming;
+      const isNewMax = windowSum > maxSum;
+      if (isNewMax) {
         maxSum = windowSum;
-        bestStart = start;
+        bestStart = newStart;
       }
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 6,
-        explanation: `Slide window to [${start}..${i}]: subtract outgoing arr[${i - k}]=${outgoing}, add incoming arr[${i}]=${incoming}. currentSum = ${windowSum}, maxSum = ${maxSum}.`,
+        explanation: `[Slide to index ${i}] Adding incoming right element arr[${i}] (${incoming}). New window [${newStart}..${i}] sum = ${windowSum}. ${
+          isNewMax ? `🎉 NEW MAX FOUND: ${maxSum}!` : `Maintained previous max: ${maxSum}.`
+        }`,
+        isMilestone: isNewMax,
+        milestoneTitle: isNewMax ? `New Max Sum = ${maxSum}` : undefined,
+        soundCue: isNewMax ? { type: 'swap' } : { type: 'compare' },
+        callStack: [
+          { name: 'slideWindow(i)', params: { incomingIdx: i, incomingVal: incoming, windowSum }, line: 6, isCurrent: true },
+          { name: 'maxSubArraySum(arr, k)', params: { i }, line: 5 },
+        ],
+        variables: {
+          windowRange: `[${newStart}..${i}]`,
+          incomingValue: incoming,
+          currentSum: windowSum,
+          maxSum,
+          bestStart,
+          isNewMax,
+        },
+        conditionEval: { expr: `windowSum (${windowSum}) > maxSum`, result: isNewMax },
         state: {
           array: [...arr],
           k,
-          windowStart: start,
+          windowStart: newStart,
           windowEnd: i,
           currentSum: windowSum,
           maxSum,
@@ -155,11 +234,24 @@ export const slidingWindowModule: AlgorithmModule<SlidingWindowInput, SlidingWin
       });
     }
 
+    // Terminal Frame
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 8,
-      explanation: `Traversal complete. Maximum sum subarray of size ${k} is ${maxSum} starting at index ${bestStart}.`,
+      isMilestone: true,
+      milestoneTitle: `Max Subarray Sum = ${maxSum}`,
+      soundCue: { type: 'complete' },
+      explanation: `🎉 Sliding Window traversal complete! Maximum sum subarray of length ${k} is ${maxSum} spanning indices [${bestStart}..${bestStart + k - 1}] (${arr
+        .slice(bestStart, bestStart + k)
+        .join(', ')}). Computed in O(N) time without redundant re-summing.`,
+      callStack: [{ name: 'maxSubArraySum(arr, k)', params: { optimalSum: maxSum, bestStart }, line: 8, isCurrent: true }],
+      variables: {
+        maxSum,
+        bestWindowRange: `[${bestStart}..${bestStart + k - 1}]`,
+        elements: arr.slice(bestStart, bestStart + k),
+        timeComplexity: 'O(N)',
+      },
       state: {
         array: [...arr],
         k,

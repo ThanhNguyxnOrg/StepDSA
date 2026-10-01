@@ -142,7 +142,16 @@ def jump_search(arr, target):
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 4,
-      explanation: `Initialized Jump Search on array of size ${n}. Optimal jump block size √${n} ≈ ${blockSize}. Target is ${target}.`,
+      explanation: `Initialized Jump Search on array of size ${n}. Optimal jump block size m = ⌊√${n}⌋ = ${blockSize}. Target is ${target}.`,
+      isMilestone: true,
+      milestoneTitle: 'Initialized Jump Search',
+      soundCue: { type: 'start' },
+      callStack: [
+        { name: 'jumpSearch(arr, target)', params: { n, blockSize, target }, line: 4, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { n, blockSize, target, prev: 0, step },
+      conditionEval: { expr: `target (${target}) >= arr[0] (${arr[0]})`, result: target >= arr[0] },
       state: {
         array: arr.map((v, i) => ({ id: i, value: v, status: 'default' })),
         pointers: { prev: 0, step: Math.min(step, n) - 1 },
@@ -150,14 +159,45 @@ def jump_search(arr, target):
       },
     });
 
+    // Initial check of optimal step size and first block boundary
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 5,
+      explanation: `Calculated jump step parameter: block size m = √${n} ≈ ${blockSize}. Evaluating first block [0..${Math.min(step, n) - 1}].`,
+      soundCue: { type: 'step' },
+      callStack: [
+        { name: 'jumpSearch(arr, target)', params: { blockSize, firstBoundary: Math.min(step, n) - 1 }, line: 5, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { blockSize, firstBlockEnd: Math.min(step, n) - 1, target },
+      conditionEval: { expr: `blockSize > 0`, result: true },
+      state: {
+        array: arr.map((v, i) => ({ id: i, value: v, status: i < blockSize ? 'active' : 'default' })),
+        pointers: { prev: 0, step: Math.min(step, n) - 1 },
+        target,
+      },
+    });
+
     // Block hopping phase
+    let hopCount = 1;
     while (arr[Math.min(step, n) - 1] < target) {
       const checkIdx = Math.min(step, n) - 1;
+      const boundaryVal = arr[checkIdx];
+
+      // Sub-step A: Check block boundary
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 6,
-        explanation: `Inspecting block boundary arr[${checkIdx}] = ${arr[checkIdx]}. Since ${arr[checkIdx]} < ${target}, jump forward by ${blockSize} indices.`,
+        explanation: `[Hop ${hopCount}] Inspecting boundary arr[${checkIdx}] = ${boundaryVal}. Checking ${boundaryVal} < ${target}.`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'jumpSearch(arr, target)', params: { hop: hopCount, checkIdx, boundaryVal }, line: 6, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { hop: hopCount, checkIdx, 'arr[checkIdx]': boundaryVal, target, blockSize },
+        conditionEval: { expr: `arr[${checkIdx}] (${boundaryVal}) < target (${target})`, result: true },
         state: {
           array: arr.map((v, i) => ({
             id: i,
@@ -169,15 +209,45 @@ def jump_search(arr, target):
         },
       });
 
+      // Sub-step B: Jump forward
+      const oldPrev = prev;
       prev = step;
       step += blockSize;
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 7,
+        explanation: `[Hop ${hopCount}] Boundary ${boundaryVal} < target (${target}). Skipping block [${oldPrev}..${checkIdx}]. Advance prev -> ${prev}, next step -> ${Math.min(step, n) - 1}.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'jumpSearch(arr, target)', params: { prev, nextStep: step }, line: 7, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { oldPrev, newPrev: prev, nextBoundary: Math.min(step, n) - 1 },
+        state: {
+          array: arr.map((v, i) => ({
+            id: i,
+            value: v,
+            status: i < prev ? 'discarded' : 'default',
+          })),
+          pointers: { prev, step: Math.min(step, n) - 1 },
+          target,
+        },
+      });
+
+      hopCount++;
 
       if (prev >= n) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 9,
-          explanation: `Jumped beyond array bounds (prev = ${prev} >= ${n}). Target ${target} is not in array.`,
+          explanation: `Jumped beyond array bounds (prev = ${prev} >= ${n}). Target ${target} is not in array. Returning -1.`,
+          soundCue: { type: 'complete' },
+          callStack: [{ name: 'jumpSearch(arr, target)', params: { prev, n }, line: 9, isCurrent: true }],
+          variables: { prev, n, notFound: true },
+          conditionEval: { expr: `prev (${prev}) >= n (${n})`, result: true },
           state: {
             array: arr.map((v, i) => ({ id: i, value: v, status: 'discarded' })),
             pointers: {},
@@ -194,9 +264,16 @@ def jump_search(arr, target):
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 10,
-      explanation: `Found target block! arr[${boundaryIdx}] = ${arr[boundaryIdx]} >= ${target}. Commencing linear scan from index ${prev} to ${boundaryIdx}.`,
+      explanation: `Target block bounded! arr[${boundaryIdx}] = ${arr[boundaryIdx]} >= ${target}. Target must lie in [${prev}..${boundaryIdx}]. Starting linear search.`,
       isMilestone: true,
       milestoneTitle: 'Target Block Located',
+      soundCue: { type: 'compare' },
+      callStack: [
+        { name: 'linearScan(prev, boundary)', params: { prev, boundaryIdx }, line: 10, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { blockStart: prev, blockEnd: boundaryIdx, target },
+      conditionEval: { expr: `arr[${boundaryIdx}] (${arr[boundaryIdx]}) >= target (${target})`, result: true },
       state: {
         array: arr.map((v, i) => ({
           id: i,
@@ -214,7 +291,13 @@ def jump_search(arr, target):
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 11,
-        explanation: `Linear scan: arr[${prev}] = ${arr[prev]} < ${target}. Incrementing prev to ${prev + 1}.`,
+        explanation: `Linear scan: arr[${prev}] = ${arr[prev]} < target (${target}). Discarding index ${prev}, incrementing prev -> ${prev + 1}.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'linearScan()', params: { prev, 'arr[prev]': arr[prev] }, line: 11, isCurrent: true },
+        ],
+        variables: { prev, 'arr[prev]': arr[prev], target },
+        conditionEval: { expr: `arr[${prev}] < target (${target})`, result: true },
         state: {
           array: arr.map((v, i) => ({
             id: i,
@@ -231,7 +314,11 @@ def jump_search(arr, target):
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 13,
-          explanation: `Reached end of block without finding ${target}. Target is absent. Returning -1.`,
+          explanation: `Reached end of block boundary without finding ${target}. Target is absent. Returning -1.`,
+          soundCue: { type: 'complete' },
+          callStack: [{ name: 'linearScan()', params: { prev, terminated: true }, line: 13, isCurrent: true }],
+          variables: { prev, notFound: true },
+          conditionEval: { expr: `prev == min(step, n)`, result: true },
           state: {
             array: arr.map((v, i) => ({ id: i, value: v, status: 'discarded' })),
             pointers: { prev },
@@ -243,14 +330,41 @@ def jump_search(arr, target):
       }
     }
 
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 13,
+      explanation: `Evaluating candidate at end of linear scan: arr[${prev}] = ${arr[prev]}. Comparing with target ${target}.`,
+      soundCue: { type: 'compare' },
+      callStack: [{ name: 'jumpSearch(arr, target)', params: { prev, val: arr[prev], target }, line: 13, isCurrent: true }],
+      variables: { prev, 'arr[prev]': arr[prev], target },
+      conditionEval: { expr: `arr[${prev}] === ${target}`, result: arr[prev] === target },
+      state: {
+        array: arr.map((v, i) => ({
+          id: i,
+          value: v,
+          status: i === prev ? 'comparing' : 'default',
+        })),
+        pointers: { prev },
+        target,
+      },
+    });
+
     if (arr[prev] === target) {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 14,
-        explanation: `Target ${target} found at index ${prev}! Search completed successfully.`,
+        explanation: `🎉 MATCH FOUND! arr[${prev}] == ${target}. Target found in O(√N) time!`,
         isMilestone: true,
-        milestoneTitle: 'Target Found',
+        milestoneTitle: `Target Found at [${prev}]`,
+        soundCue: { type: 'sorted' },
+        callStack: [
+          { name: 'jumpSearch(arr, target)', params: { foundAt: prev }, line: 14, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { resultIndex: prev, target, totalHops: hopCount },
+        conditionEval: { expr: `arr[${prev}] == target (${target})`, result: true },
         state: {
           array: arr.map((v, i) => ({
             id: i,
@@ -267,6 +381,10 @@ def jump_search(arr, target):
         totalSteps: 1,
         codeLine: 16,
         explanation: `arr[${prev}] = ${arr[prev]} > ${target}. Target is not in the array. Returning -1.`,
+        soundCue: { type: 'complete' },
+        callStack: [{ name: 'jumpSearch(arr, target)', params: { returnVal: -1 }, line: 16, isCurrent: true }],
+        variables: { result: -1, prev, 'arr[prev]': arr[prev] },
+        conditionEval: { expr: `arr[${prev}] == target`, result: false },
         state: {
           array: arr.map((v, i) => ({ id: i, value: v, status: 'discarded' })),
           pointers: { prev },

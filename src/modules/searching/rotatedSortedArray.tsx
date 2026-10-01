@@ -149,7 +149,16 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Search target ${target} in rotated sorted array. Initialize low = 0, high = ${high}.`,
+      explanation: `Search target ${target} in rotated sorted array of size ${nums.length}. Low = ${low}, High = ${high}. Modified Binary Search handles pivot break.`,
+      isMilestone: true,
+      milestoneTitle: 'Initialized Rotated Search',
+      soundCue: { type: 'start' },
+      callStack: [
+        { name: 'search(nums, target)', params: { target, low, high, n: nums.length }, line: 2, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { low, high, target, 'nums[low]': nums[low], 'nums[high]': nums[high] },
+      conditionEval: { expr: 'low <= high', result: low <= high },
       state: {
         array: [...nums],
         target,
@@ -161,14 +170,48 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
       },
     });
 
+    let iter = 1;
     while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
+      // Frame: Loop boundary condition check
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 3,
+        explanation: `[Iter ${iter}] Loop condition check: low (${low}) <= high (${high}). Search interval is [${low}..${high}] (${high - low + 1} elements).`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'search(nums, target)', params: { iter, low, high }, line: 3, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { iter, low, high, target, windowSize: high - low + 1 },
+        conditionEval: { expr: `low <= high`, result: true },
+        state: {
+          array: [...nums],
+          target,
+          low,
+          mid: null,
+          high,
+          foundIndex: null,
+          phase: 'check',
+        },
+      });
 
+      const mid = Math.floor((low + high) / 2);
+      const isMatch = nums[mid] === target;
+
+      // Frame: Midpoint inspection
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Compute mid = ${mid} (value ${nums[mid]}). Test if nums[mid] == target.`,
+        explanation: `[Iter ${iter}] Compute mid = ⌊(${low} + ${high}) / 2⌋ = ${mid} (value ${nums[mid]}). Comparing nums[mid] == target (${target}).`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'search(nums, target)', params: { iter, low, mid, high, midVal: nums[mid] }, line: 4, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { iter, low, mid, high, 'nums[mid]': nums[mid], target },
+        conditionEval: { expr: `nums[${mid}] (${nums[mid]}) == target (${target})`, result: isMatch },
         state: {
           array: [...nums],
           target,
@@ -180,12 +223,21 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
         },
       });
 
-      if (nums[mid] === target) {
+      if (isMatch) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 5,
-          explanation: `Target ${target} found at index ${mid}!`,
+          explanation: `🎉 MATCH FOUND! nums[${mid}] == ${target}. Target located at index ${mid} in O(log N) time!`,
+          isMilestone: true,
+          milestoneTitle: `Target Found at [${mid}]`,
+          soundCue: { type: 'sorted' },
+          callStack: [
+            { name: 'search(nums, target)', params: { foundIndex: mid }, line: 5, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { resultIndex: mid, target, iterations: iter },
+          conditionEval: { expr: `nums[${mid}] == target`, result: true },
           state: {
             array: [...nums],
             target,
@@ -212,7 +264,16 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 6,
-          explanation: `Left half [${low}..${mid}] is sorted (${nums[low]} <= ${nums[mid]}). Target ${target} is ${inLeft ? 'INSIDE' : 'OUTSIDE'} [${nums[low]}..${nums[mid]}).`,
+          explanation: `Left half [${low}..${mid}] is strictly sorted (${nums[low]} <= ${nums[mid]}). Target ${target} is ${
+            inLeft ? 'WITHIN left range' : 'OUTSIDE left range'
+          } [${nums[low]}..${nums[mid]}).`,
+          soundCue: { type: 'step' },
+          callStack: [
+            { name: 'evaluateHalves()', params: { leftSorted: true, inLeft }, line: 6, isCurrent: true },
+            { name: 'search()', params: { low, high }, line: 6 },
+          ],
+          variables: { sortedHalf: 'LEFT', range: `[${nums[low]}..${nums[mid]})`, target, inLeft },
+          conditionEval: { expr: `nums[${low}] <= target && target < nums[${mid}]`, result: inLeft },
           state: {
             array: [...nums],
             target,
@@ -226,8 +287,28 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
 
         if (inLeft) {
           high = mid - 1;
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 7,
+            explanation: `Discarding right half [${mid}..${high + 1}]. Narrowing search window to [${low}..${high}].`,
+            soundCue: { type: 'step' },
+            callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 7, isCurrent: true }],
+            variables: { low, high, discarded: `[${mid}..${high + 1}]` },
+            state: { array: [...nums], target, low, mid: null, high, foundIndex: null, phase: 'narrow_left' },
+          });
         } else {
           low = mid + 1;
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 8,
+            explanation: `Discarding left half [${low - 1}..${mid}]. Narrowing search window to [${low}..${high}].`,
+            soundCue: { type: 'step' },
+            callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 8, isCurrent: true }],
+            variables: { low, high, discarded: `[${low - 1}..${mid}]` },
+            state: { array: [...nums], target, low, mid: null, high, foundIndex: null, phase: 'narrow_right' },
+          });
         }
       } else {
         // Right half sorted
@@ -236,7 +317,16 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 11,
-          explanation: `Right half [${mid}..${high}] is sorted (${nums[mid]} <= ${nums[high]}). Target ${target} is ${inRight ? 'INSIDE' : 'OUTSIDE'} (${nums[mid]}..${nums[high]}].`,
+          explanation: `Right half [${mid}..${high}] is sorted (${nums[mid]} <= ${nums[high]}). Target ${target} is ${
+            inRight ? 'WITHIN right range' : 'OUTSIDE right range'
+          } (${nums[mid]}..${nums[high]}].`,
+          soundCue: { type: 'step' },
+          callStack: [
+            { name: 'evaluateHalves()', params: { rightSorted: true, inRight }, line: 11, isCurrent: true },
+            { name: 'search()', params: { low, high }, line: 11 },
+          ],
+          variables: { sortedHalf: 'RIGHT', range: `(${nums[mid]}..${nums[high]}]`, target, inRight },
+          conditionEval: { expr: `nums[${mid}] < target && target <= nums[${high}]`, result: inRight },
           state: {
             array: [...nums],
             target,
@@ -250,24 +340,50 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
 
         if (inRight) {
           low = mid + 1;
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 12,
+            explanation: `Discarding left half [${low - 1}..${mid}]. Narrowing search window to [${low}..${high}].`,
+            soundCue: { type: 'step' },
+            callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 12, isCurrent: true }],
+            variables: { low, high, discarded: `[${low - 1}..${mid}]` },
+            state: { array: [...nums], target, low, mid: null, high, foundIndex: null, phase: 'narrow_right' },
+          });
         } else {
           high = mid - 1;
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 13,
+            explanation: `Discarding right half [${mid}..${high + 1}]. Narrowing search window to [${low}..${high}].`,
+            soundCue: { type: 'step' },
+            callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 13, isCurrent: true }],
+            variables: { low, high, discarded: `[${mid}..${high + 1}]` },
+            state: { array: [...nums], target, low, mid: null, high, foundIndex: null, phase: 'narrow_left' },
+          });
         }
       }
+
+      iter++;
     }
 
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 18,
-      explanation: `Target ${target} not found in the array (low > high). Return -1.`,
+      codeLine: 16,
+      explanation: `Search exhausted: low (${low}) > high (${high}). Target ${target} does not exist in array. Returning -1.`,
+      soundCue: { type: 'complete' },
+      callStack: [{ name: 'search()', params: { returnVal: -1 }, line: 16, isCurrent: true }],
+      variables: { returnVal: -1, notFound: true, totalIterations: iter },
+      conditionEval: { expr: 'low <= high', result: false },
       state: {
         array: [...nums],
         target,
         low,
         mid: null,
         high,
-        foundIndex: -1,
+        foundIndex: null,
         phase: 'not_found',
       },
     });
@@ -277,7 +393,6 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
       f.stepIndex = idx;
       f.totalSteps = total;
     });
-
     return frames;
   },
   renderStage: (frame: ExecutionFrame<RotatedSearchState>) => {

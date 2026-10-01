@@ -217,8 +217,12 @@ export const articulationPointsModule: AlgorithmModule<
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialize Articulation Points detection for ${nodes.length} vertices and ${edges.length} edges.`,
+      isMilestone: true,
+      milestoneTitle: `Init Tarjan's Cut Vertices Search`,
+      explanation: `Initialize Tarjan's Articulation Points algorithm for ${nodes.length} vertices and ${edges.length} edges. Discovers discovery time (disc) and low-link (low) values via DFS tree traversal.`,
       variables: { totalNodes: nodes.length, totalEdges: edges.length },
+      conditionEval: { expr: 'nodes.length > 0', result: true },
+      soundCue: { type: 'step' },
       callStack: [{ name: 'findArticulationPoints()', params: { n: nodes.length }, line: 2, isCurrent: true }],
       state: {
         nodes,
@@ -241,8 +245,10 @@ export const articulationPointsModule: AlgorithmModule<
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Visit "${u}" (parent: ${parent ?? 'none'}). Set disc[${u}]=${disc[u]}, low[${u}]=${low[u]}.`,
-        variables: { node: u, disc: disc[u], low: low[u], parent: parent ?? 'null' },
+        explanation: `Visit node "${u}" in DFS (parent: ${parent ?? 'none'}). Set disc[${u}]=${disc[u]}, low[${u}]=${low[u]}.`,
+        variables: { node: u, disc: disc[u], low: low[u], parent: parent ?? 'null', timer },
+        conditionEval: { expr: `disc['${u}'] === ${disc[u]}`, result: true },
+        soundCue: { type: 'select' },
         callStack: [{ name: `dfs(u="${u}")`, params: { u, parent: parent ?? 'null' }, line: 4, isCurrent: true }],
         state: {
           nodes,
@@ -259,12 +265,55 @@ export const articulationPointsModule: AlgorithmModule<
         if (v === parent) continue;
 
         if (disc[v] !== undefined) {
+          // Back-edge detected!
+          const oldLow = low[u];
           low[u] = Math.min(low[u], disc[v]);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 6,
+            explanation: `Back-edge detected: (${u} -> ${v}) leads to previously visited ancestor with disc[${v}]=${disc[v]}. Update low[${u}] = min(${oldLow}, ${disc[v]}) = ${low[u]}.`,
+            variables: { node: u, ancestor: v, ancestorDisc: disc[v], previousLow: oldLow, newLow: low[u] },
+            conditionEval: { expr: `disc['${v}'] !== undefined`, result: true },
+            soundCue: { type: 'compare' },
+            callStack: [{ name: 'handleBackEdge', params: { u, v, discV: disc[v] }, line: 6, isCurrent: true }],
+            state: {
+              nodes,
+              edges,
+              activeNode: u,
+              activeNeighbor: v,
+              disc: { ...disc },
+              low: { ...low },
+              cutVertices: Array.from(cutVertices),
+            },
+          });
         } else {
           children++;
           dfs(v, u);
 
+          const oldLow = low[u];
           low[u] = Math.min(low[u], low[v]);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 8,
+            explanation: `Returned from DFS subtree of "${v}" to "${u}". Update low[${u}] = min(${oldLow}, low[${v}] (${low[v]})) = ${low[u]}.`,
+            variables: { node: u, child: v, lowChild: low[v], updatedLow: low[u] },
+            conditionEval: { expr: `low[${u}] = min(${oldLow}, ${low[v]})`, result: low[u] },
+            soundCue: { type: 'step' },
+            callStack: [{ name: 'returnFromChild', params: { u, v }, line: 8, isCurrent: true }],
+            state: {
+              nodes,
+              edges,
+              activeNode: u,
+              activeNeighbor: v,
+              disc: { ...disc },
+              low: { ...low },
+              cutVertices: Array.from(cutVertices),
+            },
+          });
 
           if (parent !== null && low[v] >= disc[u]) {
             cutVertices.add(u);
@@ -272,8 +321,12 @@ export const articulationPointsModule: AlgorithmModule<
               stepIndex: frames.length,
               totalSteps: 1,
               codeLine: 9,
-              explanation: `Non-root cut condition satisfied for "${u}"! low[${v}]=${low[v]} >= disc[${u}]=${disc[u]} -> "${u}" is an Articulation Point!`,
-              variables: { cutVertex: u, child: v, lowChild: low[v], discU: disc[u] },
+              isMilestone: true,
+              milestoneTitle: `Cut Vertex Found: "${u}"`,
+              explanation: `Non-root cut condition satisfied for "${u}"! low[${v}]=${low[v]} >= disc[${u}]=${disc[u]}. Child "${v}" has no back-edge reaching above "${u}". Removing "${u}" disconnects the graph!`,
+              variables: { cutVertex: u, child: v, lowChild: low[v], discU: disc[u], conditionMet: true },
+              conditionEval: { expr: `low['${v}'] (${low[v]}) >= disc['${u}'] (${disc[u]})`, result: true },
+              soundCue: { type: 'swap' },
               callStack: [{ name: `cutVertexFound(${u})`, params: { u, v }, line: 9, isCurrent: true }],
               state: {
                 nodes,
@@ -295,8 +348,12 @@ export const articulationPointsModule: AlgorithmModule<
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 12,
-          explanation: `Root cut condition satisfied for "${u}"! Root has ${children} independent children in DFS tree -> "${u}" is an Articulation Point!`,
+          isMilestone: true,
+          milestoneTitle: `Root Cut Vertex: "${u}" (${children} Subtrees)`,
+          explanation: `Root cut condition satisfied for "${u}"! Root vertex "${u}" has ${children} independent children subtrees in DFS tree. Removing "${u}" disconnects them!`,
           variables: { rootCutVertex: u, childrenCount: children },
+          conditionEval: { expr: `parent === null && children > 1 (${children} > 1)`, result: true },
+          soundCue: { type: 'swap' },
           callStack: [{ name: `rootCutFound(${u})`, params: { u, children }, line: 12, isCurrent: true }],
           state: {
             nodes,
@@ -320,10 +377,14 @@ export const articulationPointsModule: AlgorithmModule<
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 15,
+      isMilestone: true,
+      milestoneTitle: `Found ${cutVertices.size} Articulation Points`,
       explanation: `Articulation Points detection complete! Identified ${cutVertices.size} cut vertex/vertices: ${
-        cutVertices.size > 0 ? Array.from(cutVertices).join(', ') : 'None (Biconnected)'
+        cutVertices.size > 0 ? Array.from(cutVertices).join(', ') : 'None (Graph is Biconnected)'
       }.`,
       variables: { totalCutVertices: cutVertices.size, cutVertices: Array.from(cutVertices).join(', ') },
+      conditionEval: { expr: 'dfsTraversalExhausted', result: true },
+      soundCue: { type: 'complete' },
       callStack: [{ name: 'complete()', params: { count: cutVertices.size }, line: 15, isCurrent: true }],
       state: {
         nodes,

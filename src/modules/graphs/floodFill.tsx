@@ -189,7 +189,13 @@ export const floodFillModule: AlgorithmModule<
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 4,
+      isMilestone: true,
+      milestoneTitle: `Init Flood Fill (${rows}x${cols})`,
       explanation: `Initialized Flood Fill on ${rows}x${cols} grid. Seed cell (${sr}, ${sc}) has original color ${origColor}. Target fill color: ${newColor}.`,
+      variables: { rows, cols, seedRow: sr, seedCol: sc, origColor, newColor, filledCount: 0 },
+      conditionEval: { expr: 'origColor !== newColor', result: origColor !== newColor },
+      soundCue: { type: 'step' },
+      callStack: [{ name: 'floodFill', params: { sr, sc, newColor }, line: 4, isCurrent: true }],
       state: {
         grid: grid.map((r) => [...r]),
         activeCell: [sr, sc],
@@ -204,7 +210,13 @@ export const floodFillModule: AlgorithmModule<
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 5,
-        explanation: 'Seed color equals target color. No fill required.',
+        isMilestone: true,
+        milestoneTitle: 'Early Exit (Identical Color)',
+        explanation: `Seed color ${origColor} already matches target color ${newColor}. No pixels altered.`,
+        variables: { origColor, newColor, earlyExit: true },
+        conditionEval: { expr: 'origColor === newColor', result: true },
+        soundCue: { type: 'complete' },
+        callStack: [{ name: 'floodFill', params: { sr, sc, newColor }, line: 5, isCurrent: true }],
         state: {
           grid: grid.map((r) => [...r]),
           startColor: origColor,
@@ -223,9 +235,13 @@ export const floodFillModule: AlgorithmModule<
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 8,
-      explanation: `Recolored seed cell (${sr}, ${sc}) to ${newColor}. Enqueued cell to initiate wavefront.`,
       isMilestone: true,
       milestoneTitle: `Filled Seed Cell (${sr}, ${sc})`,
+      explanation: `Recolored seed cell (${sr}, ${sc}) from ${origColor} to ${newColor}. Enqueued cell into BFS wavefront queue.`,
+      variables: { seedCell: `(${sr}, ${sc})`, queueSize: 1, filledCount: 1 },
+      conditionEval: { expr: `grid[${sr}][${sc}] = ${newColor}`, result: true },
+      soundCue: { type: 'insert' },
+      callStack: [{ name: 'enqueueSeed', params: { r: sr, c: sc, color: newColor }, line: 8, isCurrent: true }],
       state: {
         grid: grid.map((r) => [...r]),
         activeCell: [sr, sc],
@@ -245,32 +261,64 @@ export const floodFillModule: AlgorithmModule<
     while (queue.length > 0) {
       const [r, c] = queue.shift()!;
 
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 12,
+        action: 'DEQUEUE_CELL',
+        explanation: `Dequeued cell (${r}, ${c}) from wavefront queue. Scanning 4 orthogonal neighbors (North, South, West, East).`,
+        variables: { currentCell: `(${r}, ${c})`, remainingInQueue: queue.length, filledCount },
+        conditionEval: { expr: 'queue.length > 0', result: true },
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'expandWavefront', params: { r, c }, line: 12, isCurrent: true },
+          { name: 'floodFill', params: { sr, sc }, line: 9 },
+        ],
+        state: {
+          grid: grid.map((row) => [...row]),
+          activeCell: [r, c],
+          startColor: origColor,
+          newColor,
+          filledCount,
+        },
+      });
+
       for (const [dr, dc, dirName] of dirs) {
         const nr = r + dr;
         const nc = c + dc;
+        const inBounds = nr >= 0 && nr < rows && nc >= 0 && nc < cols;
 
-        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-          if (grid[nr][nc] === origColor) {
-            grid[nr][nc] = newColor;
-            filledCount++;
-            queue.push([nr, nc]);
+        if (!inBounds) continue;
 
-            frames.push({
-              stepIndex: frames.length,
-              totalSteps: 1,
-              codeLine: 16,
-              explanation: `Wavefront expanded ${dirName} to (${nr}, ${nc}). Neighbor color ${origColor} matches seed! Recolored to ${newColor} and enqueued.`,
-              isMilestone: true,
-              milestoneTitle: `Filled (${nr}, ${nc})`,
-              state: {
-                grid: grid.map((row) => [...row]),
-                activeCell: [nr, nc],
-                startColor: origColor,
-                newColor,
-                filledCount,
-              },
-            });
-          }
+        const isMatch = grid[nr][nc] === origColor;
+
+        if (isMatch) {
+          grid[nr][nc] = newColor;
+          filledCount++;
+          queue.push([nr, nc]);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 16,
+            isMilestone: true,
+            milestoneTitle: `Filled ${dirName} (${nr}, ${nc})`,
+            explanation: `Wavefront expanded ${dirName} to (${nr}, ${nc}). Color ${origColor} matches seed! Recolored to ${newColor} and enqueued.`,
+            variables: { direction: dirName, cell: `(${nr}, ${nc})`, origColor, newColor, filledCount, queueLength: queue.length },
+            conditionEval: { expr: `grid[${nr}][${nc}] === ${origColor}`, result: true },
+            soundCue: { type: 'insert' },
+            callStack: [
+              { name: 'fillNeighbor', params: { nr, nc, dir: dirName }, line: 16, isCurrent: true },
+              { name: 'floodFill', params: { sr, sc }, line: 9 },
+            ],
+            state: {
+              grid: grid.map((row) => [...row]),
+              activeCell: [nr, nc],
+              startColor: origColor,
+              newColor,
+              filledCount,
+            },
+          });
         }
       }
     }
@@ -279,9 +327,13 @@ export const floodFillModule: AlgorithmModule<
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 18,
-      explanation: `Flood Fill complete! All 4-connected cells matching color ${origColor} recolored. Total cells filled: ${filledCount}.`,
       isMilestone: true,
-      milestoneTitle: 'Flood Fill Finished',
+      milestoneTitle: `Flood Fill Finished (${filledCount} Cells)`,
+      explanation: `Flood Fill complete! All 4-connected cells in component matching color ${origColor} recolored to ${newColor}. Total cells filled: ${filledCount}.`,
+      variables: { totalFilled: filledCount, startColor: origColor, newColor, queueEmpty: true },
+      conditionEval: { expr: 'queue.length === 0', result: true },
+      soundCue: { type: 'complete' },
+      callStack: [{ name: 'complete', params: { filledCount }, line: 18, isCurrent: true }],
       state: {
         grid: grid.map((row) => [...row]),
         startColor: origColor,

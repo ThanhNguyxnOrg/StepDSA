@@ -81,7 +81,16 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
   let stack: CallStackFrame[] = [];
 
   if (frame.callStack && frame.callStack.length > 0) {
-    stack = frame.callStack;
+    stack = frame.callStack.map((item, idx) =>
+      typeof item === 'string'
+        ? {
+            name: item,
+            params: {},
+            line: frame.codeLine || 1,
+            isCurrent: idx === frame.callStack!.length - 1,
+          }
+        : item
+    );
   } else {
     const s = frame.state as any;
     const cleanModName = getCleanFuncName(moduleName);

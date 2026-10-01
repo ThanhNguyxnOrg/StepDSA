@@ -162,6 +162,12 @@ public:
       totalSteps: 1,
       codeLine: 2,
       explanation: `Initialized empty Stack with capacity ${capacity}. top = -1.`,
+      isMilestone: true,
+      milestoneTitle: 'Stack Initialized',
+      soundCue: { type: 'start' },
+      variables: { top: -1, size: 0, capacity },
+      callStack: [{ name: 'Stack.init', params: { capacity }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `top == -1`, result: true },
       state: getFrameState(),
     });
 
@@ -176,6 +182,10 @@ public:
         explanation: `PUSH(${val}): Added element to top of stack. Top is now at index ${currentStack.length - 1}.`,
         isMilestone: true,
         milestoneTitle: `Push ${val}`,
+        soundCue: { type: 'swap' },
+        variables: { pushedVal: val, top: currentStack.length - 1, size: currentStack.length },
+        callStack: [{ name: 'Stack.push', params: { val }, line: 7, isCurrent: true }],
+        conditionEval: { expr: `size < capacity (${currentStack.length} <= ${capacity})`, result: true },
         state: getFrameState('PUSH', 'pushed'),
       });
     }
@@ -190,6 +200,10 @@ public:
         explanation: `PEEK(): Inspecting top element without removing it. Current top is ${topVal}.`,
         isMilestone: true,
         milestoneTitle: `Peek (${topVal})`,
+        soundCue: { type: 'compare' },
+        variables: { peekVal: topVal, topIndex: currentStack.length - 1, size: currentStack.length },
+        callStack: [{ name: 'Stack.peek', params: {}, line: 16, isCurrent: true }],
+        conditionEval: { expr: `!isEmpty() (${currentStack.length} > 0)`, result: true },
         state: getFrameState('PEEK'),
       });
     }
@@ -204,6 +218,10 @@ public:
         explanation: `POP(): Removed ${poppedVal} from top of stack. New top is at index ${currentStack.length - 1}.`,
         isMilestone: true,
         milestoneTitle: `Pop ${poppedVal}`,
+        soundCue: { type: 'step' },
+        variables: { poppedVal, top: currentStack.length - 1, remainingSize: currentStack.length },
+        callStack: [{ name: 'Stack.pop', params: {}, line: 12, isCurrent: true }],
+        conditionEval: { expr: `size > 0 (${currentStack.length + 1} > 0)`, result: true },
         state: getFrameState('POP', 'popped'),
       });
     }
@@ -218,6 +236,10 @@ public:
       explanation: `PUSH(${extraVal}): Re-pushed new value onto the vacated top slot.`,
       isMilestone: true,
       milestoneTitle: `Push ${extraVal}`,
+      soundCue: { type: 'complete' },
+      variables: { extraVal, top: currentStack.length - 1, size: currentStack.length },
+      callStack: [{ name: 'Stack.push', params: { val: extraVal }, line: 7, isCurrent: true }],
+      conditionEval: { expr: `size < capacity (${currentStack.length} <= ${capacity})`, result: true },
       state: getFrameState('PUSH', 'pushed'),
     });
 

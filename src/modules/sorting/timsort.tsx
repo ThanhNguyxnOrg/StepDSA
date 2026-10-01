@@ -150,18 +150,37 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
     // Phase 1: Identify and extend natural runs
     while (start < n) {
       let end = start + 1;
+      const isAscending = end < n && elements[end].value >= elements[start].value;
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 3,
+        explanation: `Scanning for natural run starting at index ${start} (value ${elements[start].value}). Direction: ${
+          end < n ? (isAscending ? 'Ascending (>=)' : 'Strictly Descending (<)') : 'Single element'
+        }.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'identifyRun(start)', params: { start, initialVal: elements[start].value }, line: 3, isCurrent: true },
+          { name: 'timSort()', params: { n, minRun }, line: 2 },
+        ],
+        variables: { start, 'arr[start]': elements[start].value, minRun, direction: isAscending ? 'asc' : 'desc' },
+        state: {
+          array: elements.map((e, idx) => ({ ...e, status: idx === start ? 'active' : 'default' })),
+          pointers: { scan: start },
+        },
+      });
+
       if (end < n) {
-        if (elements[end].value >= elements[start].value) {
-          // Ascending run
+        if (isAscending) {
           while (end < n && elements[end].value >= elements[end - 1].value) {
             end++;
           }
         } else {
-          // Descending run -> reverse it
           while (end < n && elements[end].value < elements[end - 1].value) {
             end++;
           }
-          // Reverse subsegment
+          // Reverse strictly descending run to ascending
           let left = start;
           let right = end - 1;
           while (left < right) {
@@ -171,6 +190,22 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
             left++;
             right--;
           }
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 4,
+            explanation: `Reversed strictly descending run [${start}..${end - 1}] to maintain ascending invariant.`,
+            soundCue: { type: 'swap' },
+            callStack: [
+              { name: 'reverseRun()', params: { start, end: end - 1 }, line: 4, isCurrent: true },
+              { name: 'timSort()', params: { n }, line: 2 },
+            ],
+            variables: { reversedRange: `[${start}..${end - 1}]`, newValues: elements.slice(start, end).map((e) => e.value) },
+            state: {
+              array: elements.map((e, idx) => ({ ...e, status: idx >= start && idx < end ? 'active' : 'default' })),
+              pointers: { start, end: end - 1 },
+            },
+          });
         }
       }
 
@@ -179,6 +214,24 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
       // Extend to minRun with binary insertion sort if needed
       if (runLen < minRun && start + minRun <= n) {
         const targetEnd = Math.min(n, start + minRun);
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 5,
+          explanation: `Run length ${runLen} < minRun ${minRun}. Extending run to index ${targetEnd - 1} via Binary Insertion Sort.`,
+          soundCue: { type: 'compare' },
+          callStack: [
+            { name: 'binaryInsertionSort(start, end)', params: { start, targetEnd }, line: 5, isCurrent: true },
+            { name: 'timSort()', params: { n }, line: 2 },
+          ],
+          variables: { naturalLength: runLen, minRunTarget: minRun, targetEnd },
+          conditionEval: { expr: `runLen (${runLen}) < minRun (${minRun})`, result: true },
+          state: {
+            array: elements.map((e, idx) => ({ ...e, status: idx >= start && idx < targetEnd ? 'comparing' : 'default' })),
+            pointers: { start, targetEnd: targetEnd - 1 },
+          },
+        });
+
         for (let i = start + 1; i < targetEnd; i++) {
           let j = i;
           while (j > start && elements[j].value < elements[j - 1].value) {
@@ -194,41 +247,37 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
 
       runs.push({ start, len: runLen });
 
-      for (let k = start; k < end; k++) {
-        elements[k].status = 'active';
-      }
-
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 4,
+        codeLine: 6,
         explanation: `Formed Run #${runs.length}: [${start}..${end - 1}] (length ${runLen}): [${elements
           .slice(start, end)
           .map((e) => e.value)
-          .join(', ')}].`,
+          .join(', ')}]. Pushed to run stack.`,
+        isMilestone: true,
+        milestoneTitle: `Run #${runs.length} Finalized`,
+        soundCue: { type: 'sorted' },
         variables: {
           runNumber: runs.length,
           range: `[${start}..${end - 1}]`,
           length: runLen,
+          stackSize: runs.length,
         },
         callStack: [
-          { name: `buildRun(start=${start})`, params: { start, length: runLen }, line: 4, isCurrent: true },
+          { name: `pushRun(start=${start})`, params: { start, length: runLen }, line: 6, isCurrent: true },
           { name: 'timSort()', params: { n }, line: 2 },
         ],
         state: {
-          array: elements.map((e) => ({ ...e })),
+          array: elements.map((e, idx) => ({ ...e, status: idx >= start && idx < end ? 'active' : 'default' })),
           pointers: { runStart: start, runEnd: end - 1 },
         },
       });
 
-      for (let k = start; k < end; k++) {
-        elements[k].status = 'default';
-      }
-
       start = end;
     }
 
-    // Phase 2: Merge adjacent runs
+    // Phase 2: Merge adjacent runs step-by-step
     while (runs.length > 1) {
       const r1 = runs.shift()!;
       const r2 = runs.shift()!;
@@ -237,29 +286,49 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
       const mergeMid = r1.start + r1.len;
       const mergeEnd = r2.start + r2.len;
 
-      for (let k = mergeStart; k < mergeEnd; k++) {
-        elements[k].status = 'comparing';
-      }
-
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 8,
-        explanation: `Merging adjacent runs: [${mergeStart}..${mergeMid - 1}] and [${mergeMid}..${mergeEnd - 1}].`,
+        explanation: `Merging adjacent runs: Run A [${mergeStart}..${mergeMid - 1}] and Run B [${mergeMid}..${mergeEnd - 1}].`,
+        soundCue: { type: 'compare' },
         variables: {
-          leftRun: `[${elements.slice(mergeStart, mergeMid).map((e) => e.value).join(', ')}]`,
-          rightRun: `[${elements.slice(mergeMid, mergeEnd).map((e) => e.value).join(', ')}]`,
+          runA: `[${elements.slice(mergeStart, mergeMid).map((e) => e.value).join(', ')}]`,
+          runB: `[${elements.slice(mergeMid, mergeEnd).map((e) => e.value).join(', ')}]`,
         },
         callStack: [{ name: `mergeRuns(${mergeStart}, ${mergeEnd})`, params: { mergeStart, mergeEnd }, line: 8, isCurrent: true }],
         state: {
-          array: elements.map((e) => ({ ...e })),
+          array: elements.map((e, idx) => ({
+            ...e,
+            status: idx >= mergeStart && idx < mergeEnd ? 'comparing' : 'default',
+          })),
           pointers: { left: mergeStart, right: mergeEnd - 1 },
         },
       });
 
-      // Merge sort the subsegment
-      const mergedVals = elements.slice(mergeStart, mergeEnd).map((e) => e.value);
-      mergedVals.sort((a, b) => a - b);
+      // Step-by-step two-pointer merge
+      const leftArr = elements.slice(mergeStart, mergeMid).map((e) => e.value);
+      const rightArr = elements.slice(mergeMid, mergeEnd).map((e) => e.value);
+      const mergedVals: number[] = [];
+      let pL = 0;
+      let pR = 0;
+
+      while (pL < leftArr.length && pR < rightArr.length) {
+        if (leftArr[pL] <= rightArr[pR]) {
+          mergedVals.push(leftArr[pL]);
+          pL++;
+        } else {
+          mergedVals.push(rightArr[pR]);
+          pR++;
+        }
+      }
+      while (pL < leftArr.length) {
+        mergedVals.push(leftArr[pL++]);
+      }
+      while (pR < rightArr.length) {
+        mergedVals.push(rightArr[pR++]);
+      }
+
       for (let k = 0; k < mergedVals.length; k++) {
         elements[mergeStart + k].value = mergedVals[k];
         elements[mergeStart + k].status = 'sorted';
@@ -271,11 +340,17 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 9,
-        explanation: `Merged into unified run: [${elements.slice(mergeStart, mergeEnd).map((e) => e.value).join(', ')}].`,
-        variables: { mergedRange: `[${mergeStart}..${mergeEnd - 1}]` },
+        explanation: `Runs merged and sorted into unified run: [${elements.slice(mergeStart, mergeEnd).map((e) => e.value).join(', ')}].`,
+        isMilestone: true,
+        milestoneTitle: `Merged [${mergeStart}..${mergeEnd - 1}]`,
+        soundCue: { type: 'swap' },
+        variables: { mergedRange: `[${mergeStart}..${mergeEnd - 1}]`, remainingRuns: runs.length },
         callStack: [{ name: `mergeDone()`, params: { size: mergedVals.length }, line: 9, isCurrent: true }],
         state: {
-          array: elements.map((e) => ({ ...e })),
+          array: elements.map((e, idx) => ({
+            ...e,
+            status: idx >= mergeStart && idx < mergeEnd ? 'sorted' : 'default',
+          })),
           pointers: { start: mergeStart, end: mergeEnd - 1 },
         },
       });

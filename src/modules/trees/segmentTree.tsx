@@ -194,6 +194,12 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
       )}]. Root node #1 represents interval [0, 3] with total sum ${
         tree[1]
       }. Target Range Query: [${ql}, ${qr}].`,
+      isMilestone: true,
+      milestoneTitle: 'Segment Tree Initialized',
+      soundCue: { type: 'start' },
+      variables: { queryRange: `[${ql}, ${qr}]`, rootSum: tree[1], arrayLength: n },
+      callStack: [{ name: 'buildSegmentTree', params: { n }, line: 4, isCurrent: true }],
+      conditionEval: { expr: `n > 0`, result: true },
       state: {
         rawArray: [...rawArr],
         nodes: buildTreeNodes(),
@@ -210,6 +216,10 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
         totalSteps: 1,
         codeLine: 16,
         explanation: `Query visiting node #${node} spanning [${l}, ${r}] with sum ${tree[node]}. Comparing against target range [${ql}, ${qr}].`,
+        soundCue: { type: 'compare' },
+        variables: { node, segment: `[${l}, ${r}]`, sum: tree[node], target: `[${ql}, ${qr}]` },
+        callStack: [{ name: 'rangeQuery', params: { node, l, r }, line: 16, isCurrent: true }],
+        conditionEval: { expr: `ql <= l && r <= qr (${ql} <= ${l} && ${r} <= ${qr})`, result: ql <= l && r <= qr },
         state: {
           rawArray: [...rawArr],
           nodes: buildTreeNodes(node, chosenSegments),
@@ -230,6 +240,10 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
           explanation: `Total overlap! Segment [${l}, ${r}] is strictly inside [${ql}, ${qr}]. Adding ${tree[node]} to accumulator. Running sum = ${totalSum}.`,
           isMilestone: true,
           milestoneTitle: `Merged Segment [${l}, ${r}]: +${tree[node]}`,
+          soundCue: { type: 'swap' },
+          variables: { matchedSegment: `[${l}, ${r}]`, addedValue: tree[node], runningTotal: totalSum },
+          callStack: [{ name: 'accumulateSegment', params: { node, val: tree[node] }, line: 18, isCurrent: true }],
+          conditionEval: { expr: `ql <= l && r <= qr`, result: true },
           state: {
             rawArray: [...rawArr],
             nodes: buildTreeNodes(node, chosenSegments),
@@ -248,6 +262,10 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
           totalSteps: 1,
           codeLine: 20,
           explanation: `Disjoint: Segment [${l}, ${r}] lies entirely outside [${ql}, ${qr}]. Returning 0.`,
+          soundCue: { type: 'step' },
+          variables: { disjointSegment: `[${l}, ${r}]`, target: `[${ql}, ${qr}]`, contribution: 0 },
+          callStack: [{ name: 'disjointSegment', params: { node, l, r }, line: 20, isCurrent: true }],
+          conditionEval: { expr: `r < ql || l > qr`, result: true },
           state: {
             rawArray: [...rawArr],
             nodes: buildTreeNodes(undefined, chosenSegments),
@@ -274,6 +292,10 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
       explanation: `Range Sum Query for [${ql}, ${qr}] complete in O(log N)! Total Range Sum = ${totalSum}.`,
       isMilestone: true,
       milestoneTitle: `Query Result: ${totalSum}`,
+      soundCue: { type: 'complete' },
+      variables: { totalRangeSum: totalSum, range: `[${ql}, ${qr}]`, queryComplete: true },
+      callStack: [{ name: 'rangeQuery.done', params: { result: totalSum }, line: 23, isCurrent: true }],
+      conditionEval: { expr: `totalSum >= 0`, result: true },
       state: {
         rawArray: [...rawArr],
         nodes: buildTreeNodes(undefined, chosenSegments),

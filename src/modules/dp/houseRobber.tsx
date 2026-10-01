@@ -123,39 +123,50 @@ export const houseRobberModule: AlgorithmModule<HouseRobberInput, HouseRobberSta
 
     dp[0] = nums[0];
 
-    // Frame 0: House 0
+    // Frame 0: Initial state & House 0 base case
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
-      explanation: `Initialized House Robber DP. Base Case 0: Only House 0 available ($${nums[0]}). dp[0] = ${dp[0]}.`,
+      explanation: `Initialized House Robber DP. Base Case 0: Only House 0 available ($${nums[0]}). The only choice is robbing House 0. dp[0] = $${dp[0]}.`,
       isMilestone: true,
-      milestoneTitle: `Base Case dp[0]=$${nums[0]}`,
+      milestoneTitle: `Base Case dp[0] = $${nums[0]}`,
       soundCue: 'start',
-      scopeVariables: { houseCount: n, 'dp[0]': dp[0] },
+      callStack: [
+        { name: 'rob(nums)', params: { n, house: 0 }, line: 1, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { houseCount: n, i: 0, 'nums[0]': nums[0], 'dp[0]': dp[0] },
+      conditionEval: { expr: 'i == 0', result: true },
       state: {
         houses: [...nums],
         dp: [...dp],
         currentIndex: 0,
         robbedIndices: [0],
         maxLoot: dp[0],
-        decisionText: `Rob House 0 ($${nums[0]})`,
+        decisionText: `Base Case: Rob House 0 ($${nums[0]})`,
       },
     });
 
     if (n > 1) {
-      dp[1] = Math.max(nums[0], nums[1]);
+      // Step: Inspect House 1 vs House 0
       const robFirst = nums[0] >= nums[1];
+      dp[1] = Math.max(nums[0], nums[1]);
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 6,
-        explanation: `Base Case 1: Between House 0 ($${nums[0]}) and House 1 ($${nums[1]}), rob the higher-value house: dp[1] = max(${nums[0]}, ${nums[1]}) = ${dp[1]}.`,
+        explanation: `Base Case 1: Evaluate House 1 ($${nums[1]}) vs House 0 ($${nums[0]}). Since adjacent houses cannot both be robbed, choose the richer one: max($${nums[0]}, $${nums[1]}) = $${dp[1]}.`,
         isMilestone: true,
-        milestoneTitle: `Base Case dp[1]=$${dp[1]}`,
+        milestoneTitle: `Base Case dp[1] = $${dp[1]}`,
         soundCue: 'compare',
-        scopeVariables: { 'dp[1]': dp[1], chosenHouse: robFirst ? 0 : 1 },
+        callStack: [
+          { name: 'rob(nums)', params: { i: 1 }, line: 6, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { i: 1, 'nums[0]': nums[0], 'nums[1]': nums[1], 'dp[1]': dp[1] },
+        conditionEval: { expr: `nums[0] (${nums[0]}) >= nums[1] (${nums[1]})`, result: robFirst },
         state: {
           houses: [...nums],
           dp: [...dp],
@@ -171,23 +182,77 @@ export const houseRobberModule: AlgorithmModule<HouseRobberInput, HouseRobberSta
       const skipLoot = dp[i - 1];
       const robLoot = dp[i - 2] + nums[i];
       const robThisHouse = robLoot > skipLoot;
-      dp[i] = Math.max(skipLoot, robLoot);
 
+      // Sub-frame 1: Evaluate Option A (Skip house i)
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `House ${i} ($${nums[i]}) — Option A (Skip): If we skip house ${i}, total loot is carried over from dp[${i - 1}] = $${skipLoot}.`,
+        soundCue: 'step',
+        callStack: [
+          { name: 'rob(nums)', params: { i, option: 'SKIP' }, line: 8, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { i, 'nums[i]': nums[i], 'dp[i-1]': skipLoot, skipLoot },
+        state: {
+          houses: [...nums],
+          dp: [...dp],
+          currentIndex: i,
+          robbedIndices: [],
+          maxLoot: dp[i - 1],
+          decisionText: `Evaluating Skip: $${skipLoot}`,
+        },
+      });
+
+      // Sub-frame 2: Evaluate Option B (Rob house i)
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `House ${i} ($${nums[i]}) — Option B (Rob): If we rob house ${i}, we must skip house ${i - 1} and add dp[${i - 2}] ($${dp[i - 2]} + $${nums[i]} = $${robLoot}).`,
+        soundCue: 'compare',
+        callStack: [
+          { name: 'rob(nums)', params: { i, option: 'ROB' }, line: 8, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { i, 'nums[i]': nums[i], 'dp[i-2]': dp[i - 2], robLoot },
+        state: {
+          houses: [...nums],
+          dp: [...dp],
+          currentIndex: i,
+          robbedIndices: [],
+          maxLoot: dp[i - 1],
+          decisionText: `Evaluating Rob: $${dp[i - 2]} + $${nums[i]} = $${robLoot}`,
+        },
+      });
+
+      // Sub-frame 3: Compare and finalize dp[i]
+      dp[i] = Math.max(skipLoot, robLoot);
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 9,
         explanation: robThisHouse
-          ? `House ${i} ($${nums[i]}): Robbing House ${i} + dp[${i - 2}] ($${nums[i]} + $${dp[i - 2]} = $${robLoot}) beats skipping ($${skipLoot})! dp[${i}] = $${dp[i]}.`
-          : `House ${i} ($${nums[i]}): Skipping House ${i}. Previous loot dp[${i - 1}] ($${skipLoot}) exceeds robLoot ($${robLoot}). dp[${i}] = $${dp[i]}.`,
+          ? `House ${i} DECISION: Robbing ($${robLoot}) beats skipping ($${skipLoot})! dp[${i}] = $${dp[i]}.`
+          : `House ${i} DECISION: Skipping ($${skipLoot}) exceeds robbing ($${robLoot}). dp[${i}] = $${dp[i]}.`,
         soundCue: robThisHouse ? 'swap' : 'step',
         isMilestone: true,
         milestoneTitle: `dp[${i}] = $${dp[i]}`,
-        scopeVariables: {
-          house: i,
+        callStack: [
+          { name: 'rob(nums)', params: { i, chosen: robThisHouse ? 'ROB' : 'SKIP' }, line: 9, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: {
+          i,
           lootIfRobbed: robLoot,
           lootIfSkipped: skipLoot,
+          'dp[i]': dp[i],
           decision: robThisHouse ? 'ROB' : 'SKIP',
+        },
+        conditionEval: {
+          expr: `robLoot ($${robLoot}) > skipLoot ($${skipLoot})`,
+          result: robThisHouse,
         },
         state: {
           houses: [...nums],
@@ -195,27 +260,95 @@ export const houseRobberModule: AlgorithmModule<HouseRobberInput, HouseRobberSta
           currentIndex: i,
           robbedIndices: [],
           maxLoot: dp[i],
-          decisionText: robThisHouse ? `ROB House ${i} (+$${nums[i]})` : `SKIP House ${i}`,
+          decisionText: robThisHouse ? `ROB House ${i} (+$${nums[i]}) -> $${dp[i]}` : `SKIP House ${i} -> $${dp[i]}`,
         },
       });
     }
 
-    // Backtrack optimal robbed houses
+    // Step: Backtrack optimal path step-by-step
     const optimalRobbed: number[] = [];
     let idx = n - 1;
     while (idx >= 0) {
       if (idx === 0) {
         optimalRobbed.push(0);
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 11,
+          explanation: `Backtracking: Reached House 0. Rob House 0 ($${nums[0]}).`,
+          callStack: [{ name: 'backtrack()', params: { idx: 0 }, line: 11, isCurrent: true }],
+          variables: { idx: 0, robHouse: 0, currentOptimal: [...optimalRobbed] },
+          state: {
+            houses: [...nums],
+            dp: [...dp],
+            currentIndex: 0,
+            robbedIndices: [...optimalRobbed],
+            maxLoot: dp[n - 1],
+            decisionText: `Backtracked: Rob House 0`,
+          },
+        });
         break;
       } else if (idx === 1) {
-        if (dp[1] === nums[1]) optimalRobbed.push(1);
-        else optimalRobbed.push(0);
+        const pickOne = dp[1] === nums[1];
+        const chosen = pickOne ? 1 : 0;
+        optimalRobbed.push(chosen);
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 11,
+          explanation: `Backtracking: At House 1. Rob House ${chosen} ($${nums[chosen]}).`,
+          callStack: [{ name: 'backtrack()', params: { idx: 1, chosen }, line: 11, isCurrent: true }],
+          variables: { idx: 1, chosen, currentOptimal: [...optimalRobbed] },
+          state: {
+            houses: [...nums],
+            dp: [...dp],
+            currentIndex: chosen,
+            robbedIndices: [...optimalRobbed],
+            maxLoot: dp[n - 1],
+            decisionText: `Backtracked: Rob House ${chosen}`,
+          },
+        });
         break;
       } else {
-        if (dp[idx] === dp[idx - 2] + nums[idx]) {
+        const wasRobbed = dp[idx] === dp[idx - 2] + nums[idx];
+        if (wasRobbed) {
           optimalRobbed.push(idx);
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 11,
+            explanation: `Backtracking: dp[${idx}] ($${dp[idx]}) == dp[${idx - 2}] ($${dp[idx - 2]}) + nums[${idx}] ($${nums[idx]}). House ${idx} was ROBBED! Jumping back to house ${idx - 2}.`,
+            callStack: [{ name: 'backtrack()', params: { idx, wasRobbed: true }, line: 11, isCurrent: true }],
+            variables: { idx, wasRobbed: true, jumpTo: idx - 2, currentOptimal: [...optimalRobbed] },
+            conditionEval: { expr: `dp[${idx}] == dp[${idx - 2}] + nums[${idx}]`, result: true },
+            state: {
+              houses: [...nums],
+              dp: [...dp],
+              currentIndex: idx,
+              robbedIndices: [...optimalRobbed],
+              maxLoot: dp[n - 1],
+              decisionText: `Backtracked: House ${idx} was ROBBED`,
+            },
+          });
           idx -= 2;
         } else {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 11,
+            explanation: `Backtracking: dp[${idx}] ($${dp[idx]}) == dp[${idx - 1}] ($${dp[idx - 1]}). House ${idx} was SKIPPED. Inspecting house ${idx - 1}.`,
+            callStack: [{ name: 'backtrack()', params: { idx, wasRobbed: false }, line: 11, isCurrent: true }],
+            variables: { idx, wasRobbed: false, jumpTo: idx - 1, currentOptimal: [...optimalRobbed] },
+            conditionEval: { expr: `dp[${idx}] == dp[${idx - 2}] + nums[${idx}]`, result: false },
+            state: {
+              houses: [...nums],
+              dp: [...dp],
+              currentIndex: idx,
+              robbedIndices: [...optimalRobbed],
+              maxLoot: dp[n - 1],
+              decisionText: `Backtracked: House ${idx} was SKIPPED`,
+            },
+          });
           idx -= 1;
         }
       }
@@ -230,7 +363,11 @@ export const houseRobberModule: AlgorithmModule<HouseRobberInput, HouseRobberSta
       isMilestone: true,
       milestoneTitle: `Max Loot = $${dp[n - 1]}`,
       soundCue: 'complete',
-      scopeVariables: { totalLoot: dp[n - 1], housesRobbed: optimalRobbed.join(', ') },
+      callStack: [
+        { name: 'rob(nums)', params: { optimalLoot: dp[n - 1] }, line: 12, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { totalLoot: dp[n - 1], housesRobbed: optimalRobbed.join(', ') },
       state: {
         houses: [...nums],
         dp: [...dp],

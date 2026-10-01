@@ -130,6 +130,8 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
 
     let moveCount = 0;
 
+    const callStack: { name: string; params: Record<string, string | number>; line?: number; isCurrent?: boolean }[] = [];
+
     // Initial frame
     frames.push({
       stepIndex: 0,
@@ -139,7 +141,9 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
       isMilestone: true,
       milestoneTitle: `${n} Disks Initialized`,
       soundCue: 'start',
-      scopeVariables: { n, source: 'A', destination: 'C', aux: 'B', totalMovesNeeded },
+      variables: { n, source: 'A', destination: 'C', aux: 'B', totalMovesNeeded, moveCount: 0 },
+      callStack: [{ name: 'main', params: { n }, line: 1, isCurrent: true }],
+      conditionEval: { expr: `n <= 5`, result: true },
       state: {
         rods: cloneRods(),
         moveCount: 0,
@@ -147,12 +151,42 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
       },
     });
 
+    const getStackSnapshot = (currentLine: number) =>
+      callStack.map((frame, i) => ({
+        ...frame,
+        line: i === callStack.length - 1 ? currentLine : frame.line,
+        isCurrent: i === callStack.length - 1,
+      }));
+
     const solveHanoi = (
       count: number,
       src: 'A' | 'B' | 'C',
       dst: 'A' | 'B' | 'C',
       aux: 'A' | 'B' | 'C'
     ) => {
+      callStack.push({
+        name: 'hanoi',
+        params: { count, src, dst, aux },
+        line: 1,
+      });
+
+      // Frame: Call entry and base-case check
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 1,
+        explanation: `Enter hanoi(count=${count}, src=${src}, dst=${dst}, aux=${aux}). Evaluating recursion condition: count === 1.`,
+        soundCue: 'step',
+        variables: { count, src, dst, aux, moveCount },
+        callStack: getStackSnapshot(1),
+        conditionEval: { expr: `${count} === 1`, result: count === 1 },
+        state: {
+          rods: cloneRods(),
+          moveCount,
+          totalMovesNeeded,
+        },
+      });
+
       if (count === 1) {
         moveCount++;
         const disk = rods[src].pop()!;
@@ -161,12 +195,14 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 3,
-          explanation: `Move #${moveCount}: Moved base disk ${disk.size} directly from Rod ${src} to Rod ${dst}.`,
+          codeLine: 2,
+          explanation: `Base case met (count=1). Move #${moveCount}: Transfer disk ${disk.size} from Rod ${src} to Rod ${dst}.`,
           isMilestone: true,
           milestoneTitle: `Move Disk ${disk.size} (${src} → ${dst})`,
           soundCue: 'swap',
-          scopeVariables: { move: moveCount, diskSize: disk.size, from: src, to: dst },
+          variables: { move: moveCount, diskSize: disk.size, from: src, to: dst },
+          callStack: getStackSnapshot(2),
+          conditionEval: { expr: `moveCount === totalMovesNeeded`, result: moveCount === totalMovesNeeded },
           state: {
             rods: cloneRods(),
             movingDisk: { size: disk.size, from: src, to: dst },
@@ -174,13 +210,15 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
             totalMovesNeeded,
           },
         });
+
+        callStack.pop();
         return;
       }
 
-      // Step 1: Move top n-1 disks from src to aux
+      // Step 1: Move top count-1 disks from src to aux
       solveHanoi(count - 1, src, aux, dst);
 
-      // Step 2: Move count disk from src to dst
+      // Step 2: Move disk count from src to dst
       moveCount++;
       const disk = rods[src].pop()!;
       rods[dst].push(disk);
@@ -188,12 +226,14 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 6,
-        explanation: `Move #${moveCount}: Transferred largest available disk ${disk.size} from Rod ${src} to Rod ${dst}.`,
+        codeLine: 5,
+        explanation: `Move #${moveCount}: Transferred disk ${disk.size} directly from Rod ${src} to Rod ${dst}.`,
         isMilestone: true,
         milestoneTitle: `Move Disk ${disk.size} (${src} → ${dst})`,
         soundCue: 'swap',
-        scopeVariables: { move: moveCount, diskSize: disk.size, from: src, to: dst },
+        variables: { move: moveCount, diskSize: disk.size, from: src, to: dst, remainingSubtree: count - 1 },
+        callStack: getStackSnapshot(5),
+        conditionEval: { expr: `count > 1`, result: true },
         state: {
           rods: cloneRods(),
           movingDisk: { size: disk.size, from: src, to: dst },
@@ -202,8 +242,10 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
         },
       });
 
-      // Step 3: Move n-1 disks from aux to dst
+      // Step 3: Move count-1 disks from aux to dst
       solveHanoi(count - 1, aux, dst, src);
+
+      callStack.pop();
     };
 
     solveHanoi(n, 'A', 'C', 'B');
@@ -216,7 +258,9 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
       isMilestone: true,
       milestoneTitle: 'Puzzle Solved',
       soundCue: 'complete',
-      scopeVariables: { finalMoves: moveCount, destinationRodSize: rods.C.length },
+      variables: { finalMoves: moveCount, destinationRodSize: rods.C.length },
+      callStack: [{ name: 'main', params: { n }, line: 7, isCurrent: true }],
+      conditionEval: { expr: `rods.C.length === ${n}`, result: true },
       state: {
         rods: cloneRods(),
         moveCount,

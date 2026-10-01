@@ -226,6 +226,8 @@ export const graphColoringModule: AlgorithmModule<
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
+      isMilestone: true,
+      milestoneTitle: 'Compute Degrees & Sort Descending',
       action: 'INIT_DEGREE_SORT',
       state: {
         nodes: rawNodes,
@@ -236,12 +238,14 @@ export const graphColoringModule: AlgorithmModule<
         activeNode: null,
         currentColor: 0,
       },
-      callStack: [{ name: 'welshPowell', params: { nodeCount: rawNodes.length, edgeCount: rawEdges.length } }],
+      callStack: [{ name: 'welshPowell', params: { nodeCount: rawNodes.length, edgeCount: rawEdges.length }, line: 1, isCurrent: true }],
       variables: {
         sortedOrder: sortedOrder.map((u) => `${u}(deg ${degrees[u]})`).join(', '),
         status: 'Degrees sorted descending',
       },
-      explanation: `Computed degrees and sorted vertices in descending order: [${sortedOrder.map((u) => `${u}: ${degrees[u]}`).join(', ')}].`,
+      conditionEval: { expr: 'nodes.length > 0', result: true },
+      soundCue: { type: 'step' },
+      explanation: `Computed degrees and sorted vertices in descending order: [${sortedOrder.map((u) => `${u}: ${degrees[u]}`).join(', ')}]. Vertices with highest degrees are prioritized because they are most constrained.`,
     });
 
     let currentColor = 0;
@@ -255,6 +259,8 @@ export const graphColoringModule: AlgorithmModule<
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 8,
+        isMilestone: true,
+        milestoneTitle: `Start Color #${currentColor} (${paletteEntry.name}) with ${u}`,
         action: 'COLOR_PRIMARY_VERTEX',
         state: {
           nodes: rawNodes,
@@ -265,27 +271,57 @@ export const graphColoringModule: AlgorithmModule<
           activeNode: u,
           currentColor,
         },
-        callStack: [{ name: 'welshPowell', params: { vertex: u, color: paletteEntry.name, colorId: currentColor } }],
+        callStack: [{ name: 'welshPowell', params: { vertex: u, color: paletteEntry.name, colorId: currentColor }, line: 8, isCurrent: true }],
         variables: {
           activeNode: u,
           assignedColor: paletteEntry.name,
           colorId: currentColor,
           degree: degrees[u],
         },
-        explanation: `Assigned Color ${currentColor} (${paletteEntry.name}) to highest uncolored vertex ${u} (degree ${degrees[u]}).`,
+        conditionEval: { expr: `colors['${u}'] === undefined`, result: true },
+        soundCue: { type: 'select' },
+        explanation: `Assigned Color ${currentColor} (${paletteEntry.name}) to uncolored vertex ${u} with highest degree (${degrees[u]}). Now scanning remaining vertices for non-adjacent candidates.`,
       });
 
       for (const v of sortedOrder) {
         if (colors[v] === undefined) {
           const neighbors = Array.from(adj.get(v) || []);
-          const hasConflict = neighbors.some((nb) => colors[nb] === currentColor);
+          const conflictingNeighbor = neighbors.find((nb) => colors[nb] === currentColor);
+          const hasConflict = conflictingNeighbor !== undefined;
 
-          if (!hasConflict) {
+          if (hasConflict) {
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 11,
+              action: 'CHECK_CONFLICT',
+              state: {
+                nodes: rawNodes,
+                edges: rawEdges,
+                degrees: { ...degrees },
+                sortedOrder: [...sortedOrder],
+                colors: { ...colors },
+                activeNode: v,
+                currentColor,
+              },
+              callStack: [{ name: 'checkConflict', params: { vertex: v, color: paletteEntry.name }, line: 11, isCurrent: true }],
+              variables: {
+                candidateNode: v,
+                conflictFoundWith: conflictingNeighbor,
+                colorChecked: paletteEntry.name,
+              },
+              conditionEval: { expr: `hasNeighborWithColor('${v}', ${paletteEntry.name})`, result: true },
+              soundCue: { type: 'compare' },
+              explanation: `Cannot color vertex ${v} with ${paletteEntry.name}: neighbor ${conflictingNeighbor} already has color ${paletteEntry.name}.`,
+            });
+          } else {
             colors[v] = currentColor;
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
               codeLine: 13,
+              isMilestone: true,
+              milestoneTitle: `Assigned ${paletteEntry.name} to ${v}`,
               action: 'COLOR_GREEDY_PASS',
               state: {
                 nodes: rawNodes,
@@ -296,13 +332,15 @@ export const graphColoringModule: AlgorithmModule<
                 activeNode: v,
                 currentColor,
               },
-              callStack: [{ name: 'welshPowell', params: { vertex: v, color: paletteEntry.name, colorId: currentColor } }],
+              callStack: [{ name: 'welshPowell', params: { vertex: v, color: paletteEntry.name, colorId: currentColor }, line: 13, isCurrent: true }],
               variables: {
                 activeNode: v,
                 assignedColor: paletteEntry.name,
                 reason: `No conflict with existing ${paletteEntry.name} vertices`,
               },
-              explanation: `Vertex ${v} has no neighbors with color ${paletteEntry.name}. Greedily assigned color ${currentColor} (${paletteEntry.name}).`,
+              conditionEval: { expr: `hasNeighborWithColor('${v}', ${paletteEntry.name})`, result: false },
+              soundCue: { type: 'swap' },
+              explanation: `Vertex ${v} has NO neighbors colored with ${paletteEntry.name}. Greedily assigned color ${currentColor} (${paletteEntry.name}).`,
             });
           }
         }
@@ -315,6 +353,8 @@ export const graphColoringModule: AlgorithmModule<
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 18,
+      isMilestone: true,
+      milestoneTitle: `Coloring Finished: ${currentColor} Colors`,
       action: 'COMPLETE',
       state: {
         nodes: rawNodes,
@@ -325,12 +365,15 @@ export const graphColoringModule: AlgorithmModule<
         activeNode: null,
         currentColor,
       },
-      callStack: [{ name: 'welshPowell', params: { totalColorsUsed: currentColor, status: 'DONE' } }],
+      callStack: [{ name: 'welshPowell', params: { totalColorsUsed: currentColor, status: 'DONE' }, line: 18, isCurrent: true }],
       variables: {
         totalColorsUsed: currentColor,
-        status: 'Optimal or near-optimal coloring achieved',
+        chromaticEstimate: currentColor,
+        status: 'Proper coloring achieved (0 adjacent conflicts)',
       },
-      explanation: `Graph coloring complete. Used ${currentColor} colors in total without any adjacent conflicts.`,
+      conditionEval: { expr: 'allVerticesColored && noAdjacentConflicts', result: true },
+      soundCue: { type: 'complete' },
+      explanation: `Graph coloring complete! Successfully colored all ${rawNodes.length} vertices using ${currentColor} colors with zero adjacent conflicts.`,
     });
 
     frames.forEach((f) => {

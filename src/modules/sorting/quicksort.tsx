@@ -126,12 +126,22 @@ function partition(arr, low, high):
     const n = arr.length;
     const sortedIndices = new Set<number>();
 
+    const callStack: { name: string; params: Record<string, string | number>; line?: number; isCurrent?: boolean }[] = [
+      { name: 'main', params: { n }, line: 1, isCurrent: true },
+    ];
+
     // Initial frame
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
       explanation: 'Initial array loaded. Starting Quicksort algorithm.',
+      isMilestone: true,
+      milestoneTitle: 'Quicksort Initialized',
+      soundCue: { type: 'start' },
+      variables: { n, low: 0, high: n - 1 },
+      callStack: [...callStack],
+      conditionEval: { expr: `n > 1`, result: n > 1 },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: {},
@@ -144,7 +154,10 @@ function partition(arr, low, high):
       pointers: Record<string, number> = {},
       activeStatuses: Record<number, any> = {},
       invariantValid: boolean = true,
-      milestone?: string
+      milestone?: string,
+      customVars?: Record<string, any>,
+      conditionEval?: { expr: string; result: boolean },
+      soundCue?: any
     ) {
       frames.push({
         stepIndex: frames.length,
@@ -157,6 +170,17 @@ function partition(arr, low, high):
         },
         isMilestone: !!milestone,
         milestoneTitle: milestone,
+        soundCue: soundCue ?? (milestone ? { type: 'sorted' } : { type: 'step' }),
+        variables: {
+          ...pointers,
+          ...(customVars || {}),
+        },
+        conditionEval,
+        callStack: callStack.map((frame, i) => ({
+          ...frame,
+          line: i === callStack.length - 1 ? codeLine : frame.line,
+          isCurrent: i === callStack.length - 1,
+        })),
         state: {
           array: arr.map((v, idx) => {
             let status = 'default';
@@ -173,30 +197,46 @@ function partition(arr, low, high):
       const pivot = arr[high];
       let pIndex = low;
 
+      callStack.push({ name: 'partition', params: { low, high, pivot }, line: 9 });
+
       snapshot(
         9,
         `Selected pivot = ${pivot} at index [${high}]. Initialized partition index pIndex = ${pIndex}.`,
         { pivot: high, pIndex, j: low },
         { [high]: 'pivot', [pIndex]: 'active' },
         true,
-        `Pivot Selected (${pivot})`
+        `Pivot Selected (${pivot})`,
+        { pivot, pIndex, low, high },
+        { expr: `low < high (${low} < ${high})`, result: true },
+        { type: 'pivot' }
       );
 
       for (let j = low; j < high; j++) {
+        const isLessOrEqual = arr[j] <= pivot;
         snapshot(
           12,
           `Comparing arr[j] (${arr[j]}) with pivot (${pivot}).`,
           { pivot: high, pIndex, j },
-          { [high]: 'pivot', [pIndex]: 'active', [j]: 'comparing' }
+          { [high]: 'pivot', [pIndex]: 'active', [j]: 'comparing' },
+          true,
+          undefined,
+          { 'arr[j]': arr[j], pivot, pIndex, j },
+          { expr: `arr[${j}] <= pivot (${arr[j]} <= ${pivot})`, result: isLessOrEqual },
+          { type: 'compare' }
         );
 
-        if (arr[j] <= pivot) {
+        if (isLessOrEqual) {
           if (pIndex !== j) {
             snapshot(
               13,
               `Since arr[j] (${arr[j]}) <= pivot (${pivot}), swap arr[pIndex] (${arr[pIndex]}) with arr[j] (${arr[j]}).`,
               { pivot: high, pIndex, j },
-              { [high]: 'pivot', [pIndex]: 'swapping', [j]: 'swapping' }
+              { [high]: 'pivot', [pIndex]: 'swapping', [j]: 'swapping' },
+              true,
+              undefined,
+              { pIndex, j, valPIndex: arr[pIndex], valJ: arr[j] },
+              { expr: `pIndex !== j (${pIndex} !== ${j})`, result: true },
+              { type: 'swap' }
             );
 
             [arr[pIndex], arr[j]] = [arr[j], arr[pIndex]];
@@ -207,7 +247,12 @@ function partition(arr, low, high):
             14,
             `Incremented pIndex to ${pIndex}.`,
             { pivot: high, pIndex, j },
-            { [high]: 'pivot', [pIndex]: 'active' }
+            { [high]: 'pivot', [pIndex]: 'active' },
+            true,
+            undefined,
+            { pIndex, j },
+            undefined,
+            { type: 'step' }
           );
         }
       }
@@ -219,7 +264,10 @@ function partition(arr, low, high):
         { pivot: high, pIndex },
         { [high]: 'swapping', [pIndex]: 'swapping' },
         true,
-        `Partition Complete`
+        `Partition Complete`,
+        { pivot, finalPIndex: pIndex },
+        { expr: `j === high`, result: true },
+        { type: 'swap' }
       );
 
       [arr[pIndex], arr[high]] = [arr[high], arr[pIndex]];
@@ -229,13 +277,20 @@ function partition(arr, low, high):
         16,
         `Pivot ${arr[pIndex]} is now settled in its finalized sorted position at index [${pIndex}].`,
         { sorted: pIndex },
-        { [pIndex]: 'sorted' }
+        { [pIndex]: 'sorted' },
+        true,
+        undefined,
+        { sortedIndex: pIndex, value: arr[pIndex] },
+        { expr: `isSorted(pIndex)`, result: true },
+        { type: 'sorted' }
       );
 
+      callStack.pop();
       return pIndex;
     }
 
     function quicksort(low: number, high: number) {
+      callStack.push({ name: 'quicksort', params: { low, high }, line: 2 });
       if (low < high) {
         const p = partition(low, high);
         quicksort(low, p - 1);
@@ -243,6 +298,7 @@ function partition(arr, low, high):
       } else if (low === high) {
         sortedIndices.add(low);
       }
+      callStack.pop();
     }
 
     quicksort(0, n - 1);
@@ -256,6 +312,10 @@ function partition(arr, low, high):
       explanation: '🎉 Quicksort complete! All elements are verified sorted.',
       isMilestone: true,
       milestoneTitle: 'Quicksort Finished',
+      soundCue: { type: 'complete' },
+      variables: { totalSorted: n, completed: true },
+      conditionEval: { expr: `isFullySorted(arr)`, result: true },
+      callStack: [{ name: 'main', params: { n }, line: 1, isCurrent: true }],
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
         pointers: {},

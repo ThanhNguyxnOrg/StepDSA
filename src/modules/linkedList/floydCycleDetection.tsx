@@ -115,11 +115,20 @@ export const floydCycleDetectionModule: AlgorithmModule<{ values: number[]; cycl
     let slow = 0;
     let fast = 0;
 
+    // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialize Tortoise (slow) and Hare (fast) at head node [0] (val ${nodes[0].val}). Loop points back to index ${input.cycleToIndex}.`,
+      explanation: `Initialize Tortoise (slow = node[0], val ${nodes[0].val}) and Hare (fast = node[0], val ${nodes[0].val}). Tail points to cycle index ${input.cycleToIndex}.`,
+      isMilestone: true,
+      milestoneTitle: 'Initialized Pointers',
+      soundCue: { type: 'start' },
+      callStack: [
+        { name: 'hasCycle(head)', params: { head: nodes[0].val, cycleTo: input.cycleToIndex }, line: 2, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { slow: 0, fast: 0, 'nodes[0]': nodes[0].val, cycleToIndex: input.cycleToIndex },
       state: {
         nodes,
         slow: 0,
@@ -130,18 +139,76 @@ export const floydCycleDetectionModule: AlgorithmModule<{ values: number[]; cycl
       },
     });
 
-    for (let step = 1; step <= 20; step++) {
-      slow = nodes[slow].nextIndex;
-      const nextFast = nodes[fast].nextIndex;
-      fast = nodes[nextFast].nextIndex;
+    let meetingNode: number | null = null;
 
+    for (let step = 1; step <= 20; step++) {
+      // Step A: Advance slow by 1
+      const prevSlow = slow;
+      slow = nodes[slow].nextIndex;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        explanation: `Iteration ${step}: Tortoise crawls 1 hop from node[${prevSlow}] to node[${slow}] (val ${nodes[slow].val}).`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'hasCycle(head)', params: { step, slow, fast }, line: 4, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { step, slow, fast, slowVal: nodes[slow].val, fastVal: nodes[fast].val },
+        state: {
+          nodes,
+          slow,
+          fast,
+          hasCycle: false,
+          meetingPoint: null,
+          phase: 'detect',
+        },
+      });
+
+      // Step B: Advance fast 1st hop
+      const fastHop1 = nodes[fast].nextIndex;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        explanation: `Iteration ${step}: Hare leaps hop 1/2 from node[${fast}] to node[${fastHop1}] (val ${nodes[fastHop1].val}).`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'hasCycle(head)', params: { step, fastHop: 1 }, line: 5, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { step, slow, fast: fastHop1, hop: '1 of 2' },
+        state: {
+          nodes,
+          slow,
+          fast: fastHop1,
+          hasCycle: false,
+          meetingPoint: null,
+          phase: 'detect',
+        },
+      });
+
+      // Step C: Advance fast 2nd hop
+      const prevFast = fastHop1;
+      fast = nodes[fastHop1].nextIndex;
       const met = slow === fast;
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 4,
-        explanation: `Step ${step}: Tortoise advances 1 step to [${slow}] (val ${nodes[slow].val}), Hare advances 2 steps to [${fast}] (val ${nodes[fast].val}).`,
+        codeLine: 5,
+        explanation: `Iteration ${step}: Hare leaps hop 2/2 from node[${prevFast}] to node[${fast}] (val ${nodes[fast].val}). Checking collision: slow (${slow}) vs fast (${fast}).`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'hasCycle(head)', params: { step, slow, fast }, line: 6, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { step, slow, fast, collision: met },
+        conditionEval: {
+          expr: `slow (node[${slow}]) == fast (node[${fast}])`,
+          result: met,
+        },
         state: {
           nodes,
           slow,
@@ -153,11 +220,20 @@ export const floydCycleDetectionModule: AlgorithmModule<{ values: number[]; cycl
       });
 
       if (met) {
+        meetingNode = slow;
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 7,
-          explanation: `COLLISION DETECTED! Tortoise and Hare meet at node [${slow}] (val ${nodes[slow].val}). Cycle verified!`,
+          explanation: `🎯 COLLISION! Tortoise and Hare intersect at node[${slow}] (val ${nodes[slow].val}). Cycle is guaranteed!`,
+          isMilestone: true,
+          milestoneTitle: `Intersection at node[${slow}]`,
+          soundCue: { type: 'sorted' },
+          callStack: [
+            { name: 'hasCycle(head)', params: { meetingNode: slow }, line: 7, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { meetingNode: slow, hasCycle: true },
           state: {
             nodes,
             slow,
@@ -168,6 +244,70 @@ export const floydCycleDetectionModule: AlgorithmModule<{ values: number[]; cycl
           },
         });
         break;
+      }
+    }
+
+    // Phase 2: Find cycle entry node if meeting occurred
+    if (meetingNode !== null) {
+      let ptr1 = 0; // reset to head
+      let ptr2 = meetingNode; // stays at meeting point
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `Phase 2 (Cycle Entry Detection): Reset pointer 1 to Head (node[0]) and keep pointer 2 at meeting point node[${ptr2}]. Both advance at 1x speed to find cycle start!`,
+        isMilestone: true,
+        milestoneTitle: 'Finding Cycle Entry',
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'findCycleStart(head, meetingNode)', params: { ptr1: 0, ptr2 }, line: 8, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { ptr1, ptr2, phase: 'find_entry' },
+        conditionEval: { expr: `ptr1 (${ptr1}) == ptr2 (${ptr2})`, result: ptr1 === ptr2 },
+        state: {
+          nodes,
+          slow: ptr1,
+          fast: ptr2,
+          hasCycle: true,
+          meetingPoint: meetingNode,
+          phase: 'found',
+        },
+      });
+
+      let entryStep = 1;
+      while (ptr1 !== ptr2 && entryStep <= 15) {
+        ptr1 = nodes[ptr1].nextIndex;
+        ptr2 = nodes[ptr2].nextIndex;
+        const reached = ptr1 === ptr2;
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 9,
+          explanation: reached
+            ? `Cycle start found at node[${ptr1}] (val ${nodes[ptr1].val})! Both pointers converged at cycle origin.`
+            : `Entry Step ${entryStep}: Pointer 1 advanced to node[${ptr1}], Pointer 2 advanced to node[${ptr2}].`,
+          isMilestone: reached,
+          milestoneTitle: reached ? `Cycle Origin: node[${ptr1}]` : undefined,
+          soundCue: reached ? { type: 'complete' } : { type: 'step' },
+          callStack: [
+            { name: 'findCycleStart(head, meetingNode)', params: { ptr1, ptr2, entryStep }, line: 9, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { entryStep, ptr1, ptr2, entryNode: reached ? ptr1 : undefined },
+          conditionEval: { expr: `ptr1 (${ptr1}) == ptr2 (${ptr2})`, result: reached },
+          state: {
+            nodes,
+            slow: ptr1,
+            fast: ptr2,
+            hasCycle: true,
+            meetingPoint: reached ? ptr1 : meetingNode,
+            phase: 'found',
+          },
+        });
+        entryStep++;
       }
     }
 

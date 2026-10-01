@@ -198,12 +198,17 @@ export const fractionalKnapsackModule: AlgorithmModule<
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Sorted ${sorted.length} items descending by unit value density (value / weight). Knapsack capacity: ${capacity}.`,
+      isMilestone: true,
+      milestoneTitle: `Sorted ${sorted.length} Items by Density`,
+      explanation: `Sorted ${sorted.length} items descending by unit value density (value / weight). Knapsack capacity: ${capacity}kg. Highest density item packed first.`,
       variables: {
         capacity,
         totalItems: sorted.length,
         highestDensity: sorted[0]?.density ?? 0,
+        densityRanking: sorted.map((it, i) => `#${i}: $${it.density}/kg`).join(', '),
       },
+      conditionEval: { expr: 'items.length > 0', result: true },
+      soundCue: { type: 'step' },
       callStack: [
         { name: `fractionalKnapsack(items, ${capacity})`, params: { capacity, n: sorted.length }, line: 2, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
@@ -236,6 +241,8 @@ export const fractionalKnapsackModule: AlgorithmModule<
           density: it.density,
           remainingCapacity: currentCapacity,
         },
+        conditionEval: { expr: `remCap (${currentCapacity}) > 0`, result: currentCapacity > 0 },
+        soundCue: { type: 'compare' },
         callStack: [
           { name: `processItem(${it.value}, ${it.weight})`, params: { value: it.value, wt: it.weight, rem: currentCapacity }, line: 5, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
@@ -254,10 +261,58 @@ export const fractionalKnapsackModule: AlgorithmModule<
 
       if (currentCapacity === 0) {
         it.status = 'skipped';
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 6,
+          explanation: `Knapsack is already completely full (remCap = 0kg). Item #${i} must be skipped.`,
+          variables: { item: i, status: 'skipped', remainingCapacity: 0 },
+          conditionEval: { expr: 'remCap === 0', result: true },
+          soundCue: { type: 'step' },
+          callStack: [
+            { name: `skipItem(${i})`, params: { item: i }, line: 6, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          state: {
+            items: sorted.map((item) => ({ ...item })),
+            currentIndex: i,
+            capacity,
+            remainingCapacity: 0,
+            totalValue: Number(accumulatedValue.toFixed(2)),
+          },
+        });
         continue;
       }
 
-      if (it.weight <= currentCapacity) {
+      // Check fit condition
+      const fitsFully = it.weight <= currentCapacity;
+
+      if (fitsFully) {
+        // Evaluate condition
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 7,
+          explanation: `Weight test: item weight (${it.weight}kg) <= remaining capacity (${currentCapacity}kg) is TRUE! Can take 100% of item #${i}.`,
+          variables: { itemWeight: it.weight, remCap: currentCapacity, fitsEntirely: true },
+          conditionEval: { expr: `${it.weight} <= ${currentCapacity}`, result: true },
+          soundCue: { type: 'select' },
+          callStack: [
+            { name: `checkCapacity(${it.weight})`, params: { weight: it.weight, rem: currentCapacity }, line: 7, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          state: {
+            items: sorted.map((item, idx) => ({
+              ...item,
+              status: idx === i ? 'inspecting' : item.status,
+            })),
+            currentIndex: i,
+            capacity,
+            remainingCapacity: currentCapacity,
+            totalValue: Number(accumulatedValue.toFixed(2)),
+          },
+        });
+
         // Take 100%
         currentCapacity -= it.weight;
         accumulatedValue += it.value;
@@ -270,7 +325,7 @@ export const fractionalKnapsackModule: AlgorithmModule<
           codeLine: 8,
           isMilestone: true,
           milestoneTitle: `Packed 100% of Item #${i}`,
-          explanation: `Weight ${it.weight}kg fits entirely in remaining capacity (${currentCapacity + it.weight}kg). Packed 100%. Gained +$${it.value}.`,
+          explanation: `Packed 100% of Item #${i} (${it.weight}kg). Added +$${it.value}. Remaining knapsack capacity: ${currentCapacity}kg.`,
           variables: {
             fraction: '100%',
             weightUsed: it.weight,
@@ -278,6 +333,8 @@ export const fractionalKnapsackModule: AlgorithmModule<
             remCap: currentCapacity,
             totVal: Number(accumulatedValue.toFixed(2)),
           },
+          conditionEval: { expr: 'item.takenFraction === 1.0', result: true },
+          soundCue: { type: 'insert' },
           callStack: [
             { name: `takeFullItem(${it.value})`, params: { val: it.value, rem: currentCapacity }, line: 8, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
@@ -291,9 +348,39 @@ export const fractionalKnapsackModule: AlgorithmModule<
           },
         });
       } else {
-        // Take fraction
+        // Calculate fraction
         const frac = currentCapacity / it.weight;
         const gain = it.value * frac;
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 11,
+          explanation: `Weight test: item weight (${it.weight}kg) > remaining capacity (${currentCapacity}kg). Must take fraction = ${currentCapacity}/${it.weight} = ${(frac * 100).toFixed(1)}%.`,
+          variables: {
+            itemWeight: it.weight,
+            remCap: currentCapacity,
+            fractionDecimal: Number(frac.toFixed(3)),
+            calculatedGain: Number(gain.toFixed(2)),
+          },
+          conditionEval: { expr: `${it.weight} <= ${currentCapacity}`, result: false },
+          soundCue: { type: 'compare' },
+          callStack: [
+            { name: `calcFraction(${currentCapacity}, ${it.weight})`, params: { rem: currentCapacity, wt: it.weight }, line: 11, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          state: {
+            items: sorted.map((item, idx) => ({
+              ...item,
+              status: idx === i ? 'inspecting' : item.status,
+            })),
+            currentIndex: i,
+            capacity,
+            remainingCapacity: currentCapacity,
+            totalValue: Number(accumulatedValue.toFixed(2)),
+          },
+        });
+
         accumulatedValue += gain;
         it.takenFraction = Number(frac.toFixed(2));
         it.status = 'partial';
@@ -305,13 +392,15 @@ export const fractionalKnapsackModule: AlgorithmModule<
           codeLine: 12,
           isMilestone: true,
           milestoneTitle: `Packed ${(frac * 100).toFixed(1)}% of Item #${i}`,
-          explanation: `Knapsack cannot fit entire ${it.weight}kg. Sliced fraction (${(frac * 100).toFixed(1)}%). Added +$${gain.toFixed(2)} to reach full knapsack capacity.`,
+          explanation: `Packed ${(frac * 100).toFixed(1)}% of Item #${i} (slicing ${it.weight * frac}kg). Added +$${gain.toFixed(2)}. Knapsack is now 100% FULL!`,
           variables: {
             fraction: `${(frac * 100).toFixed(1)}%`,
             gainedVal: Number(gain.toFixed(2)),
             totVal: Number(accumulatedValue.toFixed(2)),
             remCap: 0,
           },
+          conditionEval: { expr: 'remCap === 0', result: true },
+          soundCue: { type: 'swap' },
           callStack: [
             { name: `takeFraction(${(frac * 100).toFixed(1)}%)`, params: { gain: gain.toFixed(2), frac: frac.toFixed(2) }, line: 12, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },

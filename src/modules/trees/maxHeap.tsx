@@ -178,6 +178,12 @@ function heapify(arr, n, i):
       explanation: `Initialized arbitrary array [${arr.join(', ')}] of size ${n}. Floyd's linear Build-Heap will start at index ${
         Math.floor(n / 2) - 1
       }.`,
+      isMilestone: true,
+      milestoneTitle: 'Build-Heap Initialized',
+      soundCue: { type: 'start' },
+      variables: { n, startInternalNode: Math.floor(n / 2) - 1 },
+      callStack: [{ name: 'buildMaxHeap', params: { n }, line: 13, isCurrent: true }],
+      conditionEval: { expr: `n > 1`, result: true },
       state: {
         nodes: buildTreeNodes(arr),
         heapArray: [...arr],
@@ -196,6 +202,10 @@ function heapify(arr, n, i):
         explanation: `Heapify at node index ${idx} (val ${arr[idx]}). Left child index ${left} (${
           left < n ? arr[left] : 'None'
         }), right child index ${right} (${right < n ? arr[right] : 'None'}).`,
+        soundCue: { type: 'compare' },
+        variables: { idx, val: arr[idx], left, right, leftVal: left < n ? arr[left] : null, rightVal: right < n ? arr[right] : null },
+        callStack: [{ name: 'heapifyDown', params: { idx, val: arr[idx] }, line: 2, isCurrent: true }],
+        conditionEval: { expr: `idx < Math.floor(n / 2)`, result: idx < Math.floor(n / 2) },
         state: {
           nodes: buildTreeNodes(arr, idx),
           heapArray: [...arr],
@@ -222,6 +232,10 @@ function heapify(arr, n, i):
           explanation: `Violation: child arr[${largest}] (${arr[idx]}) > parent (${temp}). Swapped elements. Sifting downward.`,
           isMilestone: true,
           milestoneTitle: `Sift Down Swap (${temp} ↔ ${arr[idx]})`,
+          soundCue: { type: 'swap' },
+          variables: { parentIdx: idx, largestIdx: largest, swappedVal: arr[idx], demotedVal: temp },
+          callStack: [{ name: 'swapNodes', params: { parentIdx: idx, childIdx: largest }, line: 10, isCurrent: true }],
+          conditionEval: { expr: `largest !== idx`, result: true },
           state: {
             nodes: buildTreeNodes(arr, idx, largest),
             heapArray: [...arr],
@@ -243,6 +257,10 @@ function heapify(arr, n, i):
         explanation: `Floyd's bottom-up scan: processing internal subtree rooted at index ${i} (value ${arr[i]}).`,
         isMilestone: true,
         milestoneTitle: `Processing Subtree Root #${i}`,
+        soundCue: { type: 'step' },
+        variables: { currentInternalIdx: i, val: arr[i] },
+        callStack: [{ name: 'buildMaxHeap.loop', params: { i }, line: 15, isCurrent: true }],
+        conditionEval: { expr: `i >= 0 (${i} >= 0)`, result: true },
         state: {
           nodes: buildTreeNodes(arr, i),
           heapArray: [...arr],
@@ -261,6 +279,10 @@ function heapify(arr, n, i):
       )}]. Root holds max element ${arr[0]}.`,
       isMilestone: true,
       milestoneTitle: 'Build-Heap Complete',
+      soundCue: { type: 'complete' },
+      variables: { maxElement: arr[0], n, heapValid: true },
+      callStack: [{ name: 'buildMaxHeap.done', params: { maxVal: arr[0] }, line: 16, isCurrent: true }],
+      conditionEval: { expr: `i < 0`, result: true },
       state: {
         nodes: buildTreeNodes(arr),
         heapArray: [...arr],

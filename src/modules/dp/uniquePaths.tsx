@@ -105,6 +105,12 @@ export const uniquePathsModule: AlgorithmModule<{ m: number; n: number }, Unique
       explanation: `Initialized DP grid of size ${m} x ${n}. Target destination is bottom-right cell (${
         m - 1
       }, ${n - 1}).`,
+      isMilestone: true,
+      milestoneTitle: 'Unique Paths Initialized',
+      soundCue: { type: 'start' },
+      variables: { m, n, totalCells: m * n },
+      callStack: [{ name: 'uniquePaths', params: { m, n }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `m > 0 && n > 0`, result: true },
       state: { m, n, dp: dp.map((row) => [...row]) },
     });
 
@@ -119,6 +125,10 @@ export const uniquePathsModule: AlgorithmModule<{ m: number; n: number }, Unique
       explanation: 'Base cases: all boundary cells in Row 0 and Col 0 set to 1 (only 1 straight path).',
       isMilestone: true,
       milestoneTitle: 'Initialized Boundary Base Cases = 1',
+      soundCue: { type: 'step' },
+      variables: { m, n, boundaryVal: 1 },
+      callStack: [{ name: 'initBoundaries', params: { m, n }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `dp[0][0] == 1`, result: true },
       state: { m, n, dp: dp.map((row) => [...row]) },
     });
 
@@ -135,6 +145,10 @@ export const uniquePathsModule: AlgorithmModule<{ m: number; n: number }, Unique
           explanation: `Evaluating cell (${r}, ${c}): can arrive from above (${r - 1}, ${c}) [${topVal} paths] or left (${r}, ${
             c - 1
           }) [${leftVal} paths].`,
+          soundCue: { type: 'compare' },
+          variables: { r, c, fromTop: topVal, fromLeft: leftVal, sum: topVal + leftVal },
+          callStack: [{ name: 'computeCell', params: { r, c }, line: 4, isCurrent: true }],
+          conditionEval: { expr: `r >= 1 && c >= 1`, result: true },
           state: {
             m,
             n,
@@ -158,6 +172,10 @@ export const uniquePathsModule: AlgorithmModule<{ m: number; n: number }, Unique
           } paths.`,
           isMilestone: true,
           milestoneTitle: `Cell (${r}, ${c}) = ${dp[r][c]}`,
+          soundCue: { type: 'swap' },
+          variables: { r, c, 'dp[r][c]': dp[r][c], topVal, leftVal },
+          callStack: [{ name: 'setCellDP', params: { r, c, paths: dp[r][c] }, line: 5, isCurrent: true }],
+          conditionEval: { expr: `dp[r][c] == topVal + leftVal`, result: true },
           state: {
             m,
             n,
@@ -177,6 +195,10 @@ export const uniquePathsModule: AlgorithmModule<{ m: number; n: number }, Unique
       }.`,
       isMilestone: true,
       milestoneTitle: `Result: ${dp[m - 1][n - 1]} Paths`,
+      soundCue: { type: 'complete' },
+      variables: { targetR: m - 1, targetC: n - 1, totalPaths: dp[m - 1][n - 1], completed: true },
+      callStack: [{ name: 'uniquePaths.done', params: { paths: dp[m - 1][n - 1] }, line: 6, isCurrent: true }],
+      conditionEval: { expr: `r == m - 1 && c == n - 1`, result: true },
       state: {
         m,
         n,

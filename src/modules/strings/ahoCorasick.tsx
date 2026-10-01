@@ -172,6 +172,8 @@ void buildFailLinks() {
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
+      isMilestone: true,
+      milestoneTitle: `Init Aho-Corasick (${patterns.length} Patterns)`,
       action: 'BUILD_COMPLETE',
       state: {
         trie: JSON.parse(JSON.stringify(trie)),
@@ -181,9 +183,11 @@ void buildFailLinks() {
         matches: [],
         phase: 'FAIL_LINKS',
       },
-      callStack: [{ name: 'buildAhoAutomaton', params: { totalPatterns: patterns.length, totalNodes: trie.length } }],
-      variables: { patterns: patterns.join(', '), totalNodes: trie.length },
-      explanation: `Constructed Aho-Corasick Trie with BFS failure links for ${patterns.length} patterns. Total states: ${trie.length}.`,
+      callStack: [{ name: 'buildAhoAutomaton', params: { totalPatterns: patterns.length, totalNodes: trie.length }, line: 2, isCurrent: true }],
+      variables: { patterns: patterns.join(', '), totalNodes: trie.length, alphabetSize: 26 },
+      conditionEval: { expr: 'patterns.length > 0', result: true },
+      soundCue: { type: 'step' },
+      explanation: `Constructed multi-pattern Trie with BFS failure links for ${patterns.length} patterns [${patterns.join(', ')}]. Total automaton states: ${trie.length}.`,
     });
 
     // Step 3: Stream Search
@@ -193,23 +197,36 @@ void buildFailLinks() {
     for (let i = 0; i < text.length; i++) {
       const ch = text[i];
 
+      // Failure transitions if character doesn't match current state
       while (curr > 0 && trie[curr].children[ch] === undefined) {
+        const prev = curr;
         curr = trie[curr].failId;
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 8,
+          action: 'FAIL_TRANSITION',
+          state: {
+            trie: JSON.parse(JSON.stringify(trie)),
+            currentNodeId: curr,
+            textIndex: i,
+            currentChar: ch,
+            matches: [...matches],
+            phase: 'SEARCH',
+          },
+          callStack: [{ name: 'followFailureLink', params: { fromState: prev, toState: curr, char: ch }, line: 8, isCurrent: true }],
+          variables: { mismatchChar: ch, hoppedFrom: prev, hoppedTo: curr, textIndex: i },
+          conditionEval: { expr: `trie[${prev}].children['${ch}'] === undefined`, result: true },
+          soundCue: { type: 'compare' },
+          explanation: `Mismatch: State #${prev} has no transition for '${ch}'. Followed suffix failure link to State #${curr} (longest proper suffix match).`,
+        });
       }
 
       if (trie[curr].children[ch] !== undefined) {
         curr = trie[curr].children[ch];
       } else {
         curr = 0;
-      }
-
-      // Check matches at current node or via failure chain
-      let check = curr;
-      while (check > 0) {
-        if (trie[check].isWord && trie[check].word) {
-          matches.push({ pattern: trie[check].word!, index: i - trie[check].word!.length + 1 });
-        }
-        check = trie[check].failId;
       }
 
       frames.push({
@@ -225,21 +242,57 @@ void buildFailLinks() {
           matches: [...matches],
           phase: 'SEARCH',
         },
-        callStack: [{ name: 'processChar', params: { index: i, char: ch, activeState: curr } }],
+        callStack: [{ name: 'processChar', params: { index: i, char: ch, activeState: curr }, line: 12, isCurrent: true }],
         variables: {
           textIndex: i,
           char: ch,
           activeStateId: curr,
           totalMatchesFound: matches.length,
         },
-        explanation: `Index ${i} ('${ch}'): Automaton moved to State #${curr} ('${trie[curr].char}'). Matches so far: ${matches.length}.`,
+        conditionEval: { expr: `advancedToState === ${curr}`, result: true },
+        soundCue: { type: 'step' },
+        explanation: `Stream index ${i} ('${ch}'): Advanced along Trie transition to State #${curr} (char '${trie[curr].char}'). Matches so far: ${matches.length}.`,
       });
+
+      // Check matches at current node or via failure chain
+      let check = curr;
+      while (check > 0) {
+        if (trie[check].isWord && trie[check].word) {
+          const matchStart = i - trie[check].word!.length + 1;
+          matches.push({ pattern: trie[check].word!, index: matchStart });
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 14,
+            isMilestone: true,
+            milestoneTitle: `Match: "${trie[check].word}" at [${matchStart}..${i}]`,
+            action: 'MATCH_FOUND',
+            state: {
+              trie: JSON.parse(JSON.stringify(trie)),
+              currentNodeId: curr,
+              textIndex: i,
+              currentChar: ch,
+              matches: [...matches],
+              phase: 'SEARCH',
+            },
+            callStack: [{ name: 'reportMatch', params: { pattern: trie[check].word, start: matchStart, end: i }, line: 14, isCurrent: true }],
+            variables: { matchedPattern: trie[check].word, startIndex: matchStart, endIndex: i, totalMatches: matches.length },
+            conditionEval: { expr: `trie[${check}].isWord === true`, result: true },
+            soundCue: { type: 'insert' },
+            explanation: `Dictionary pattern "${trie[check].word}" recognized at text slice [${matchStart}..${i}]! Total matches: ${matches.length}.`,
+          });
+        }
+        check = trie[check].failId;
+      }
     }
 
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 16,
+      isMilestone: true,
+      milestoneTitle: `Found ${matches.length} Matches`,
       action: 'COMPLETE',
       state: {
         trie: JSON.parse(JSON.stringify(trie)),
@@ -249,12 +302,14 @@ void buildFailLinks() {
         matches: [...matches],
         phase: 'DONE',
       },
-      callStack: [{ name: 'ahoCorasick', params: { totalMatches: matches.length, status: 'DONE' } }],
+      callStack: [{ name: 'ahoCorasick', params: { totalMatches: matches.length, status: 'DONE' }, line: 16, isCurrent: true }],
       variables: {
         totalMatchesFound: matches.length,
         matchesList: matches.map((m) => `"${m.pattern}"@${m.index}`).join(', '),
       },
-      explanation: `Search complete in O(N + M + Z) time! Found ${matches.length} pattern occurrences.`,
+      conditionEval: { expr: 'streamExhausted', result: true },
+      soundCue: { type: 'complete' },
+      explanation: `Multi-pattern search complete in O(N + M + Z) linear time! Located ${matches.length} pattern occurrences without backtracking.`,
     });
 
     frames.forEach((f) => {

@@ -165,6 +165,9 @@ export const transitiveClosureModule: AlgorithmModule<
       totalSteps: 1,
       codeLine: 1,
       action: 'INIT',
+      isMilestone: true,
+      milestoneTitle: 'Matrix Initialized',
+      soundCue: { type: 'start' },
       state: {
         nodes: rawNodes,
         matrix: matrix.map((row) => [...row]),
@@ -175,6 +178,7 @@ export const transitiveClosureModule: AlgorithmModule<
       },
       callStack: [{ name: 'transitiveClosure', params: { V, edgesCount: rawEdges.length } }],
       variables: { V, totalEdges: rawEdges.length, status: 'Adjacency initialized' },
+      conditionEval: { expr: `V === ${V}`, result: true },
       explanation: `Initialized reachability matrix with reflexive 1s on diagonal and direct graph edges.`,
     });
 
@@ -184,6 +188,9 @@ export const transitiveClosureModule: AlgorithmModule<
         totalSteps: 1,
         codeLine: 5,
         action: 'PIVOT_SELECT',
+        isMilestone: true,
+        milestoneTitle: `Pivot Node ${rawNodes[k]} (k=${k})`,
+        soundCue: { type: 'pivot' },
         state: {
           nodes: rawNodes,
           matrix: matrix.map((row) => [...row]),
@@ -194,10 +201,34 @@ export const transitiveClosureModule: AlgorithmModule<
         },
         callStack: [{ name: 'transitiveClosure', params: { pivotK: rawNodes[k], k } }],
         variables: { pivotNode: rawNodes[k], k, phase: `Exploring paths through node ${rawNodes[k]}` },
-        explanation: `Set intermediate pivot vertex k = ${rawNodes[k]} (index ${k}). Examining paths i -> k -> j.`,
+        conditionEval: { expr: `k < ${V}`, result: true },
+        explanation: `Set intermediate pivot vertex k = ${rawNodes[k]} (index ${k}). Examining all candidate paths i -> ${rawNodes[k]} -> j.`,
       });
 
       for (let i = 0; i < V; i++) {
+        const canReachPivot = matrix[i][k] === 1;
+        if (canReachPivot) {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 6,
+            action: 'ROW_SCAN',
+            soundCue: { type: 'step' },
+            state: {
+              nodes: rawNodes,
+              matrix: matrix.map((row) => [...row]),
+              k,
+              i,
+              j: -1,
+              justUpdated: null,
+            },
+            callStack: [{ name: 'scanRow', params: { source: rawNodes[i], pivot: rawNodes[k] } }],
+            variables: { source: rawNodes[i], pivot: rawNodes[k], canReachPivot: true },
+            conditionEval: { expr: `reach[${rawNodes[i]}][${rawNodes[k]}] === 1`, result: true },
+            explanation: `Source node ${rawNodes[i]} can reach pivot ${rawNodes[k]}. Propagating reachability to all nodes reachable from ${rawNodes[k]}.`,
+          });
+        }
+
         for (let j = 0; j < V; j++) {
           const throughK = matrix[i][k] === 1 && matrix[k][j] === 1;
           const wasReachable = matrix[i][j] === 1;
@@ -209,6 +240,9 @@ export const transitiveClosureModule: AlgorithmModule<
               totalSteps: 1,
               codeLine: 8,
               action: 'REACHABILITY_DISCOVERED',
+              isMilestone: true,
+              milestoneTitle: `New Path: ${rawNodes[i]} → ${rawNodes[j]}`,
+              soundCue: { type: 'swap' },
               state: {
                 nodes: rawNodes,
                 matrix: matrix.map((row) => [...row]),
@@ -225,6 +259,7 @@ export const transitiveClosureModule: AlgorithmModule<
                 formula: `reach[${rawNodes[i]}][${rawNodes[k]}] (1) && reach[${rawNodes[k]}][${rawNodes[j]}] (1)`,
                 newReach: `reach[${rawNodes[i]}][${rawNodes[j]}] = 1`,
               },
+              conditionEval: { expr: `reach[${i}][${k}] && reach[${k}][${j}]`, result: true },
               explanation: `New path discovered: ${rawNodes[i]} -> ${rawNodes[k]} -> ${rawNodes[j]}. Updated reach[${rawNodes[i]}][${rawNodes[j]}] = 1!`,
             });
           }
@@ -237,6 +272,9 @@ export const transitiveClosureModule: AlgorithmModule<
       totalSteps: 1,
       codeLine: 10,
       action: 'COMPLETE',
+      isMilestone: true,
+      milestoneTitle: 'Transitive Closure Complete',
+      soundCue: { type: 'complete' },
       state: {
         nodes: rawNodes,
         matrix: matrix.map((row) => [...row]),
@@ -247,6 +285,7 @@ export const transitiveClosureModule: AlgorithmModule<
       },
       callStack: [{ name: 'transitiveClosure', params: { status: 'DONE' } }],
       variables: { V, status: 'Transitive closure complete' },
+      conditionEval: { expr: `completed === true`, result: true },
       explanation: "Warshall's algorithm completed. Reachability matrix fully computed in O(V^3).",
     });
 

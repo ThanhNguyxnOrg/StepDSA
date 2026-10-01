@@ -127,7 +127,7 @@ def bfs(graph, start):
     },
   ],
   defaultInput: 0,
-  generateTimeline: (): ExecutionFrame<GraphBFSState>[] => {
+  generateTimeline: (startInput?: number): ExecutionFrame<GraphBFSState>[] => {
     const initialNodes: GraphNode[] = [
       { id: 0, label: '0', x: 80, y: 70, status: 'unvisited' },
       { id: 1, label: '1', x: 190, y: 30, status: 'unvisited' },
@@ -144,115 +144,175 @@ def bfs(graph, start):
       { from: 3, to: 4 },
     ];
 
-    const frames: ExecutionFrame<GraphBFSState>[] = [];
+    // Build adjacency list (undirected)
+    const adj: Record<number, number[]> = { 0: [1, 2], 1: [0, 3], 2: [0, 4], 3: [1, 4], 4: [2, 3] };
+    const startNode = typeof startInput === 'number' && adj[startInput] ? startInput : 0;
 
-    // Frame 0: Init
+    const frames: ExecutionFrame<GraphBFSState>[] = [];
+    const nodeStatus: Record<number, GraphNode['status']> = {};
+    initialNodes.forEach((n) => {
+      nodeStatus[n.id] = 'unvisited';
+    });
+
+    const queue: number[] = [startNode];
+    const visitedSet = new Set<number>();
+    const queuedSet = new Set<number>([startNode]);
+    const visitedOrder: number[] = [];
+    nodeStatus[startNode] = 'queued';
+
+    const getNodesState = (): GraphNode[] =>
+      initialNodes.map((n) => ({ ...n, status: nodeStatus[n.id] }));
+
+    // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
-      totalSteps: 6,
-      codeLine: 4,
-      explanation: 'Step 0: Initializing BFS with Start Node 0. Enqueueing [0].',
+      totalSteps: 1,
+      codeLine: 2,
+      explanation: `Initialized BFS at Start Node ${startNode}. Marked node ${startNode} as queued and pushed into FIFO Queue.`,
+      isMilestone: true,
+      milestoneTitle: `BFS Initialized at Node ${startNode}`,
+      soundCue: { type: 'start' },
+      callStack: [
+        { name: 'bfs(graph, start)', params: { start: startNode }, line: 2, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { startNode, queue: [...queue], visitedOrder: [] },
+      conditionEval: { expr: 'queue.length > 0', result: true },
       state: {
-        nodes: initialNodes.map((n) => (n.id === 0 ? { ...n, status: 'queued' } : n)),
+        nodes: getNodesState(),
         edges,
-        queue: [0],
-        visitedOrder: [],
+        queue: [...queue],
+        visitedOrder: [...visitedOrder],
       },
     });
 
-    // Frame 1: Visit 0, enqueue 1 and 2
-    frames.push({
-      stepIndex: 1,
-      totalSteps: 6,
-      codeLine: 8,
-      explanation: 'Step 1: Dequeued Node 0. Visiting neighbors 1 and 2 → enqueued.',
-      state: {
-        nodes: initialNodes.map((n) =>
-          n.id === 0
-            ? { ...n, status: 'visited' }
-            : n.id === 1 || n.id === 2
-            ? { ...n, status: 'queued' }
-            : n
-        ),
-        edges,
-        queue: [1, 2],
-        visitedOrder: [0],
-      },
-    });
+    while (queue.length > 0) {
+      // Step A: Dequeue vertex
+      const curr = queue.shift()!;
+      queuedSet.delete(curr);
+      nodeStatus[curr] = 'active';
 
-    // Frame 2: Visit 1, enqueue 3
-    frames.push({
-      stepIndex: 2,
-      totalSteps: 6,
-      codeLine: 8,
-      explanation: 'Step 2: Dequeued Node 1. Visiting neighbor 3 → enqueued.',
-      state: {
-        nodes: initialNodes.map((n) =>
-          n.id === 0 || n.id === 1
-            ? { ...n, status: 'visited' }
-            : n.id === 2 || n.id === 3
-            ? { ...n, status: 'queued' }
-            : n
-        ),
-        edges,
-        queue: [2, 3],
-        visitedOrder: [0, 1],
-      },
-    });
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        explanation: `Dequeued vertex ${curr} from front of queue. Status changed to ACTIVE. Exploring neighbors: [${adj[curr].join(', ')}].`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'bfs(graph, start)', params: { currentVertex: curr, queueLength: queue.length }, line: 4, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { currentVertex: curr, queue: [...queue], neighbors: adj[curr] },
+        state: {
+          nodes: getNodesState(),
+          edges,
+          queue: [...queue],
+          visitedOrder: [...visitedOrder],
+        },
+      });
 
-    // Frame 3: Visit 2, enqueue 4
-    frames.push({
-      stepIndex: 3,
-      totalSteps: 6,
-      codeLine: 8,
-      explanation: 'Step 3: Dequeued Node 2. Visiting neighbor 4 → enqueued.',
-      state: {
-        nodes: initialNodes.map((n) =>
-          n.id === 0 || n.id === 1 || n.id === 2
-            ? { ...n, status: 'visited' }
-            : n.id === 3 || n.id === 4
-            ? { ...n, status: 'queued' }
-            : n
-        ),
-        edges,
-        queue: [3, 4],
-        visitedOrder: [0, 1, 2],
-      },
-    });
+      // Step B: Explore each neighbor
+      for (const neighbor of adj[curr]) {
+        const isAlreadyKnown = visitedSet.has(neighbor) || queuedSet.has(neighbor);
 
-    // Frame 4: Visit 3
-    frames.push({
-      stepIndex: 4,
-      totalSteps: 6,
-      codeLine: 8,
-      explanation: 'Step 4: Dequeued Node 3. Neighbor 4 is already queued, skipping cycle.',
-      state: {
-        nodes: initialNodes.map((n) =>
-          n.id !== 4 ? { ...n, status: 'visited' } : { ...n, status: 'queued' }
-        ),
-        edges,
-        queue: [4],
-        visitedOrder: [0, 1, 2, 3],
-      },
-    });
+        if (!isAlreadyKnown) {
+          queuedSet.add(neighbor);
+          queue.push(neighbor);
+          nodeStatus[neighbor] = 'queued';
 
-    // Frame 5: Visit 4 (All nodes visited)
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 7,
+            explanation: `Inspecting neighbor ${neighbor} from vertex ${curr}: Not yet visited or queued! Enqueueing vertex ${neighbor}.`,
+            isMilestone: true,
+            milestoneTitle: `Enqueued Node ${neighbor}`,
+            soundCue: { type: 'swap' },
+            callStack: [
+              { name: 'enqueueNeighbor()', params: { from: curr, neighbor }, line: 7, isCurrent: true },
+              { name: 'bfs(graph, start)', params: { currentVertex: curr }, line: 5 },
+            ],
+            variables: { currentVertex: curr, neighbor, isKnown: false, queue: [...queue] },
+            conditionEval: { expr: `!visited.has(${neighbor})`, result: true },
+            state: {
+              nodes: getNodesState(),
+              edges,
+              queue: [...queue],
+              visitedOrder: [...visitedOrder],
+            },
+          });
+        } else {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 6,
+            explanation: `Inspecting neighbor ${neighbor} from vertex ${curr}: Already discovered (${
+              visitedSet.has(neighbor) ? 'Visited' : 'Queued'
+            }). Skipping edge to avoid redundant cycle processing.`,
+            soundCue: { type: 'compare' },
+            callStack: [
+              { name: 'checkNeighbor()', params: { from: curr, neighbor, status: 'already_known' }, line: 6, isCurrent: true },
+              { name: 'bfs(graph, start)', params: { currentVertex: curr }, line: 5 },
+            ],
+            variables: { currentVertex: curr, neighbor, isKnown: true, queue: [...queue] },
+            conditionEval: { expr: `visited.has(${neighbor}) || queued.has(${neighbor})`, result: true },
+            state: {
+              nodes: getNodesState(),
+              edges,
+              queue: [...queue],
+              visitedOrder: [...visitedOrder],
+            },
+          });
+        }
+      }
+
+      // Step C: Mark current as finalized visited
+      visitedSet.add(curr);
+      visitedOrder.push(curr);
+      nodeStatus[curr] = 'visited';
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 9,
+        explanation: `Vertex ${curr} completely processed! Marked as VISITED. Visited sequence: [${visitedOrder.join(' -> ')}].`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'bfs(graph, start)', params: { finalized: curr, totalVisited: visitedOrder.length }, line: 9, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { finalizedVertex: curr, visitedOrder: [...visitedOrder], queue: [...queue] },
+        state: {
+          nodes: getNodesState(),
+          edges,
+          queue: [...queue],
+          visitedOrder: [...visitedOrder],
+        },
+      });
+    }
+
+    // Terminal Frame
     frames.push({
-      stepIndex: 5,
-      totalSteps: 6,
+      stepIndex: frames.length,
+      totalSteps: 1,
       codeLine: 12,
       isMilestone: true,
       milestoneTitle: 'BFS Wavefront Complete',
-      explanation: 'Step 5: Dequeued Node 4. Queue is empty. BFS traversal complete!',
+      soundCue: { type: 'complete' },
+      explanation: `🎉 Queue is empty! BFS traversal complete. Final level-order discovery order: [${visitedOrder.join(' -> ')}].`,
+      callStack: [{ name: 'bfs(graph, start)', params: { completed: true, totalNodes: visitedOrder.length }, line: 12, isCurrent: true }],
+      variables: { completed: true, visitedOrder: [...visitedOrder], totalVisited: visitedOrder.length },
+      conditionEval: { expr: 'queue.length == 0', result: true },
       state: {
-        nodes: initialNodes.map((n) => ({ ...n, status: 'visited' })),
+        nodes: getNodesState(),
         edges,
         queue: [],
-        visitedOrder: [0, 1, 2, 3, 4],
+        visitedOrder: [...visitedOrder],
       },
     });
 
-    return frames;
+    const total = frames.length;
+    return frames.map((f, idx) => ({ ...f, stepIndex: idx, totalSteps: total }));
   },
   renderStage: (frame: ExecutionFrame<GraphBFSState>) => {
     const { nodes, edges, queue, visitedOrder } = frame.state;

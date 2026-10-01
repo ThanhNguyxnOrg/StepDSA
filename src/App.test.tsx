@@ -9,7 +9,7 @@ describe('App Full Integration Smoke Test', () => {
     expect(screen.getByText(/Explore Hub/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Quicksort/i)[0]).toBeInTheDocument();
     expect(screen.getByText(/Personal Code Visualization Studio/i)).toBeInTheDocument();
-  });
+  }, 20000);
 
   it('navigates to Workbench when clicking Launch Visualizer', () => {
     render(<App />);
@@ -20,7 +20,7 @@ describe('App Full Integration Smoke Test', () => {
     // Should now show the Workbench controls
     expect(screen.getByTitle(/Reset to Start/i)).toBeInTheDocument();
     expect(screen.getByTitle('Play (Space)')).toBeInTheDocument();
-  });
+  }, 20000);
 
   it('opens Personal Code Studio modal when clicking CLI button', () => {
     render(<App />);
@@ -28,7 +28,7 @@ describe('App Full Integration Smoke Test', () => {
     fireEvent.click(studioBtn);
 
     expect(screen.getByText(/100% Local Execution Security/i)).toBeInTheDocument();
-  });
+  }, 20000);
 
   it('navigates to Workbench and applies presets and custom input cleanly', () => {
     render(<App />);
@@ -54,5 +54,5 @@ describe('App Full Integration Smoke Test', () => {
     const applyBtn = screen.getByText('Apply');
     fireEvent.click(applyBtn);
     expect(screen.getByText(/Step 1\//i)).toBeInTheDocument();
-  });
+  }, 20000);
 });

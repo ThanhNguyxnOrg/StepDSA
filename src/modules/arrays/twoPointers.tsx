@@ -116,6 +116,12 @@ export const twoPointersModule: AlgorithmModule<number[], TwoPointersState> = {
       totalSteps: 1,
       codeLine: 2,
       explanation: `Initialize two pointers: left = 0 (height ${heights[left]}), right = ${right} (height ${heights[right]}).`,
+      isMilestone: true,
+      milestoneTitle: 'Pointers Initialized',
+      soundCue: { type: 'start' },
+      variables: { left, right, 'height[left]': heights[left], 'height[right]': heights[right], maxArea: 0 },
+      callStack: [{ name: 'maxArea', params: { n: heights.length }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `left < right (${left} < ${right})`, result: left < right },
       state: {
         heights: [...heights],
         left,
@@ -131,8 +137,9 @@ export const twoPointersModule: AlgorithmModule<number[], TwoPointersState> = {
       const width = right - left;
       const minH = Math.min(heights[left], heights[right]);
       const area = width * minH;
+      const isNewMax = area > maxArea;
 
-      if (area > maxArea) {
+      if (isNewMax) {
         maxArea = area;
         bestLeft = left;
         bestRight = right;
@@ -143,6 +150,12 @@ export const twoPointersModule: AlgorithmModule<number[], TwoPointersState> = {
         totalSteps: 1,
         codeLine: 6,
         explanation: `Width = ${right} - ${left} = ${width}, height = min(${heights[left]}, ${heights[right]}) = ${minH}. Water area = ${area}. Max area = ${maxArea}.`,
+        soundCue: { type: isNewMax ? 'swap' : 'compare' },
+        isMilestone: isNewMax,
+        milestoneTitle: isNewMax ? `New Max Area: ${maxArea}` : undefined,
+        variables: { left, right, width, minH, area, maxArea, isNewMax },
+        callStack: [{ name: 'calculateArea', params: { left, right, area }, line: 6, isCurrent: true }],
+        conditionEval: { expr: `area > maxArea (${area} > ${maxArea})`, result: isNewMax },
         state: {
           heights: [...heights],
           left,
@@ -160,6 +173,10 @@ export const twoPointersModule: AlgorithmModule<number[], TwoPointersState> = {
           totalSteps: 1,
           codeLine: 8,
           explanation: `height[left] (${heights[left]}) < height[right] (${heights[right]}): move left pointer inward (left = ${left + 1}).`,
+          soundCue: { type: 'step' },
+          variables: { 'h[left]': heights[left], 'h[right]': heights[right], advancing: 'left' },
+          callStack: [{ name: 'advanceLeft', params: { newLeft: left + 1 }, line: 8, isCurrent: true }],
+          conditionEval: { expr: `heights[left] < heights[right] (${heights[left]} < ${heights[right]})`, result: true },
           state: {
             heights: [...heights],
             left,
@@ -177,6 +194,10 @@ export const twoPointersModule: AlgorithmModule<number[], TwoPointersState> = {
           totalSteps: 1,
           codeLine: 10,
           explanation: `height[left] (${heights[left]}) >= height[right] (${heights[right]}): move right pointer inward (right = ${right - 1}).`,
+          soundCue: { type: 'step' },
+          variables: { 'h[left]': heights[left], 'h[right]': heights[right], advancing: 'right' },
+          callStack: [{ name: 'advanceRight', params: { newRight: right - 1 }, line: 10, isCurrent: true }],
+          conditionEval: { expr: `heights[left] >= heights[right] (${heights[left]} >= ${heights[right]})`, result: true },
           state: {
             heights: [...heights],
             left,
@@ -196,6 +217,12 @@ export const twoPointersModule: AlgorithmModule<number[], TwoPointersState> = {
       totalSteps: 1,
       codeLine: 12,
       explanation: `Pointers met at index ${left}. Maximum water area found is ${maxArea} between indices [${bestLeft}, ${bestRight}].`,
+      isMilestone: true,
+      milestoneTitle: `Max Water Area: ${maxArea}`,
+      soundCue: { type: 'complete' },
+      variables: { maxArea, bestBounds: `[${bestLeft}, ${bestRight}]`, completed: true },
+      callStack: [{ name: 'maxArea.done', params: { maxArea }, line: 12, isCurrent: true }],
+      conditionEval: { expr: `left >= right (${left} >= ${right})`, result: true },
       state: {
         heights: [...heights],
         left,

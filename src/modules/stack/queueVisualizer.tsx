@@ -129,7 +129,10 @@ public:
       explanation: `Initialized empty Queue with capacity ${capacity}. Front = 0, Rear = -1. FIFO discipline active.`,
       isMilestone: true,
       milestoneTitle: 'Queue Initialized',
-      soundCue: 'start',
+      soundCue: { type: 'start' },
+      variables: { front: 0, rear: -1, size: 0, capacity },
+      callStack: [{ name: 'Queue.init', params: { capacity }, line: 1, isCurrent: true }],
+      conditionEval: { expr: `size == 0`, result: true },
       scopeVariables: { front: 0, rear: -1, size: 0, capacity },
       state: {
         items: [],
@@ -151,7 +154,10 @@ public:
         explanation: `ENQUEUE(${val}): Element pushed at rear index [${rear}]. Current queue size = ${queue.length}.`,
         isMilestone: true,
         milestoneTitle: `Enqueue ${val}`,
-        soundCue: 'swap',
+        soundCue: { type: 'swap' },
+        variables: { enqueued: val, front: 0, rear, size: queue.length },
+        callStack: [{ name: 'Queue.enqueue', params: { val, rear }, line: 5, isCurrent: true }],
+        conditionEval: { expr: `size < capacity (${queue.length} < ${capacity})`, result: true },
         scopeVariables: { enqueued: val, front: 0, rear, size: queue.length },
         state: {
           items: queue.map((v, idx) => ({
@@ -174,7 +180,10 @@ public:
         totalSteps: 1,
         codeLine: 12,
         explanation: `PEEK(): Inspecting front element without removal. Value = ${queue[0]}.`,
-        soundCue: 'compare',
+        soundCue: { type: 'compare' },
+        variables: { frontVal: queue[0], size: queue.length },
+        callStack: [{ name: 'Queue.peek', params: {}, line: 12, isCurrent: true }],
+        conditionEval: { expr: `!isEmpty() (${queue.length} > 0)`, result: true },
         scopeVariables: { frontVal: queue[0], size: queue.length },
         state: {
           items: queue.map((v, idx) => ({
@@ -201,7 +210,10 @@ public:
         explanation: `DEQUEUE(): Removed oldest element (${dequeuedVal}) from front. Next element shifts to front.`,
         isMilestone: true,
         milestoneTitle: `Dequeue ${dequeuedVal}`,
-        soundCue: 'sorted',
+        soundCue: { type: 'step' },
+        variables: { dequeued: dequeuedVal, remainingSize: queue.length },
+        callStack: [{ name: 'Queue.dequeue', params: {}, line: 8, isCurrent: true }],
+        conditionEval: { expr: `size > 0 (${queue.length + 1} > 0)`, result: true },
         scopeVariables: { dequeued: dequeuedVal, remainingSize: queue.length },
         state: {
           items: queue.map((v, idx) => ({
@@ -224,7 +236,10 @@ public:
       explanation: `🎉 Queue lifecycle operations complete. FIFO ordering preserved throughout all transitions.`,
       isMilestone: true,
       milestoneTitle: 'Queue Ready',
-      soundCue: 'complete',
+      soundCue: { type: 'complete' },
+      variables: { finalSize: queue.length, capacity },
+      callStack: [{ name: 'Queue.summary', params: { size: queue.length }, line: 15, isCurrent: true }],
+      conditionEval: { expr: `queue.length >= 0`, result: true },
       scopeVariables: { finalSize: queue.length },
       state: {
         items: queue.map((v, idx) => ({

@@ -85,70 +85,191 @@ pop_back(deque)`,
     const dq: number[] = [];
     const frames: ExecutionFrame<DequeState>[] = [];
 
+    // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: 'Initialized empty Deque with dual Head/Tail access ports.',
+      explanation: 'Initialized empty Double-Ended Queue (Deque) with symmetric O(1) Head & Tail access ports.',
+      isMilestone: true,
+      milestoneTitle: 'Initialized Empty Deque',
+      soundCue: { type: 'start' },
+      callStack: [
+        { name: 'deque_init()', params: { capacity: 'dynamic' }, line: 2, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { size: 0, front: null, rear: null, isEmpty: true },
+      conditionEval: { expr: 'size == 0', result: true },
       state: { items: [], recentAction: undefined },
     });
 
     const v1 = input[0] ?? 10;
+    // Step 1A: Prepare push_back
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 4,
+      explanation: `Preparing PUSH_BACK(${v1}): Checking rear port capacity. Deque currently has ${dq.length} items.`,
+      soundCue: { type: 'step' },
+      callStack: [
+        { name: 'push_back(deque, val)', params: { val: v1, currentSize: dq.length }, line: 4, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { action: 'PUSH_BACK', val: v1, sizeBefore: dq.length },
+      state: { items: [...dq], recentAction: undefined },
+    });
+    // Step 1B: Commit push_back
     dq.push(v1);
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 4,
-      explanation: `PUSH_BACK(${v1}): Appended ${v1} to rear of Deque.`,
+      explanation: `PUSH_BACK(${v1}) Committed: Appended ${v1} to rear of Deque. Front=0, Rear=0.`,
       isMilestone: true,
       milestoneTitle: `Push Back (${v1})`,
+      soundCue: { type: 'swap' },
+      callStack: [
+        { name: 'push_back(deque, val)', params: { val: v1, newSize: dq.length }, line: 4, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { action: 'PUSH_BACK', val: v1, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
       state: { items: [...dq], recentAction: 'PUSH_BACK', highlightedIndex: dq.length - 1 },
     });
 
     const v2 = input[1] ?? 20;
+    // Step 2A: Prepare push_front
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 5,
+      explanation: `Preparing PUSH_FRONT(${v2}): Inserting at head index 0. Existing items will shift logically.`,
+      soundCue: { type: 'step' },
+      callStack: [
+        { name: 'push_front(deque, val)', params: { val: v2, currentSize: dq.length }, line: 5, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { action: 'PUSH_FRONT', val: v2, sizeBefore: dq.length },
+      state: { items: [...dq], recentAction: undefined },
+    });
+    // Step 2B: Commit push_front
     dq.unshift(v2);
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 5,
-      explanation: `PUSH_FRONT(${v2}): Prepended ${v2} to front of Deque.`,
+      explanation: `PUSH_FRONT(${v2}) Committed: Prepended ${v2} to front of Deque in O(1). Front=${dq[0]}, Rear=${dq[dq.length - 1]}.`,
       isMilestone: true,
       milestoneTitle: `Push Front (${v2})`,
+      soundCue: { type: 'swap' },
+      callStack: [
+        { name: 'push_front(deque, val)', params: { val: v2, newSize: dq.length }, line: 5, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { action: 'PUSH_FRONT', val: v2, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
       state: { items: [...dq], recentAction: 'PUSH_FRONT', highlightedIndex: 0 },
     });
 
     const v3 = input[2] ?? 30;
+    // Step 3: Push back v3
     dq.push(v3);
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 6,
-      explanation: `PUSH_BACK(${v3}): Appended ${v3} to rear of Deque.`,
+      explanation: `PUSH_BACK(${v3}): Appended ${v3} to rear. Deque sequence is now [${dq.join(', ')}].`,
       isMilestone: true,
       milestoneTitle: `Push Back (${v3})`,
+      soundCue: { type: 'swap' },
+      callStack: [
+        { name: 'push_back(deque, val)', params: { val: v3, size: dq.length }, line: 6, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { action: 'PUSH_BACK', val: v3, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
       state: { items: [...dq], recentAction: 'PUSH_BACK', highlightedIndex: dq.length - 1 },
     });
 
+    // Step 4: Peek front before pop
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 7,
+      explanation: `PEEK_FRONT(): Inspecting head element without removal -> ${dq[0]}. Underflow check: isEmpty is FALSE.`,
+      soundCue: { type: 'compare' },
+      callStack: [
+        { name: 'peek_front(deque)', params: { frontVal: dq[0] }, line: 7, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { peekVal: dq[0], isEmpty: false },
+      conditionEval: { expr: 'size > 0', result: true },
+      state: { items: [...dq], recentAction: 'PUSH_FRONT', highlightedIndex: 0 },
+    });
+
+    // Step 5: Pop front
     const poppedFront = dq.shift();
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 7,
-      explanation: `POP_FRONT(): Removed ${poppedFront} from the front port in O(1).`,
+      explanation: `POP_FRONT(): Removed ${poppedFront} from the front port in O(1). Remaining elements: [${dq.join(', ')}].`,
       isMilestone: true,
       milestoneTitle: `Pop Front (${poppedFront})`,
+      soundCue: { type: 'step' },
+      callStack: [
+        { name: 'pop_front(deque)', params: { popped: poppedFront, remainingSize: dq.length }, line: 7, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { poppedVal: poppedFront, size: dq.length, newFront: dq[0] },
       state: { items: [...dq], recentAction: 'POP_FRONT', highlightedIndex: 0 },
     });
 
+    // Step 6: Peek back before pop
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 8,
+      explanation: `PEEK_BACK(): Inspecting rear element without removal -> ${dq[dq.length - 1]}. Underflow check passed.`,
+      soundCue: { type: 'compare' },
+      callStack: [
+        { name: 'peek_back(deque)', params: { rearVal: dq[dq.length - 1] }, line: 8, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { rearVal: dq[dq.length - 1], isEmpty: false },
+      conditionEval: { expr: 'size > 0', result: true },
+      state: { items: [...dq], recentAction: 'PUSH_BACK', highlightedIndex: dq.length - 1 },
+    });
+
+    // Step 7: Pop back
     const poppedBack = dq.pop();
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 8,
-      explanation: `POP_BACK(): Removed ${poppedBack} from the rear port in O(1).`,
+      explanation: `POP_BACK(): Removed ${poppedBack} from the rear port in O(1). Only [${dq.join(', ')}] remains.`,
       isMilestone: true,
       milestoneTitle: `Pop Back (${poppedBack})`,
+      soundCue: { type: 'step' },
+      callStack: [
+        { name: 'pop_back(deque)', params: { popped: poppedBack, remainingSize: dq.length }, line: 8, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { poppedVal: poppedBack, size: dq.length, front: dq[0], rear: dq[0] },
       state: { items: [...dq], recentAction: 'POP_BACK', highlightedIndex: dq.length - 1 },
+    });
+
+    // Step 8: Terminal state summary
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 9,
+      explanation: `🎉 Deque visualizer complete! Successfully demonstrated O(1) Push/Pop operations at both ends.`,
+      isMilestone: true,
+      milestoneTitle: 'Operations Complete',
+      soundCue: { type: 'complete' },
+      callStack: [
+        { name: 'main()', params: { finalSize: dq.length }, line: 9, isCurrent: true },
+      ],
+      variables: { finalSize: dq.length, remainingElement: dq[0] },
+      state: { items: [...dq], recentAction: undefined },
     });
 
     const total = frames.length;

@@ -127,7 +127,10 @@ export const kadanesAlgorithmModule: AlgorithmModule<KadaneInput, KadaneState> =
       explanation: `Initialized Kadane's algorithm. Base case: index 0 (val: ${arr[0]}). currentSum = ${currentSum}, maxSum = ${maxSum}.`,
       isMilestone: true,
       milestoneTitle: `Base Case arr[0]=${arr[0]}`,
-      soundCue: 'start',
+      soundCue: { type: 'start' },
+      variables: { currentSum, maxSum, element: arr[0], index: 0, n },
+      callStack: [{ name: 'maxSubArray', params: { n }, line: 1, isCurrent: true }],
+      conditionEval: { expr: `n > 0`, result: true },
       scopeVariables: { currentSum, maxSum, element: arr[0], index: 0 },
       state: {
         array: [...arr],
@@ -170,9 +173,20 @@ export const kadanesAlgorithmModule: AlgorithmModule<KadaneInput, KadaneState> =
         explanation: shouldRestart
           ? `Element arr[${i}] (${val}) > accumulated sum (${sumWithCurrent}). Discarding negative prefix! Restarting new window at index ${i}.`
           : `Extending contiguous subarray: adding arr[${i}] (${val}). currentSum = ${currentSum}.`,
-        soundCue: shouldRestart ? 'discard' : isNewGlobalMax ? 'swap' : 'step',
+        soundCue: { type: shouldRestart ? 'compare' : isNewGlobalMax ? 'swap' : 'step' },
         isMilestone: isNewGlobalMax,
         milestoneTitle: isNewGlobalMax ? `New Max Sum (${maxSum})` : undefined,
+        variables: {
+          index: i,
+          val,
+          currentSum,
+          maxSum,
+          window: `[${windowStart} ... ${windowEnd}]`,
+          shouldRestart,
+          isNewGlobalMax,
+        },
+        callStack: [{ name: 'kadaneStep', params: { i, val, currentSum, maxSum }, line: 5, isCurrent: true }],
+        conditionEval: { expr: `val > currentSum + val (${val} > ${sumWithCurrent})`, result: shouldRestart },
         scopeVariables: {
           index: i,
           val,
@@ -203,7 +217,15 @@ export const kadanesAlgorithmModule: AlgorithmModule<KadaneInput, KadaneState> =
       explanation: `🎉 Kadane's Algorithm Complete! Maximum contiguous subarray sum is ${maxSum}. Subarray: [${optimalSubarray.join(', ')}] spanning indices [${bestStart} ... ${bestEnd}].`,
       isMilestone: true,
       milestoneTitle: `Max Sum = ${maxSum}`,
-      soundCue: 'complete',
+      soundCue: { type: 'complete' },
+      variables: {
+        maxSum,
+        optimalSubarray: `[${optimalSubarray.join(', ')}]`,
+        range: `[${bestStart} ... ${bestEnd}]`,
+        completed: true,
+      },
+      callStack: [{ name: 'maxSubArray.done', params: { maxSum }, line: 8, isCurrent: true }],
+      conditionEval: { expr: `i == n (${n} == ${n})`, result: true },
       scopeVariables: {
         maxSum,
         optimalSubarray: `[${optimalSubarray.join(', ')}]`,

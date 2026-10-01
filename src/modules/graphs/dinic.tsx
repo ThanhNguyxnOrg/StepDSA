@@ -221,6 +221,8 @@ int dinic(int s, int t) {
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
+      isMilestone: true,
+      milestoneTitle: `Init Dinic's Network (Source: ${source}, Sink: ${sink})`,
       action: 'INIT',
       state: {
         nodes: rawNodes,
@@ -232,9 +234,11 @@ int dinic(int s, int t) {
         activeNode: null,
         totalFlow: 0,
       },
-      callStack: [{ name: 'dinic', params: { source, sink, edgeCount: rawEdges.length } }],
-      variables: { source, sink, totalFlow: 0 },
-      explanation: `Initialized Dinic's Algorithm. Ready for Phase 1 Level Graph BFS.`,
+      callStack: [{ name: 'dinic', params: { source, sink, edgeCount: rawEdges.length }, line: 2, isCurrent: true }],
+      variables: { source, sink, totalFlow: 0, residualEdges: flowEdges.length },
+      conditionEval: { expr: 'source !== sink', result: true },
+      soundCue: { type: 'step' },
+      explanation: `Initialized Dinic's Algorithm. Source = "${source}", Sink = "${sink}". Phase 1 begins with BFS Level Graph construction.`,
     });
 
     let phaseNum = 1;
@@ -244,12 +248,56 @@ int dinic(int s, int t) {
       const queue: string[] = [source];
       levels[source] = 0;
 
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        action: 'BFS_START',
+        state: {
+          nodes: rawNodes,
+          edges: flowEdges.map((e) => ({ ...e })),
+          levels: { ...levels },
+          source,
+          sink,
+          phase: 'BFS_LEVEL_GRAPH',
+          activeNode: source,
+          totalFlow,
+        },
+        callStack: [{ name: 'bfsLevelGraph', params: { phase: phaseNum, source }, line: 5, isCurrent: true }],
+        variables: { phase: phaseNum, queue: [source], currentLevel: 0 },
+        conditionEval: { expr: 'queue.length > 0', result: true },
+        soundCue: { type: 'select' },
+        explanation: `Phase ${phaseNum} BFS: Initialize queue with source "${source}" at level 0.`,
+      });
+
       while (queue.length > 0) {
         const u = queue.shift()!;
         for (const e of flowEdges) {
           if (e.from === u && levels[e.to] === undefined && e.capacity - e.flow > 0) {
             levels[e.to] = levels[u] + 1;
             queue.push(e.to);
+
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 8,
+              action: 'LEVEL_ASSIGNED',
+              state: {
+                nodes: rawNodes,
+                edges: flowEdges.map((e) => ({ ...e })),
+                levels: { ...levels },
+                source,
+                sink,
+                phase: 'BFS_LEVEL_GRAPH',
+                activeNode: e.to,
+                totalFlow,
+              },
+              callStack: [{ name: 'assignLevel', params: { node: e.to, level: levels[e.to], from: u }, line: 8, isCurrent: true }],
+              variables: { node: e.to, assignedLevel: levels[e.to], via: u, residualCap: e.capacity - e.flow },
+              conditionEval: { expr: `resCap(${u}->${e.to}) > 0 && levels[${e.to}] == null`, result: true },
+              soundCue: { type: 'insert' },
+              explanation: `BFS explored edge (${u} -> ${e.to}): Residual capacity = ${e.capacity - e.flow} > 0. Assigned level[${e.to}] = ${levels[e.to]}.`,
+            });
           }
           if (e.to === u && levels[e.from] === undefined && e.flow > 0) {
             levels[e.from] = levels[u] + 1;
@@ -263,6 +311,8 @@ int dinic(int s, int t) {
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 35,
+          isMilestone: true,
+          milestoneTitle: `Max Flow Reached: ${totalFlow}`,
           action: 'TERMINATED',
           state: {
             nodes: rawNodes,
@@ -274,9 +324,11 @@ int dinic(int s, int t) {
             activeNode: null,
             totalFlow,
           },
-          callStack: [{ name: 'dinic', params: { maxFlow: totalFlow, status: 'DONE' } }],
-          variables: { totalFlow, status: 'Sink unreachable in residual graph' },
-          explanation: `Sink "${sink}" unreachable in Level Graph. Maximum Flow = ${totalFlow}.`,
+          callStack: [{ name: 'dinic', params: { maxFlow: totalFlow, status: 'DONE' }, line: 35, isCurrent: true }],
+          variables: { totalFlow, status: 'Sink unreachable in residual graph', maxFlowOptimal: true },
+          conditionEval: { expr: `levels['${sink}'] !== undefined`, result: false },
+          soundCue: { type: 'complete' },
+          explanation: `Sink "${sink}" is unreachable from source in residual graph (no augmenting paths remain). Maximum Flow = ${totalFlow}.`,
         });
         break;
       }
@@ -285,6 +337,8 @@ int dinic(int s, int t) {
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 10,
+        isMilestone: true,
+        milestoneTitle: `Phase ${phaseNum} Level Graph (Sink dist = ${levels[sink]})`,
         action: 'LEVEL_GRAPH_BUILT',
         state: {
           nodes: rawNodes,
@@ -296,15 +350,16 @@ int dinic(int s, int t) {
           activeNode: null,
           totalFlow,
         },
-        callStack: [{ name: 'bfsLevelGraph', params: { phase: phaseNum, sinkLevel: levels[sink] } }],
-        variables: { phase: phaseNum, sinkLevel: levels[sink] },
-        explanation: `Phase ${phaseNum} Level Graph built. Distance to sink = ${levels[sink]}. Admissible edges must step from level L to L+1.`,
+        callStack: [{ name: 'bfsLevelGraph', params: { phase: phaseNum, sinkLevel: levels[sink] }, line: 10, isCurrent: true }],
+        variables: { phase: phaseNum, sinkLevel: levels[sink], levelsSummary: Object.entries(levels).map(([k, v]) => `${k}:${v}`).join(', ') },
+        conditionEval: { expr: `levels['${sink}'] !== undefined`, result: true },
+        soundCue: { type: 'step' },
+        explanation: `Phase ${phaseNum} Level Graph built successfully. Distance to sink = ${levels[sink]}. DFS will push blocking flow strictly along admissible edges where level[v] == level[u] + 1.`,
       });
 
       // DFS to find blocking flows
       let phasePushed = 0;
       while (true) {
-        // Find single augmenting path using DFS strictly on admissible edges
         const path: string[] = [];
         const edgeIdxPath: number[] = [];
         const isRevPath: boolean[] = [];
@@ -345,6 +400,8 @@ int dinic(int s, int t) {
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 25,
+          isMilestone: true,
+          milestoneTitle: `Pushed ${pushed} Flow (+${pushed} -> ${totalFlow})`,
           action: 'BLOCKING_FLOW_PUSH',
           state: {
             nodes: rawNodes,
@@ -356,9 +413,11 @@ int dinic(int s, int t) {
             activeNode: path[path.length - 1],
             totalFlow,
           },
-          callStack: [{ name: 'dfsBlocking', params: { path: path.join('->'), pushed } }],
-          variables: { pushed, currentFlow: totalFlow, path: path.join(' -> ') },
-          explanation: `Pushed ${pushed} units along admissible path ${path.join(' -> ')}. Cumulative flow: ${totalFlow}.`,
+          callStack: [{ name: 'dfsBlocking', params: { path: path.join('->'), pushed }, line: 25, isCurrent: true }],
+          variables: { pushed, currentFlow: totalFlow, path: path.join(' -> '), phasePushed },
+          conditionEval: { expr: `pushedFlow > 0`, result: true },
+          soundCue: { type: 'swap' },
+          explanation: `DFS found admissible augmenting path [${path.join(' -> ')}] with bottleneck capacity ${pushed}. Pushed ${pushed} units. Cumulative flow: ${totalFlow}.`,
         });
       }
 

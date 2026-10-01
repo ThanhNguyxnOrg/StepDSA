@@ -118,7 +118,8 @@ export const euclideanGcdModule: AlgorithmModule<EuclideanGcdInput, EuclideanGcd
       action: string,
       isMilestone: boolean,
       scope: Record<string, string | number>,
-      soundCue?: ExecutionFrame<EuclideanGcdState>['soundCue']
+      soundCueType: 'step' | 'compare' | 'swap' | 'complete' = 'step',
+      condition?: { expr: string; result: boolean | number | string }
     ): ExecutionFrame<EuclideanGcdState> => ({
       stepIndex: stepIdx,
       totalSteps: 0,
@@ -141,18 +142,18 @@ export const euclideanGcdModule: AlgorithmModule<EuclideanGcdInput, EuclideanGcd
       },
       callStack: [
         {
-          id: 'gcd-frame',
           name: 'gcd',
-          file: 'euclideanGcd.ts',
           line: codeLine,
           params: { a: state.currentA, b: state.currentB },
+          isCurrent: true,
         },
       ],
-      scopeVariables: scope,
+      variables: scope,
+      conditionEval: condition ?? { expr: 'b !== 0', result: state.currentB !== 0 },
       explanation,
       action,
       isMilestone,
-      soundCue,
+      soundCue: { type: soundCueType },
       invariantStatus:
         state.phase === 'done'
           ? `GCD is verified as ${state.gcdResult}.`
@@ -176,11 +177,12 @@ export const euclideanGcdModule: AlgorithmModule<EuclideanGcdInput, EuclideanGcd
         step++,
         state,
         2,
-        `Initialized Euclidean Algorithm with a = ${a}, b = ${b}. Check condition: b != 0 (${b !== 0}).`,
+        `Initialized Euclidean Algorithm with a = ${a}, b = ${b}. Objective: compute gcd(${a}, ${b}) via successive remainder reductions.`,
         'Initialize GCD',
         true,
-        { a, b, 'b != 0': b !== 0 ? 'true' : 'false' },
-        'start'
+        { a, b, 'b !== 0': b !== 0 ? 'true' : 'false' },
+        'step',
+        { expr: 'b !== 0', result: b !== 0 }
       )
     );
 
@@ -189,22 +191,39 @@ export const euclideanGcdModule: AlgorithmModule<EuclideanGcdInput, EuclideanGcd
     let curB = b;
 
     while (curB !== 0) {
+      // Frame 1: Check loop condition
       state.phase = 'modulo';
+      timeline.push(
+        baseFrame(
+          step++,
+          state,
+          2,
+          `Loop test: b = ${curB} !== 0 is TRUE. Proceed with Euclidean division step #${stepCounter}.`,
+          `Check b != 0`,
+          false,
+          { currentA: curA, currentB: curB, condition: 'curB !== 0' },
+          'compare',
+          { expr: `${curB} !== 0`, result: true }
+        )
+      );
+
       const q = Math.floor(curA / curB);
       const r = curA % curB;
       state.quotient = q;
       state.remainder = r;
 
+      // Frame 2: Compute quotient and remainder
       timeline.push(
         baseFrame(
           step++,
           state,
           3,
-          `Compute division: ${curA} = (${q} × ${curB}) + ${r}. Remainder r = ${curA} mod ${curB} = ${r}.`,
+          `Compute Euclidean division: ${curA} = (${q} × ${curB}) + ${r}. Remainder r = ${curA} % ${curB} = ${r}.`,
           `Calculate ${curA} mod ${curB}`,
-          false,
-          { a: curA, b: curB, quotient: q, remainder: r },
-          'compare'
+          r === 0,
+          { a: curA, b: curB, quotient: q, remainder: r, invariant: `gcd(${curA}, ${curB}) = gcd(${curB}, ${r})` },
+          'compare',
+          { expr: `${curA} % ${curB} === ${r}`, result: true }
         )
       );
 
@@ -224,16 +243,20 @@ export const euclideanGcdModule: AlgorithmModule<EuclideanGcdInput, EuclideanGcd
       state.currentA = curA;
       state.currentB = curB;
 
+      // Frame 3: Shift parameters
       timeline.push(
         baseFrame(
           step++,
           state,
           4,
-          `Shift parameters: new a = ${curA}, new b = ${curB}. Now checking loop condition: b != 0 (${curB !== 0}).`,
+          `Shift parameters for next cycle: new a = ${curA}, new b = ${curB}.${
+            curB === 0 ? ' Remainder reached zero! Next iteration will conclude the algorithm.' : ''
+          }`,
           `Set a = ${curA}, b = ${curB}`,
-          true,
-          { newA: curA, newB: curB, 'b != 0': curB !== 0 ? 'true' : 'false' },
-          curB === 0 ? 'success' : 'step'
+          curB === 0,
+          { newA: curA, newB: curB, nextRemainder: curB },
+          curB === 0 ? 'complete' : 'swap',
+          { expr: `b === 0`, result: curB === 0 }
         )
       );
     }
@@ -248,11 +271,12 @@ export const euclideanGcdModule: AlgorithmModule<EuclideanGcdInput, EuclideanGcd
         step++,
         state,
         6,
-        `Loop terminated because b = 0. The Greatest Common Divisor is a = ${curA}.`,
+        `Algorithm terminated because b = 0. The Greatest Common Divisor is a = ${curA}. gcd(${a}, ${b}) = ${curA}.`,
         `GCD Found: ${curA}`,
         true,
-        { gcd: curA, totalSteps: history.length },
-        'complete'
+        { gcd: curA, totalSteps: history.length, verifiedGcd: curA },
+        'complete',
+        { expr: 'b === 0', result: true }
       )
     );
 

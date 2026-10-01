@@ -131,6 +131,12 @@ export const longestPalindromicSubstringModule: AlgorithmModule<string, LPSState
       totalSteps: 1,
       codeLine: 2,
       explanation: `Find longest palindromic substring for "${s}". Ready to expand around centers.`,
+      isMilestone: true,
+      milestoneTitle: 'LPS Initialized',
+      soundCue: { type: 'start' },
+      variables: { str: s, length: n, bestLength },
+      callStack: [{ name: 'longestPalindrome', params: { s, n }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `n > 0`, result: n > 0 },
       state: {
         str: s,
         centerL: 0,
@@ -161,6 +167,10 @@ export const longestPalindromicSubstringModule: AlgorithmModule<string, LPSState
           totalSteps: 1,
           codeLine: 10,
           explanation: `Testing ${type} center at indices (${left}, ${right}) -> characters '${s[left]}' and '${s[right]}'.`,
+          soundCue: { type: 'compare' },
+          variables: { centerType: type, left, right, leftChar: s[left], rightChar: s[right] },
+          callStack: [{ name: 'expandAroundCenter', params: { left, right, type }, line: 10, isCurrent: true }],
+          conditionEval: { expr: `s[left] == s[right] ('${s[left]}' == '${s[right]}')`, result: s[left] === s[right] },
           state: {
             str: s,
             centerL: l,
@@ -175,7 +185,8 @@ export const longestPalindromicSubstringModule: AlgorithmModule<string, LPSState
 
         while (left >= 0 && right < n && s[left] === s[right]) {
           const curLen = right - left + 1;
-          if (curLen > bestLength) {
+          const isNewBest = curLen > bestLength;
+          if (isNewBest) {
             bestLength = curLen;
             bestStart = left;
           }
@@ -185,6 +196,12 @@ export const longestPalindromicSubstringModule: AlgorithmModule<string, LPSState
             totalSteps: 1,
             codeLine: 5,
             explanation: `'${s[left]}' === '${s[right]}'! Palindrome candidate length ${curLen}: "${s.substring(left, right + 1)}". Expanding outward.`,
+            soundCue: { type: isNewBest ? 'swap' : 'step' },
+            isMilestone: isNewBest,
+            milestoneTitle: isNewBest ? `New Best: "${s.substring(left, right + 1)}" (${curLen})` : undefined,
+            variables: { curLen, palindrome: s.substring(left, right + 1), bestLength, left, right },
+            callStack: [{ name: 'expandPalindrome', params: { left, right, len: curLen }, line: 5, isCurrent: true }],
+            conditionEval: { expr: `curLen > bestLength (${curLen} > ${bestLength})`, result: isNewBest },
             state: {
               str: s,
               centerL: l,
@@ -209,6 +226,12 @@ export const longestPalindromicSubstringModule: AlgorithmModule<string, LPSState
       totalSteps: 1,
       codeLine: 18,
       explanation: `Search complete! Longest palindromic substring is "${s.substring(bestStart, bestStart + bestLength)}" (length ${bestLength}).`,
+      isMilestone: true,
+      milestoneTitle: `LPS: "${s.substring(bestStart, bestStart + bestLength)}"`,
+      soundCue: { type: 'complete' },
+      variables: { longestPalindrome: s.substring(bestStart, bestStart + bestLength), length: bestLength, completed: true },
+      callStack: [{ name: 'longestPalindrome.done', params: { result: s.substring(bestStart, bestStart + bestLength) }, line: 18, isCurrent: true }],
+      conditionEval: { expr: `bestLength >= 1`, result: true },
       state: {
         str: s,
         centerL: bestStart,

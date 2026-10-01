@@ -126,10 +126,20 @@ function merge(arr, left, mid, right):
     const n = arr.length;
     const sortedSegments = new Set<string>();
 
+    const callStack: { name: string; params: Record<string, string | number>; line?: number; isCurrent?: boolean }[] = [
+      { name: 'main', params: { n }, line: 1, isCurrent: true },
+    ];
+
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
+      isMilestone: true,
+      milestoneTitle: 'Mergesort Initialized',
+      soundCue: { type: 'start' },
+      variables: { n, left: 0, right: n - 1 },
+      conditionEval: { expr: `n > 1`, result: n > 1 },
+      callStack: [...callStack],
       explanation: 'Starting Mergesort. Recursively dividing array into halves.',
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
@@ -142,7 +152,10 @@ function merge(arr, left, mid, right):
       explanation: string,
       pointers: Record<string, number> = {},
       activeStatuses: Record<number, any> = {},
-      milestone?: string
+      milestone?: string,
+      customVars?: Record<string, any>,
+      conditionEval?: { expr: string; result: boolean },
+      soundCue?: any
     ) {
       frames.push({
         stepIndex: frames.length,
@@ -155,6 +168,17 @@ function merge(arr, left, mid, right):
         },
         isMilestone: !!milestone,
         milestoneTitle: milestone,
+        soundCue: soundCue ?? (milestone ? { type: 'sorted' } : { type: 'step' }),
+        variables: {
+          ...pointers,
+          ...(customVars || {}),
+        },
+        conditionEval,
+        callStack: callStack.map((frame, i) => ({
+          ...frame,
+          line: i === callStack.length - 1 ? codeLine : frame.line,
+          isCurrent: i === callStack.length - 1,
+        })),
         state: {
           array: arr.map((v, idx) => {
             let status = 'default';
@@ -167,6 +191,7 @@ function merge(arr, left, mid, right):
     }
 
     function merge(left: number, mid: number, right: number) {
+      callStack.push({ name: 'merge', params: { left, mid, right }, line: 9 });
       const temp: number[] = [];
       let i = left;
       let j = mid + 1;
@@ -176,18 +201,26 @@ function merge(arr, left, mid, right):
         `Merging sorted subarrays arr[${left}..${mid}] and arr[${mid + 1}..${right}].`,
         { left, mid, right, i, j },
         { [left]: 'active', [right]: 'active' },
-        `Merge Range [${left}..${right}]`
+        `Merge Range [${left}..${right}]`,
+        { left, mid, right, leftLen: mid - left + 1, rightLen: right - mid },
+        { expr: `left <= mid && mid + 1 <= right`, result: true },
+        { type: 'pivot' }
       );
 
       while (i <= mid && j <= right) {
+        const isLessOrEqual = arr[i] <= arr[j];
         snapshot(
           12,
           `Comparing left element arr[${i}] (${arr[i]}) with right element arr[${j}] (${arr[j]}).`,
           { i, j, left, right },
-          { [i]: 'comparing', [j]: 'comparing' }
+          { [i]: 'comparing', [j]: 'comparing' },
+          undefined,
+          { 'arr[i]': arr[i], 'arr[j]': arr[j], choose: isLessOrEqual ? 'left' : 'right' },
+          { expr: `arr[${i}] <= arr[${j}] (${arr[i]} <= ${arr[j]})`, result: isLessOrEqual },
+          { type: 'compare' }
         );
 
-        if (arr[i] <= arr[j]) {
+        if (isLessOrEqual) {
           temp.push(arr[i]);
           i++;
         } else {
@@ -221,23 +254,34 @@ function merge(arr, left, mid, right):
         `Merged segment arr[${left}..${right}] is now sorted: [${temp.join(', ')}].`,
         { left, right },
         active,
-        `Merged [${left}..${right}]`
+        `Merged [${left}..${right}]`,
+        { mergedCount: temp.length, range: `[${left}..${right}]` },
+        { expr: `isSorted(range)`, result: true },
+        { type: 'swap' }
       );
+
+      callStack.pop();
     }
 
     function mergesort(left: number, right: number) {
+      callStack.push({ name: 'mergesort', params: { left, right }, line: 2 });
       if (left < right) {
         const mid = Math.floor((left + right) / 2);
         snapshot(
           3,
           `Dividing range [${left}..${right}] at mid index ${mid}.`,
           { left, mid, right },
-          { [mid]: 'pivot' }
+          { [mid]: 'pivot' },
+          undefined,
+          { left, mid, right },
+          { expr: `left < right (${left} < ${right})`, result: true },
+          { type: 'step' }
         );
         mergesort(left, mid);
         mergesort(mid + 1, right);
         merge(left, mid, right);
       }
+      callStack.pop();
     }
 
     mergesort(0, n - 1);
@@ -250,6 +294,10 @@ function merge(arr, left, mid, right):
       explanation: '🎉 Mergesort complete! All subarrays successfully merged in O(N log N) time.',
       isMilestone: true,
       milestoneTitle: 'Sorting Complete',
+      soundCue: { type: 'complete' },
+      variables: { n, sorted: true },
+      conditionEval: { expr: `isSorted(arr)`, result: true },
+      callStack: [{ name: 'main', params: { n }, line: 1, isCurrent: true }],
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
         pointers: {},

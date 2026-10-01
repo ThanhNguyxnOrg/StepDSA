@@ -168,6 +168,34 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
           },
         });
         break;
+      } else {
+        // Frame: Mismatch, discard index i
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 3,
+          explanation: `Mismatch: arr[${i}] (${arr[i]}) != target (${target}). Discarding index ${i}. Advancing to index ${i + 1}.`,
+          soundCue: { type: 'step' },
+          callStack: [
+            { name: 'linearSearch(arr, target)', params: { i, mismatch: true }, line: 3, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { i, discardedValue: arr[i], nextIndex: i + 1, target },
+          conditionEval: { expr: `arr[${i}] != target (${target})`, result: true },
+          state: {
+            array: arr.map((v, idx) => ({
+              id: idx,
+              value: v,
+              status: idx <= i ? 'discarded' : 'default',
+            })),
+            pointers: { i },
+            target,
+          },
+          invariantStatus: {
+            isValid: true,
+            label: `Verified prefix arr[0..${i}] != ${target}`,
+          },
+        });
       }
     }
 

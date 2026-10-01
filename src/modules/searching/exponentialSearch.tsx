@@ -123,11 +123,37 @@ export const exponentialSearchModule: AlgorithmModule<
     const n = arr.length;
     const frames: ExecutionFrame<ArrayStageState>[] = [];
 
+    const baseCallStack = [{ name: 'exponentialSearch', params: { n, target }, line: 1, isCurrent: true }];
+
+    // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 2,
-      explanation: `Checking base index arr[0] = ${arr[0]}. Target is ${target}.`,
+      codeLine: 1,
+      explanation: `Initialized Exponential Search for target ${target} in sorted array of ${n} elements.`,
+      isMilestone: true,
+      milestoneTitle: 'Search Initialized',
+      soundCue: 'start',
+      variables: { n, target, i: 1 },
+      callStack: baseCallStack,
+      conditionEval: { expr: `n > 0`, result: true },
+      state: {
+        array: arr.map((v, i) => ({ id: i, value: v, status: 'default' })),
+        pointers: { target },
+        target,
+      },
+    });
+
+    // Frame 1: Base check at index 0
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 3,
+      explanation: `Checking base element arr[0] = ${arr[0]}. Testing if arr[0] == target (${target}).`,
+      soundCue: 'compare',
+      variables: { n, target, 'arr[0]': arr[0] },
+      callStack: baseCallStack,
+      conditionEval: { expr: `arr[0] === target`, result: arr[0] === target },
       state: {
         array: arr.map((v, i) => ({ id: i, value: v, status: i === 0 ? 'comparing' : 'default' })),
         pointers: { check: 0 },
@@ -140,9 +166,13 @@ export const exponentialSearchModule: AlgorithmModule<
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Target ${target} matches arr[0] immediately!`,
+        explanation: `Target ${target} matches arr[0] immediately! Returning index 0 in O(1).`,
         isMilestone: true,
         milestoneTitle: 'Target Found at Index 0',
+        soundCue: 'complete',
+        variables: { foundIndex: 0, target },
+        callStack: baseCallStack,
+        conditionEval: { expr: `arr[0] === target`, result: true },
         state: {
           array: arr.map((v, i) => ({ id: i, value: v, status: i === 0 ? 'sorted' : 'default' })),
           pointers: { found: 0 },
@@ -155,36 +185,92 @@ export const exponentialSearchModule: AlgorithmModule<
 
     let i = 1;
     while (i < n && arr[i] <= target) {
+      // Comparison at current power of 2
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 7,
-        explanation: `Exponential Doubling: arr[${i}] = ${arr[i]} <= target (${target}). Doubling index: next boundary = ${i * 2}.`,
-        isMilestone: true,
-        milestoneTitle: `Doubling Bound to i = ${i}`,
+        explanation: `Exponential Doubling probe: arr[${i}] = ${arr[i]}. Evaluating arr[${i}] <= target (${target}).`,
+        soundCue: 'compare',
+        variables: { i, 'arr[i]': arr[i], target, nextCandidate: i * 2 },
+        callStack: baseCallStack,
+        conditionEval: { expr: `i < ${n} && arr[${i}] <= ${target}`, result: true },
+        state: {
+          array: arr.map((v, idx) => ({
+            id: idx,
+            value: v,
+            status: idx === i ? 'comparing' : idx < i ? 'discarded' : 'default',
+          })),
+          pointers: { bound: i },
+          target,
+        },
+      });
+
+      const nextI = i * 2;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `Condition met: ${arr[i]} <= ${target}. Doubling index jump: i = ${i} * 2 = ${nextI}.`,
+        soundCue: 'step',
+        variables: { prevI: i, i: nextI, target },
+        callStack: baseCallStack,
+        conditionEval: { expr: `i *= 2`, result: nextI },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
             value: v,
             status: idx === i ? 'active' : idx < i ? 'discarded' : 'default',
           })),
-          pointers: { bound: i },
+          pointers: { leapFrom: i, leapTo: Math.min(nextI, n - 1) },
           target,
         },
       });
-      i *= 2;
+
+      i = nextI;
     }
 
-    let low = Math.floor(i / 2);
-    let high = Math.min(i, n - 1);
-
+    // Bound overshoot or bound loop exit check
+    const overshootExceeded = i < n ? `arr[${i}] (${arr[i]}) > ${target}` : `i (${i}) >= array length (${n})`;
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 9,
-      explanation: `Search range successfully bounded between [low=${low}, high=${high}]. Beginning Binary Search.`,
+      explanation: `Doubling loop terminated: ${overshootExceeded}. Target must reside between index ${Math.floor(i / 2)} and ${Math.min(i, n - 1)}.`,
+      soundCue: 'pivot',
+      variables: { i, 'arr[i]': i < n ? arr[i] : 'OOB', target },
+      callStack: baseCallStack,
+      conditionEval: { expr: `i < n && arr[i] <= target`, result: false },
+      state: {
+        array: arr.map((v, idx) => ({
+          id: idx,
+          value: v,
+          status: idx === Math.min(i, n - 1) ? 'pivot' : idx < Math.floor(i / 2) ? 'discarded' : 'default',
+        })),
+        pointers: { overshoot: Math.min(i, n - 1) },
+        target,
+      },
+    });
+
+    let low = Math.floor(i / 2);
+    let high = Math.min(i, n - 1);
+
+    const bsCallStack = [
+      { name: 'exponentialSearch', params: { n, target }, line: 10, isCurrent: false },
+      { name: 'binarySearch', params: { low, high, target }, line: 11, isCurrent: true },
+    ];
+
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 10,
+      explanation: `Bounded Search Window: low = ${low}, high = ${high}. Subarray size = ${high - low + 1}. Invoking binarySearch.`,
       isMilestone: true,
-      milestoneTitle: 'Bounded Subarray Located',
+      milestoneTitle: 'Subarray Bounded',
+      soundCue: 'pivot',
+      variables: { low, high, target, windowSpan: high - low + 1 },
+      callStack: bsCallStack,
+      conditionEval: { expr: `low <= high`, result: low <= high },
       state: {
         array: arr.map((v, idx) => ({
           id: idx,
@@ -200,11 +286,20 @@ export const exponentialSearchModule: AlgorithmModule<
     let found = -1;
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
+
+      // Mid calculation frame
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 12,
-        explanation: `Binary Search mid = ${mid}, arr[${mid}] = ${arr[mid]}. Comparing with ${target}.`,
+        explanation: `Binary Search mid calculation: mid = floor((${low} + ${high}) / 2) = ${mid}. Inspecting arr[${mid}] = ${arr[mid]}.`,
+        soundCue: 'compare',
+        variables: { low, mid, high, 'arr[mid]': arr[mid], target },
+        callStack: [
+          { name: 'exponentialSearch', params: { n, target }, line: 10, isCurrent: false },
+          { name: 'binarySearch', params: { low, high, target }, line: 12, isCurrent: true },
+        ],
+        conditionEval: { expr: `low <= high`, result: true },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -222,9 +317,16 @@ export const exponentialSearchModule: AlgorithmModule<
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 13,
-          explanation: `Target ${target} located at index ${mid}!`,
+          explanation: `🎯 Target ${target} successfully matched at index ${mid}! Exponential search complete in O(log i) time.`,
           isMilestone: true,
-          milestoneTitle: 'Target Found',
+          milestoneTitle: `Target Found at Index ${mid}`,
+          soundCue: 'complete',
+          variables: { foundIndex: mid, value: arr[mid], target },
+          callStack: [
+            { name: 'exponentialSearch', params: { n, target }, line: 10, isCurrent: false },
+            { name: 'binarySearch', params: { low, high, target }, line: 13, isCurrent: true },
+          ],
+          conditionEval: { expr: `arr[${mid}] === target`, result: true },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -239,39 +341,55 @@ export const exponentialSearchModule: AlgorithmModule<
       }
 
       if (arr[mid] < target) {
-        low = mid + 1;
+        const nextLow = mid + 1;
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 14,
-          explanation: `arr[${mid}] (${arr[mid]}) < ${target}. Search right half [${low}..${high}].`,
+          explanation: `arr[${mid}] (${arr[mid]}) < ${target}. Discarding left subarray [${low}..${mid}]. Adjusting low = ${nextLow}.`,
+          soundCue: 'discard',
+          variables: { oldLow: low, newLow: nextLow, high, mid, target },
+          callStack: [
+            { name: 'exponentialSearch', params: { n, target }, line: 10, isCurrent: false },
+            { name: 'binarySearch', params: { low: nextLow, high, target }, line: 14, isCurrent: true },
+          ],
+          conditionEval: { expr: `arr[${mid}] < target`, result: true },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
               value: v,
-              status: idx >= low && idx <= high ? 'active' : 'discarded',
+              status: idx >= nextLow && idx <= high ? 'active' : 'discarded',
             })),
-            pointers: { low, high },
+            pointers: { low: nextLow, high },
             target,
           },
         });
+        low = nextLow;
       } else {
-        high = mid - 1;
+        const nextHigh = mid - 1;
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 15,
-          explanation: `arr[${mid}] (${arr[mid]}) > ${target}. Search left half [${low}..${high}].`,
+          explanation: `arr[${mid}] (${arr[mid]}) > ${target}. Discarding right subarray [${mid}..${high}]. Adjusting high = ${nextHigh}.`,
+          soundCue: 'discard',
+          variables: { low, oldHigh: high, newHigh: nextHigh, mid, target },
+          callStack: [
+            { name: 'exponentialSearch', params: { n, target }, line: 10, isCurrent: false },
+            { name: 'binarySearch', params: { low, high: nextHigh, target }, line: 15, isCurrent: true },
+          ],
+          conditionEval: { expr: `arr[${mid}] > target`, result: true },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
               value: v,
-              status: idx >= low && idx <= high ? 'active' : 'discarded',
+              status: idx >= low && idx <= nextHigh ? 'active' : 'discarded',
             })),
-            pointers: { low, high },
+            pointers: { low, high: nextHigh },
             target,
           },
         });
+        high = nextHigh;
       }
     }
 
@@ -280,7 +398,13 @@ export const exponentialSearchModule: AlgorithmModule<
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 16,
-        explanation: `Target ${target} not found within range. Search complete. Returning -1.`,
+        explanation: `Target ${target} not found within range (low > high). Search terminated. Returning -1.`,
+        isMilestone: true,
+        milestoneTitle: 'Target Not Found',
+        soundCue: 'complete',
+        variables: { low, high, found: -1, target },
+        callStack: baseCallStack,
+        conditionEval: { expr: `low <= high`, result: false },
         state: {
           array: arr.map((v, idx) => ({ id: idx, value: v, status: 'discarded' })),
           pointers: {},

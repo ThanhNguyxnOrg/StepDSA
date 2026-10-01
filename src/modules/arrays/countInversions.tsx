@@ -152,8 +152,45 @@ export const countInversionsModule: AlgorithmModule<{ array: number[] }, CountIn
       let k = l;
       let splitCount = 0;
 
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 7,
+        explanation: `Merging sorted halves: Left [${left.join(', ')}] (range ${l}..${m}) and Right [${right.join(', ')}] (range ${m + 1}..${r}).`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'mergeAndCount()', params: { l, m, r, leftLen: left.length, rightLen: right.length }, line: 7, isCurrent: true },
+          { name: 'mergeSort()', params: { l, r }, line: 5 },
+        ],
+        variables: { l, m, r, left: `[${left.join(', ')}]`, right: `[${right.join(', ')}]`, totalInversions },
+        state: {
+          array: [...arr],
+          inversionCount: totalInversions,
+          currentRange: [l, r],
+          recentInversionsFound: 0,
+        },
+      });
+
       while (i < left.length && j < right.length) {
         if (left[i] <= right[j]) {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 8,
+            explanation: `Comparing left[${i}] (${left[i]}) <= right[${j}] (${right[j]}): In-order! No inversion. Placing ${left[i]} at index ${k}.`,
+            soundCue: { type: 'compare' },
+            callStack: [
+              { name: 'mergeAndCount()', params: { leftVal: left[i], rightVal: right[j], isOrder: true }, line: 8, isCurrent: true },
+            ],
+            variables: { 'left[i]': left[i], 'right[j]': right[j], inversionsAdded: 0, totalInversions },
+            conditionEval: { expr: `left[${i}] (${left[i]}) <= right[${j}] (${right[j]})`, result: true },
+            state: {
+              array: [...arr],
+              inversionCount: totalInversions,
+              currentRange: [l, r],
+              recentInversionsFound: 0,
+            },
+          });
           arr[k++] = left[i++];
         } else {
           const cross = left.length - i;
@@ -167,12 +204,16 @@ export const countInversionsModule: AlgorithmModule<{ array: number[] }, CountIn
             explanation: `Cross-inversion found! right[${j}] (${right[j]}) < left[${i}] (${left[i]}). Since left half is sorted, ${right[j]} is smaller than all ${cross} remaining elements in left: [${left
               .slice(i)
               .join(', ')}]. Added +${cross} to inversion count.`,
+            isMilestone: true,
+            milestoneTitle: `+${cross} Inversions (right=${right[j]})`,
+            soundCue: { type: 'swap' },
             variables: {
               rightVal: right[j],
               leftVal: left[i],
               inversionsAdded: cross,
               runningTotal: totalInversions,
             },
+            conditionEval: { expr: `left[${i}] (${left[i]}) > right[${j}] (${right[j]})`, result: true },
             callStack: [{ name: `crossInversion(right=${right[j]})`, params: { cross }, line: 9, isCurrent: true }],
             state: {
               array: [...arr],
@@ -188,11 +229,47 @@ export const countInversionsModule: AlgorithmModule<{ array: number[] }, CountIn
 
       while (i < left.length) arr[k++] = left[i++];
       while (j < right.length) arr[k++] = right[j++];
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 10,
+        explanation: `Merged subsegment [${l}..${r}] is now sorted: [${arr.slice(l, r + 1).join(', ')}]. Sub-inversions found: ${splitCount}.`,
+        soundCue: { type: 'step' },
+        callStack: [{ name: 'mergeDone()', params: { l, r, splitCount }, line: 10, isCurrent: true }],
+        variables: { mergedRange: `[${l}..${r}]`, sortedSegment: `[${arr.slice(l, r + 1).join(', ')}]`, totalInversions },
+        state: {
+          array: [...arr],
+          inversionCount: totalInversions,
+          currentRange: [l, r],
+          recentInversionsFound: splitCount,
+        },
+      });
     }
 
     function mergeSort(l: number, r: number) {
       if (l >= r) return;
       const m = Math.floor((l + r) / 2);
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        explanation: `Divide: Splitting range [${l}..${r}] at midpoint ${m} into [${l}..${m}] and [${m + 1}..${r}].`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'mergeSort(l, r)', params: { l, r, m }, line: 4, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { l, r, midpoint: m, leftSub: `[${arr.slice(l, m + 1).join(', ')}]`, rightSub: `[${arr.slice(m + 1, r + 1).join(', ')}]` },
+        state: {
+          array: [...arr],
+          inversionCount: totalInversions,
+          currentRange: [l, r],
+          recentInversionsFound: 0,
+        },
+      });
+
       mergeSort(l, m);
       mergeSort(m + 1, r);
       merge(l, m, r);

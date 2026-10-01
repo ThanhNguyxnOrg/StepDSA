@@ -34,19 +34,25 @@ export const jumpGameModule: AlgorithmModule<number[], JumpGameState> = {
   },
   presets: [
     {
-      id: 'reachable',
-      label: 'Reachable Path',
-      description: '[2, 3, 1, 1, 4] -> Can reach end',
+      id: 'multi-step-reach',
+      label: 'Multi-Step Frontier Expansion',
+      description: '[2, 1, 2, 1, 0, 2, 1, 4] -> Step-by-step frontier advancement to goal',
+      data: [2, 1, 2, 1, 0, 2, 1, 4],
+    },
+    {
+      id: 'reachable-short',
+      label: 'Standard Path [2, 3, 1, 1, 4]',
+      description: 'Quick leap over intermediate indices',
       data: [2, 3, 1, 1, 4],
     },
     {
       id: 'trapped-zero',
-      label: 'Trapped by Zero',
-      description: '[3, 2, 1, 0, 4] -> Stuck at index 3',
+      label: 'Trapped by Zero Barrier [3, 2, 1, 0, 4]',
+      description: 'Frontier maxReach stops at index 3, unable to bridge index 4',
       data: [3, 2, 1, 0, 4],
     },
   ],
-  defaultInput: [2, 3, 1, 1, 4],
+  defaultInput: [2, 1, 2, 1, 0, 2, 1, 4],
   codeSnippets: {
     python: `def can_jump(nums):
     max_reach = 0
@@ -93,18 +99,23 @@ export const jumpGameModule: AlgorithmModule<number[], JumpGameState> = {
     return true`,
   },
   generateTimeline: (input: number[]) => {
-    const nums = input.length > 0 ? input : [2, 3, 1, 1, 4];
+    const nums = input?.length > 0 ? input : [2, 1, 2, 1, 0, 2, 1, 4];
     const n = nums.length;
     let maxReach = 0;
     const frames: ExecutionFrame<JumpGameState>[] = [];
+
+    const callStack = [{ name: 'canJump', params: { n, targetIndex: n - 1 }, line: 2, isCurrent: true }];
 
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialized Jump Game with array [${nums.join(', ')}]. Target index is ${
+      action: 'INIT',
+      callStack,
+      variables: { currentIndex: 0, maxReach: 0, targetIndex: n - 1, totalLength: n },
+      explanation: `Initialized Jump Game with array [${nums.join(', ')}]. Destination is index ${
         n - 1
-      }. maxReach = 0.`,
+      }. Starting frontier maxReach = 0.`,
       state: {
         nums: [...nums],
         currentIndex: 0,
@@ -115,14 +126,42 @@ export const jumpGameModule: AlgorithmModule<number[], JumpGameState> = {
     });
 
     for (let i = 0; i < n; ++i) {
-      if (i > maxReach) {
+      // Step 1: Reachability check
+      const isReachable = i <= maxReach;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        action: 'CHECK_REACHABILITY',
+        callStack,
+        conditionEval: {
+          expr: `i (${i}) <= maxReach (${maxReach})`,
+          result: isReachable,
+        },
+        variables: { currentIndex: i, 'nums[i]': nums[i], maxReach, isReachable },
+        explanation: isReachable
+          ? `Inspecting index ${i} (value ${nums[i]}): index is within current frontier (${i} <= ${maxReach}). Valid position to jump from.`
+          : `Barrier violation! Index ${i} > maxReach (${maxReach}). Cannot advance further!`,
+        state: {
+          nums: [...nums],
+          currentIndex: i,
+          maxReach,
+          canReach: false,
+          status: isReachable ? 'scanning' : 'stuck',
+        },
+      });
+
+      if (!isReachable) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 4,
-          explanation: `Stuck! Current index ${i} exceeds maximum reachable frontier (${maxReach}). Cannot advance further.`,
+          action: 'STUCK_TERMINATE',
           isMilestone: true,
-          milestoneTitle: 'Stuck at Barrier: Cannot Reach End',
+          milestoneTitle: `Stuck at Barrier Index ${i}`,
+          callStack,
+          variables: { stuckIndex: i, maxReach, result: false },
+          explanation: `❌ Trapped! Current index ${i} exceeds maximum reachable frontier (${maxReach}). The last index ${n - 1} is unreachable. Returning false.`,
           state: {
             nums: [...nums],
             currentIndex: i,
@@ -137,15 +176,29 @@ export const jumpGameModule: AlgorithmModule<number[], JumpGameState> = {
 
       const potentialReach = i + nums[i];
       const prevMax = maxReach;
+      const expands = potentialReach > maxReach;
       maxReach = Math.max(maxReach, potentialReach);
 
+      // Step 2: Jump potential inspection
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 5,
-        explanation: `At index ${i} (value ${nums[i]}): potential reach = ${i} + ${nums[i]} = ${potentialReach}. maxReach updated: max(${prevMax}, ${potentialReach}) = ${maxReach}.`,
-        isMilestone: maxReach > prevMax,
-        milestoneTitle: `Frontier Extended to ${maxReach}`,
+        action: 'UPDATE_MAX_REACH',
+        isMilestone: expands,
+        milestoneTitle: expands ? `Frontier Extended: maxReach = ${maxReach}` : undefined,
+        callStack,
+        variables: {
+          currentIndex: i,
+          jumpPower: nums[i],
+          potentialReach,
+          prevMax,
+          newMaxReach: maxReach,
+          frontierExpanded: expands,
+        },
+        explanation: expands
+          ? `From index ${i}, jump length ${nums[i]} gives reach = ${i} + ${nums[i]} = ${potentialReach}. Frontier expands from ${prevMax} to ${maxReach}!`
+          : `From index ${i}, jump reach ${i} + ${nums[i]} = ${potentialReach} does not exceed current frontier (${maxReach}). Frontier unchanged.`,
         state: {
           nums: [...nums],
           currentIndex: i,
@@ -155,16 +208,24 @@ export const jumpGameModule: AlgorithmModule<number[], JumpGameState> = {
         },
       });
 
+      // Step 3: Check goal reached
       if (maxReach >= n - 1) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 6,
-          explanation: `Frontier maxReach (${maxReach}) reached or exceeded last index ${
-            n - 1
-          }! Destination is reachable.`,
+          action: 'GOAL_REACHED',
           isMilestone: true,
-          milestoneTitle: 'Destination Reachable!',
+          milestoneTitle: `Goal Reachable! maxReach (${maxReach}) >= ${n - 1}`,
+          callStack,
+          conditionEval: {
+            expr: `maxReach (${maxReach}) >= lastIndex (${n - 1})`,
+            result: true,
+          },
+          variables: { currentIndex: i, maxReach, lastIndex: n - 1, result: true },
+          explanation: `🎯 Destination reached! Frontier maxReach (${maxReach}) reaches or surpasses last index ${
+            n - 1
+          }! Returning true.`,
           state: {
             nums: [...nums],
             currentIndex: i,
@@ -182,6 +243,7 @@ export const jumpGameModule: AlgorithmModule<number[], JumpGameState> = {
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 7,
+      action: 'COMPLETE',
       explanation: 'Scanned all elements. Destination reached!',
       isMilestone: true,
       milestoneTitle: 'Finished',

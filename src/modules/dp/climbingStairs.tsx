@@ -100,6 +100,12 @@ export const climbingStairsModule: AlgorithmModule<number, StairState> = {
       totalSteps: 1,
       codeLine: 2,
       explanation: `Initialized Climbing Stairs DP table of size ${n + 1} for n = ${n} steps.`,
+      isMilestone: true,
+      milestoneTitle: 'Climbing Stairs Initialized',
+      soundCue: { type: 'start' },
+      variables: { n, dpSize: n + 1 },
+      callStack: [{ name: 'climbStairs', params: { n }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `n >= 1`, result: true },
       state: { n, dpTable: [...dp], currentStair: 0, highlightedIndices: [] },
     });
 
@@ -112,6 +118,10 @@ export const climbingStairsModule: AlgorithmModule<number, StairState> = {
       explanation: 'Base case dp[1] = 1: Exactly 1 way to climb 1 step ([1]).',
       isMilestone: true,
       milestoneTitle: 'Base Case dp[1] = 1',
+      soundCue: { type: 'step' },
+      variables: { 'dp[1]': 1, n },
+      callStack: [{ name: 'baseCase', params: { step: 1, ways: 1 }, line: 4, isCurrent: true }],
+      conditionEval: { expr: `n >= 1`, result: true },
       state: { n, dpTable: [...dp], currentStair: 1, highlightedIndices: [1] },
     });
 
@@ -123,6 +133,10 @@ export const climbingStairsModule: AlgorithmModule<number, StairState> = {
       explanation: 'Base case dp[2] = 2: Exactly 2 ways to reach step 2 ([1+1] or [2]).',
       isMilestone: true,
       milestoneTitle: 'Base Case dp[2] = 2',
+      soundCue: { type: 'step' },
+      variables: { 'dp[1]': 1, 'dp[2]': 2, n },
+      callStack: [{ name: 'baseCase', params: { step: 2, ways: 2 }, line: 5, isCurrent: true }],
+      conditionEval: { expr: `n >= 2`, result: n >= 2 },
       state: { n, dpTable: [...dp], currentStair: 2, highlightedIndices: [2] },
     });
 
@@ -133,6 +147,10 @@ export const climbingStairsModule: AlgorithmModule<number, StairState> = {
         totalSteps: 1,
         codeLine: 6,
         explanation: `Evaluating step ${i}: sum contributions from dp[${i - 1}] (${dp[i - 1]}) and dp[${i - 2}] (${dp[i - 2]}).`,
+        soundCue: { type: 'compare' },
+        variables: { i, 'dp[i-1]': dp[i - 1], 'dp[i-2]': dp[i - 2] },
+        callStack: [{ name: 'computeStep', params: { i }, line: 6, isCurrent: true }],
+        conditionEval: { expr: `i <= n (${i} <= ${n})`, result: true },
         state: { n, dpTable: [...dp], currentStair: i, highlightedIndices: [i - 1, i - 2] },
       });
 
@@ -145,6 +163,10 @@ export const climbingStairsModule: AlgorithmModule<number, StairState> = {
         explanation: `Computed dp[${i}] = dp[${i - 1}] + dp[${i - 2}] = ${dp[i - 1]} + ${dp[i - 2]} = ${dp[i]} distinct ways.`,
         isMilestone: true,
         milestoneTitle: `dp[${i}] = ${dp[i]} Ways`,
+        soundCue: { type: 'swap' },
+        variables: { i, 'dp[i]': dp[i], prev1: dp[i - 1], prev2: dp[i - 2] },
+        callStack: [{ name: 'recordWays', params: { step: i, ways: dp[i] }, line: 7, isCurrent: true }],
+        conditionEval: { expr: `dp[${i}] == dp[${i - 1}] + dp[${i - 2}]`, result: true },
         state: { n, dpTable: [...dp], currentStair: i, highlightedIndices: [i] },
       });
     }
@@ -156,6 +178,10 @@ export const climbingStairsModule: AlgorithmModule<number, StairState> = {
       explanation: `Reached top step ${n}! Total distinct climbing combinations = ${dp[n]}.`,
       isMilestone: true,
       milestoneTitle: `Total Ways: ${dp[n]}`,
+      soundCue: { type: 'complete' },
+      variables: { n, totalWays: dp[n], completed: true },
+      callStack: [{ name: 'climbStairs.done', params: { totalWays: dp[n] }, line: 8, isCurrent: true }],
+      conditionEval: { expr: `i > n`, result: true },
       state: { n, dpTable: [...dp], currentStair: n, highlightedIndices: [n] },
     });
 

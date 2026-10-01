@@ -149,6 +149,20 @@ export const activitySelectionModule: AlgorithmModule<Interval[], ActivitySelect
       totalSteps: 1,
       codeLine: 2,
       explanation: `Sort all intervals by finish time ascending. Greedily pick first activity "${sorted[0].label}" [${sorted[0].start}..${sorted[0].end}].`,
+      action: 'select-first',
+      callStack: ['selectActivities(activities)'],
+      variables: {
+        'sorted.length': sorted.length,
+        selectedCount: 1,
+        currentTask: sorted[0].label,
+        lastEnd: lastEnd,
+      },
+      conditionEval: {
+        condition: 'greedy initial pick (earliest finish time)',
+        result: true,
+      },
+      soundCue: 'pop',
+      isMilestone: true,
       state: {
         activities: sorted,
         selectedIndices: [0],
@@ -167,6 +181,21 @@ export const activitySelectionModule: AlgorithmModule<Interval[], ActivitySelect
         totalSteps: 1,
         codeLine: 5,
         explanation: `Inspect "${act.label}" [${act.start}..${act.end}]. Start ${act.start} vs last end ${lastEnd}: ${isCompatible ? 'COMPATIBLE (No overlap)' : 'OVERLAPPING (Conflict)'}.`,
+        action: 'inspect',
+        callStack: ['selectActivities(activities)', `inspect(index=${i})`],
+        variables: {
+          i: i,
+          'act.label': act.label,
+          'act.start': act.start,
+          'act.end': act.end,
+          lastEnd: lastEnd,
+          isCompatible: isCompatible,
+        },
+        conditionEval: {
+          condition: `act.start (${act.start}) >= lastEnd (${lastEnd})`,
+          result: isCompatible,
+        },
+        soundCue: 'step',
         state: {
           activities: sorted,
           selectedIndices: [...selected],
@@ -184,6 +213,20 @@ export const activitySelectionModule: AlgorithmModule<Interval[], ActivitySelect
           totalSteps: 1,
           codeLine: 7,
           explanation: `ACCEPTED: Schedule "${act.label}" [${act.start}..${act.end}]. New finish time barrier = ${lastEnd}.`,
+          action: 'accept',
+          callStack: ['selectActivities(activities)', `accept(index=${i})`],
+          variables: {
+            i: i,
+            selectedCount: selected.length,
+            newLastEnd: lastEnd,
+            scheduled: selected.map(idx => sorted[idx].label).join(', '),
+          },
+          conditionEval: {
+            condition: `scheduled.push("${act.label}")`,
+            result: true,
+          },
+          soundCue: 'swap',
+          isMilestone: true,
           state: {
             activities: sorted,
             selectedIndices: [...selected],
@@ -198,6 +241,18 @@ export const activitySelectionModule: AlgorithmModule<Interval[], ActivitySelect
           totalSteps: 1,
           codeLine: 8,
           explanation: `REJECTED: "${act.label}" starts at ${act.start} before last finish ${lastEnd}. Discarded.`,
+          action: 'reject',
+          callStack: ['selectActivities(activities)', `reject(index=${i})`],
+          variables: {
+            i: i,
+            rejected: act.label,
+            overlap: `${act.start} < ${lastEnd}`,
+          },
+          conditionEval: {
+            condition: `act.start < lastEnd (conflict detected)`,
+            result: false,
+          },
+          soundCue: 'fail',
           state: {
             activities: sorted,
             selectedIndices: [...selected],
@@ -214,6 +269,18 @@ export const activitySelectionModule: AlgorithmModule<Interval[], ActivitySelect
       totalSteps: 1,
       codeLine: 9,
       explanation: `Greedy selection complete. Scheduled ${selected.length} non-overlapping activities.`,
+      action: 'complete',
+      callStack: ['selectActivities(activities)'],
+      variables: {
+        totalScheduled: selected.length,
+        finalSchedule: selected.map(idx => sorted[idx].label).join(' -> '),
+      },
+      conditionEval: {
+        condition: 'loop terminated (all intervals evaluated)',
+        result: true,
+      },
+      soundCue: 'finish',
+      isMilestone: true,
       state: {
         activities: sorted,
         selectedIndices: [...selected],

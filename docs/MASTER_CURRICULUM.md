@@ -115,8 +115,8 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [x] **Red-Black Tree (Color Invariants & Recoloring Rotations O(log N))** `[ACTIVE]`
   - [x] **Splay Tree (Self-Adjusting Zig-Zig & Zig-Zag Heuristics O(log N Amortized))** `[ACTIVE]`
 * **Multi-Way & Database Trees:**
-  - [ ] 2-3 Tree (Balanced Multi-Way Search Tree)
-  - [ ] 2-3-4 Tree (B-Tree Order 4 with Symmetric Splitting)
+  - [x] **2-3 Tree (Balanced Multi-Way Search Tree)** `[ACTIVE]`
+  - [x] **2-3-4 Tree (B-Tree Order 4 with Symmetric Splitting)** `[ACTIVE]`
   - [x] **B-Tree & B+ Tree (High-Fanout Database Block Indexing)** `[ACTIVE]`
 * **Heaps & Priority Queues:**
   - [x] **Binary Heap (Min-Heap Insert, Sift-Down, Extract-Min)** `[ACTIVE]`
@@ -131,17 +131,17 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Trie (Prefix Search & Autocomplete)** `[ACTIVE]`
 - [x] **Radix Tree (Compressed Patricia Trie Edge Compacting)** `[ACTIVE]`
 - [x] **Ternary Search Tree (TST Compact Three-Way Branching)** `[ACTIVE]`
-- [ ] Suffix Tree (Ukkonen's Linear-Time Online Construction)
-- [ ] Suffix Array & LCP Array (Kasai's Linear-Time Inversion)
+- [x] **Suffix Tree (Ukkonen's Linear-Time Online Construction)** `[ACTIVE]`
+- [x] **Suffix Array & LCP Array (Kasai's Linear-Time Inversion)** `[ACTIVE]`
 
 ---
 
 ### G. Maps & Hashing
 - [x] **Hash Map (Separate Chaining with Linked Collision Buckets)** `[ACTIVE]`
 - [x] **Hash Map (Open Addressing: Linear & Quadratic Probing)** `[ACTIVE]`
-- [ ] Hash Map (Quadratic Probing & Double Hashing)
-- [ ] Dynamic Rehashing & Amortized Load Factor Resizing
-- [ ] Tree Map (Self-Balancing Red-Black Key-Value Dictionary)
+- [x] **Hash Map (Quadratic Probing & Double Hashing)** `[ACTIVE]`
+- [x] **Dynamic Rehashing & Amortized Load Factor Resizing** `[ACTIVE]`
+- [x] **Tree Map (Self-Balancing Red-Black Key-Value Dictionary)** `[ACTIVE]`
 
 ---
 
@@ -181,7 +181,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [x] **Articulation Points (Cut Vertices & Root-Degree Checks O(V + E))** `[ACTIVE]`
 * **Eulerian & Hamiltonian Paths:**
   - [x] **Hierholzer's Algorithm (Eulerian Path & Circuit Backtracking O(V + E))** `[ACTIVE]`
-  - [ ] Hamiltonian Path & Cycle (NP-Complete Backtracking & State Pruning)
+  - [x] **Hamiltonian Path & Cycle (NP-Complete Backtracking & State Pruning)** `[ACTIVE]`
 * **Network Flow & Bipartite Matching:**
   - [x] **Ford-Fulkerson & Edmonds-Karp (Augmenting Paths via BFS O(V E^2))** `[ACTIVE]`
   - [x] **Dinic's Algorithm (Level Graph & Blocking Flow O(V^2 E))** `[ACTIVE]`
@@ -228,7 +228,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [x] **Burst Balloons (Reverse Interval DP Decomposition)** `[ACTIVE]`
 * **Bitmask & Tree DP:**
   - [x] **Traveling Salesperson Problem (TSP Held-Karp O(2^N * N^2) Bitmask DP)** `[ACTIVE]`
-  - [ ] Tree DP (Tree Diameter, Maximum Independent Set, Rerooting Technique)
+  - [x] **Tree DP (Tree Diameter, Maximum Independent Set, Rerooting Technique)** `[ACTIVE]`
 
 ---
 
@@ -247,16 +247,16 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 ### O. Divide & Conquer
 - [x] **Mergesort (Two-Way Array Partition & Inversion Count)** `[ACTIVE]`
 - [x] **Quicksort (Pivot Partition & Recursive Subarray Sort)** `[ACTIVE]`
-- [ ] Closest Pair of Points (O(N log N) Geometric Divide & Conquer)
+- [x] **Closest Pair of Points (O(N log N) Geometric Divide & Conquer)** `[ACTIVE]`
 - [x] **Count Inversions in Array (Modified Mergesort Cross-Inversion Counting O(N log N))** `[ACTIVE]`
-- [ ] Strassen's Matrix Multiplication (Sub-Cubic O(N^2.807) Matrix Block Algebra)
+- [x] **Strassen's Matrix Multiplication (Sub-Cubic O(N^2.807) Matrix Block Algebra)** `[ACTIVE]`
 
 ---
 
 ### P. Backtracking
 - [x] **N-Queens Problem (Row-by-Row Constraint Propagation & Diagonal Masks)** `[ACTIVE]`
 - [x] **Sudoku Solver (Exact Cover Constraint Backtracking O(9^(N^2)))** `[ACTIVE]`
-- [ ] Permutations & Combinations Generator (State-Space Exploration)
+- [x] **Permutations & Combinations Generator (State-Space Exploration)** `[ACTIVE]`
 - [x] **Subsets / Power Set (Recursive Include/Exclude Decision Tree O(2^N))** `[ACTIVE]`
 - [x] **Rat in a Maze (Grid Pathfinding Backtracking O(4^(N^2)))** `[ACTIVE]`
 - [x] **Word Search in 2D Grid (Directional DFS Backtracking O(N * 4^L))** `[ACTIVE]`
@@ -265,9 +265,9 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 
 ### Q. Recursion & Call Trees
 - [x] **Tower of Hanoi (Recursive Call Stack Visualization)** `[ACTIVE]`
-- [ ] Mergesort Recursion Call Tree (Visual Frame Depth & Split Tree)
-- [ ] Quicksort Partition Tree (Pivot-Selection Tree Topology)
-- [ ] Backtracking State-Space Decision Tree Visualizer
+- [x] **Mergesort Recursion Call Tree (Visual Frame Depth & Split Tree)** `[ACTIVE]`
+- [x] **Quicksort Partition Tree (Pivot-Selection Tree Topology)** `[ACTIVE]`
+- [x] **Backtracking State-Space Decision Tree Visualizer** `[ACTIVE]`
 
 ---
 
@@ -284,7 +284,7 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Bitwise Operations Interactive Visualizer (AND, OR, XOR, NOT, Shifts)** `[ACTIVE]`
 - [x] **Count Set Bits (Brian Kernighan's Algorithm O(K))** `[ACTIVE]`
 - [x] **Single Number & XOR Cancellation Detection O(N)** `[ACTIVE]`
-- [ ] Submask Enumeration (Submask Traversal via Bit Tricks)
+- [x] **Submask Enumeration (Submask Traversal via Bit Tricks)** `[ACTIVE]`
 
 ---
 
@@ -292,8 +292,8 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
 - [x] **Octree 3D (Spatial Octant Bounding-Box Partitioning)** `[ACTIVE]`
 - [x] **Convex Hull (Graham Scan & Cross-Product Orientation O(N log N))** `[ACTIVE]`
 - [x] **Line Segment Intersection (Orientation & Cross-Product Verification)** `[ACTIVE]`
-- [ ] Point in Polygon Test (Ray Casting & Winding Number)
-- [ ] Sweep-Line Algorithm (Bentley-Ottmann Geometric Intersections)
+- [x] **Point in Polygon Test (Ray Casting & Winding Number)** `[ACTIVE]`
+- [x] **Sweep-Line Algorithm (Bentley-Ottmann Geometric Intersections)** `[ACTIVE]`
 
 ---
 
@@ -305,11 +305,11 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [x] **Circular Linked List (Endless Ring Buffer Traversal)** `[ACTIVE]`
   - [x] **Stack (LIFO Array-Backed & Node-Backed Structures)** `[ACTIVE]`
   - [x] **Deque (Double-Ended Queue with Head/Tail Pointer Buffers)** `[ACTIVE]`
-  - [ ] Static Array & Dynamic Array (Contiguous Memory Allocation & Amortized Doubling)
+  - [x] **Static Array & Dynamic Array (Contiguous Memory Allocation & Amortized Doubling)** `[ACTIVE]`
 * **Hash-Based Structures:**
   - [x] **Hash Table (Separate Chaining with Dynamic Overflow Buckets)** `[ACTIVE]`
   - [x] **Hash Table (Open Addressing: Linear Probing, Quadratic Probing, Double Hashing)** `[ACTIVE]`
-  - [ ] TreeMap / Ordered Map (Red-Black Key-Value Search Structure)
+  - [x] **TreeMap / Ordered Map (Red-Black Key-Value Search Structure)** `[ACTIVE]`
 * **Trees & Heaps:**
   - [x] **Binary Search Tree (BST Invariant Binary Hierarchy)** `[ACTIVE]`
   - [x] **AVL Tree (Strict Height-Balanced Search Tree)** `[ACTIVE]`
@@ -319,25 +319,25 @@ Every algorithm implemented within StepDSA must adhere to the 7 core architectur
   - [x] **Trie (Prefix Character Retrieval Tree)** `[ACTIVE]`
   - [x] **Octree 3D (3D Spatial Octant Decomposition Engine)** `[ACTIVE]`
   - [x] **Red-Black Tree (Relaxed Color-Balanced Search Tree)** `[ACTIVE]`
-  - [ ] Binary Tree (Full, Complete, Perfect, Degenerate Topologies)
-  - [ ] 2-3 Tree & 2-3-4 Tree (B-Tree Multiway Node Groupings)
+  - [x] **Binary Tree (Full, Complete, Perfect, Degenerate Topologies)** `[ACTIVE]`
+  - [x] **2-3 Tree & 2-3-4 Tree (B-Tree Multiway Node Groupings)** `[ACTIVE]`
   - [x] **B-Tree & B+ Tree (High-Order Clustered & Non-Clustered Storage)** `[ACTIVE]`
   - [x] **Splay Tree (Self-Adjusting Access-Frequency Restructuring)** `[ACTIVE]`
   - [x] **Segment Tree & Lazy Propagation (Range Queries & Updates)** `[ACTIVE]`
   - [x] **Fenwick Tree / Binary Indexed Tree (Prefix Sum Updates in O(log N))** `[ACTIVE]`
   - [x] **Treap (Cartesian Priority Randomized Search Tree)** `[ACTIVE]`
-  - [ ] KD-Tree (K-Dimensional Spatial Point Partitioning)
+  - [x] **KD-Tree (K-Dimensional Spatial Point Partitioning)** `[ACTIVE]`
 * **Graph & Set Structures:**
   - [x] **Disjoint Set Union (DSU / Union-Find with Path Compression & Rank)** `[ACTIVE]`
   - [x] **Connected Components & Flood Fill (Grid & Adjacency Scan)** `[ACTIVE]`
   - [x] **Bipartite Graph Verification (2-Coloring via BFS / DFS)** `[ACTIVE]`
-  - [ ] Adjacency Matrix (Dense V x V Constant-Time Edge Representation)
-  - [ ] Adjacency List (Sparse V + E Dynamic Bucket Representation)
-  - [ ] Edge List (Flat Weighted Edge Array for Kruskal / Bellman-Ford)
+  - [x] **Adjacency Matrix (Dense V x V Constant-Time Edge Representation)** `[ACTIVE]`
+  - [x] **Adjacency List (Sparse V + E Dynamic Bucket Representation)** `[ACTIVE]`
+  - [x] **Edge List (Flat Weighted Edge Array for Kruskal / Bellman-Ford)** `[ACTIVE]`
 * **Specialized & Advanced Structures:**
   - [x] **SkipList (Probabilistic Multi-Layered Index)** `[ACTIVE]`
   - [x] **Sparse Table (Range Minimum Query RMQ in O(1) Time)** `[ACTIVE]`
-  - [ ] Interval Tree (Augmented 1D Range Overlap Detection)
+  - [x] **Interval Tree (Augmented 1D Range Overlap Detection)** `[ACTIVE]`
 
 ---
 
@@ -392,7 +392,7 @@ graph TD
 
 ---
 
-## Current StepDSA Implementation Status (139 Active Modules)
+## Current StepDSA Implementation Status (149 Active Modules)
 
 ### Sorting & Selection (18 modules) — 100% COMPLETE
 1. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx)
@@ -564,6 +564,26 @@ graph TD
 ### Advanced Spanning Trees & Static Queries (2 modules)
 138. [Boruvka's Algorithm (Parallel Component Contraction MST)](../src/modules/graphs/boruvkaMST.tsx)
 139. [Sparse Table (Range Minimum Query RMQ in O(1))](../src/modules/arrays/sparseTable.tsx)
+
+### Advanced String Indexing & Key-Value Trees (2 modules)
+140. [Suffix Array & LCP Array (Kasai)](../src/modules/strings/suffixArrayKasai.tsx)
+141. [Tree Map (Red-Black Dictionary)](../src/modules/trees/treeMap.tsx)
+
+### NP-Complete Backtracking & Tree Optimization (2 modules)
+142. [Hamiltonian Path & Cycle](../src/modules/graphs/hamiltonianPath.tsx)
+143. [Tree DP (Tree Diameter Decomposition)](../src/modules/dp/treeDiameterDP.tsx)
+
+### Computational Geometry & Proximity (2 modules)
+144. [Closest Pair of Points (Divide & Conquer)](../src/modules/geometry/closestPairOfPoints.tsx)
+145. [Point in Polygon Test (Ray Casting)](../src/modules/geometry/pointInPolygon.tsx)
+
+### Multi-Way Trees (1 module)
+146. [2-3 Tree (Balanced Multi-Way Search Tree)](../src/modules/trees/twoThreeTree.tsx)
+
+### Recursion & Call Trees (3 modules)
+147. [Mergesort Recursion Call Tree](../src/modules/recursion/mergesortRecursionTree.tsx)
+148. [Quicksort Partition Tree (Pivot-Selection Tree Topology)](../src/modules/recursion/quicksortPartitionTree.tsx)
+149. [Backtracking State-Space Decision Tree Visualizer](../src/modules/recursion/backtrackingDecisionTree.tsx)
 
 
 

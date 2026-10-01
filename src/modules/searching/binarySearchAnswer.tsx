@@ -161,8 +161,12 @@ export const binarySearchAnswerModule: AlgorithmModule<
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
+      isMilestone: true,
+      milestoneTitle: `Init Binary Search on Answer [1..${maxPile}]`,
       explanation: `Set search boundaries for speed k: low = 1 (minimum possible speed), high = max(piles) = ${maxPile} (guaranteed finish in ${piles.length} hours). Total time allowance H = ${h}.`,
       variables: { low, high, maxPile, targetHours: h, bestSpeed },
+      conditionEval: { expr: 'low <= high', result: true },
+      soundCue: { type: 'step' },
       callStack: [
         { name: `minEatingSpeed(piles, ${h})`, params: { h, maxPile }, line: 2, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
@@ -180,22 +184,51 @@ export const binarySearchAnswerModule: AlgorithmModule<
       },
     });
 
+    let iter = 1;
     while (low <= high) {
+      // Loop condition frame
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 7,
+        explanation: `Iteration #${iter}: Checking loop condition low (${low}) <= high (${high}). Search space contains ${high - low + 1} candidate speeds.`,
+        variables: { iteration: iter, low, high, rangeSize: high - low + 1, currentBest: bestSpeed },
+        conditionEval: { expr: `low (${low}) <= high (${high})`, result: true },
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: `searchIteration(${iter})`, params: { low, high }, line: 7, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        state: {
+          piles,
+          h,
+          low,
+          high,
+          mid: Math.floor((low + high) / 2),
+          hoursNeeded: calcHours(Math.floor((low + high) / 2)),
+          isFeasible: false,
+          bestSpeed,
+          phase: 'search',
+        },
+      });
+
       const mid = Math.floor((low + high) / 2);
-      const hours = calcHours(mid);
+      const pileHours = piles.map((p) => Math.ceil(p / mid));
+      const hours = pileHours.reduce((a, b) => a + b, 0);
       const feasible = hours <= h;
 
-      // Evaluate predicate
+      // Evaluate predicate with pile breakdown
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 8,
-        explanation: `Test candidate speed k = ${mid} (midpoint of [${low}..${high}]). Required time: ${hours} hours across all piles.`,
-        variables: { candidateSpeed: mid, hoursNeeded: hours, allowedHours: h, feasible: String(feasible) },
+        explanation: `Test candidate speed k = ${mid}: Compute ceil(pile / ${mid}) for each pile -> [${pileHours.join(' + ')}] = ${hours} total hours needed (Budget H = ${h}).`,
+        variables: { candidateSpeed: mid, hoursNeeded: hours, allowedHours: h, feasible: String(feasible), pileBreakdown: pileHours.join('+') },
         conditionEval: {
           expr: `hoursNeeded(${mid}) [${hours}] <= H [${h}]`,
           result: feasible,
         },
+        soundCue: { type: 'compare' },
         callStack: [
           { name: `checkFeasibility(k=${mid})`, params: { speed: mid, hours, target: h }, line: 8, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
@@ -223,8 +256,10 @@ export const binarySearchAnswerModule: AlgorithmModule<
           codeLine: 10,
           isMilestone: true,
           milestoneTitle: `Feasible Speed Found (k = ${mid})`,
-          explanation: `Speed k = ${mid} succeeds (${hours} hrs <= ${h} hrs). Record bestSpeed = ${mid}. Narrow upper bound: high = mid - 1 = ${high} to search for even smaller speeds.`,
-          variables: { bestSpeed, newHigh: high, low },
+          explanation: `Speed k = ${mid} succeeds (${hours} hrs <= ${h} hrs). Record bestSpeed = ${mid}. Narrow upper bound: high = mid - 1 = ${high} to search for smaller feasible speeds.`,
+          variables: { bestSpeed, newHigh: high, low, verified: true },
+          conditionEval: { expr: `${hours} <= ${h}`, result: true },
+          soundCue: { type: 'swap' },
           callStack: [
             { name: `recordOptimal(${mid})`, params: { best: mid, newHigh: high }, line: 10, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
@@ -249,7 +284,9 @@ export const binarySearchAnswerModule: AlgorithmModule<
           totalSteps: 1,
           codeLine: 13,
           explanation: `Speed k = ${mid} is too slow (${hours} hrs > ${h} hrs). Discard speed <= ${mid}. Narrow lower bound: low = mid + 1 = ${low}.`,
-          variables: { speedTooSlow: mid, newLow: low, high },
+          variables: { speedTooSlow: mid, newLow: low, high, tooSlow: true },
+          conditionEval: { expr: `${hours} <= ${h}`, result: false },
+          soundCue: { type: 'compare' },
           callStack: [
             { name: `increaseSpeed(low=${low})`, params: { low, high }, line: 13, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
@@ -267,6 +304,7 @@ export const binarySearchAnswerModule: AlgorithmModule<
           },
         });
       }
+      iter++;
     }
 
     // Final result frame

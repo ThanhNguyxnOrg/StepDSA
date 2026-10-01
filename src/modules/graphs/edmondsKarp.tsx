@@ -257,6 +257,7 @@ export const edmondsKarpModule: AlgorithmModule<
       explanation: `Initialized Edmonds-Karp with source "${source}" and sink "${sink}". Zero initial flow.`,
     });
 
+    let bfsIteration = 1;
     while (true) {
       // Run BFS in residual graph
       const parent = new Map<string, string>();
@@ -264,6 +265,26 @@ export const edmondsKarpModule: AlgorithmModule<
       const isReverse = new Map<string, boolean>();
       const queue: string[] = [source];
       parent.set(source, source);
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        action: 'BFS_START',
+        state: {
+          nodes: rawNodes,
+          edges: flowEdges.map((e) => ({ ...e })),
+          source,
+          sink,
+          augmentingPath: null,
+          bottleneck: 0,
+          totalFlow,
+        },
+        callStack: [{ name: 'bfsAugment()', params: { iteration: bfsIteration, source, sink }, line: 4, isCurrent: true }],
+        variables: { bfsIteration, currentFlow: totalFlow, searchingForPath: true },
+        conditionEval: { expr: 'queue.length > 0 && !parent.has(sink)', result: true },
+        explanation: `BFS Round ${bfsIteration}: Searching for shortest augmenting path from "${source}" to "${sink}" in residual graph.`,
+      });
 
       while (queue.length > 0 && !parent.has(sink)) {
         const u = queue.shift()!;
@@ -275,6 +296,26 @@ export const edmondsKarpModule: AlgorithmModule<
             parentEdgeIndex.set(e.to, i);
             isReverse.set(e.to, false);
             queue.push(e.to);
+
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 6,
+              action: 'BFS_EXPLORE',
+              state: {
+                nodes: rawNodes,
+                edges: flowEdges.map((e) => ({ ...e })),
+                source,
+                sink,
+                augmentingPath: null,
+                bottleneck: 0,
+                totalFlow,
+              },
+              callStack: [{ name: 'bfsExplore()', params: { from: u, to: e.to, resCap: e.capacity - e.flow }, line: 6, isCurrent: true }],
+              variables: { from: u, to: e.to, residualCapacity: e.capacity - e.flow, isReverse: false },
+              conditionEval: { expr: `cap(${u}->${e.to}) - flow > 0`, result: true },
+              explanation: `BFS traversed forward edge (${u} -> ${e.to}): Residual capacity = ${e.capacity - e.flow} > 0. Enqueued "${e.to}".`,
+            });
           }
           // Backward residual edge
           else if (e.to === u && !parent.has(e.from) && e.flow > 0) {
@@ -282,16 +323,42 @@ export const edmondsKarpModule: AlgorithmModule<
             parentEdgeIndex.set(e.from, i);
             isReverse.set(e.from, true);
             queue.push(e.from);
+
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 7,
+              action: 'BFS_EXPLORE',
+              state: {
+                nodes: rawNodes,
+                edges: flowEdges.map((e) => ({ ...e })),
+                source,
+                sink,
+                augmentingPath: null,
+                bottleneck: 0,
+                totalFlow,
+              },
+              callStack: [{ name: 'bfsExplore()', params: { from: u, to: e.from, backwardFlow: e.flow }, line: 7, isCurrent: true }],
+              variables: { from: u, to: e.from, residualCapacity: e.flow, isReverse: true },
+              conditionEval: { expr: `flow(${e.from}->${u}) > 0`, result: true },
+              explanation: `BFS traversed backward edge (${u} -> ${e.from}): Can cancel up to ${e.flow} units of flow. Enqueued "${e.from}".`,
+            });
           }
         }
       }
 
       if (!parent.has(sink)) {
+        // Collect reachable nodes for Min-Cut
+        const reachableFromSource = Array.from(parent.keys());
+        const sinkPartition = rawNodes.filter((n) => !parent.has(n));
+
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 18,
           action: 'NO_MORE_PATHS',
+          isMilestone: true,
+          milestoneTitle: `Max Flow = ${totalFlow}`,
           state: {
             nodes: rawNodes,
             edges: flowEdges.map((e) => ({ ...e })),
@@ -301,14 +368,20 @@ export const edmondsKarpModule: AlgorithmModule<
             bottleneck: 0,
             totalFlow,
           },
-          callStack: [{ name: 'edmondsKarp', params: { maxFlow: totalFlow, status: 'OPTIMAL' } }],
-          variables: { totalFlow, status: 'Max-Flow Min-Cut Achieved' },
-          explanation: `No augmenting paths remain from "${source}" to "${sink}". Max flow = ${totalFlow}.`,
+          callStack: [{ name: 'edmondsKarp', params: { maxFlow: totalFlow, status: 'OPTIMAL' }, line: 18, isCurrent: true }],
+          variables: {
+            totalFlow,
+            minCutS: `[${reachableFromSource.join(', ')}]`,
+            minCutT: `[${sinkPartition.join(', ')}]`,
+            status: 'Max-Flow Min-Cut Verified',
+          },
+          conditionEval: { expr: '!parent.has(sink)', result: true },
+          explanation: `🎉 No more augmenting paths exist from "${source}" to "${sink}". Max Flow = ${totalFlow}. Min-Cut partition: S={${reachableFromSource.join(',')}}, T={${sinkPartition.join(',')}}.`,
         });
         break;
       }
 
-      // Reconstruct path
+      // Reconstruct path and bottleneck
       const path: string[] = [];
       let curr = sink;
       let bottleneck = Infinity;
@@ -329,6 +402,8 @@ export const edmondsKarpModule: AlgorithmModule<
         totalSteps: 1,
         codeLine: 9,
         action: 'PATH_FOUND',
+        isMilestone: true,
+        milestoneTitle: `Augmenting Path Found (+${bottleneck})`,
         state: {
           nodes: rawNodes,
           edges: flowEdges.map((e) => ({ ...e })),
@@ -338,13 +413,14 @@ export const edmondsKarpModule: AlgorithmModule<
           bottleneck,
           totalFlow,
         },
-        callStack: [{ name: 'bfsAugment', params: { path: path.join('->'), bottleneck } }],
+        callStack: [{ name: 'bfsAugment', params: { path: path.join('->'), bottleneck }, line: 9, isCurrent: true }],
         variables: {
           augmentingPath: path.join(' -> '),
           bottleneckCapacity: bottleneck,
           currentTotalFlow: totalFlow,
         },
-        explanation: `BFS found shortest augmenting path: ${path.join(' -> ')} with bottleneck capacity ${bottleneck}.`,
+        conditionEval: { expr: `bottleneck (${bottleneck}) > 0`, result: true },
+        explanation: `BFS found shortest augmenting path: ${path.join(' -> ')} with bottleneck capacity Δ = ${bottleneck}.`,
       });
 
       // Apply augmentation
@@ -376,10 +452,12 @@ export const edmondsKarpModule: AlgorithmModule<
           bottleneck,
           totalFlow,
         },
-        callStack: [{ name: 'edmondsKarp', params: { addedFlow: bottleneck, totalFlow } }],
-        variables: { pushedFlow: bottleneck, newTotalFlow: totalFlow },
-        explanation: `Pushed ${bottleneck} units along ${path.join(' -> ')}. Cumulative flow is now ${totalFlow}.`,
+        callStack: [{ name: 'augmentFlow()', params: { addedFlow: bottleneck, newTotal: totalFlow }, line: 14, isCurrent: true }],
+        variables: { pushedFlow: bottleneck, newTotalFlow: totalFlow, path: path.join(' -> ') },
+        explanation: `Augmented flow: Pushed ${bottleneck} units along ${path.join(' -> ')}. Cumulative flow is now ${totalFlow}.`,
       });
+
+      bfsIteration++;
     }
 
     frames.forEach((f) => {

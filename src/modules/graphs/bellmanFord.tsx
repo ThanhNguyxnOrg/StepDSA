@@ -234,7 +234,10 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
       explanation: `Initialized Bellman-Ford from source '${startNode}'. dist[${startNode}] = 0, all other vertices dist = ∞. Will perform up to ${V - 1} relaxation passes.`,
       isMilestone: true,
       milestoneTitle: `Init dist[${startNode}]=0`,
-      soundCue: 'start',
+      soundCue: { type: 'start' },
+      variables: { source: startNode, numVertices: V, numEdges: edges.length, pass: 0 },
+      callStack: [{ name: 'bellmanFord', params: { source: startNode, V }, line: 1, isCurrent: true }],
+      conditionEval: { expr: `V > 1`, result: V > 1 },
       scopeVariables: { source: startNode, numVertices: V, numEdges: edges.length },
       state: makeState(0),
     });
@@ -250,7 +253,10 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
         explanation: `Beginning Pass #${pass} of ${V - 1}. Scanning all ${edges.length} edges for relaxation opportunities.`,
         isMilestone: true,
         milestoneTitle: `Pass #${pass} Start`,
-        soundCue: 'step',
+        soundCue: { type: 'step' },
+        variables: { pass, totalPasses: V - 1, edgesToScan: edges.length },
+        callStack: [{ name: 'bellmanFord.pass', params: { pass, maxPasses: V - 1 }, line: 5, isCurrent: true }],
+        conditionEval: { expr: `pass <= V - 1 (${pass} <= ${V - 1})`, result: true },
         scopeVariables: { pass, totalPasses: V - 1 },
         state: makeState(pass),
       });
@@ -277,7 +283,10 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
             explanation: `✨ Relaxed edge (${u} → ${v}, weight ${w}): dist[${v}] updated from ${oldDist === INF ? '∞' : oldDist} down to ${dist[v]} (via ${u}).`,
             isMilestone: true,
             milestoneTitle: `Relax (${u}→${v})`,
-            soundCue: 'swap',
+            soundCue: { type: 'swap' },
+            variables: { edge: `${u}→${v}`, u, v, weight: w, newDist: dist[v], oldDist: oldDist === INF ? '∞' : oldDist },
+            callStack: [{ name: 'relaxEdge', params: { from: u, to: v, weight: w }, line: 8, isCurrent: true }],
+            conditionEval: { expr: `dist[${u}] + ${w} < dist[${v}] (${uDist + w} < ${vDist === INF ? '∞' : vDist})`, result: true },
             scopeVariables: { edge: `${u}→${v}`, weight: w, newDist: dist[v], oldDist: oldDist === INF ? '∞' : oldDist },
             state: makeState(pass, edge.id, false, true),
           });
@@ -292,7 +301,10 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
           explanation: `Pass #${pass} completed with 0 relaxations. Shortest paths have converged early!`,
           isMilestone: true,
           milestoneTitle: 'Early Convergence',
-          soundCue: 'success',
+          soundCue: { type: 'step' },
+          variables: { pass, convergedEarly: true, totalRelaxations: 0 },
+          callStack: [{ name: 'bellmanFord.earlyExit', params: { pass }, line: 11, isCurrent: true }],
+          conditionEval: { expr: `!passRelaxed`, result: true },
           scopeVariables: { pass, converged: true },
           state: makeState(pass, undefined, false, false),
         });
@@ -315,7 +327,10 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
           explanation: `🚨 NEGATIVE-WEIGHT CYCLE DETECTED! Edge (${u} → ${v}, weight ${w}) can still be relaxed: dist[${u}] (${dist[u]}) + ${w} < dist[${v}] (${dist[v]}). Shortest paths are undefined!`,
           isMilestone: true,
           milestoneTitle: 'Negative Cycle!',
-          soundCue: 'discard',
+          soundCue: { type: 'compare' },
+          variables: { cycleEdge: `${u}→${v}`, weight: w, negativeCycle: true },
+          callStack: [{ name: 'detectNegativeCycle', params: { from: u, to: v }, line: 15, isCurrent: true }],
+          conditionEval: { expr: `dist[${u}] + ${w} < dist[${v}]`, result: true },
           scopeVariables: { cycleEdge: `${u}→${v}`, weight: w, negativeCycle: true },
           state: makeState(V, edge.id, true, true),
         });
@@ -331,7 +346,16 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
         explanation: `🎉 Bellman-Ford execution complete! Verified 0 negative-weight cycles. All shortest paths proven optimal.`,
         isMilestone: true,
         milestoneTitle: 'Shortest Paths Confirmed',
-        soundCue: 'complete',
+        soundCue: { type: 'complete' },
+        variables: {
+          converged: true,
+          negativeCycleDetected: false,
+          distances: Object.entries(dist)
+            .map(([k, v]) => `${k}:${v === INF ? '∞' : v}`)
+            .join(', '),
+        },
+        callStack: [{ name: 'bellmanFord.complete', params: { optimal: true }, line: 18, isCurrent: true }],
+        conditionEval: { expr: `!negativeCycleDetected`, result: true },
         scopeVariables: {
           distances: Object.entries(dist)
             .map(([k, v]) => `${k}:${v === INF ? '∞' : v}`)

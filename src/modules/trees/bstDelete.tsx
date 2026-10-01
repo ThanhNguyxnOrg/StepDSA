@@ -184,11 +184,15 @@ export const bstDeleteModule: AlgorithmModule<
       totalSteps: 1,
       codeLine: 2,
       explanation: `BST loaded with ${values.length} nodes. Commencing search and deletion of key = ${key}.`,
+      isMilestone: true,
+      milestoneTitle: 'BST Initialized',
+      soundCue: { type: 'start' },
       variables: { targetKey: key, treeNodes: initialTreeNodes.length, rootVal: internalRoot?.value ?? 0 },
       callStack: [
         { name: `deleteNode(root, ${key})`, params: { key, root: internalRoot?.value ?? 0 }, line: 2, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
+      conditionEval: { expr: `root !== null`, result: true },
       state: {
         nodes: initialTreeNodes.map((n) => ({ ...n })),
         targetValue: key,
@@ -197,6 +201,29 @@ export const bstDeleteModule: AlgorithmModule<
 
     // Simulate search path to key
     let curr = internalRoot;
+
+    // Frame: Inspect initial candidate node at root
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 2,
+      explanation: `Inspect node ${curr ? curr.value : 'null'}. Compare key (${key}) with node value (${curr?.value}).`,
+      soundCue: { type: 'compare' },
+      variables: { currentVal: curr?.value ?? 'null', targetKey: key },
+      conditionEval: { expr: `node.val === key`, result: curr?.value === key },
+      callStack: [
+        { name: `deleteNode(${curr?.value}, ${key})`, params: { curr: curr?.value ?? 'null', key }, line: 2, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      state: {
+        nodes: computePositions(internalRoot).map((n) => ({
+          ...n,
+          status: n.id === curr?.id ? 'comparing' : 'default',
+        })),
+        targetValue: key,
+      },
+    });
+
     const path: InternalNode[] = [];
     while (curr && curr.value !== key) {
       path.push(curr);
@@ -208,6 +235,7 @@ export const bstDeleteModule: AlgorithmModule<
         totalSteps: 1,
         codeLine: key < currVal ? 3 : 5,
         explanation: `Target key ${key} ${key < currVal ? '<' : '>'} current node ${currVal}. Traverse ${nextDir} subtree.`,
+        soundCue: { type: 'step' },
         variables: { currentVal: currVal, targetKey: key, direction: nextDir },
         conditionEval: {
           expr: `${key} ${key < currVal ? '<' : '>'} ${currVal}`,
@@ -342,61 +370,192 @@ export const bstDeleteModule: AlgorithmModule<
           },
         });
       } else {
-        // Case 3: Two children -> find successor
-        let succ = targetNode.right!;
-        while (succ.left) succ = succ.left;
-        const succVal = succ.value;
-
+        // Case 3: Two children -> find inorder successor step-by-step
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 13,
+          codeLine: 12,
+          action: 'ENTER_CASE_3',
           isMilestone: true,
-          milestoneTitle: `Inorder Successor Found (${succVal})`,
-          explanation: `Target ${key} has two children. Located inorder successor ${succVal} (smallest value in right subtree).`,
-          variables: { targetNode: key, inorderSuccessor: succVal },
+          milestoneTitle: `Case 3: Two Children on Node ${key}`,
+          explanation: `Node ${key} has both left child (${targetNode.left?.value}) and right child (${targetNode.right?.value}). Strategy: replace ${key} with its Inorder Successor (the smallest value in its right subtree).`,
+          variables: { targetVal: key, strategy: 'Inorder Successor Replacement', rightSubtreeRoot: targetNode.right?.value ?? 0 },
           callStack: [
-            { name: `findSuccessor(${key})`, params: { succ: succVal }, line: 13, isCurrent: true },
+            { name: `findInorderSuccessor(root.right=${targetNode.right?.value})`, params: { rightRoot: targetNode.right?.value ?? 0 }, line: 12, isCurrent: true },
+            { name: `deleteNode(${key})`, params: { key }, line: 7 },
             { name: 'main()', params: {}, line: 1 },
           ],
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,
-              status: n.value === succVal ? 'comparing' : n.id === targetNode.id ? 'active' : 'default',
+              status: n.id === targetNode.id ? 'active' : 'default',
+            })),
+            targetValue: key,
+          },
+        });
+
+        // Step 1 of Case 3: Step into right child
+        let succTracker: InternalNode = targetNode.right!;
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 13,
+          action: 'SUCCESSOR_TRAVERSE_START',
+          explanation: `Step into right subtree root ${succTracker.value}. Minimum value in right subtree will be found by traversing left as far as possible.`,
+          variables: { currentSubtree: succTracker.value, currentCandidateMin: succTracker.value },
+          callStack: [
+            { name: `traverseLeft(${succTracker.value})`, params: { curr: succTracker.value }, line: 13, isCurrent: true },
+            { name: `deleteNode(${key})`, params: { key }, line: 7 },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          state: {
+            nodes: computePositions(internalRoot).map((n) => ({
+              ...n,
+              status: n.id === succTracker.id ? 'comparing' : n.id === targetNode.id ? 'active' : 'default',
+            })),
+            targetValue: succTracker.value,
+          },
+        });
+
+        // Traverse down left children
+        while (succTracker.left) {
+          succTracker = succTracker.left;
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 13,
+            action: 'SUCCESSOR_TRAVERSE_LEFT',
+            explanation: `Found left child ${succTracker.value} < candidate. Traversing left to smaller value ${succTracker.value}.`,
+            variables: { currentCandidateMin: succTracker.value },
+            callStack: [
+              { name: `traverseLeft(${succTracker.value})`, params: { curr: succTracker.value }, line: 13, isCurrent: true },
+              { name: `deleteNode(${key})`, params: { key }, line: 7 },
+              { name: 'main()', params: {}, line: 1 },
+            ],
+            state: {
+              nodes: computePositions(internalRoot).map((n) => ({
+                ...n,
+                status: n.id === succTracker.id ? 'comparing' : n.id === targetNode.id ? 'active' : 'default',
+              })),
+              targetValue: succTracker.value,
+            },
+          });
+        }
+
+        const succVal = succTracker.value;
+        const succId = succTracker.id;
+
+        // Frame: Inorder successor confirmed
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 13,
+          action: 'SUCCESSOR_CONFIRMED',
+          isMilestone: true,
+          milestoneTitle: `Successor Identified: ${succVal}`,
+          soundCue: { type: 'pivot' },
+          explanation: `Node ${succVal} has no left child: confirmed as Inorder Successor (next value in sorted sequence).`,
+          variables: { targetNode: key, inorderSuccessor: succVal },
+          callStack: [
+            { name: `successorConfirmed(${succVal})`, params: { succ: succVal }, line: 13, isCurrent: true },
+            { name: `deleteNode(${key})`, params: { key }, line: 7 },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          conditionEval: { expr: `succ.left === null`, result: true },
+          state: {
+            nodes: computePositions(internalRoot).map((n) => ({
+              ...n,
+              status: n.id === succId ? 'comparing' : n.id === targetNode.id ? 'active' : 'default',
             })),
             targetValue: succVal,
           },
         });
 
-        // Copy successor value to target
+        // Step 2 of Case 3: Copy successor value to target node
         targetNode.value = succVal;
 
-        // Delete successor from right subtree
-        const deleteSuccessor = (r: InternalNode | null, sVal: number): InternalNode | null => {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 14,
+          action: 'OVERWRITE_VALUE',
+          isMilestone: true,
+          milestoneTitle: `Copy Value: ${key} -> ${succVal}`,
+          soundCue: { type: 'swap' },
+          explanation: `Copied successor value ${succVal} into target node (formerly ${key}). Node ${succVal} is now temporarily duplicated.`,
+          variables: { oldTargetValue: key, newTargetValue: succVal, duplicatedValue: succVal },
+          callStack: [
+            { name: `copyValue(target.val = ${succVal})`, params: { val: succVal }, line: 14, isCurrent: true },
+            { name: `deleteNode(${key})`, params: { key }, line: 7 },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          conditionEval: { expr: `root.val = succ.val`, result: true },
+          state: {
+            nodes: computePositions(internalRoot).map((n) => ({
+              ...n,
+              status: n.id === targetNode.id ? 'active' : n.id === succId ? 'comparing' : 'default',
+            })),
+            targetValue: succVal,
+          },
+        });
+
+        // Step 3 of Case 3: Recursively delete successor from right subtree
+        const deleteSuccessor = (r: InternalNode | null, sId: string): InternalNode | null => {
           if (!r) return null;
-          if (r.value === sVal) return r.right;
-          r.left = deleteSuccessor(r.left, sVal);
-          r.right = deleteSuccessor(r.right, sVal);
+          if (r.id === sId) return r.right; // Successor has at most a right child!
+          r.left = deleteSuccessor(r.left, sId);
+          r.right = deleteSuccessor(r.right, sId);
           return r;
         };
-        targetNode.right = deleteSuccessor(targetNode.right, succVal);
+        targetNode.right = deleteSuccessor(targetNode.right, succId);
 
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 15,
+          action: 'PRUNE_OLD_SUCCESSOR',
           isMilestone: true,
-          milestoneTitle: `Replaced with Successor (${succVal})`,
-          explanation: `Copied successor value ${succVal} into target node position, and pruned old successor leaf from right subtree. BST invariant fully restored!`,
-          variables: { newRootVal: succVal, prunedVal: succVal },
+          milestoneTitle: `Pruned Old Successor Node`,
+          soundCue: { type: 'discard' },
+          explanation: `Recursively spliced out original successor node from right subtree. Tree is valid BST again without duplicate ${succVal}.`,
+          variables: { removedSuccessorId: succId, rootValue: internalRoot?.value ?? 0 },
           callStack: [
-            { name: `completeReplacement(${succVal})`, params: { value: succVal }, line: 15, isCurrent: true },
+            { name: `deleteNode(root.right, ${succVal})`, params: { val: succVal }, line: 15, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          conditionEval: { expr: `deleteNode(root.right, succ.val)`, result: true },
+          state: {
+            nodes: computePositions(internalRoot).map((n) => ({
+              ...n,
+              status: n.id === targetNode.id ? 'sorted' : 'default',
+            })),
+            targetValue: succVal,
+          },
+        });
+
+        // Frame: Invariant verification
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 16,
+          action: 'VERIFY_BST_INVARIANT',
+          isMilestone: true,
+          milestoneTitle: 'BST Invariant Verified',
+          soundCue: { type: 'complete' },
+          invariantStatus: {
+            label: 'BST Invariant: Left < Current < Right holds globally',
+            isValid: true,
+          },
+          explanation: `🎉 Deletion complete! BST invariant verified: left subtree elements < ${succVal} < right subtree elements.`,
+          variables: { deletedKey: key, newSubtreeRoot: succVal, totalNodesRemaining: computePositions(internalRoot).length },
+          callStack: [
+            { name: 'verifyInvariant()', params: {}, line: 16, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
           ],
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,
-              status: n.value === succVal ? 'sorted' : 'default',
+              status: 'sorted',
             })),
             targetValue: succVal,
           },

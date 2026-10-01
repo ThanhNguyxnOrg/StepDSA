@@ -139,10 +139,18 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
     const finalPlaced = new Set<number>();
     const frames: ExecutionFrame<ArrayStageState>[] = [];
 
+    const baseCallStack = [{ name: 'quickselect', params: { k, n }, line: 1, isCurrent: true }];
+
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 12,
+      isMilestone: true,
+      milestoneTitle: 'Quickselect Initialized',
+      soundCue: { type: 'start' },
+      variables: { targetK: k, low, high, n },
+      callStack: baseCallStack,
+      conditionEval: { expr: `k >= 0 && k < ${n}`, result: true },
       explanation: `Initialized Quickselect. Searching for target rank k = ${k} (0-indexed). Array size = ${n}.`,
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
@@ -158,9 +166,13 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Subarray [${low}..${high}]: Selected pivot arr[${high}] = ${pivot}. Partitioning around pivot.`,
         isMilestone: true,
         milestoneTitle: `Pivot ${pivot} Selected`,
+        soundCue: { type: 'pivot' },
+        variables: { pivot, low, high, targetK: k },
+        callStack: [{ name: 'partition', params: { low, high, pivot }, line: 4, isCurrent: true }],
+        conditionEval: { expr: `low <= high (${low} <= ${high})`, result: true },
+        explanation: `Subarray [${low}..${high}]: Selected pivot arr[${high}] = ${pivot}. Partitioning around pivot.`,
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -178,10 +190,15 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
       });
 
       for (let j = low; j < high; ++j) {
+        const isLessOrEqual = arr[j] <= pivot;
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 7,
+          soundCue: { type: 'compare' },
+          variables: { 'arr[j]': arr[j], pivot, i, j, isLessOrEqual },
+          callStack: [{ name: 'compare', params: { j, pivot }, line: 7, isCurrent: true }],
+          conditionEval: { expr: `arr[${j}] <= pivot (${arr[j]} <= ${pivot})`, result: isLessOrEqual },
           explanation: `Comparing arr[${j}] (${arr[j]}) with pivot (${pivot}).`,
           state: {
             array: arr.map((v, idx) => ({
@@ -201,7 +218,7 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
           },
         });
 
-        if (arr[j] <= pivot) {
+        if (isLessOrEqual) {
           if (i !== j) {
             const temp = arr[i];
             arr[i] = arr[j];
@@ -210,6 +227,10 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
               stepIndex: frames.length,
               totalSteps: 1,
               codeLine: 8,
+              soundCue: { type: 'swap' },
+              variables: { swapped: true, indexA: i, indexB: j, valA: arr[i], valB: arr[j] },
+              callStack: [{ name: 'swap', params: { i, j }, line: 8, isCurrent: true }],
+              conditionEval: { expr: `i !== j (${i} !== ${j})`, result: true },
               explanation: `Swapped arr[${i}] (${temp}) with arr[${j}] (${arr[i]}) so smaller element is at left partition.`,
               state: {
                 array: arr.map((v, idx) => ({
@@ -236,9 +257,13 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 10,
-        explanation: `Placed pivot ${arr[pIdx]} at its final sorted rank index ${pIdx}. Comparing pIdx (${pIdx}) with target k (${k}).`,
         isMilestone: true,
         milestoneTitle: `Pivot Placed at Index ${pIdx}`,
+        soundCue: { type: 'sorted' },
+        variables: { pIdx, targetK: k, pivotVal: arr[pIdx], rankMatch: pIdx === k },
+        callStack: [{ name: 'partitionComplete', params: { pIdx, k }, line: 10, isCurrent: true }],
+        conditionEval: { expr: `pIdx === k (${pIdx} === ${k})`, result: pIdx === k },
+        explanation: `Placed pivot ${arr[pIdx]} at its final sorted rank index ${pIdx}. Comparing pIdx (${pIdx}) with target k (${k}).`,
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -254,9 +279,13 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 16,
-          explanation: `Rank match found! Pivot index ${pIdx} == k (${k}). The k-th smallest element is ${arr[pIdx]}.`,
           isMilestone: true,
           milestoneTitle: `Found k-th Element: ${arr[pIdx]}`,
+          soundCue: { type: 'complete' },
+          variables: { found: true, k, answer: arr[pIdx] },
+          callStack: baseCallStack,
+          conditionEval: { expr: `pIdx === k`, result: true },
+          explanation: `Rank match found! Pivot index ${pIdx} == k (${k}). The k-th smallest element is ${arr[pIdx]}.`,
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -275,6 +304,10 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 18,
+          soundCue: { type: 'step' },
+          variables: { pIdx, k, pruneDirection: 'LEFT', newLow: pIdx + 1 },
+          callStack: baseCallStack,
+          conditionEval: { expr: `pIdx < k (${pIdx} < ${k})`, result: true },
           explanation: `pIdx (${pIdx}) < k (${k}): Target lies in right partition. Pruning left half [${low}..${pIdx}]. New low = ${pIdx + 1}.`,
           state: {
             array: arr.map((v, idx) => ({
@@ -291,6 +324,10 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 20,
+          soundCue: { type: 'step' },
+          variables: { pIdx, k, pruneDirection: 'RIGHT', newHigh: pIdx - 1 },
+          callStack: baseCallStack,
+          conditionEval: { expr: `pIdx > k (${pIdx} > ${k})`, result: true },
           explanation: `pIdx (${pIdx}) > k (${k}): Target lies in left partition. Pruning right half [${pIdx}..${high}]. New high = ${pIdx - 1}.`,
           state: {
             array: arr.map((v, idx) => ({

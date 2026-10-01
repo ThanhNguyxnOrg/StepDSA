@@ -113,8 +113,12 @@ export const extendedGcdModule: AlgorithmModule<{ a: number; b: number }, Extend
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialize Extended Euclidean Algorithm for a = ${a}, b = ${b}. Objective: find (gcd, x, y) such that ${a}x + ${b}y = gcd.`,
-      variables: { a, b },
+      isMilestone: true,
+      milestoneTitle: `Init Extended GCD(${a}, ${b})`,
+      explanation: `Initialize Extended Euclidean Algorithm for a = ${a}, b = ${b}. Goal: compute gcd(${a}, ${b}) and integers (x, y) satisfying Bezout's identity: ${a}*x + ${b}*y = gcd(${a}, ${b}).`,
+      variables: { a, b, goalEquation: `${a}*x + ${b}*y = gcd` },
+      conditionEval: { expr: 'b >= 0', result: true },
+      soundCue: { type: 'step' },
       callStack: [{ name: `extGcd(a=${a}, b=${b})`, params: { a, b }, line: 2, isCurrent: true }],
       state: {
         a,
@@ -123,15 +127,44 @@ export const extendedGcdModule: AlgorithmModule<{ a: number; b: number }, Extend
       },
     });
 
-    function solve(currA: number, currB: number): [number, number, number] {
-      if (currB === 0) {
+    function solve(currA: number, currB: number, depth: number): [number, number, number] {
+      // Step: Function call entry and base case condition check
+      const isBase = currB === 0;
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 2,
+        explanation: `Enter extGcd(a=${currA}, b=${currB}) at recursion depth ${depth}. Evaluating base case: currB === 0.`,
+        soundCue: { type: 'step' },
+        variables: { currA, currB, depth, isBase },
+        conditionEval: { expr: `currB === 0`, result: isBase },
+        callStack: [
+          { name: `extGcd(${currA}, ${currB})`, params: { a: currA, b: currB, depth }, line: 2, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        state: {
+          a,
+          b,
+          steps: [...steps],
+        },
+      });
+
+      if (isBase) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 3,
-          explanation: `Base case reached: b = 0. GCD = ${currA}. Set base coefficients x = 1, y = 0.`,
-          variables: { gcd: currA, x: 1, y: 0 },
-          callStack: [{ name: `baseCase(${currA})`, params: { gcd: currA }, line: 3, isCurrent: true }],
+          isMilestone: true,
+          milestoneTitle: `Base Case: b = 0 (gcd = ${currA})`,
+          explanation: `Base case condition (b === 0) is TRUE! Therefore gcd = ${currA}. Set initial coefficients: x = 1, y = 0 since ${currA}*(1) + 0*(0) = ${currA}.`,
+          variables: { currA, currB, gcd: currA, x: 1, y: 0, depth },
+          conditionEval: { expr: 'currB === 0', result: true },
+          soundCue: { type: 'complete' },
+          callStack: [
+            { name: `baseCase(${currA})`, params: { gcd: currA }, line: 3, isCurrent: true },
+            { name: `solve(${currA}, 0)`, params: { a: currA, b: 0 }, line: 2 },
+          ],
           state: {
             a,
             b,
@@ -147,13 +180,19 @@ export const extendedGcdModule: AlgorithmModule<{ a: number; b: number }, Extend
       const q = Math.floor(currA / currB);
       const r = currA % currB;
 
+      // Division frame
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 7,
-        explanation: `Divide: ${currA} = ${q} * ${currB} + ${r}. Recursing on (b=${currB}, r=${r}).`,
-        variables: { a: currA, b: currB, quotient: q, remainder: r },
-        callStack: [{ name: `extGcd(${currB}, ${r})`, params: { currB, r }, line: 7, isCurrent: true }],
+        explanation: `Euclidean Division at depth ${depth}: ${currA} ÷ ${currB} = ${q} remainder ${r}. Linear relation: ${currA} = ${q} * ${currB} + ${r}.`,
+        variables: { currA, currB, quotient: q, remainder: r, depth },
+        conditionEval: { expr: `${currA} = ${q} * ${currB} + ${r}`, result: true },
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: `divide(${currA}, ${currB})`, params: { q, r }, line: 7, isCurrent: true },
+          { name: `extGcd(${currA}, ${currB})`, params: { a: currA, b: currB }, line: 2 },
+        ],
         state: {
           a,
           b,
@@ -161,22 +200,76 @@ export const extendedGcdModule: AlgorithmModule<{ a: number; b: number }, Extend
         },
       });
 
-      const [gcdVal, x1, y1] = solve(currB, r);
+      // Recurse frame
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `Recurse downward: Calling extGcd(b=${currB}, r=${r}) to compute sub-problem Bezout coefficients.`,
+        variables: { nextA: currB, nextB: r, depth: depth + 1 },
+        conditionEval: { expr: 'currB !== 0', result: true },
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: `extGcd(${currB}, ${r})`, params: { a: currB, b: r }, line: 8, isCurrent: true },
+          { name: `extGcd(${currA}, ${currB})`, params: { a: currA, b: currB }, line: 2 },
+        ],
+        state: {
+          a,
+          b,
+          steps: [...steps],
+        },
+      });
+
+      const [gcdVal, x1, y1] = solve(currB, r, depth + 1);
 
       const x = y1;
       const y = x1 - q * y1;
 
       steps.push({ q, r, x, y });
 
+      // Frame: Bezout Substitution breakdown
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 8,
-        explanation: `Backtrack from (${currB}, ${r}): Update x = y1 = ${x}, y = x1 - (${q} * ${y1}) = ${y}. Verification: ${currA}(${x}) + ${currB}(${y}) = ${
-          currA * x + currB * y
-        }.`,
-        variables: { currA, currB, x, y, identityCheck: currA * x + currB * y },
-        callStack: [{ name: `updateCoeffs(${currA}, ${currB})`, params: { x, y }, line: 8, isCurrent: true }],
+        codeLine: 9,
+        explanation: `Unwinding recursion to depth ${depth}: Substitute remainder r = ${currA} - ${q}*${currB} into (${currB}*${x1} + ${r}*${y1} = ${gcdVal}).`,
+        soundCue: { type: 'step' },
+        variables: { currA, currB, x1, y1, q, r, gcdVal },
+        conditionEval: { expr: `r === currA - q * currB`, result: true },
+        callStack: [
+          { name: `substitute(${currA}, ${currB})`, params: { x1, y1, q }, line: 9, isCurrent: true },
+          { name: `extGcd(${currA}, ${currB})`, params: { a: currA, b: currB }, line: 2 },
+        ],
+        state: {
+          a,
+          b,
+          steps: [...steps],
+          gcdVal,
+        },
+      });
+
+      // Backtrack coefficient update frame
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 9,
+        isMilestone: true,
+        milestoneTitle: `Coefficients for (${currA}, ${currB})`,
+        explanation: `Backtrack to depth ${depth}: Collected terms give x = y1 = ${x}, y = x1 - q*y1 = ${x1} - (${q})*(${y1}) = ${y}. Verified: ${currA}*(${x}) + ${currB}*(${y}) = ${currA * x + currB * y}.`,
+        variables: {
+          currA,
+          currB,
+          x,
+          y,
+          formula: `x = y1 (${y1}), y = x1 - q*y1 (${x1} - ${q}*${y1} = ${y})`,
+          identityCheck: `${currA}*(${x}) + ${currB}*(${y}) = ${currA * x + currB * y}`,
+        },
+        conditionEval: { expr: `${currA}*(${x}) + ${currB}*(${y}) === ${gcdVal}`, result: currA * x + currB * y === gcdVal },
+        soundCue: { type: 'swap' },
+        callStack: [
+          { name: `backtrack(${currA}, ${currB})`, params: { x, y, gcd: gcdVal }, line: 9, isCurrent: true },
+          { name: `extGcd(${currA}, ${currB})`, params: { a: currA, b: currB }, line: 2 },
+        ],
         state: {
           a,
           b,
@@ -190,20 +283,31 @@ export const extendedGcdModule: AlgorithmModule<{ a: number; b: number }, Extend
       return [gcdVal, x, y];
     }
 
-    const [finalGcd, finalX, finalY] = solve(a, b);
+    const [finalGcd, finalX, finalY] = solve(a, b, 0);
 
     // Final Completion Frame
+    const isCoprime = finalGcd === 1;
+    const modInverse = isCoprime && b > 0 ? ((finalX % b) + b) % b : null;
+
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 10,
-      explanation: `Extended GCD complete! gcd(${a}, ${b}) = ${finalGcd}. Bezout identity: ${a}(${finalX}) + ${b}(${finalY}) = ${finalGcd}.`,
+      isMilestone: true,
+      milestoneTitle: `Bezout Identity: ${a}(${finalX}) + ${b}(${finalY}) = ${finalGcd}`,
+      explanation: `Extended GCD Complete! gcd(${a}, ${b}) = ${finalGcd}. Bezout solution: ${a}*(${finalX}) + ${b}*(${finalY}) = ${finalGcd}.${
+        isCoprime && b > 0 ? ` Since gcd=1, the modular inverse of ${a} mod ${b} is ${modInverse}.` : ''
+      }`,
       variables: {
         gcd: finalGcd,
         x: finalX,
         y: finalY,
-        inverseModuloB: finalGcd === 1 ? ((finalX % b) + b) % b : 'Undefined (not coprime)',
+        coprime: isCoprime,
+        modularInverse: modInverse ?? 'Undefined',
+        verified: a * finalX + b * finalY === finalGcd,
       },
+      conditionEval: { expr: `${a}*(${finalX}) + ${b}*(${finalY}) === ${finalGcd}`, result: true },
+      soundCue: { type: 'complete' },
       callStack: [{ name: 'complete()', params: { gcd: finalGcd, x: finalX, y: finalY }, line: 10, isCurrent: true }],
       state: {
         a,

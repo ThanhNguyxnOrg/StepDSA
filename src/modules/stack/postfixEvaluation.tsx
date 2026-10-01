@@ -166,31 +166,98 @@ export const postfixEvaluationModule: AlgorithmModule<
 
       if (!isOp) {
         const val = Number(tok);
-        stack.push(val);
-
+        // Inspect token
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 12,
-          explanation: `Token "${tok}" is an integer operand. Push ${val} to operand stack.`,
-          variables: { operand: val, stackTop: val, stackDepth: stack.length },
+          explanation: `Scan token[${i}] = "${tok}". Test if operator: token is an integer operand (${val}).`,
+          variables: { tokenIndex: i, token: tok, isOperator: false, parsedVal: val },
+          conditionEval: { expr: "['+', '-', '*', '/'].includes(token)", result: false },
+          soundCue: { type: 'step' },
           callStack: [
-            { name: `pushOperand(${val})`, params: { val }, line: 12, isCurrent: true },
-            { name: 'main()', params: {}, line: 1 },
+            { name: `scanToken("${tok}")`, params: { index: i, tok }, line: 12, isCurrent: true },
+            { name: 'evalRPN()', params: { count: tokens.length }, line: 3 },
           ],
           state: {
             tokens,
             currentIndex: i,
             operandStack: [...stack],
-            currentComputation: `Push ${val}`,
+            currentComputation: `Read operand ${val}`,
+            intermediateResult: val,
+          },
+        });
+
+        stack.push(val);
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 13,
+          explanation: `Push operand ${val} onto LIFO stack. Stack now contains [${stack.join(', ')}].`,
+          variables: { operand: val, stackTop: val, stackDepth: stack.length },
+          conditionEval: { expr: "stack.push(val)", result: true },
+          soundCue: { type: 'insert' },
+          callStack: [
+            { name: `pushOperand(${val})`, params: { val, depth: stack.length }, line: 13, isCurrent: true },
+            { name: 'evalRPN()', params: { count: tokens.length }, line: 3 },
+          ],
+          state: {
+            tokens,
+            currentIndex: i,
+            operandStack: [...stack],
+            currentComputation: `Push ${val} -> [${stack.join(', ')}]`,
             intermediateResult: val,
           },
         });
       } else {
+        // Inspect operator
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 4,
+          explanation: `Scan token[${i}] = "${tok}". Operator detected! Prepare to pop two operands from stack.`,
+          variables: { tokenIndex: i, operator: tok, currentStackSize: stack.length },
+          conditionEval: { expr: "['+', '-', '*', '/'].includes(token)", result: true },
+          soundCue: { type: 'step' },
+          callStack: [
+            { name: `scanOperator("${tok}")`, params: { op: tok }, line: 4, isCurrent: true },
+            { name: 'evalRPN()', params: { count: tokens.length }, line: 3 },
+          ],
+          state: {
+            tokens,
+            currentIndex: i,
+            operandStack: [...stack],
+            currentComputation: `Encountered operator ${tok}`,
+            intermediateResult: null,
+          },
+        });
+
         const b = stack.pop()!;
         const a = stack.pop()!;
-        let res = 0;
 
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 5,
+          explanation: `Popped right operand b = ${b} (top of stack), then popped left operand a = ${a}.`,
+          variables: { op: tok, leftOperand_a: a, rightOperand_b: b, stackRemaining: [...stack] },
+          conditionEval: { expr: "stack.length >= 2", result: true },
+          soundCue: { type: 'compare' },
+          callStack: [
+            { name: `popOperands("${tok}")`, params: { a, b }, line: 5, isCurrent: true },
+            { name: 'evalRPN()', params: { count: tokens.length }, line: 3 },
+          ],
+          state: {
+            tokens,
+            currentIndex: i,
+            operandStack: [...stack],
+            currentComputation: `a = ${a}, b = ${b}`,
+            intermediateResult: null,
+          },
+        });
+
+        let res = 0;
         if (tok === '+') res = a + b;
         else if (tok === '-') res = a - b;
         else if (tok === '*') res = a * b;
@@ -204,11 +271,13 @@ export const postfixEvaluationModule: AlgorithmModule<
           codeLine: 6,
           isMilestone: true,
           milestoneTitle: `Evaluated ${a} ${tok} ${b} = ${res}`,
-          explanation: `Encountered operator "${tok}". Popped right operand b = ${b}, then left operand a = ${a}. Computed ${a} ${tok} ${b} = ${res}. Pushed result ${res} back to stack.`,
-          variables: { op: tok, leftOperand: a, rightOperand: b, result: res },
+          explanation: `Computed ${a} ${tok} ${b} = ${res}. Pushed result ${res} back onto stack.`,
+          variables: { op: tok, left: a, right: b, result: res, newStack: [...stack] },
+          conditionEval: { expr: `${a} ${tok} ${b}`, result: res },
+          soundCue: { type: 'swap' },
           callStack: [
             { name: `applyOperator("${tok}", ${a}, ${b})`, params: { op: tok, a, b, res }, line: 6, isCurrent: true },
-            { name: 'main()', params: {}, line: 1 },
+            { name: 'evalRPN()', params: { count: tokens.length }, line: 3 },
           ],
           state: {
             tokens,
@@ -229,8 +298,10 @@ export const postfixEvaluationModule: AlgorithmModule<
       codeLine: 14,
       isMilestone: true,
       milestoneTitle: `Final Value: ${finalVal}`,
-      explanation: `Evaluation complete. Final evaluated RPN result at stack top is ${finalVal}.`,
-      variables: { finalResult: finalVal, tokensEvaluated: tokens.length },
+      explanation: `RPN Evaluation complete. Single surviving value on stack is ${finalVal}.`,
+      variables: { finalResult: finalVal, tokensEvaluated: tokens.length, stackSize: stack.length },
+      conditionEval: { expr: "tokensExhausted && stack.length === 1", result: true },
+      soundCue: { type: 'complete' },
       callStack: [
         { name: 'complete()', params: { result: finalVal }, line: 14, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },

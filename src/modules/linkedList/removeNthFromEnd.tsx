@@ -142,11 +142,15 @@ export const removeNthFromEndModule: AlgorithmModule<
       totalSteps: 1,
       codeLine: 2,
       explanation: `Create dummy sentinel node pointing to head [${values.join(' -> ')}]. Initialize fast and slow pointers at dummy.`,
-      variables: { n, slow: 'dummy (-1)', fast: 'dummy (-1)', gap: 0 },
+      isMilestone: true,
+      milestoneTitle: 'Initialized Sentinel & Pointers',
+      soundCue: { type: 'start' },
+      variables: { n, slow: 'dummy (-1)', fast: 'dummy (-1)', gap: 0, listLength: values.length },
       callStack: [
         { name: `removeNthFromEnd(head, ${n})`, params: { n, length: values.length }, line: 2, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
+      conditionEval: { expr: `n (${n}) <= listLength (${values.length})`, result: true },
       state: {
         nodes: [...initialNodes],
         fastIndex: -1,
@@ -159,31 +163,61 @@ export const removeNthFromEndModule: AlgorithmModule<
     let fastPos = -1;
     // Step 1: Advance fast pointer n + 1 times
     for (let step = 1; step <= n + 1; step++) {
-      fastPos = step - 1; // -1 is dummy, 0 is node 0, 1 is node 1...
-      const fastLabel = fastPos === -1 ? 'dummy' : fastPos >= values.length ? 'null' : `${values[fastPos]} (index ${fastPos})`;
+      const nextFastPos = step - 1; // -1 is dummy, 0 is node 0, 1 is node 1...
+      const fastLabel = nextFastPos === -1 ? 'dummy' : nextFastPos >= values.length ? 'null' : `${values[nextFastPos]} (index ${nextFastPos})`;
+
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 5,
-        explanation: `Advancing fast pointer: step ${step} of ${n + 1}. Fast is now at ${fastLabel}. Gap = ${step}.`,
-        variables: { step, targetGap: n + 1, fastPos: fastPos >= values.length ? 'null' : fastPos, slowPos: -1 },
+        codeLine: 4,
+        explanation: `Advancing fast pointer: step ${step} of ${n + 1}. Moving fast from index ${fastPos} to ${nextFastPos >= values.length ? 'null' : nextFastPos}.`,
+        soundCue: { type: 'step' },
+        variables: { step, targetGap: n + 1, fastPos: nextFastPos >= values.length ? 'null' : nextFastPos, slowPos: -1 },
         callStack: [
-          { name: `removeNthFromEnd(head, ${n})`, params: { fast: fastLabel, step }, line: 5, isCurrent: true },
+          { name: `removeNthFromEnd(head, ${n})`, params: { fast: fastLabel, step }, line: 4, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
         ],
+        conditionEval: { expr: `step <= n + 1 (${step} <= ${n + 1})`, result: true },
         state: {
           nodes: [...initialNodes],
-          fastIndex: fastPos,
+          fastIndex: nextFastPos,
           slowIndex: -1,
           targetN: n,
           phase: 'lead',
         },
       });
+
+      fastPos = nextFastPos;
     }
+
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 6,
+      explanation: `Fast pointer lead established with constant offset of ${n + 1} steps. Ready to slide window.`,
+      isMilestone: true,
+      milestoneTitle: 'Pointer Gap Established',
+      soundCue: { type: 'step' },
+      variables: { targetGap: n + 1, currentFast: fastPos >= values.length ? 'null' : fastPos, currentSlow: -1 },
+      callStack: [
+        { name: `removeNthFromEnd(head, ${n})`, params: { gap: n + 1 }, line: 6, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      conditionEval: { expr: `fastIndex - slowIndex === ${n + 1}`, result: true },
+      state: {
+        nodes: [...initialNodes],
+        fastIndex: fastPos,
+        slowIndex: -1,
+        targetN: n,
+        phase: 'lead',
+      },
+    });
 
     // Step 2: Slide both pointers until fast is beyond last node (fastPos >= values.length)
     let slowPos = -1;
+    let slideIter = 0;
     while (fastPos < values.length) {
+      slideIter++;
       slowPos++;
       fastPos++;
       const slowLabel = slowPos === -1 ? 'dummy' : `${values[slowPos]}`;
@@ -193,12 +227,14 @@ export const removeNthFromEndModule: AlgorithmModule<
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 8,
-        explanation: `Sliding window forward: slow -> ${slowLabel}, fast -> ${fastLabel}. Preserving constant offset of ${n + 1}.`,
-        variables: { slowIndex: slowPos, fastIndex: fastPos >= values.length ? 'null' : fastPos, n },
+        explanation: `[Slide ${slideIter}] Advancing slow -> ${slowLabel} (idx ${slowPos}) and fast -> ${fastLabel} (idx ${fastPos}). Offset invariant preserved.`,
+        soundCue: { type: 'step' },
+        variables: { slideIter, slowIndex: slowPos, fastIndex: fastPos >= values.length ? 'null' : fastPos, n },
         callStack: [
-          { name: `removeNthFromEnd(head, ${n})`, params: { slow: slowLabel, fast: fastLabel }, line: 8, isCurrent: true },
+          { name: `removeNthFromEnd(head, ${n})`, params: { slow: slowLabel, fast: fastLabel, slideIter }, line: 8, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
         ],
+        conditionEval: { expr: `fast !== null`, result: true },
         state: {
           nodes: [...initialNodes],
           fastIndex: fastPos,
@@ -219,12 +255,14 @@ export const removeNthFromEndModule: AlgorithmModule<
       codeLine: 10,
       isMilestone: true,
       milestoneTitle: `Target Node Identified (${deleteVal})`,
-      explanation: `Fast reached null. Slow is at index ${slowPos}. Target node to remove is slow.next (index ${deleteIdx}, value ${deleteVal}).`,
+      soundCue: { type: 'compare' },
+      explanation: `Fast reached null. Slow is at predecessor node (index ${slowPos}). Target node to delete is slow.next (index ${deleteIdx}, value ${deleteVal}).`,
       variables: { slowPredecessor: slowPos, targetToDelete: deleteVal, deleteIndex: deleteIdx },
       callStack: [
         { name: `removeNthFromEnd(head, ${n})`, params: { toDelete: deleteVal, predecessor: slowPos }, line: 10, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
+      conditionEval: { expr: `fast === null`, result: true },
       state: {
         nodes: [...initialNodes],
         fastIndex: fastPos,
@@ -246,12 +284,39 @@ export const removeNthFromEndModule: AlgorithmModule<
       codeLine: 11,
       isMilestone: true,
       milestoneTitle: `Node Removed (${deleteVal})`,
-      explanation: `Executed slow.next = slow.next.next. Node with value ${deleteVal} is detached from the list.`,
+      soundCue: { type: 'discard' },
+      explanation: `Executing slow.next = slow.next.next. Node with value ${deleteVal} is detached from linked chain.`,
       variables: { removedNode: deleteVal, remainingNodes: values.length - 1 },
       callStack: [
         { name: `removeNthFromEnd(head, ${n})`, params: { unlinked: deleteVal }, line: 11, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
+      conditionEval: { expr: `slow.next = slow.next.next`, result: true },
+      state: {
+        nodes: updatedNodes,
+        fastIndex: fastPos,
+        slowIndex: slowPos,
+        targetN: n,
+        phase: 'done',
+      },
+    });
+
+    // Step 5: Final head return
+    const remainingValues = values.filter((_, idx) => idx !== deleteIdx);
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 12,
+      isMilestone: true,
+      milestoneTitle: 'List Updated',
+      soundCue: { type: 'complete' },
+      explanation: `🎉 Return dummy.next. Result list: [${remainingValues.join(' -> ')}]. Traversal completed in single O(L) pass with O(1) extra space.`,
+      variables: { remainingLength: remainingValues.length, finalHead: remainingValues[0] ?? 'null' },
+      callStack: [
+        { name: `removeNthFromEnd(head, ${n})`, params: { returnHead: remainingValues[0] ?? 'null' }, line: 12, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      conditionEval: { expr: `return dummy.next`, result: true },
       state: {
         nodes: updatedNodes,
         fastIndex: fastPos,

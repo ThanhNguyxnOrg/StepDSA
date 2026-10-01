@@ -186,10 +186,18 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
       };
     };
 
+    const baseCallStack = [{ name: 'cocktailShakerSort', params: { n }, line: 1, isCurrent: true }];
+
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 4,
+      isMilestone: true,
+      milestoneTitle: 'Cocktail Shaker Initialized',
+      soundCue: { type: 'start' },
+      variables: { start, end, n },
+      callStack: baseCallStack,
+      conditionEval: { expr: `start < end`, result: start < end },
       explanation: `Begin Cocktail Shaker Sort. Window bounds [start=${start}, end=${end}].`,
       state: makeFrameState(),
     });
@@ -199,15 +207,20 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
 
       // Forward Pass
       for (let i = start; i < end; ++i) {
+        const shouldSwap = arr[i] > arr[i + 1];
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 8,
+          soundCue: { type: 'compare' },
+          variables: { direction: 'FORWARD', i, next: i + 1, 'arr[i]': arr[i], 'arr[i+1]': arr[i + 1], shouldSwap },
+          callStack: [{ name: 'forwardPass', params: { i, end }, line: 8, isCurrent: true }],
+          conditionEval: { expr: `arr[${i}] > arr[${i + 1}] (${arr[i]} > ${arr[i + 1]})`, result: shouldSwap },
           explanation: `Forward pass: comparing arr[${i}] (${arr[i]}) with arr[${i + 1}] (${arr[i + 1]}).`,
           state: makeFrameState(i, i + 1, 'comparing'),
         });
 
-        if (arr[i] > arr[i + 1]) {
+        if (shouldSwap) {
           const temp = arr[i];
           arr[i] = arr[i + 1];
           arr[i + 1] = temp;
@@ -217,9 +230,13 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
             stepIndex: frames.length,
             totalSteps: 1,
             codeLine: 10,
-            explanation: `Swapped arr[${i}] and arr[${i + 1}] (${temp} > ${arr[i]}).`,
             isMilestone: true,
             milestoneTitle: `Forward Swap (${arr[i]}, ${arr[i + 1]})`,
+            soundCue: { type: 'swap' },
+            variables: { swapped: true, indexA: i, indexB: i + 1, valA: arr[i], valB: arr[i + 1] },
+            callStack: [{ name: 'swap', params: { i, next: i + 1 }, line: 10, isCurrent: true }],
+            conditionEval: { expr: `swapped = true`, result: true },
+            explanation: `Swapped arr[${i}] and arr[${i + 1}] (${temp} > ${arr[i]}).`,
             state: makeFrameState(i, i + 1, 'swapping'),
           });
         }
@@ -230,9 +247,13 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 13,
-        explanation: `Forward pass completed. Maximum element bubbled to index ${end}. Decrementing end to ${end - 1}.`,
         isMilestone: true,
         milestoneTitle: `Max Placed at Index ${end}`,
+        soundCue: { type: 'sorted' },
+        variables: { lockedIndex: end, maxVal: arr[end], newEnd: end - 1 },
+        callStack: baseCallStack,
+        conditionEval: { expr: `isSorted(end)`, result: true },
+        explanation: `Forward pass completed. Maximum element bubbled to index ${end}. Decrementing end to ${end - 1}.`,
         state: makeFrameState(),
       });
 
@@ -243,15 +264,20 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
 
       // Backward Pass
       for (let i = end - 1; i >= start; --i) {
+        const shouldSwap = arr[i] > arr[i + 1];
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 17,
+          soundCue: { type: 'compare' },
+          variables: { direction: 'BACKWARD', i, next: i + 1, 'arr[i]': arr[i], 'arr[i+1]': arr[i + 1], shouldSwap },
+          callStack: [{ name: 'backwardPass', params: { i, start }, line: 17, isCurrent: true }],
+          conditionEval: { expr: `arr[${i}] > arr[${i + 1}] (${arr[i]} > ${arr[i + 1]})`, result: shouldSwap },
           explanation: `Backward pass: comparing arr[${i}] (${arr[i]}) with arr[${i + 1}] (${arr[i + 1]}).`,
           state: makeFrameState(i, i + 1, 'comparing'),
         });
 
-        if (arr[i] > arr[i + 1]) {
+        if (shouldSwap) {
           const temp = arr[i];
           arr[i] = arr[i + 1];
           arr[i + 1] = temp;
@@ -261,9 +287,13 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
             stepIndex: frames.length,
             totalSteps: 1,
             codeLine: 19,
-            explanation: `Swapped arr[${i}] and arr[${i + 1}] (${temp} > ${arr[i]}). Turtle element dragged to left.`,
             isMilestone: true,
             milestoneTitle: `Backward Swap (${arr[i]}, ${arr[i + 1]})`,
+            soundCue: { type: 'swap' },
+            variables: { swapped: true, indexA: i, indexB: i + 1, valA: arr[i], valB: arr[i + 1] },
+            callStack: [{ name: 'swap', params: { i, next: i + 1 }, line: 19, isCurrent: true }],
+            conditionEval: { expr: `swapped = true`, result: true },
+            explanation: `Swapped arr[${i}] and arr[${i + 1}] (${temp} > ${arr[i]}). Turtle element dragged to left.`,
             state: makeFrameState(i, i + 1, 'swapping'),
           });
         }
@@ -274,9 +304,13 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 21,
-        explanation: `Backward pass completed. Minimum element bubbled to index ${start}. Incrementing start to ${start + 1}.`,
         isMilestone: true,
         milestoneTitle: `Min Placed at Index ${start}`,
+        soundCue: { type: 'sorted' },
+        variables: { lockedIndex: start, minVal: arr[start], newStart: start + 1 },
+        callStack: baseCallStack,
+        conditionEval: { expr: `isSorted(start)`, result: true },
+        explanation: `Backward pass completed. Minimum element bubbled to index ${start}. Incrementing start to ${start + 1}.`,
         state: makeFrameState(),
       });
 
@@ -289,9 +323,13 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 22,
-      explanation: 'Array fully sorted in both directions. Cocktail Shaker Sort complete.',
       isMilestone: true,
       milestoneTitle: 'Sorting Complete',
+      soundCue: { type: 'complete' },
+      variables: { completed: true, totalSorted: n },
+      callStack: baseCallStack,
+      conditionEval: { expr: `isSorted(arr)`, result: true },
+      explanation: 'Array fully sorted in both directions. Cocktail Shaker Sort complete.',
       state: {
         array: arr.map((v, i) => ({ id: i, value: v, status: 'sorted' })),
         pointers: {},

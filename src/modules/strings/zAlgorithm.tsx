@@ -166,7 +166,10 @@ export const zAlgorithmModule: AlgorithmModule<ZInput, ZState> = {
       explanation: `Constructed concatenated string S = P + "$" + T: "${S}". Length = ${n}. Initializing Z-array.`,
       isMilestone: true,
       milestoneTitle: 'String Constructed',
-      soundCue: 'start',
+      soundCue: { type: 'start' },
+      variables: { concatenatedString: S, patternLength: m, textLength: text.length, n },
+      callStack: [{ name: 'zAlgorithm', params: { pattern, text }, line: 1, isCurrent: true }],
+      conditionEval: { expr: `n > 0`, result: true },
       scopeVariables: { concatenatedString: S, patternLength: m, textLength: text.length },
       state: {
         fullString: S,
@@ -195,7 +198,10 @@ export const zAlgorithmModule: AlgorithmModule<ZInput, ZState> = {
         explanation: reusedFromBox
           ? `Index ${i} inside current Z-box [${l}, ${r}]. Reused Z[${i - l}]=${Z[i - l]} from prefix in O(1)! Initial Z[${i}] = ${Z[i]}.`
           : `Index ${i} outside current Z-box. Comparing characters from scratch with prefix.`,
-        soundCue: reusedFromBox ? 'step' : 'compare',
+        soundCue: { type: reusedFromBox ? 'step' : 'compare' },
+        variables: { i, 'box[L, R]': `[${l}, ${r}]`, initialZ: Z[i], reusedFromBox },
+        callStack: [{ name: 'computeZ', params: { i, boxL: l, boxR: r }, line: 8, isCurrent: true }],
+        conditionEval: { expr: `i <= r (${i} <= ${r})`, result: i <= r },
         scopeVariables: { i, 'box[L, R]': `[${l}, ${r}]`, initialZ: Z[i] },
         state: {
           fullString: S,
@@ -224,9 +230,12 @@ export const zAlgorithmModule: AlgorithmModule<ZInput, ZState> = {
           totalSteps: 1,
           codeLine: 14,
           explanation: `Z[${i}] extended to ${Z[i]}. Shifted rightmost Z-box forward to [${l}, ${r}] (substring "${S.slice(l, r + 1)}").`,
-          soundCue: 'swap',
+          soundCue: { type: 'swap' },
           isMilestone: true,
           milestoneTitle: `Z-Box [${l}, ${r}]`,
+          variables: { i, zValue: Z[i], newL: l, newR: r },
+          callStack: [{ name: 'updateZBox', params: { l, r }, line: 14, isCurrent: true }],
+          conditionEval: { expr: `i + Z[i] - 1 > r`, result: true },
           scopeVariables: { i, zValue: Z[i], newL: l, newR: r },
           state: {
             fullString: S,
@@ -253,7 +262,10 @@ export const zAlgorithmModule: AlgorithmModule<ZInput, ZState> = {
           explanation: `🎯 Full pattern match found at text index ${textPos}! Z[${i}] (${Z[i]}) == pattern length (${m}).`,
           isMilestone: true,
           milestoneTitle: `Match at Index ${textPos}`,
-          soundCue: 'success',
+          soundCue: { type: 'complete' },
+          variables: { matchIndexInText: textPos, pattern, zVal: Z[i] },
+          callStack: [{ name: 'reportMatch', params: { textPos, i }, line: 16, isCurrent: true }],
+          conditionEval: { expr: `Z[i] == m (${Z[i]} == ${m})`, result: true },
           scopeVariables: { matchIndexInText: textPos, pattern },
           state: {
             fullString: S,
@@ -276,7 +288,10 @@ export const zAlgorithmModule: AlgorithmModule<ZInput, ZState> = {
       explanation: `🎉 Z-Algorithm complete! Found ${matches.length} total occurrences of "${pattern}" at indices: [${matches.join(', ')}].`,
       isMilestone: true,
       milestoneTitle: 'Search Complete',
-      soundCue: 'complete',
+      soundCue: { type: 'complete' },
+      variables: { totalMatches: matches.length, positions: matches.join(', '), completed: true },
+      callStack: [{ name: 'zAlgorithm.done', params: { matchCount: matches.length }, line: 18, isCurrent: true }],
+      conditionEval: { expr: `i == n (${n} == ${n})`, result: true },
       scopeVariables: { totalMatches: matches.length, positions: matches.join(', ') },
       state: {
         fullString: S,

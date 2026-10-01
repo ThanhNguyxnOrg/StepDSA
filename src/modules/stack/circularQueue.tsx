@@ -173,6 +173,12 @@ public:
       totalSteps: 1,
       codeLine: 2,
       explanation: `Initialized empty Circular Queue with capacity ${capacity}. front = 0, rear = -1, count = 0.`,
+      isMilestone: true,
+      milestoneTitle: 'Circular Queue Initialized',
+      soundCue: { type: 'start' },
+      variables: { front: 0, rear: -1, count: 0, capacity },
+      callStack: [{ name: 'CircularQueue.init', params: { capacity }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `count == 0`, result: true },
       state: getFrameState(),
     });
 
@@ -189,6 +195,10 @@ public:
         explanation: `ENQUEUE(${val}): rear advanced to (${rear - 1 < 0 ? -1 : rear - 1} + 1) % ${capacity} = ${rear}. Buffer slot [${rear}] occupied.`,
         isMilestone: true,
         milestoneTitle: `Enqueue ${val} to slot ${rear}`,
+        soundCue: { type: 'swap' },
+        variables: { enqueued: val, front, rear, count, capacity },
+        callStack: [{ name: 'CircularQueue.enqueue', params: { val, rear }, line: 11, isCurrent: true }],
+        conditionEval: { expr: `count <= capacity (${count} <= ${capacity})`, result: true },
         state: getFrameState('ENQUEUE'),
       });
     }
@@ -207,6 +217,10 @@ public:
         explanation: `DEQUEUE(): Removed ${removedVal} from slot ${oldFront}. front advanced to (${oldFront} + 1) % ${capacity} = ${front}. Slot ${oldFront} is now free for wrap-around.`,
         isMilestone: true,
         milestoneTitle: `Dequeue from slot ${oldFront}`,
+        soundCue: { type: 'step' },
+        variables: { dequeued: removedVal, oldFront, newFront: front, count },
+        callStack: [{ name: 'CircularQueue.dequeue', params: { fromSlot: oldFront }, line: 18, isCurrent: true }],
+        conditionEval: { expr: `count >= 0 (${count} >= 0)`, result: true },
         state: getFrameState('DEQUEUE'),
       });
     }
@@ -226,6 +240,10 @@ public:
           explanation: `ENQUEUE(${val}): rear wrapped around from ${oldRear} to (${oldRear} + 1) % ${capacity} = ${rear}! Reclaimed previously vacated memory slot.`,
           isMilestone: true,
           milestoneTitle: `Wrap Enqueue ${val} to slot ${rear}`,
+          soundCue: { type: 'complete' },
+          variables: { wrapVal: val, oldRear, newRear: rear, count, capacity, isWrap: rear < oldRear },
+          callStack: [{ name: 'CircularQueue.enqueueWrap', params: { val, slot: rear }, line: 11, isCurrent: true }],
+          conditionEval: { expr: `rear < oldRear (${rear} < ${oldRear})`, result: rear < oldRear },
           state: getFrameState('ENQUEUE'),
         });
       }

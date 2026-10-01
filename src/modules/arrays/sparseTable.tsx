@@ -163,6 +163,8 @@ function query(L, R):
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
+      isMilestone: true,
+      milestoneTitle: `Init Sparse Table (N=${n})`,
       action: 'INIT',
       state: {
         array: [...arr],
@@ -175,9 +177,11 @@ function query(L, R):
         minVal: null,
         message: `Initialized Sparse Table base layer 2^0 for N=${n} elements`,
       },
-      callStack: [{ name: 'initSparseTable', params: { n, K } }],
+      callStack: [{ name: 'initSparseTable', params: { n, K }, line: 1, isCurrent: true }],
       variables: { n, maxPowerK: K, baseElements: arr.join(',') },
-      explanation: `Initialized Sparse Table with base row length 1 (2^0 = 1). Precomputation commencing.`,
+      conditionEval: { expr: 'array.length > 0', result: true },
+      soundCue: { type: 'step' },
+      explanation: `Initialized Sparse Table with base row length 1 (2^0 = 1). Each element is its own range minimum of length 1.`,
     });
 
     // Build phases j = 1 .. K - 1
@@ -191,8 +195,10 @@ function query(L, R):
 
       frames.push({
         stepIndex: frames.length,
-        totalSteps: frames.length + 1,
+        totalSteps: 1,
         codeLine: 14,
+        isMilestone: true,
+        milestoneTitle: `Precomputed Layer 2^${j} = ${len}`,
         action: 'BUILD_LAYER',
         state: {
           array: [...arr],
@@ -205,13 +211,16 @@ function query(L, R):
           minVal: null,
           message: `Precomputed column j=${j} (Interval length 2^${j} = ${len})`,
         },
-        callStack: [{ name: 'buildLayer', params: { j, blockLength: len } }],
-        variables: { j, intervalLength: len, subproblems: n - len + 1 },
-        explanation: `Computed layer j=${j} (powers of 2^${j} = ${len}). Each cell combines two sub-intervals of size ${half}.`,
+        callStack: [{ name: 'buildLayer', params: { j, blockLength: len }, line: 14, isCurrent: true }],
+        variables: { j, intervalLength: len, subproblems: n - len + 1, recurrence: `st[i][${j}] = min(st[i][${j-1}], st[i+${half}][${j-1}])` },
+        conditionEval: { expr: `1 << ${j} <= ${n}`, result: true },
+        soundCue: { type: 'swap' },
+        explanation: `Computed layer j=${j} (power 2^${j} = ${len}). Merged two adjacent intervals of length ${half}: [i..i+${half}-1] and [i+${half}..i+${len}-1].`,
       });
     }
 
     // Now execute queries
+    let qIdx = 1;
     for (const q of queries) {
       const L = Math.max(0, Math.min(q.L, n - 1));
       const R = Math.max(L, Math.min(q.R, n - 1));
@@ -225,10 +234,37 @@ function query(L, R):
       const rightMin = st[rightIdx][k];
       const ans = Math.min(leftMin, rightMin);
 
+      // Frame 1: Query decomposition
       frames.push({
         stepIndex: frames.length,
-        totalSteps: frames.length + 1,
+        totalSteps: 1,
+        codeLine: 20,
+        action: 'QUERY_DECOMPOSE',
+        state: {
+          array: [...arr],
+          st: st.map((r) => [...r]),
+          queryL: L,
+          queryR: R,
+          k,
+          leftBlock: { start: leftIdx, len: blockLen },
+          rightBlock: { start: rightIdx, len: blockLen },
+          minVal: null,
+          message: `Query #${qIdx} RMQ(${L}, ${R}): length = ${rangeLen}. Largest power of 2: k = floor(log2(${rangeLen})) = ${k} (size ${blockLen}).`,
+        },
+        callStack: [{ name: 'decomposeQuery', params: { L, R, length: rangeLen, k }, line: 20, isCurrent: true }],
+        variables: { queryNumber: qIdx, range: `[${L}..${R}]`, rangeLength: rangeLen, powerOfTwo: blockLen, exponentK: k },
+        conditionEval: { expr: `1 << ${k} <= ${rangeLen} && 1 << (${k} + 1) > ${rangeLen}`, result: true },
+        soundCue: { type: 'select' },
+        explanation: `Decomposing query range [${L}..${R}] into two overlapping power-of-two windows of length ${blockLen}: Left [${leftIdx}..${leftIdx + blockLen - 1}] and Right [${rightIdx}..${R}].`,
+      });
+
+      // Frame 2: O(1) Evaluation
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
         codeLine: 24,
+        isMilestone: true,
+        milestoneTitle: `RMQ(${L}, ${R}) = ${ans}`,
         action: 'QUERY_EXECUTE',
         state: {
           array: [...arr],
@@ -239,9 +275,9 @@ function query(L, R):
           leftBlock: { start: leftIdx, len: blockLen },
           rightBlock: { start: rightIdx, len: blockLen },
           minVal: ans,
-          message: `RMQ(${L}, ${R}): len=${rangeLen}, k=${k} (2^${k}=${blockLen}) -> min(st[${leftIdx}][${k}], st[${rightIdx}][${k}]) = ${ans}`,
+          message: `RMQ(${L}, ${R}): min(st[${leftIdx}][${k}] (${leftMin}), st[${rightIdx}][${k}] (${rightMin})) = ${ans}`,
         },
-        callStack: [{ name: 'queryRMQ', params: { L, R, k, answer: ans } }],
+        callStack: [{ name: 'queryRMQ', params: { L, R, k, answer: ans }, line: 24, isCurrent: true }],
         variables: {
           range: `[${L}..${R}]`,
           length: rangeLen,
@@ -249,15 +285,21 @@ function query(L, R):
           leftBlockMin: leftMin,
           rightBlockMin: rightMin,
           minAnswer: ans,
+          idempotentFormula: `min(${leftMin}, ${rightMin}) = ${ans}`,
         },
-        explanation: `Evaluated RMQ(${L}, ${R}) in O(1) time: Covered range by two overlapping blocks of size ${blockLen}: [${leftIdx}..${leftIdx + blockLen - 1}] and [${rightIdx}..${R}]. Minimum value: ${ans}.`,
+        conditionEval: { expr: `min(${leftMin}, ${rightMin}) === ${ans}`, result: true },
+        soundCue: { type: 'insert' },
+        explanation: `Evaluated RMQ(${L}, ${R}) in strictly O(1) time: min(${leftMin}, ${rightMin}) = ${ans}. Due to idempotence (min(x, x) = x), the overlapping middle elements do not distort the result.`,
       });
+      qIdx++;
     }
 
     frames.push({
       stepIndex: frames.length,
-      totalSteps: frames.length + 1,
+      totalSteps: 1,
       codeLine: 30,
+      isMilestone: true,
+      milestoneTitle: `Sparse Table Complete (${queries.length} Queries Evaluated)`,
       action: 'COMPLETE',
       state: {
         array: [...arr],
@@ -268,16 +310,19 @@ function query(L, R):
         leftBlock: null,
         rightBlock: null,
         minVal: null,
-        message: 'Completed all Sparse Table queries in O(1) time each',
+        message: `Sparse Table operations completed for ${queries.length} queries`,
       },
-      callStack: [{ name: 'complete', params: { totalQueries: queries.length } }],
-      variables: { completed: true, totalQueries: queries.length },
-      explanation: `Sparse Table demonstration complete. Answered all ${queries.length} Range Minimum Queries in O(1) time per query.`,
+      callStack: [{ name: 'complete', params: { totalQueries: queries.length }, line: 30, isCurrent: true }],
+      variables: { completed: true, totalQueries: queries.length, totalTableCells: n * K },
+      conditionEval: { expr: 'allQueriesCompleted', result: true },
+      soundCue: { type: 'complete' },
+      explanation: `All ${queries.length} RMQ queries processed in O(1) worst-case lookup time following static O(N log N) precomputation.`,
     });
 
     frames.forEach((f) => {
       f.totalSteps = frames.length;
     });
+
     return frames;
   },
   renderStage: (frame: ExecutionFrame<SparseTableState>) => {

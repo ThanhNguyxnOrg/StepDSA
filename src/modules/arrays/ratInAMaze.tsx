@@ -7,7 +7,7 @@ export interface RatInAMazeState {
   pathTrail: [number, number][];
   visited: boolean[][];
   solved: boolean;
-  action: 'MOVE' | 'BACKTRACK' | 'GOAL' | 'START';
+  action: 'MOVE' | 'BACKTRACK' | 'GOAL' | 'START' | 'PROBE';
 }
 
 export const ratInAMazeModule: AlgorithmModule<{ maze: number[][] }, RatInAMazeState> = {
@@ -160,9 +160,13 @@ export const ratInAMazeModule: AlgorithmModule<{ maze: number[][] }, RatInAMazeS
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
+      isMilestone: true,
+      milestoneTitle: 'Maze Initialized',
+      soundCue: { type: 'start' },
       explanation: `Initialize Rat in a Maze on ${n}x${n} grid. Start at (0, 0), Goal at (${n - 1}, ${n - 1}).`,
       variables: { gridSize: `${n}x${n}`, start: '(0, 0)', goal: `(${n - 1}, ${n - 1})` },
       callStack: [{ name: 'solveMaze()', params: { n }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `maze[0][0] === 1`, result: maze[0][0] === 1 },
       state: {
         maze,
         n,
@@ -186,9 +190,13 @@ export const ratInAMazeModule: AlgorithmModule<{ maze: number[][] }, RatInAMazeS
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 4,
-          explanation: `GOAL REACHED at (${r}, ${c})! Valid escape path discovered with length ${pathTrail.length}.`,
+          isMilestone: true,
+          milestoneTitle: 'Goal Reached',
+          soundCue: { type: 'complete' },
+          explanation: `🎯 GOAL REACHED at (${r}, ${c})! Valid escape path discovered with length ${pathTrail.length}.`,
           variables: { goal: `(${r}, ${c})`, pathLength: pathTrail.length },
           callStack: [{ name: `goalReached(${r}, ${c})`, params: { r, c }, line: 4, isCurrent: true }],
+          conditionEval: { expr: `r === ${n - 1} && c === ${n - 1}`, result: true },
           state: {
             maze,
             n,
@@ -210,9 +218,11 @@ export const ratInAMazeModule: AlgorithmModule<{ maze: number[][] }, RatInAMazeS
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 8,
+          soundCue: { type: 'step' },
           explanation: `Advance to open cell (${r}, ${c}). Added to active solution path.`,
           variables: { r, c, pathDepth: pathTrail.length },
           callStack: [{ name: `dfs(r=${r}, c=${c})`, params: { r, c }, line: 8, isCurrent: true }],
+          conditionEval: { expr: `maze[${r}][${c}] === 1`, result: true },
           state: {
             maze,
             n,
@@ -225,6 +235,7 @@ export const ratInAMazeModule: AlgorithmModule<{ maze: number[][] }, RatInAMazeS
         });
 
         // Directions: Down, Right, Up, Left
+        const dirNames = ['Down', 'Right', 'Up', 'Left'];
         const directions: [number, number][] = [
           [1, 0],
           [0, 1],
@@ -232,8 +243,42 @@ export const ratInAMazeModule: AlgorithmModule<{ maze: number[][] }, RatInAMazeS
           [0, -1],
         ];
 
-        for (const [dr, dc] of directions) {
-          if (dfs(r + dr, c + dc)) return true;
+        for (let d = 0; d < directions.length; d++) {
+          const [dr, dc] = directions[d];
+          const nr = r + dr;
+          const nc = c + dc;
+          const dir = dirNames[d];
+          const inBounds = nr >= 0 && nr < n && nc >= 0 && nc < n;
+          const isOpen = inBounds && maze[nr][nc] === 1;
+          const notVisited = inBounds && !visited[nr][nc];
+          const isValid = inBounds && isOpen && notVisited;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 10,
+            soundCue: { type: isValid ? 'step' : 'compare' },
+            explanation: `Probe ${dir} -> (${nr}, ${nc}): inBounds=${inBounds}, open=${isOpen}, unvisited=${notVisited}. ${isValid ? 'Eligible move.' : 'Blocked/Invalid.'}`,
+            variables: { current: `(${r}, ${c})`, probe: `(${nr}, ${nc})`, dir, isValid },
+            conditionEval: { expr: `validCell(${nr}, ${nc})`, result: isValid },
+            callStack: [
+              { name: `probe(${dir})`, params: { from: `(${r},${c})`, to: `(${nr},${nc})` }, line: 10, isCurrent: true },
+              { name: `dfs(${r}, ${c})`, params: { r, c }, line: 8 },
+            ],
+            state: {
+              maze,
+              n,
+              currentPos: [r, c],
+              pathTrail: [...pathTrail],
+              visited: visited.map((row) => [...row]),
+              solved: false,
+              action: isValid ? 'MOVE' : 'PROBE',
+            },
+          });
+
+          if (isValid) {
+            if (dfs(nr, nc)) return true;
+          }
         }
 
         // Backtrack
@@ -244,9 +289,13 @@ export const ratInAMazeModule: AlgorithmModule<{ maze: number[][] }, RatInAMazeS
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 12,
-          explanation: `Dead end from cell (${r}, ${c})! Backtracking to previous cell.`,
-          variables: { backtrackedFrom: `(${r}, ${c})` },
+          isMilestone: true,
+          milestoneTitle: `Backtrack from (${r}, ${c})`,
+          soundCue: { type: 'discard' },
+          explanation: `Dead end from cell (${r}, ${c})! All 4 directions explored without reaching goal. Backtracking.`,
+          variables: { backtrackedFrom: `(${r}, ${c})`, newPos: pathTrail.length > 0 ? `(${pathTrail[pathTrail.length - 1][0]}, ${pathTrail[pathTrail.length - 1][1]})` : '(0, 0)' },
           callStack: [{ name: `backtrack(${r}, ${c})`, params: { r, c }, line: 12, isCurrent: true }],
+          conditionEval: { expr: `allDirectionsExhausted(${r}, ${c})`, result: true },
           state: {
             maze,
             n,
@@ -269,11 +318,15 @@ export const ratInAMazeModule: AlgorithmModule<{ maze: number[][] }, RatInAMazeS
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 14,
+      isMilestone: true,
+      milestoneTitle: solved ? 'Maze Solved' : 'Maze Unsolvable',
+      soundCue: { type: 'complete' },
       explanation: solved
-        ? `Maze solved! Path: ${pathTrail.map(([r, c]) => `(${r},${c})`).join(' -> ')}.`
+        ? `🎉 Maze solved! Path: ${pathTrail.map(([r, c]) => `(${r},${c})`).join(' -> ')}.`
         : 'No feasible path exists from start to exit.',
       variables: { solved, totalPathSteps: pathTrail.length },
       callStack: [{ name: 'complete()', params: { solved: String(solved) }, line: 14, isCurrent: true }],
+      conditionEval: { expr: `solved === true`, result: solved },
       state: {
         maze,
         n,

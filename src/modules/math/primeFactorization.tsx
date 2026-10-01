@@ -144,6 +144,8 @@ export const primeFactorizationModule: AlgorithmModule<
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
+      isMilestone: true,
+      milestoneTitle: `Init Prime Factorization (${originalNumber})`,
       action: 'INIT',
       state: {
         originalNumber,
@@ -152,15 +154,41 @@ export const primeFactorizationModule: AlgorithmModule<
         factors: [],
         stepExplanation: `Initialize factorization of ${originalNumber}`,
       },
-      callStack: [{ name: 'factorize', params: { n: originalNumber } }],
+      callStack: [{ name: 'factorize', params: { n: originalNumber }, line: 2, isCurrent: true }],
       variables: { n: originalNumber, remainder: rem, divisorLimit: Math.floor(Math.sqrt(originalNumber)) },
+      conditionEval: { expr: 'originalNumber >= 2', result: true },
+      soundCue: { type: 'step' },
       explanation: `Begin prime factorization of ${originalNumber}. Testing trial divisors up to sqrt(${originalNumber}) ≈ ${Math.floor(
         Math.sqrt(originalNumber)
       )}.`,
     });
 
     for (let d = 2; d * d <= rem; d++) {
-      if (rem % d === 0) {
+      const isDivisible = rem % d === 0;
+
+      // Candidate testing frame
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        action: 'TEST_DIVISOR',
+        state: {
+          originalNumber,
+          remainingNumber: rem,
+          candidate: d,
+          factors: [...factors],
+          stepExplanation: `Testing divisor d = ${d}: ${rem} % ${d} = ${rem % d}`,
+        },
+        callStack: [{ name: 'testDivisor', params: { d, rem }, line: 5, isCurrent: true }],
+        variables: { candidateDivisor: d, currentRemainder: rem, isFactor: isDivisible },
+        conditionEval: { expr: `${rem} % ${d} === 0`, result: isDivisible },
+        soundCue: { type: 'compare' },
+        explanation: `Test candidate divisor d = ${d}: ${rem} mod ${d} = ${rem % d}.${
+          isDivisible ? ` Divisible! ${d} is a prime factor.` : ` Not divisible, advancing.`
+        }`,
+      });
+
+      if (isDivisible) {
         let count = 0;
         while (rem % d === 0) {
           count++;
@@ -178,12 +206,35 @@ export const primeFactorizationModule: AlgorithmModule<
               factors: [...factors, { prime: d, count }],
               stepExplanation: `Divided by prime ${d}. Remaining quotient = ${rem}`,
             },
-            callStack: [{ name: 'divideByPrime', params: { prime: d, newRemainder: rem } }],
+            callStack: [{ name: 'divideByPrime', params: { prime: d, newRemainder: rem }, line: 8, isCurrent: true }],
             variables: { primeFactor: d, currentExponent: count, remainingQuotient: rem },
-            explanation: `Extracted prime factor ${d} (division #${count}). Remaining quotient: ${rem}.`,
+            conditionEval: { expr: `rem % ${d} === 0`, result: true },
+            soundCue: { type: 'insert' },
+            explanation: `Extracted prime factor ${d} (power #${count}). Remaining quotient: ${rem}.`,
           });
         }
         factors.push({ prime: d, count });
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 10,
+          isMilestone: true,
+          milestoneTitle: `Factor Recorded: ${d}^${count}`,
+          action: 'FACTOR_RECORDED',
+          state: {
+            originalNumber,
+            remainingNumber: rem,
+            candidate: d,
+            factors: [...factors],
+            stepExplanation: `Completed factor ${d}^${count}`,
+          },
+          callStack: [{ name: 'recordFactor', params: { prime: d, exponent: count }, line: 10, isCurrent: true }],
+          variables: { factor: `${d}^${count}`, currentRemainder: rem },
+          conditionEval: { expr: `${rem} % ${d} !== 0`, result: true },
+          soundCue: { type: 'swap' },
+          explanation: `Fully extracted prime ${d} with multiplicity ${count} (${d}^${count}). Continuing search on remaining quotient ${rem}.`,
+        });
       }
     }
 
@@ -193,6 +244,8 @@ export const primeFactorizationModule: AlgorithmModule<
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 14,
+        isMilestone: true,
+        milestoneTitle: `Prime Residue: ${rem}`,
         action: 'PRIME_REMAINDER',
         state: {
           originalNumber,
@@ -201,9 +254,11 @@ export const primeFactorizationModule: AlgorithmModule<
           factors: [...factors],
           stepExplanation: `Remaining quotient ${rem} is prime`,
         },
-        callStack: [{ name: 'appendRemainder', params: { primeRemainder: rem } }],
+        callStack: [{ name: 'appendRemainder', params: { primeRemainder: rem }, line: 14, isCurrent: true }],
         variables: { primeRemainder: rem, finalRemainder: 1 },
-        explanation: `No divisors remain <= sqrt(${rem}). The remainder ${rem} is prime and added to factor list.`,
+        conditionEval: { expr: 'rem > 1', result: true },
+        soundCue: { type: 'insert' },
+        explanation: `No divisors remain <= sqrt(${rem}). The surviving remainder ${rem} is prime and appended to factor list.`,
       });
     }
 
@@ -213,6 +268,8 @@ export const primeFactorizationModule: AlgorithmModule<
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 16,
+      isMilestone: true,
+      milestoneTitle: `Decomposition: ${originalNumber} = ${factorFormula}`,
       action: 'COMPLETE',
       state: {
         originalNumber,
@@ -221,8 +278,10 @@ export const primeFactorizationModule: AlgorithmModule<
         factors: [...factors],
         stepExplanation: `Complete prime decomposition: ${factorFormula}`,
       },
-      callStack: [{ name: 'factorize', params: { formula: factorFormula, status: 'DONE' } }],
+      callStack: [{ name: 'factorize', params: { formula: factorFormula, status: 'DONE' }, line: 16, isCurrent: true }],
       variables: { completeDecomposition: factorFormula, totalUniquePrimes: factors.length },
+      conditionEval: { expr: 'factorizationComplete', result: true },
+      soundCue: { type: 'complete' },
       explanation: `Factorization complete! ${originalNumber} = ${factorFormula}.`,
     });
 

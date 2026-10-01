@@ -26,7 +26,7 @@ export interface OctantBox {
 export interface OctreeState {
   points: Point3D[];
   boxes: OctantBox[];
-  activeOctantIndex?: number;
+  activeOctantIndex?: number | null;
   querySphere?: { x: number; y: number; z: number; radius: number };
   foundPoints?: string[];
   subdividing?: boolean;
@@ -287,9 +287,18 @@ export class OctreeNode {
     const frames: ExecutionFrame<OctreeState>[] = [
       {
         stepIndex: 0,
-        totalSteps: 6,
+        totalSteps: 1,
         codeLine: 1,
-        explanation: 'Initial State: Created 3D Bounding Cube [0..100]³ as Root Octree node.',
+        explanation: 'Initial State: Created 3D Bounding Cube [0..100]³ as Root Octree node with capacity = 1.',
+        isMilestone: true,
+        milestoneTitle: 'Root Bounding Cube',
+        soundCue: { type: 'start' },
+        callStack: [
+          { name: 'OctreeNode(bounds)', params: { min: [0, 0, 0], max: [100, 100, 100] }, line: 1, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { capacity: 1, depth: 0, totalPoints: 0, activeBoxes: 1 },
+        conditionEval: { expr: 'points.length < CAPACITY', result: true },
         state: {
           points: [],
           boxes: [rootBox],
@@ -297,9 +306,16 @@ export class OctreeNode {
       },
       {
         stepIndex: 1,
-        totalSteps: 6,
+        totalSteps: 1,
         codeLine: 25,
-        explanation: `Insert P0(${p0.x}, ${p0.y}, ${p0.z}): Root has capacity 1, point stored at root leaf.`,
+        explanation: `Containment Check: Point P0(${p0.x}, ${p0.y}, ${p0.z}) is inside [0..100]³. Root has room (0 < 1). Stored directly in leaf.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'insert(point)', params: { id: p0.id, coords: [p0.x, p0.y, p0.z] }, line: 25, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { point: p0.label, x: p0.x, y: p0.y, z: p0.z, storedAt: 'root' },
+        conditionEval: { expr: `contains(root.bounds, P0)`, result: true },
         state: {
           points: [{ ...p0, highlighted: true }],
           boxes: [rootBox],
@@ -307,9 +323,16 @@ export class OctreeNode {
       },
       {
         stepIndex: 2,
-        totalSteps: 6,
+        totalSteps: 1,
         codeLine: 31,
-        explanation: `Insert P1(${p1.x}, ${p1.y}, ${p1.z}): Capacity exceeded! Subdividing root bounding volume into 8 child octants.`,
+        explanation: `Insert P1(${p1.x}, ${p1.y}, ${p1.z}): Leaf already contains 1 point (capacity = 1). OVERFLOW! Triggering 8-way spatial subdivision.`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'subdivide()', params: { parent: 'root', numChildren: 8 }, line: 31, isCurrent: true },
+          { name: 'insert(point)', params: { id: p1.id }, line: 28 },
+        ],
+        variables: { point: p1.label, currentOccupancy: 1, maxCapacity: 1, overflow: true },
+        conditionEval: { expr: 'points.length >= CAPACITY', result: true },
         state: {
           points: [p0, { ...p1, highlighted: true }],
           boxes: subBoxes,
@@ -318,20 +341,70 @@ export class OctreeNode {
       },
       {
         stepIndex: 3,
-        totalSteps: 6,
-        codeLine: 35,
-        explanation: `Redistributing points: P0 mapped to Octant 2 [L-X, H-Y, L-Z]; P1 mapped to Octant 5 [H-X, L-Y, H-Z].`,
+        totalSteps: 1,
+        codeLine: 33,
+        explanation: `Subdivision Complete: Mid-plane splits at (xm, ym, zm) = (50, 50, 50). Space partitioned into 8 child octants.`,
+        isMilestone: true,
+        milestoneTitle: '8-Way Spatial Subdivision',
+        soundCue: { type: 'swap' },
+        callStack: [
+          { name: 'subdivide()', params: { midX: 50, midY: 50, midZ: 50 }, line: 33, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { midPoint: [50, 50, 50], childOctantsCount: 8, depth: 1 },
         state: {
           points: [p0, p1],
+          boxes: subBoxes,
+          subdividing: false,
+        },
+      },
+      {
+        stepIndex: 4,
+        totalSteps: 1,
+        codeLine: 35,
+        explanation: `Redistributing P0(${p0.x}, ${p0.y}, ${p0.z}): Evaluated (x<50, y>=50, z<50) -> Routed to Octant 2 [L-X, H-Y, L-Z].`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'redistribute(point)', params: { id: p0.id, targetOctant: 2 }, line: 35, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { point: 'P0', octant: 2, octantName: octantNames[2] },
+        conditionEval: { expr: `P0.y (75) >= 50 && P0.x (25) < 50`, result: true },
+        state: {
+          points: [{ ...p0, highlighted: true }, p1],
+          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
+          activeOctantIndex: 2,
+        },
+      },
+      {
+        stepIndex: 5,
+        totalSteps: 1,
+        codeLine: 36,
+        explanation: `Redistributing P1(${p1.x}, ${p1.y}, ${p1.z}): Evaluated (x>=50, y<50, z>=50) -> Routed to Octant 5 [H-X, L-Y, H-Z].`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'redistribute(point)', params: { id: p1.id, targetOctant: 5 }, line: 36, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { point: 'P1', octant: 5, octantName: octantNames[5] },
+        conditionEval: { expr: `P1.x (80) >= 50 && P1.z (70) >= 50`, result: true },
+        state: {
+          points: [p0, { ...p1, highlighted: true }],
           boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 || idx === 5 })),
           activeOctantIndex: 5,
         },
       },
       {
-        stepIndex: 4,
-        totalSteps: 6,
+        stepIndex: 6,
+        totalSteps: 1,
         codeLine: 40,
-        explanation: `Insert P2(${p2.x}, ${p2.y}, ${p2.z}): Routed to Octant 2. Octant 2 now holds 2 points and prepares next recursive subdivision.`,
+        explanation: `Insert P2(${p2.x}, ${p2.y}, ${p2.z}): Routed to Octant 2. Octant 2 now holds 2 points (P0 and P2). Spatial clustering detected!`,
+        soundCue: { type: 'swap' },
+        callStack: [
+          { name: 'insert(point)', params: { id: p2.id, targetOctant: 2 }, line: 40, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { point: 'P2', targetOctant: 2, octant2PointCount: 2 },
         state: {
           points: [p0, p1, { ...p2, highlighted: true }],
           boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
@@ -339,12 +412,97 @@ export class OctreeNode {
         },
       },
       {
-        stepIndex: 5,
-        totalSteps: 6,
+        stepIndex: 7,
+        totalSteps: 1,
+        codeLine: 40,
+        explanation: `Insert P3(${p3.x}, ${p3.y}, ${p3.z}): Evaluated (x>=50, y>=50, z>=50) -> Routed cleanly to Octant 7 [H-X, H-Y, H-Z].`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'insert(point)', params: { id: p3.id, targetOctant: 7 }, line: 40, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { point: 'P3', targetOctant: 7, octantName: octantNames[7] },
+        conditionEval: { expr: `P3.x >= 50 && P3.y >= 50 && P3.z >= 50`, result: true },
+        state: {
+          points: [p0, p1, p2, { ...p3, highlighted: true }],
+          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 7 })),
+          activeOctantIndex: 7,
+        },
+      },
+      {
+        stepIndex: 8,
+        totalSteps: 1,
         codeLine: 45,
+        explanation: `Initiating 3D Spatial Range Query: Target center = (30, 80, 30), Search Radius = 25. Checking octant bounding boxes.`,
         isMilestone: true,
         milestoneTitle: 'Spatial Range Query',
-        explanation: `Spatial Query at (30, 80, 30) Radius=25: Pruned 7 octants! Visited only Octant 2, locating P0 & P2 in O(log N).`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'queryRange(sphere)', params: { center: [30, 80, 30], radius: 25 }, line: 45, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { queryCenter: [30, 80, 30], queryRadius: 25, testedOctants: 8 },
+        state: {
+          points: [p0, p1, p2, p3],
+          boxes: subBoxes,
+          querySphere: { x: 30, y: 80, z: 30, radius: 25 },
+          activeOctantIndex: null,
+        },
+      },
+      {
+        stepIndex: 9,
+        totalSteps: 1,
+        codeLine: 47,
+        explanation: `Pruning Subtrees: Sphere-AABB intersection test passes ONLY for Octant 2! Octants 0, 1, 3, 4, 5, 6, 7 are completely pruned in O(1).`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'intersectAABB()', params: { prunedCount: 7, preservedCount: 1 }, line: 47, isCurrent: true },
+          { name: 'queryRange()', params: { activeOctant: 2 }, line: 45 },
+        ],
+        variables: { prunedOctants: '0, 1, 3, 4, 5, 6, 7', survivingOctant: 2, speedup: '7/8 space pruned' },
+        conditionEval: { expr: 'intersects(sphere, octant2.bounds)', result: true },
+        state: {
+          points: [p0, p1, p2, p3],
+          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
+          querySphere: { x: 30, y: 80, z: 30, radius: 25 },
+          activeOctantIndex: 2,
+        },
+      },
+      {
+        stepIndex: 10,
+        totalSteps: 1,
+        codeLine: 50,
+        explanation: `Distance Verification: Point P0 (dist = 8.66 <= 25) and P2 (dist = 7.07 <= 25) lie inside the search sphere! Both returned.`,
+        soundCue: { type: 'swap' },
+        callStack: [
+          { name: 'verifyPoints()', params: { found: ['P0', 'P2'] }, line: 50, isCurrent: true },
+          { name: 'queryRange()', params: {}, line: 45 },
+        ],
+        variables: { 'dist(P0)': 8.66, 'dist(P2)': 7.07, radius: 25, matches: 2 },
+        conditionEval: { expr: 'dist(pt, center) <= radius', result: true },
+        state: {
+          points: [
+            { ...p0, highlighted: true },
+            p1,
+            { ...p2, highlighted: true },
+            p3,
+          ],
+          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
+          querySphere: { x: 30, y: 80, z: 30, radius: 25 },
+          foundPoints: ['p0', 'p2'],
+          activeOctantIndex: 2,
+        },
+      },
+      {
+        stepIndex: 11,
+        totalSteps: 1,
+        codeLine: 52,
+        isMilestone: true,
+        milestoneTitle: 'Query Complete (O(log N))',
+        soundCue: { type: 'complete' },
+        explanation: `🎉 3D Octree query complete! Found 2 points (P0, P2) in O(log N) operations with hierarchical spatial culling.`,
+        callStack: [{ name: 'main()', params: { matchedPoints: 2 }, line: 52, isCurrent: true }],
+        variables: { queryResults: 'P0, P2', matchedCount: 2, efficiency: 'Hierarchical Culling' },
         state: {
           points: [
             { ...p0, highlighted: true },

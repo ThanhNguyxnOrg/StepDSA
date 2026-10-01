@@ -98,8 +98,12 @@ export const singleNumberModule: AlgorithmModule<{ nums: number[] }, SingleNumbe
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialize XOR accumulator = 0 (binary: 0000). Processing array of ${n} elements.`,
-      variables: { accumulator: 0, arrayLength: n },
+      isMilestone: true,
+      milestoneTitle: 'Initialize XOR Accumulator',
+      explanation: `Initialize XOR accumulator = 0 (binary: 0000_0000). Processing array of ${n} elements using bitwise identity x ^ x = 0 and x ^ 0 = x.`,
+      variables: { accumulator: 0, arrayLength: n, bitPattern: '00000000' },
+      conditionEval: { expr: 'accumulator === 0', result: true },
+      soundCue: { type: 'step' },
       callStack: [{ name: 'singleNumber()', params: { n }, line: 2, isCurrent: true }],
       state: {
         nums,
@@ -108,18 +112,70 @@ export const singleNumberModule: AlgorithmModule<{ nums: number[] }, SingleNumbe
       },
     });
 
+    const seenValues = new Set<number>();
+
     for (let i = 0; i < n; i++) {
       const val = nums[i];
       const prev = acc;
+      const isSecondOccurrence = seenValues.has(val);
+      seenValues.add(val);
+
+      // Frame A: Inspect & prepare bitwise XOR
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 3,
+        explanation: `Inspect nums[${i}] = ${val} (binary: ${val.toString(2).padStart(4, '0')}). ${
+          isSecondOccurrence
+            ? `Value ${val} has appeared before! This XOR operation will CANCEL out its bits to zero.`
+            : `First time encountering ${val}. This XOR operation will introduce its bits into the accumulator.`
+        }`,
+        variables: {
+          index: i,
+          numValue: val,
+          currentAccumulator: prev,
+          isDuplicateMatch: isSecondOccurrence,
+        },
+        conditionEval: { expr: `isDuplicate(nums[${i}])`, result: isSecondOccurrence },
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: `inspect(${val})`, params: { index: i, val }, line: 3, isCurrent: true },
+          { name: 'singleNumber()', params: { n }, line: 2 },
+        ],
+        state: {
+          nums,
+          currentIndex: i,
+          currentXor: prev,
+        },
+      });
+
+      // Frame B: Execute XOR bitwise operation
       acc ^= val;
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Index ${i}: XOR value ${val} (bin: ${val.toString(2)}) with accumulator ${prev} (bin: ${prev.toString(2)}) -> New Accumulator = ${acc} (bin: ${acc.toString(2)}).`,
-        variables: { index: i, value: val, previousXor: prev, newXor: acc },
-        callStack: [{ name: `xorStep(i=${i})`, params: { val, acc }, line: 4, isCurrent: true }],
+        isMilestone: isSecondOccurrence,
+        milestoneTitle: isSecondOccurrence ? `Pair (${val}, ${val}) Cancelled` : undefined,
+        explanation: `Execute ${prev} ^ ${val} -> New accumulator = ${acc} (binary: ${acc.toString(2).padStart(4, '0')}). ${
+          isSecondOccurrence
+            ? `Duplicate pair of ${val}'s successfully neutralized!`
+            : `Bits of ${val} merged into accumulator.`
+        }`,
+        variables: {
+          index: i,
+          value: val,
+          previousXor: prev,
+          newXor: acc,
+          binaryOperation: `${prev.toString(2).padStart(4, '0')} ^ ${val.toString(2).padStart(4, '0')} = ${acc.toString(2).padStart(4, '0')}`,
+        },
+        conditionEval: { expr: `${prev} ^ ${val}`, result: acc },
+        soundCue: { type: isSecondOccurrence ? 'swap' : 'insert' },
+        callStack: [
+          { name: `applyXor(${val})`, params: { prev, val, acc }, line: 4, isCurrent: true },
+          { name: 'singleNumber()', params: { n }, line: 2 },
+        ],
         state: {
           nums,
           currentIndex: i,
@@ -133,8 +189,12 @@ export const singleNumberModule: AlgorithmModule<{ nums: number[] }, SingleNumbe
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 6,
-      explanation: `All duplicate pairs cancelled out to 0! Single unique element identified: ${acc}.`,
-      variables: { singleUniqueNumber: acc },
+      isMilestone: true,
+      milestoneTitle: `Single Number Found: ${acc}`,
+      explanation: `All duplicate elements have cancelled out into 0! The only surviving non-zero residue is the unique element: ${acc}.`,
+      variables: { singleUniqueNumber: acc, finalBits: acc.toString(2).padStart(4, '0') },
+      conditionEval: { expr: 'traversalComplete', result: true },
+      soundCue: { type: 'complete' },
       callStack: [{ name: 'complete()', params: { result: acc }, line: 6, isCurrent: true }],
       state: {
         nums,

@@ -125,11 +125,21 @@ void traverse(Node* head) {
 
     const frames: ExecutionFrame<CircularLinkedListState>[] = [];
 
+    // Frame 0: Ring Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialized Circular Linked List with ${n} nodes. Tail node (${raw[n - 1]}) points back to Head node (${raw[0]}).`,
+      explanation: `Initialized Circular Linked List with ${n} nodes. Tail node #${n - 1} (${raw[n - 1]}) points back to Head node #0 (${raw[0]}), forming a continuous cycle.`,
+      isMilestone: true,
+      milestoneTitle: 'Initialized Circular Ring',
+      soundCue: { type: 'start' },
+      callStack: [
+        { name: 'traverse(head)', params: { ringSize: n, headVal: raw[0], tailVal: raw[n - 1] }, line: 2, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { ringSize: n, 'head.val': raw[0], 'tail.val': raw[n - 1], 'tail.next': 'head (node #0)' },
+      conditionEval: { expr: 'head != null', result: true },
       state: {
         nodes: [...nodes],
         activePointerIndex: 0,
@@ -138,17 +148,23 @@ void traverse(Node* head) {
       },
     });
 
-    // Traverse the full ring once
+    // Traverse the full ring node by node
     for (let i = 0; i < n; ++i) {
+      const nextIdx = (i + 1) % n;
+      const isLastNode = i === n - 1;
+
+      // Sub-step A: Process current node value
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 5,
-        explanation: `Visiting node #${i} (value ${raw[i]}). curr.next points to ${
-          i === n - 1 ? `head (node #0, value ${raw[0]})` : `node #${i + 1} (value ${raw[i + 1]})`
-        }.`,
-        isMilestone: true,
-        milestoneTitle: `Traversing Node ${raw[i]}`,
+        explanation: `[Visit Node #${i}] Processing element value = ${raw[i]}. Active pointer curr is positioned at node #${i}.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'traverse(head)', params: { currIndex: i, 'curr.val': raw[i] }, line: 5, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { currIndex: i, 'curr.val': raw[i], isTail: isLastNode },
         state: {
           nodes: nodes.map((node, idx) => ({
             ...node,
@@ -159,16 +175,77 @@ void traverse(Node* head) {
           isClosedLoop: true,
         },
       });
+
+      // Sub-step B: Follow curr.next edge
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 6,
+        explanation: `[Follow Pointer] curr.next points to ${
+          isLastNode ? `HEAD (node #0, value ${raw[0]}) across loopback edge!` : `node #${nextIdx} (value ${raw[nextIdx]})`
+        }.`,
+        isMilestone: isLastNode,
+        milestoneTitle: isLastNode ? 'Loopback Edge Traversed' : undefined,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'traverse(head)', params: { from: i, to: nextIdx }, line: 6, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { fromIndex: i, nextIndex: nextIdx, isLoopback: isLastNode },
+        conditionEval: { expr: `curr.next (${nextIdx}) == head (0)`, result: isLastNode },
+        state: {
+          nodes: nodes.map((node, idx) => ({
+            ...node,
+            status: idx === i ? 'active' : idx === nextIdx ? 'comparing' : idx === 0 ? 'head' : idx === n - 1 ? 'tail' : 'normal',
+          })),
+          activePointerIndex: i,
+          pointerName: `curr.next -> #${nextIdx}`,
+          isClosedLoop: true,
+        },
+      });
+
+      // Sub-step C: Check do-while condition
+      const willTerminate = isLastNode;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 7,
+        explanation: willTerminate
+          ? `Condition Evaluation: curr has wrapped around to head (node #0). while (curr != head) becomes FALSE.`
+          : `Condition Evaluation: next node #${nextIdx} != head (node #0). while (curr != head) is TRUE, continuing cycle.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'traverse(head)', params: { curr: nextIdx, head: 0 }, line: 7, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { nextNode: nextIdx, headNode: 0, continueTraversal: !willTerminate },
+        conditionEval: { expr: `curr (${nextIdx}) != head (0)`, result: !willTerminate },
+        state: {
+          nodes: nodes.map((node, idx) => ({
+            ...node,
+            status: idx === nextIdx ? 'active' : idx === 0 ? 'head' : idx === n - 1 ? 'tail' : 'normal',
+          })),
+          activePointerIndex: nextIdx,
+          pointerName: willTerminate ? 'curr reached head' : `advance to #${nextIdx}`,
+          isClosedLoop: true,
+        },
+      });
     }
 
-    // Step across the tail-to-head back edge!
+    // Terminal Frame
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 6,
-      explanation: `Cycle Complete! curr reached tail and followed next back to head (node #0). Stop condition curr == head met.`,
+      codeLine: 8,
+      explanation: `🎉 Complete 360° Ring Traversal finished! All ${n} circular nodes visited in order and returned safely to Head.`,
       isMilestone: true,
       milestoneTitle: 'Cycle Loop Completed',
+      soundCue: { type: 'complete' },
+      callStack: [
+        { name: 'traverse(head)', params: { completed: true, visitedCount: n }, line: 8, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { ringSize: n, fullCycleVisited: true, finalPointer: 'head (node #0)' },
       state: {
         nodes: nodes.map((node, idx) => ({
           ...node,

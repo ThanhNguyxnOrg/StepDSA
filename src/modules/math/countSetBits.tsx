@@ -119,10 +119,10 @@ export const countSetBitsModule: AlgorithmModule<{ n: number }, CountSetBitsStat
       },
     });
 
+    let stepNum = 1;
     while (n > 0) {
       const nMinus1 = n - 1;
       const nextN = n & nMinus1;
-      count++;
 
       // Find the position of the bit cleared
       const diff = n ^ nextN;
@@ -133,22 +133,73 @@ export const countSetBitsModule: AlgorithmModule<{ n: number }, CountSetBitsStat
         bitPos++;
       }
 
+      // Sub-frame 1: Loop condition check
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 3,
+        explanation: `Iteration ${stepNum}: Checking while condition: n (${n}) > 0 is TRUE. Proceed to eliminate rightmost set bit.`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: `countSetBits(n=${initialN})`, params: { n, count }, line: 3, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { n, binary: n.toString(2).padStart(8, '0'), count },
+        conditionEval: { expr: `n (${n}) > 0`, result: true },
+        state: {
+          initialN,
+          n,
+          nMinus1: n > 0 ? n - 1 : 0,
+          clearedBitPos: -1,
+          bitCount: count,
+          isComplete: false,
+        },
+      });
+
+      // Sub-frame 2: Compute n - 1
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Step ${count}: n = ${n} (${n.toString(2).padStart(8, '0')}), n - 1 = ${nMinus1} (${nMinus1.toString(2).padStart(8, '0')}). Bitwise AND clears lowest set bit at index 2^${bitPos}. Result = ${nextN} (${nextN.toString(2).padStart(8, '0')}).`,
-        variables: {
+        explanation: `Compute n - 1 = ${nMinus1} (${nMinus1.toString(2).padStart(8, '0')}). Borrowing flips the rightmost 1 at 2^${bitPos} to 0, and all trailing 0s to 1s.`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'computeMinusOne()', params: { n, nMinus1, bitPos }, line: 4, isCurrent: true },
+          { name: `countSetBits(n=${initialN})`, params: { n }, line: 4 },
+        ],
+        variables: { n, nMinus1, 'binary(n)': n.toString(2).padStart(8, '0'), 'binary(n-1)': nMinus1.toString(2).padStart(8, '0') },
+        state: {
+          initialN,
           n,
+          nMinus1,
+          clearedBitPos: bitPos,
+          bitCount: count,
+          isComplete: false,
+        },
+      });
+
+      // Sub-frame 3: Execute n & (n - 1)
+      count++;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 4,
+        explanation: `Bitwise AND (n & (n - 1)) = ${nextN} (${nextN.toString(2).padStart(8, '0')}). Successfully extinguished bit at 2^${bitPos}! Increment count to ${count}.`,
+        soundCue: { type: 'swap' },
+        isMilestone: true,
+        milestoneTitle: `Extinguished Bit 2^${bitPos}`,
+        callStack: [
+          { name: `clearRightmostBit()`, params: { clearedPos: bitPos, nextN, count }, line: 4, isCurrent: true },
+          { name: `countSetBits(n=${initialN})`, params: { n }, line: 4 },
+        ],
+        variables: {
+          nBefore: n,
           nMinus1,
           bitwiseAND: nextN,
           clearedBitPower: `2^${bitPos}`,
           count,
         },
-        callStack: [
-          { name: `clearRightmostBit()`, params: { clearedPos: bitPos, count }, line: 4, isCurrent: true },
-          { name: 'countSetBits()', params: { n: initialN }, line: 3 },
-        ],
+        conditionEval: { expr: `n & (n - 1) == ${nextN}`, result: true },
         state: {
           initialN,
           n: nextN,
@@ -160,17 +211,42 @@ export const countSetBitsModule: AlgorithmModule<{ n: number }, CountSetBitsStat
       });
 
       n = nextN;
+      stepNum++;
     }
+
+    // Step: While loop termination check
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 3,
+      explanation: `Checking while condition: n (${n}) > 0 is FALSE. All set bits have been cleared.`,
+      soundCue: { type: 'compare' },
+      callStack: [{ name: `countSetBits(n=${initialN})`, params: { n: 0, count }, line: 3, isCurrent: true }],
+      variables: { n: 0, finalCount: count },
+      conditionEval: { expr: 'n (0) > 0', result: false },
+      state: {
+        initialN,
+        n: 0,
+        nMinus1: 0,
+        clearedBitPos: -1,
+        bitCount: count,
+        isComplete: true,
+      },
+    });
 
     // Final Completion Frame
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 6,
-      explanation: `All set bits eliminated (n = 0)! Total popcount for ${initialN} is ${count} set bit${count === 1 ? '' : 's'}.`,
+      explanation: `🎉 All set bits eliminated (n = 0)! Total popcount for ${initialN} is ${count} set bit${count === 1 ? '' : 's'}. Algorithm ran in O(k) steps where k = number of set bits.`,
+      soundCue: { type: 'complete' },
+      isMilestone: true,
+      milestoneTitle: `Popcount = ${count}`,
       variables: {
         originalN: initialN,
         totalSetBits: count,
+        timeComplexity: `O(${count}) operations`,
       },
       callStack: [{ name: 'complete()', params: { totalSetBits: count }, line: 6, isCurrent: true }],
       state: {
