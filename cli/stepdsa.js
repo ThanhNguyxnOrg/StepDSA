@@ -7,8 +7,10 @@
  * Emits deterministic .stepdsa.json snapshots ready for zero-latency time-travel playback in StepDSA.
  *
  * Usage:
- *   node cli/stepdsa.js trace <file>
- *   node cli/stepdsa.js --help
+ *   stepdsa init
+ *   stepdsa run <file>
+ *   stepdsa trace <file>
+ *   stepdsa --help
  */
 
 import fs from 'node:fs';
