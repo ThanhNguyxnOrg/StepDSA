@@ -71,5 +71,6 @@ The `stepdsa run` command traces user algorithm code locally, records accumulato
 * **`src/components/`**: Modular UI components (stage, player, code inspector, playground, drawer).
 * **`src/utils/`**: Web Audio synthesizer, array generators, and formatters.
 * **`cli/`**: Standalone zero-backend CLI (`init`, `run`, `trace`) for local algorithm tracing.
-* **`docs/`**: Curriculum, architecture, specifications, and Architecture Decision Records (ADRs).
+* **`docs/`**: Developer guides, CLI manual, and curriculum specifications.
+
 

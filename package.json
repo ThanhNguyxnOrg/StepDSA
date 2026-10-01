@@ -2,10 +2,33 @@
   "name": "stepdsa",
   "private": false,
   "version": "1.0.0",
+  "description": "Interactive Data Structures & Algorithms visualizer with zero-setup local execution CLI and time-travel debugging.",
   "type": "module",
   "bin": {
     "stepdsa": "./cli/stepdsa.js"
   },
+  "files": [
+    "cli",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsa",
+    "algorithms",
+    "data-structures",
+    "visualizer",
+    "education",
+    "cli",
+    "time-travel",
+    "debugger"
+  ],
+  "author": "ThanhNguyxnOrg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThanhNguyxnOrg/StepDSA.git"
+  },
+  "homepage": "https://ThanhNguyxnOrg.github.io/StepDSA/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
