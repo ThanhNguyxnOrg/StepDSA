@@ -1,18 +1,18 @@
 {
   "version": "1.0.0",
   "metadata": {
-    "sourceFile": "sample_bubble_sort.cpp",
-    "language": "cpp",
+    "sourceFile": "sample_bubble_sort.py",
+    "language": "python",
     "totalSteps": 41,
-    "createdAt": "2026-09-26T07:23:33.161Z",
+    "createdAt": "2026-10-01T04:08:40.786Z",
     "generator": "StepDSA Local Tracer CLI v1.0"
   },
-  "sourceCode": "// sample_bubble_sort.cpp\n// StepDSA Local Tracing Engine — C++ Example (ICPC / Competitive Programming)\n\n#include <iostream>\n#include <vector>\n#include <utility>\n\nvoid bubbleSort(std::vector<int>& arr) {\n    int n = arr.size();\n    for (int i = 0; i < n; ++i) {\n        for (int j = 0; j < n - i - 1; ++j) {\n            if (arr[j] > arr[j + 1]) {\n                std::swap(arr[j], arr[j + 1]);\n            }\n        }\n    }\n}\n\nint main() {\n    std::vector<int> arr = {45, 12, 89, 34, 7, 23, 60};\n    \n    std::cout << \"Original Array: \";\n    for (int x : arr) std::cout << x << \" \";\n    std::cout << \"\\n\";\n\n    bubbleSort(arr);\n\n    std::cout << \"Sorted Array:   \";\n    for (int x : arr) std::cout << x << \" \";\n    std::cout << \"\\n\";\n\n    return 0;\n}\n",
+  "sourceCode": "# sample_bubble_sort.py\n# Developer's personal algorithm solution\n\ndef bubble_sort():\n    arr = [45, 12, 89, 34, 7, 23, 60]\n    n = len(arr)\n    for i in range(n):\n        for j in range(0, n - i - 1):\n            if arr[j] > arr[j + 1]:\n                arr[j], arr[j + 1] = arr[j + 1], arr[j]\n    return arr\n\nif __name__ == \"__main__\":\n    result = bubble_sort()\n    print(\"Sorted array:\", result)\n",
   "steps": [
     {
       "stepIndex": 0,
       "codeLine": 1,
-      "explanation": "Initial state: Loaded array of size 7 from sample_bubble_sort.cpp",
+      "explanation": "Initial state: Loaded array of size 7 from sample_bubble_sort.py",
       "state": {
         "array": [
           {
@@ -1944,7 +1944,7 @@
     },
     {
       "stepIndex": 40,
-      "codeLine": 34,
+      "codeLine": 16,
       "isMilestone": true,
       "milestoneTitle": "Algorithm Execution Terminated",
       "explanation": "Local trace finished. Final sorted array: [7, 12, 23, 34, 45, 60, 89].",

@@ -1,0 +1,35 @@
+---
+title: Quick Sort (Lomuto Partition)
+language: typescript
+category: sorting
+input: [45, 12, 89, 34, 21, 70, 5, 60]
+stage: array
+pointers: ["i", "j", "pivot"]
+---
+function partition(arr, low, high) {
+  const pivot = arr[high];
+  let i = low - 1;
+  for (let j = low; j < high; j++) {
+    if (arr[j] <= pivot) {
+      i++;
+      const temp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = temp;
+    }
+  }
+  const temp = arr[i + 1];
+  arr[i + 1] = arr[high];
+  arr[high] = temp;
+  return i + 1;
+}
+
+function quickSort(arr, low, high) {
+  if (low < high) {
+    const pi = partition(arr, low, high);
+    quickSort(arr, low, pi - 1);
+    quickSort(arr, pi + 1, high);
+  }
+  return arr;
+}
+
+quickSort(input, 0, input.length - 1);
