@@ -9,16 +9,15 @@
 
 ## 1. Executive Summary & Goals
 
-StepDSA v1.0.0 provides 162 hardcoded, curated algorithm modules. **Personal Code Studio** expands the platform into a general-purpose, interactive visualizer where students, competitive programmers, and engineers author custom algorithms in a single `.stepdsa` file, run them locally or directly in the browser with **zero visualizer-specific boilerplate**, and step through execution with full time-travel telemetry.
+StepDSA v1.0.0 provides 162 hardcoded, curated algorithm modules. **Personal Code Studio (BYOC — Bring Your Own Code)** expands the platform into a general-purpose, interactive visualizer where students, competitive programmers, and engineers author custom algorithms in a single `.stepdsa` file, run them with **zero visualizer-specific boilerplate**, and step through execution with full time-travel telemetry.
 
-### Key Capabilities
-1. **`.stepdsa` File Standard:** A clean human-authored format combining YAML frontmatter (metadata, input fixtures, visual hints) with 100% standard, unescaped algorithm code (TypeScript/JavaScript, Python, C++).
-2. **Transparent Tracing Engine:** Automatic detection of memory reads, writes, swaps, and comparisons using transparent Proxies and AST instrumentation. Users write ordinary loops and conditionals without proprietary SDK function calls.
-3. **Dual Execution Pipeline:**
-   - **In-Browser Studio:** Built-in code editor + drag-and-drop `.stepdsa` parser for instant client-side execution.
-   - **Local CLI (`stepdsa`):** Command-line tool for tracing native Python/C++ scripts and generating `.stepdsa.json` traces or streaming over WebSocket (`ws://localhost:9123`).
-4. **Universal Multi-Stage Adapter:** Dynamic detection of data structure topology (1D/2D arrays, linked lists, trees, graphs) to mount the appropriate high-contrast visual stage (`ArrayStage`, `TreeStage`, `GraphStage`, etc.).
-5. **Embedded Source Synchronization:** Exact source code lines embedded in execution snapshots, allowing StepDSA's Code Inspector to highlight active statements in real time.
+### Core Architecture Principles:
+1. **100% Client-Side & Zero-Backend:** The StepDSA web app is a static SPA (deployable to GitHub Pages) with zero server infrastructure, zero database, and zero cloud execution costs. All in-browser code executes in the user's browser sandbox.
+2. **TypeScript / Node.js Local CLI:** For native execution and offline developer workflows, StepDSA provides a TypeScript-powered CLI runnable via zero-install `npx @stepdsa/cli` or `node cli/stepdsa.js`, sharing 100% of types and schemas with the web visualizer.
+3. **Smart Pattern Classifier & Editable Title Pill:** Competitive code (`class Solution { bool isValid() }`) is automatically analyzed to detect canonical patterns (e.g. Stack Bracket Matching) and surfaced with an editable title pill and auto-testcases.
+4. **Native ES6 Proxy Tracing:** Eliminates heavy AST compiler dependencies in the browser; array operations (`arr[j]`, `arr[i] = val`) automatically emit telemetry frames at native V8 speed.
+5. **Universal Multi-Stage Adapter:** Dynamic detection of data structure topology (1D/2D arrays, stack LIFO, trees, graphs) to mount the appropriate visual stage (`ArrayStage`, `TreeStage`, `GraphStage`, etc.).
+6. **Embedded Source Synchronization:** Exact source code lines embedded in execution snapshots, allowing StepDSA's Code Inspector to highlight active statements in real time.
 
 ---
 

@@ -16,29 +16,38 @@ Running arbitrary user-written code in a shared multi-tenant cloud backend intro
 
 ## 2. Decision
 
-We establish the **Personal Code Studio (BYOC — Bring Your Own Code)** architecture with three foundational pillars:
+We establish the **Personal Code Studio (BYOC — Bring Your Own Code)** architecture with five foundational pillars:
 
-1. **`.stepdsa` Developer File Standard:**
-   - Developers author algorithms in a clean, human-readable `.stepdsa` file.
-   - The file encapsulates algorithm metadata, source code (Python, TypeScript/JS, C++, etc.), and initial test fixtures.
+1. **100% Client-Side & Zero-Backend Architecture:**
+   - StepDSA is a static SPA with zero cloud execution servers.
+   - All in-browser execution runs in the client browser sandbox via native JavaScript `Proxy` wrappers on input structures.
+   - Zero cloud infrastructure costs, zero server maintenance, zero network latency.
 
-2. **Universal Multi-Stage Adapter:**
-   - Rather than requiring custom visual stage components for every user algorithm, the web workbench features an intelligent adapter.
-   - It inspects the structure of variables and collections in each execution snapshot (detecting 1D/2D arrays, linked node chains, tree parent-child pointers, or graph adjacency structures) and routes them into StepDSA's existing high-fidelity visual stages (`ArrayStage`, `TreeStage`, `GraphStage`, etc.).
+2. **`.stepdsa` Developer File Standard:**
+   - Developers author algorithms in a clean, human-readable `.stepdsa` file combining YAML frontmatter (metadata, input fixture, stage hint) with 100% standard unescaped code.
 
-3. **Embedded Source Code Synchronization:**
-   - Every execution snapshot embeds the verbatim source code lines alongside line-number mappings, variable scopes, and call-stack frames.
-   - StepDSA's Code Inspector dynamically highlights executing lines in real time with zero desynchronization.
+3. **Smart Pattern Classifier & Editable Title Pill:**
+   - Solves competitive programming code that lacks explicit algorithm names (e.g. `class Solution { bool isValid() }`).
+   - Analyzes AST/keyword structures to infer canonical names (e.g. `Valid Parentheses (Stack)`) and auto-generates test fixtures (`"()[]{}"`), while providing an editable 1-click title pill in the Studio UI.
+
+4. **TypeScript / Node.js Local CLI (`npx @stepdsa/cli`):**
+   - For native developer tracing, provides a zero-install TypeScript CLI that shares 100% of interfaces and schemas with the web visualizer.
+   - Emits `.stepdsa.json` traces that users drag and drop directly into the static web visualizer.
+
+5. **Universal Multi-Stage Adapter & Embedded Source Synchronization:**
+   - Inspects memory structures (1D/2D arrays, stack LIFO, tree parent-child pointers, graphs) and routes them into StepDSA's existing high-fidelity visual stages (`ArrayStage`, `TreeStage`, etc.).
+   - Embeds original source lines inside snapshots for synchronized Code Inspector line highlighting.
 
 ---
 
 ## 3. Consequences
 
 ### Positive
-- **100% Privacy & Zero Server Cost:** User code stays on the developer's local machine or browser sandbox; no server execution cluster required.
-- **Immediate Visual Reuse:** Existing battle-tested stages and animations immediately support custom user algorithms.
-- **Zero-Latency Scrubbing:** Deterministic pre-computed or local timeline allows instant forward/backward time-travel debugging.
+- **100% Privacy & Zero Server Cost:** User code stays on the developer's local machine or browser sandbox; zero server execution cluster required.
+- **Instant V8 Execution Speed:** Native ES6 Proxy intercepts reads and writes without heavy Babel AST rewriting in browser.
+- **Seamless LeetCode Experience:** Competitive solutions are automatically recognized and given sensible testcases and titles without manual boilerplate.
+- **Single-Codebase CLI:** TypeScript CLI shares all types and logic with the web visualizer via npm/npx.
 
 ### Negative / Trade-offs
-- The Universal Adapter must robustly handle irregular or unexpected memory structures with sensible fallbacks.
-- Multi-language tracing requires either an in-browser runtime engine (for JS/Python) or the local CLI tracer for native languages (C++).
+- Native languages (C++, Python) require running the local CLI on the user's machine instead of running directly in a static browser tab.
+- Browser sandbox limits step execution count (ceiling: 500 steps) to prevent infinite loops from locking the UI thread.

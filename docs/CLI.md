@@ -17,47 +17,62 @@ The StepDSA CLI allows competitive programmers, professors, and students to trac
 
 ## 🚀 Quick Usage
 
-### 1. Inspect Sample Tracing Code
-Inspect the C++ sample tracer in `cli/sample_bubble_sort.cpp`:
-```bash
-cat cli/sample_bubble_sort.cpp
+### 1. Author or Inspect a `.stepdsa` File
+Create a clean, human-readable algorithm file combining YAML frontmatter and unescaped code:
+```stepdsa
+---
+title: Quick Sort (Lomuto Partition)
+language: typescript
+input: [45, 12, 89, 34, 21, 70]
+stage: array
+---
+function quickSort(arr, low, high) {
+  // your custom algorithm code
+}
 ```
 
-### 2. Generate Deterministic Snapshots
-Run the StepDSA CLI to execute the code and output a timeline JSON snapshot:
+### 2. Generate Deterministic Snapshots via CLI
+Run the StepDSA CLI locally on your machine (zero-install via `npx` or local Node):
 ```bash
-node cli/stepdsa.js trace --lang cpp --src cli/sample_bubble_sort.cpp --out bubble_trace.stepdsa.json
+# Via npx (zero-install):
+npx @stepdsa/cli trace my_algorithm.stepdsa --out trace.stepdsa.json
+
+# Or directly via repository node runner:
+node cli/stepdsa.js trace my_algorithm.stepdsa
 ```
 
-### 3. Load into StepDSA Visualizer
-1. Open the [StepDSA Web App](https://ThanhNguyxnOrg.github.io/StepDSA/).
+### 3. Load into StepDSA Visualizer (Zero-Backend Web App)
+1. Open the **StepDSA Web App** (100% static, client-side).
 2. Click **Developer Studio** in the top navigation bar.
-3. Drag and drop `bubble_trace.stepdsa.json`.
-4. Step through your native code's execution with full timeline scrubbability!
+3. Drag and drop `my_algorithm.stepdsa` (runs instantly in browser) or `trace.stepdsa.json`.
+4. Step through execution with full time-travel debugger telemetry!
 
 ---
 
 ## 📋 JSON Trace Schema (`.stepdsa.json`)
 
-A valid StepDSA trace file must include:
+A valid StepDSA trace file produced by the CLI includes:
 ```json
 {
   "version": "1.0",
   "meta": {
     "title": "Custom Algorithm Trace",
     "algorithm": "bubble-sort",
-    "language": "cpp"
+    "language": "typescript"
   },
   "frames": [
     {
-      "step": 0,
+      "stepIndex": 0,
       "codeLine": 12,
       "explanation": "Comparing elements at index 0 and 1",
+      "callStack": ["bubbleSort(arr)"],
+      "variables": { "i": 0, "j": 1 },
+      "soundCue": "compare",
       "isMilestone": false,
       "state": {
         "array": [
-          { "value": 42, "status": "comparing", "index": 0 },
-          { "value": 17, "status": "comparing", "index": 1 }
+          { "id": "0", "value": 42, "status": "comparing" },
+          { "id": "1", "value": 17, "status": "comparing" }
         ]
       }
     }
