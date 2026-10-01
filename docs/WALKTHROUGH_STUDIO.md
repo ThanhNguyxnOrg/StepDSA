@@ -33,12 +33,19 @@ We implemented **Personal Code Studio (BYOC — Bring Your Own Code)** for StepD
 - Editable 1-click Title Pill (`[ 🏷️ Valid Parentheses (Stack) ✏️ ]`).
 - HTML5 Drag-and-Drop + File Input supporting both `*.stepdsa` files and `*.stepdsa.json` snapshots.
 - "Visualize Algorithm" action triggering instant in-browser tracing and loading directly onto the Workbench.
-- CLI guide for native Python / C++ tracing via `npx @stepdsa/cli`.
+- CLI guide for native Python / C++ tracing via `stepdsa run`.
+
+### 6. Zero-Setup CLI Workflow (`stepdsa init` & `stepdsa run`)
+- `stepdsa init`: Scaffolds a new project directory with `solution.stepdsa` template and `README.md`.
+- `stepdsa run <file>`: Traces local algorithm code, computes accumulator metrics (`comparisons`, `swaps`, `accesses`), compresses the snapshot using `lz-string`, and auto-launches the browser with `#trace=<compressed>` hash.
+- **Hash-Loading & Session Badge:** The web app detects `#trace=` on mount, decompresses the snapshot, mounts the custom module, cleans the URL, and displays an active CLI session badge.
+- **Payload Safety Gate:** Traces >60KB gracefully fall back to local `.stepdsa.json` export with drag-and-drop guidance.
 
 ---
 
 ## Verification & Test Results
 
-- **Unit & Integration Tests:** 350 / 350 tests passing (`npm test`).
+- **Unit & Integration Tests:** 358 / 358 tests passing (`npm test`).
 - **Compiler & Production Build:** `npx tsc --noEmit && npm run build` succeeded with exit code 0.
-- **CLI Runner:** Tested locally via `node cli/stepdsa.js trace cli/sample_bubble_sort.py` — successfully captured 41 frames.
+- **CLI Commands Tested:** `stepdsa init`, `stepdsa run`, `stepdsa trace` verified via automated vitest suite and live execution.
+

@@ -125,37 +125,47 @@ export interface AlgorithmModule<TInput = any, TState = any> {
 - Node.js `18.x` or higher
 - npm or pnpm
 
-### Local Development
+### Option A: Web App (Local Development)
 
 ```bash
-# 1. Clone repository
 git clone https://github.com/ThanhNguyxnOrg/StepDSA.git
 cd StepDSA
-
-# 2. Install dependencies
 npm install
-
-# 3. Start development server
 npm run dev
+# → Open http://localhost:5173/
+```
 
-# 4. Run test suite
-npm test
+### Option B: CLI — Trace & Visualize Your Own Code
+
+```bash
+# Link the CLI globally
+git clone https://github.com/ThanhNguyxnOrg/StepDSA.git
+cd StepDSA && npm install && npm link
+
+# Initialize a new algorithm project
+mkdir my-algo && cd my-algo
+stepdsa init
+
+# Edit solution.stepdsa, then run:
+stepdsa run solution.stepdsa
+# → Browser opens automatically with step-by-step time-travel visualization!
 ```
 
 ---
 
-## 💻 Offline Developer CLI
- 
-StepDSA includes an offline tracer CLI in `cli/` enabling competitive programmers and students to run algorithm code locally and generate StepDSA visual snapshot files:
+## 💻 Developer CLI (`stepdsa`)
+
+StepDSA includes a zero-setup CLI for tracing local algorithms and visualizing them instantly:
 
 ```bash
-# Trace a .stepdsa file (extracts frontmatter input and executes with ES6 Proxy)
-node cli/stepdsa.js trace cli/sample_quicksort.stepdsa
+# Initialize a new project folder with template
+stepdsa init
 
-# Or trace Python / C++ source scripts
-node cli/stepdsa.js trace cli/sample_bubble_sort.py
+# Trace and open visualizer in your browser
+stepdsa run solution.stepdsa
 
-# Launch visualizer and load snapshot directly in the browser via Personal Code Studio!
+# Or generate an offline .stepdsa.json snapshot file
+stepdsa trace solution.stepdsa --out trace.json
 ```
 
 For full CLI documentation, see [docs/CLI.md](docs/CLI.md).

@@ -42,6 +42,11 @@ npm run dev
 
 # 4. Run test suite:
 npm test
+
+# 5. Link and test local CLI:
+npm link
+stepdsa init
+stepdsa run solution.stepdsa --dev
 ```
 
 ---

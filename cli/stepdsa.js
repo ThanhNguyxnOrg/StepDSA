@@ -13,6 +13,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
+import LZString from 'lz-string';
 
 function printBanner() {
   console.log('\x1b[36m%s\x1b[0m', `
@@ -27,7 +29,9 @@ function printHelp() {
   printBanner();
   console.log(`
   Usage:
-    node cli/stepdsa.js trace <path-to-algorithm-file> [options]
+    stepdsa init                         Scaffold a new algorithm project folder
+    stepdsa run <file> [options]         Trace & open visualizer in browser
+    stepdsa trace <file> [options]       Trace & save .stepdsa.json snapshot file
 
   Supported Languages:
     • StepDSA Script (.stepdsa)
@@ -38,12 +42,15 @@ function printHelp() {
 
   Options:
     --out <path>     Custom output path for the .stepdsa.json snapshot file
+    --dev, --local   Target local development server (http://localhost:5173/)
+    --no-open        Do not auto-launch browser (print URL only)
     --verbose        Print every step transition to the console
-    --help           Display this help guide
+    --help, -h       Display this help guide
 
-  Example:
-    node cli/stepdsa.js trace cli/sample_quicksort.stepdsa
-    node cli/stepdsa.js trace cli/sample_bubble_sort.py
+  Examples:
+    stepdsa init
+    stepdsa run solution.stepdsa
+    stepdsa trace solution.stepdsa --out trace.json
   `);
 }
 
@@ -166,7 +173,7 @@ function traceWithProxy(code, initialInput, options = {}) {
   return [];
 }
 
-function parseAndTrace(filePath) {
+function generateTraceSnapshot(filePath) {
   const absolutePath = path.resolve(filePath);
   if (!fs.existsSync(absolutePath)) {
     console.error(`\x1b[31m[Error]\x1b[0m File not found: ${absolutePath}`);
@@ -289,10 +296,28 @@ function parseAndTrace(filePath) {
         pointers: {},
       },
     });
-
-    const total = frames.length;
-    frames.forEach((f, i) => { f.stepIndex = i; f.totalSteps = total; });
   }
+
+  // Calculate live accumulator metrics for each frame
+  let comparisons = 0;
+  let swaps = 0;
+  let accesses = 0;
+  const total = frames.length;
+
+  frames.forEach((f, i) => {
+    f.stepIndex = i;
+    f.totalSteps = total;
+    const expl = f.explanation || '';
+    if (f.state?.array?.some((el) => el.status === 'comparing') || expl.toLowerCase().includes('compar')) {
+      comparisons++;
+      accesses += 2;
+    }
+    if (f.state?.array?.some((el) => el.status === 'swapping') || expl.toLowerCase().includes('swap') || expl.toLowerCase().includes('updat')) {
+      swaps++;
+      accesses += 2;
+    }
+    f.metrics = { comparisons, swaps, accesses };
+  });
 
   const title = metadata.title || `${baseName.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
 
@@ -316,6 +341,12 @@ function parseAndTrace(filePath) {
     steps: frames,
   };
 
+  return { snapshot, baseName, title, frames, rawContent, detectedLang };
+}
+
+function parseAndTrace(filePath) {
+  const { snapshot, baseName, title, frames } = generateTraceSnapshot(filePath);
+
   const outputPath = path.resolve(path.dirname(filePath), `${baseName}.stepdsa.json`);
   fs.writeFileSync(outputPath, JSON.stringify(snapshot, null, 2), 'utf8');
 
@@ -324,9 +355,116 @@ function parseAndTrace(filePath) {
   console.log(`  • Steps Captured : \x1b[33m${frames.length} frames\x1b[0m`);
   console.log(`  • Output File    : \x1b[36m${outputPath}\x1b[0m`);
   console.log(`\n\x1b[1mNext Steps:\x1b[0m`);
-  console.log(`  1. Open StepDSA Web Visualizer (http://localhost:4173/)`);
+  console.log(`  1. Open StepDSA Web Visualizer (https://ThanhNguyxnOrg.github.io/StepDSA/)`);
   console.log(`  2. Click '\x1b[35mCLI Studio\x1b[0m' or drag \x1b[36m${baseName}.stepdsa.json\x1b[0m into the viewer!`);
   console.log(`  3. Step and time-travel through your own local execution with zero lag.\n`);
+}
+
+function openBrowser(url) {
+  const platform = process.platform;
+  try {
+    if (platform === 'win32') {
+      execSync(`start "" "${url}"`, { stdio: 'ignore', shell: true });
+    } else if (platform === 'darwin') {
+      execSync(`open "${url}"`, { stdio: 'ignore' });
+    } else {
+      execSync(`xdg-open "${url}"`, { stdio: 'ignore' });
+    }
+  } catch {
+    console.log('\x1b[33m[Info]\x1b[0m Could not auto-launch browser. Please copy and open the URL manually.');
+  }
+}
+
+function runAndVisualize(filePath) {
+  const { snapshot, baseName, title, frames } = generateTraceSnapshot(filePath);
+
+  console.log(`\x1b[32m✔ Trace Completed!\x1b[0m ${frames.length} frames captured.`);
+
+  const jsonStr = JSON.stringify(snapshot);
+  const compressed = LZString.compressToEncodedURIComponent(jsonStr);
+
+  const isDev = process.argv.includes('--dev') || process.argv.includes('--local');
+  const baseUrl = isDev ? 'http://localhost:5173/' : 'https://ThanhNguyxnOrg.github.io/StepDSA/';
+  const MAX_URL_BYTES = 60000;
+
+  if (compressed.length > MAX_URL_BYTES) {
+    const outputPath = path.resolve(path.dirname(filePath), `${baseName}.stepdsa.json`);
+    fs.writeFileSync(outputPath, JSON.stringify(snapshot, null, 2), 'utf8');
+    console.log(`\n\x1b[33m[Notice]\x1b[0m Trace payload is ${(compressed.length / 1024).toFixed(1)}KB (exceeds 60KB safe URL limit).`);
+    console.log(`  Saved locally to: \x1b[36m${outputPath}\x1b[0m`);
+    console.log(`  Open ${baseUrl} and drag the file into Developer Studio.\n`);
+    return;
+  }
+
+  const fullUrl = `${baseUrl}#trace=${compressed}`;
+  const sizeKb = (compressed.length / 1024).toFixed(1);
+  console.log(`\n  \x1b[36mURL:\x1b[0m ${baseUrl}#trace=... (${sizeKb}KB compressed payload)\n`);
+
+  const noOpen = process.argv.includes('--no-open');
+  if (!noOpen) {
+    console.log('  \x1b[35mLaunching browser...\x1b[0m\n');
+    openBrowser(fullUrl);
+  }
+}
+
+function initProject() {
+  const targetDir = process.cwd();
+  const solutionPath = path.join(targetDir, 'solution.stepdsa');
+  const readmePath = path.join(targetDir, 'README.md');
+
+  if (fs.existsSync(solutionPath)) {
+    console.log('\x1b[33m[Warning]\x1b[0m solution.stepdsa already exists. Skipping to avoid overwriting your work.');
+    console.log('  Delete or rename it if you want a fresh template.\n');
+    return;
+  }
+
+  const template = `// Your Algorithm Code
+// Write or paste your sorting/searching algorithm here.
+// StepDSA will automatically detect the array and trace every step.
+//
+// Example: Bubble Sort
+const arr = [64, 34, 25, 12, 22, 11, 90];
+
+for (let i = 0; i < arr.length; i++) {
+  for (let j = 0; j < arr.length - i - 1; j++) {
+    if (arr[j] > arr[j + 1]) {
+      const temp = arr[j];
+      arr[j] = arr[j + 1];
+      arr[j + 1] = temp;
+    }
+  }
+}
+`;
+
+  const readme = `# StepDSA Project
+
+## Quick Start
+
+1. Edit \`solution.stepdsa\` — write your algorithm code
+2. Run: \`stepdsa run solution.stepdsa\`
+3. Your browser opens with a step-by-step visualization!
+
+## Tips
+
+- Declare your array as \`const arr = [...];\` — StepDSA auto-detects it
+- Supports sorting, searching, and array manipulation algorithms
+- Learn more: https://github.com/ThanhNguyxnOrg/StepDSA
+`;
+
+  fs.writeFileSync(solutionPath, template, 'utf8');
+  if (!fs.existsSync(readmePath)) {
+    fs.writeFileSync(readmePath, readme, 'utf8');
+  }
+
+  console.log('\x1b[32m✔ Project initialized!\x1b[0m\n');
+  console.log('  Created:');
+  console.log('    • \x1b[36msolution.stepdsa\x1b[0m  — write your algorithm here');
+  if (fs.existsSync(readmePath)) {
+    console.log('    • \x1b[36mREADME.md\x1b[0m          — quick start guide');
+  }
+  console.log('\n  Next steps:');
+  console.log('    1. Edit \x1b[36msolution.stepdsa\x1b[0m with your algorithm');
+  console.log('    2. Run:  \x1b[33mstepdsa run solution.stepdsa\x1b[0m\n');
 }
 
 // CLI Arg Parsing
@@ -338,12 +476,23 @@ if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
 
 if (args[0] === 'trace') {
   if (!args[1]) {
-    console.error('\x1b[31m[Error]\x1b[0m Please specify a file to trace (e.g. node cli/stepdsa.js trace my_code.py)');
+    console.error('\x1b[31m[Error]\x1b[0m Please specify a file to trace (e.g. stepdsa trace my_code.py)');
     process.exit(1);
   }
   printBanner();
   parseAndTrace(args[1]);
+} else if (args[0] === 'init') {
+  printBanner();
+  initProject();
+} else if (args[0] === 'run') {
+  if (!args[1]) {
+    console.error('\x1b[31m[Error]\x1b[0m Please specify a file to run (e.g. stepdsa run solution.stepdsa)');
+    process.exit(1);
+  }
+  printBanner();
+  runAndVisualize(args[1]);
 } else {
-  console.error(`\x1b[31m[Error]\x1b[0m Unknown command '${args[0]}'. Use 'node cli/stepdsa.js --help'.`);
+  console.error(`\x1b[31m[Error]\x1b[0m Unknown command '${args[0]}'. Use 'stepdsa --help'.`);
   process.exit(1);
 }
+

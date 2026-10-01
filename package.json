@@ -1,8 +1,11 @@
 {
   "name": "stepdsa",
-  "private": true,
+  "private": false,
   "version": "1.0.0",
   "type": "module",
+  "bin": {
+    "stepdsa": "./cli/stepdsa.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -14,6 +17,7 @@
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
+    "lz-string": "^1.5.0",
     "motion": "^12.4.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

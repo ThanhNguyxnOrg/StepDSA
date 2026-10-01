@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
+import LZString from 'lz-string';
 import { allModules, defaultModule } from './modules/registry';
 import { AlgorithmModule } from './core/types';
 import { useTimelinePlayback } from './core/timeline';
+import { adaptTraceSnapshotToModule } from './core/studio/universalAdapter';
 import { Header } from './components/layout/Header';
 import { TheoryDrawer } from './components/layout/TheoryDrawer';
 import { CodeInspector } from './components/code/CodeInspector';
@@ -25,6 +27,7 @@ export default function App() {
   const [aboutOpen, setAboutOpen] = useState<boolean>(false);
   const [personalStudioOpen, setPersonalStudioOpen] = useState<boolean>(false);
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
+  const [cliSession, setCliSession] = useState<{ filename: string; totalSteps: number } | null>(null);
 
   // When module changes, update input to module's defaultInput
   const handleSelectModule = (mod: AlgorithmModule) => {
@@ -112,6 +115,34 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPlaying, play, pause, stepForward, stepBackward, stepToNextAction, stepToPrevAction, reset, currentView]);
+
+  // Auto-load trace snapshot from URL hash (#trace=<compressed>)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#trace=')) return;
+
+    const encoded = hash.slice('#trace='.length);
+    if (!encoded) return;
+
+    try {
+      const json = LZString.decompressFromEncodedURIComponent(encoded);
+      if (!json) {
+        console.warn('[StepDSA] Failed to decompress trace data from URL hash.');
+        return;
+      }
+      const parsed = JSON.parse(json);
+      const mod = adaptTraceSnapshotToModule(json);
+      handleSelectModule(mod);
+      setCliSession({
+        filename: parsed.meta?.sourceFile || parsed.meta?.title || 'solution.stepdsa',
+        totalSteps: parsed.meta?.totalSteps || (parsed.frames ? parsed.frames.length : 0),
+      });
+      // Clean hash to keep URL clean and prevent reloading loop
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch (err) {
+      console.warn('[StepDSA] Invalid trace data in URL hash:', err);
+    }
+  }, []);
 
   const handleToggleSound = () => {
     const next = !isMuted;
@@ -219,6 +250,13 @@ export default function App() {
                     <span>Visual Legend</span>
                   </button>
                 </div>
+
+                {cliSession && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>CLI Session: <strong>{cliSession.filename}</strong> ({cliSession.totalSteps} steps)</span>
+                  </div>
+                )}
 
                 <div className="text-[11px] font-mono text-slate-500">
                   {currentModule.category.toUpperCase()} · {currentModule.complexity.timeAverage}

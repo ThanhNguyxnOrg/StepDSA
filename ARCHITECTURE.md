@@ -47,11 +47,29 @@ graph TD
 
 ---
 
+## 🔗 CLI → Web Trace Bridge
+
+```mermaid
+graph LR
+    A[stepdsa run solution.stepdsa] --> B[Local Proxy / Deterministic Tracer]
+    B --> C[ExecutionFrame Array + Metrics]
+    C --> D[lz-string compression]
+    D --> E[Open Browser: #trace=compressed]
+    E --> F[Web App: Mount & Decompress]
+    F --> G[Universal Adapter -> AlgorithmModule]
+    G --> H[Time-Travel Visualizer + Session Badge]
+```
+
+The `stepdsa run` command traces user algorithm code locally, records accumulator metrics (`comparisons`, `swaps`, `accesses`), compresses the snapshot via `lz-string`, and opens the browser with the compressed payload in the URL hash. The web app decompresses the payload on mount, adapts it via the Universal Adapter, cleans the hash with `history.replaceState`, and displays an active session badge.
+
+---
+
 ## 🧩 Directory Organization
 
 * **`src/core/`**: Timeline controller, types, and playback logic.
 * **`src/modules/`**: Pure algorithm implementations, theory, and stage renderers.
 * **`src/components/`**: Modular UI components (stage, player, code inspector, playground, drawer).
 * **`src/utils/`**: Web Audio synthesizer, array generators, and formatters.
-* **`cli/`**: Offline C++ and Python tracers for custom code execution.
-* **`docs/`**: Curriculum, architecture, and developer specifications.
+* **`cli/`**: Standalone zero-backend CLI (`init`, `run`, `trace`) for local algorithm tracing.
+* **`docs/`**: Curriculum, architecture, specifications, and Architecture Decision Records (ADRs).
+
