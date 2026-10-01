@@ -23,7 +23,7 @@
 
 **Interactive Textbook** &nbsp;•&nbsp; **Deterministic Step Visualizer** &nbsp;•&nbsp; **Multi-Language Inspector** &nbsp;•&nbsp; **DSA Playground**
 
-[🌐 Live Web Demo](https://ThanhNguyxnOrg.github.io/StepDSA/) · [📖 Master Curriculum (54 Modules)](docs/MASTER_CURRICULUM.md) · [🏗️ Architecture Spec](ARCHITECTURE.md) · [💻 CLI Guide](docs/CLI.md) · [🐛 Report Bug](.github/ISSUE_TEMPLATE/bug_report.yml)
+[🌐 Live Web Demo](https://ThanhNguyxnOrg.github.io/StepDSA/) · [📖 Master Curriculum (162 Modules)](docs/MASTER_CURRICULUM.md) · [🏗️ Architecture Spec](ARCHITECTURE.md) · [💻 CLI Guide](docs/CLI.md) · [🐛 Report Bug](.github/ISSUE_TEMPLATE/bug_report.yml)
 
 </div>
 
@@ -37,12 +37,13 @@ Most existing algorithm visualizers suffer from the same fundamental flaws:
 3. **Dated Aesthetics:** Cluttered interfaces with canvas-only graphics, lack of variable tracking, and confusing modal settings.
 
 **StepDSA reimagines algorithm education as an interactive workbench:**
-* ⏱️ **Deterministic Time-Travel Engine:** Instant scrubbable timeline with zero-lag reverse stepping (`←`), speed controls (`0.25x` to `2x`), and step narration.
+* ⏱️ **Deterministic Time-Travel Engine:** Instant scrubbable timeline with zero-lag reverse stepping (`←`), speed controls (`0.25x` to `2x`), and step narration across **162 master curriculum modules**.
+* 🚀 **Personal Code Studio (BYOC — Bring Your Own Code):** Run your own custom code in-browser or import `.stepdsa` / `.stepdsa.json` traces. Smart pattern classifier identifies algorithm family and auto-generates test fixtures with zero cloud execution risks.
 * 💻 **Synchronized Multi-Language Code:** Live execution line tracking across **C++ (ICPC Standard), Python, TypeScript, Java, and Pseudocode**.
 * 🧪 **Interactive Playground & Edge Cases:** Stress-test algorithms with custom arrays, reverse-sorted inputs, duplicates, and worst-case patterns.
 * 📖 **Invariant-Driven Theory Panel:** Clear mental models, invariant breakdowns, and Big-O proofs alongside every step.
 * 🎵 **Auditory Sonification:** Web Audio API synth tones mapped to element values—hear entropy decrease in real time as arrays sort.
-* 🛠️ **Developer Studio & CLI:** Run your own C++ or Python code offline, export execution traces, and replay them visually in the browser.
+* 🛠️ **Developer Studio & CLI:** Run your own `.stepdsa`, C++, Python, or TypeScript code offline, export execution traces, and replay them visually in the browser.
 
 ---
 
@@ -144,14 +145,17 @@ npm test
 ---
 
 ## 💻 Offline Developer CLI
-
-StepDSA includes an offline tracer CLI in `cli/` enabling competitive programmers and students to run C++ or Python code locally and generate StepDSA visual snapshot files:
+ 
+StepDSA includes an offline tracer CLI in `cli/` enabling competitive programmers and students to run algorithm code locally and generate StepDSA visual snapshot files:
 
 ```bash
-# Run C++ tracer with custom array
-node cli/stepdsa.js trace --lang cpp --src cli/sample_bubble_sort.cpp --out trace.stepdsa.json
+# Trace a .stepdsa file (extracts frontmatter input and executes with ES6 Proxy)
+node cli/stepdsa.js trace cli/sample_quicksort.stepdsa
 
-# Launch visualizer and load snapshot directly in the browser
+# Or trace Python / C++ source scripts
+node cli/stepdsa.js trace cli/sample_bubble_sort.py
+
+# Launch visualizer and load snapshot directly in the browser via Personal Code Studio!
 ```
 
 For full CLI documentation, see [docs/CLI.md](docs/CLI.md).

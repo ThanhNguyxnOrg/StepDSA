@@ -22,9 +22,18 @@ export function traceArrayExecution(
   rawInput: number[],
   options: TraceOptions = {}
 ): ExecutionFrame[] {
+  let effectiveInput = rawInput;
+  if (!effectiveInput || effectiveInput.length === 0) {
+    const match = code.match(/=\s*\[([\d\s,.-]+)\]/);
+    if (match && match[1]) {
+      const parsed = match[1].split(',').map(v => Number(v.trim())).filter(v => !isNaN(v));
+      if (parsed.length > 0) effectiveInput = parsed;
+    }
+  }
+
   const maxSteps = options.maxSteps ?? 500;
   const frames: ExecutionFrame[] = [];
-  const currentArray = [...rawInput];
+  const currentArray = [...(effectiveInput && effectiveInput.length > 0 ? effectiveInput : [10, 20, 30, 40])];
   let stepIndex = 0;
   let lastReadIdx: number | null = null;
 
@@ -126,7 +135,11 @@ export function traceArrayExecution(
 
   let hasErrorOrLimit = false;
   try {
-    const runner = new Function('input', code);
+    const sanitizedCode = code.replace(
+      /(?:const|let|var)\s+(arr|nums|input)\s*=\s*\[[\d\s,.-]*\];?/g,
+      'var $1 = input;'
+    );
+    const runner = new Function('input', `var arr = input; var nums = input;\n${sanitizedCode}`);
     runner(proxiedArray);
   } catch (err: any) {
     hasErrorOrLimit = true;

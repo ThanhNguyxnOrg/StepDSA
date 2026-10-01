@@ -86,10 +86,10 @@ export function createCustomAlgorithmModule(
  */
 export function adaptTraceSnapshotToModule(snapshotJson: string): AlgorithmModule {
   const parsed = JSON.parse(snapshotJson);
-  const meta = parsed.meta || {};
-  const frames: ExecutionFrame[] = parsed.frames || [];
+  const meta = parsed.meta || parsed.metadata || {};
+  const frames: ExecutionFrame[] = parsed.frames || parsed.steps || [];
 
-  const title = meta.title || meta.algorithm || 'CLI Trace Snapshot';
+  const title = meta.title || meta.algorithm || meta.sourceFile || 'CLI Trace Snapshot';
   const language = meta.language || 'typescript';
 
   const dummyParsedFile: StepDSAParsedFile = {
@@ -97,7 +97,7 @@ export function adaptTraceSnapshotToModule(snapshotJson: string): AlgorithmModul
       title,
       language,
     },
-    code: meta.sourceCode || `// Traced via StepDSA CLI\n// Algorithm: ${title}`,
+    code: parsed.sourceCode || meta.sourceCode || `// Traced via StepDSA CLI\n// Algorithm: ${title}`,
     rawContent: snapshotJson,
   };
 

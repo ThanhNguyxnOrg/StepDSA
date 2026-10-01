@@ -18,17 +18,37 @@ The StepDSA CLI allows competitive programmers, professors, and students to trac
 ## 🚀 Quick Usage
 
 ### 1. Author or Inspect a `.stepdsa` File
-Create a clean, human-readable algorithm file combining YAML frontmatter and unescaped code:
-```stepdsa
----
-title: Quick Sort (Lomuto Partition)
-language: typescript
-input: [45, 12, 89, 34, 21, 70]
-stage: array
----
-function quickSort(arr, low, high) {
-  // your custom algorithm code
+Create a clean, natural algorithm file using pure JavaScript/TypeScript (or Python/C++):
+```javascript
+// Quick Sort (Lomuto Partition)
+function partition(arr, low, high) {
+  const pivot = arr[high];
+  let i = low - 1;
+  for (let j = low; j < high; j++) {
+    if (arr[j] <= pivot) {
+      i++;
+      const temp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = temp;
+    }
+  }
+  const temp = arr[i + 1];
+  arr[i + 1] = arr[high];
+  arr[high] = temp;
+  return i + 1;
 }
+
+function quickSort(arr, low, high) {
+  if (low < high) {
+    const pi = partition(arr, low, high);
+    quickSort(arr, low, pi - 1);
+    quickSort(arr, pi + 1, high);
+  }
+  return arr;
+}
+
+const arr = [45, 12, 89, 34, 21, 70, 5, 60];
+quickSort(arr, 0, arr.length - 1);
 ```
 
 ### 2. Generate Deterministic Snapshots via CLI

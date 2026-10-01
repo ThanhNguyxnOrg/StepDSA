@@ -72,4 +72,37 @@ describe('tracer: traceArrayExecution', () => {
     expect(firstFrame.variables).toBeDefined();
     expect(firstFrame.soundCue).toBeDefined();
   });
+
+  it('traces pure code with local const arr declaration without frontmatter', () => {
+    const code = `
+      function partition(arr, low, high) {
+        const pivot = arr[high];
+        let i = low - 1;
+        for (let j = low; j < high; j++) {
+          if (arr[j] <= pivot) {
+            i++;
+            const temp = arr[i]; arr[i] = arr[j]; arr[j] = temp;
+          }
+        }
+        const temp = arr[i + 1]; arr[i + 1] = arr[high]; arr[high] = temp;
+        return i + 1;
+      }
+      function quickSort(arr, low, high) {
+        if (low < high) {
+          const pi = partition(arr, low, high);
+          quickSort(arr, low, pi - 1);
+          quickSort(arr, pi + 1, high);
+        }
+      }
+      const arr = [45, 12, 89, 34, 21, 70, 5, 60];
+      quickSort(arr, 0, arr.length - 1);
+    `;
+
+    // Passing empty input so it extracts from code literal
+    const frames = traceArrayExecution(code, []);
+    expect(frames.length).toBeGreaterThan(20);
+    const lastFrame = frames[frames.length - 1];
+    const finalValues = lastFrame.state.array.map((el: any) => el.value);
+    expect(finalValues).toEqual([5, 12, 21, 34, 45, 60, 70, 89]);
+  });
 });

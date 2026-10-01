@@ -25,18 +25,42 @@ export function formatToTitleCase(str: string): string {
  * to identify algorithm title, category, stage hint, and default testcases.
  */
 export function classifyAlgorithmPattern(code: string, explicitTitle?: string): ClassifiedPattern {
-  // 1. If explicit title provided in frontmatter, honor it directly
+  // Extract array literal from source code if present
+  let extractedArray: number[] | null = null;
+  const arrayMatch = code.match(/=\s*\[([\d\s,.-]+)\]/);
+  if (arrayMatch && arrayMatch[1]) {
+    const parsed = arrayMatch[1].split(',').map(v => Number(v.trim())).filter(v => !isNaN(v));
+    if (parsed.length > 0) extractedArray = parsed;
+  }
+
+  // 1. If explicit title provided in frontmatter or UI pill, honor it directly
   if (explicitTitle && explicitTitle.trim()) {
     return {
       title: explicitTitle.trim(),
       category: 'arrays-pointers',
       stageHint: 'array',
-      defaultInput: [10, 20, 30, 40],
+      defaultInput: extractedArray || [10, 20, 30, 40],
       confidence: 'high',
     };
   }
 
   const clean = code.toLowerCase();
+
+  // Pattern: Quick Sort
+  const isQuickSort =
+    clean.includes('quicksort') ||
+    clean.includes('quick_sort') ||
+    (clean.includes('partition') && (clean.includes('pivot') || clean.includes('low') || clean.includes('high')));
+
+  if (isQuickSort) {
+    return {
+      title: 'Quick Sort (Lomuto Partition)',
+      category: 'sorting',
+      stageHint: 'array',
+      defaultInput: extractedArray || [45, 12, 89, 34, 21, 70, 5, 60],
+      confidence: 'high',
+    };
+  }
 
   // Pattern A: Stack / Bracket Matching (LeetCode #20 Valid Parentheses, etc.)
   const isBracketMatching =

@@ -32,3 +32,6 @@ coverage
 .env
 .env.production
 .env.development
+
+# StepDSA CLI Output Artifacts
+*.stepdsa.json

@@ -125,6 +125,28 @@ describe('classifier: classifyAlgorithmPattern', () => {
     expect(result.title).toBe('Custom Monotonic Stack');
   });
 
+  it('detects Quick Sort Lomuto partition pattern and extracts array literal', () => {
+    const code = `
+      function partition(arr, low, high) {
+        const pivot = arr[high];
+        let i = low - 1;
+        for (let j = low; j < high; j++) {
+          if (arr[j] <= pivot) {
+            i++;
+            let temp = arr[i]; arr[i] = arr[j]; arr[j] = temp;
+          }
+        }
+        return i + 1;
+      }
+      const arr = [45, 12, 89, 34, 21, 70, 5, 60];
+    `;
+    const result = classifyAlgorithmPattern(code);
+    expect(result.title).toBe('Quick Sort (Lomuto Partition)');
+    expect(result.category).toBe('sorting');
+    expect(result.stageHint).toBe('array');
+    expect(result.defaultInput).toEqual([45, 12, 89, 34, 21, 70, 5, 60]);
+  });
+
   it('falls back to function name if no pattern matched', () => {
     const code = `function calculateGCD(a, b) { return b === 0 ? a : calculateGCD(b, a % b); }`;
     const result = classifyAlgorithmPattern(code);

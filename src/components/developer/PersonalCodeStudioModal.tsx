@@ -27,19 +27,15 @@ interface PersonalCodeStudioModalProps {
   onLoadCustomSnapshot?: (module: AlgorithmModule) => void;
 }
 
-const DEFAULT_SAMPLE_CODE = `---
-title: Custom Bubble Sort
-input: [64, 34, 25, 12, 22, 11, 90]
-stage: array
----
-// Write or paste any standard algorithm below.
-// The array 'input' is monitored automatically.
-for (let i = 0; i < input.length; i++) {
-  for (let j = 0; j < input.length - i - 1; j++) {
-    if (input[j] > input[j + 1]) {
-      const temp = input[j];
-      input[j] = input[j + 1];
-      input[j + 1] = temp;
+const DEFAULT_SAMPLE_CODE = `// Bubble Sort Algorithm
+const arr = [64, 34, 25, 12, 22, 11, 90];
+
+for (let i = 0; i < arr.length; i++) {
+  for (let j = 0; j < arr.length - i - 1; j++) {
+    if (arr[j] > arr[j + 1]) {
+      const temp = arr[j];
+      arr[j] = arr[j + 1];
+      arr[j + 1] = temp;
     }
   }
 }
@@ -289,7 +285,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
 
               <div className="text-[11px] text-slate-500 flex items-center justify-between px-1">
                 <span>
-                  Tip: Standard loops, conditionals, and reads/writes on <code className="text-indigo-400 font-mono">input</code> are traced automatically.
+                  Tip: Standard loops, conditionals, and reads/writes on <code className="text-indigo-400 font-mono">arr</code>, <code className="text-indigo-400 font-mono">nums</code>, or <code className="text-indigo-400 font-mono">input</code> are traced automatically.
                 </span>
                 <span>Max 500 step safety guard</span>
               </div>
