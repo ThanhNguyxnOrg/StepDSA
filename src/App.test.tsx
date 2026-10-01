@@ -55,4 +55,22 @@ describe('App Full Integration Smoke Test', () => {
     fireEvent.click(applyBtn);
     expect(screen.getByText(/Step 1\//i)).toBeInTheDocument();
   }, 20000);
+
+  it('runs custom code in Personal Code Studio and mounts custom module on Workbench', () => {
+    render(<App />);
+    const studioBtn = screen.getByText(/Launch CLI Studio/i);
+    fireEvent.click(studioBtn);
+
+    // Verify modal opened with Visualize button
+    const visualizeBtn = screen.getByText(/Visualize Algorithm/i);
+    expect(visualizeBtn).toBeInTheDocument();
+
+    // Click Visualize Algorithm
+    fireEvent.click(visualizeBtn);
+
+    // Modal should close and Workbench should mount the custom algorithm
+    expect(screen.getByTitle(/Reset to Start/i)).toBeInTheDocument();
+    expect(screen.getByTitle('Play (Space)')).toBeInTheDocument();
+    expect(screen.getByText(/Step 1\//i)).toBeInTheDocument();
+  }, 20000);
 });
