@@ -39,7 +39,9 @@
 
 ### 4. Personal Code Tracing & Local Runner (BYOC — Bring Your Own Code)
 
+* **`.stepdsa` File (Developer Algorithm Source File):** A dedicated, developer-authored algorithm document (e.g. `quicksort.stepdsa` or `graph_dfs.stepdsa`) where learners and engineers write their custom algorithm code, input fixtures, visual hints, and breakpoints in their language of choice.
 * **Local Tracing Engine (Tracer CLI):** A standalone developer tool executing strictly on the user's local machine that instruments algorithm code, records variable/pointer mutations, and outputs deterministic snapshots without cloud upload.
-* **Execution Snapshot (`.stepdsa.json`):** An immutable, language-agnostic JSON format encapsulating the step-by-step memory states, line numbers, call stack, and explanations of arbitrary developer code.
+* **Execution Snapshot (`.stepdsa.json`):** An immutable, language-agnostic JSON format encapsulating the step-by-step memory states, line numbers, call stack, variables, condition evaluations, and explanations of arbitrary developer code, bundled with the raw source code for synchronized playback.
 * **Local Bridge / Dev Streamer:** A lightweight local daemon (`ws://localhost:9123`) or drag-and-drop loader that pipes locally captured snapshots directly into the StepDSA web visualizer for time-travel playback.
-* **Universal Playback Adapter:** The web visualizer's modular rendering pipeline capable of dynamically detecting whether an execution snapshot represents arrays, linked lists, binary trees, or graphs, and binding it to the appropriate Stage.
+* **Universal Multi-Stage Adapter:** The visualizer's intelligent rendering router that inspects the memory schema of a custom trace (detecting 1D/2D arrays, linked node chains, tree parent-child pointers, or graph adjacency lists) and dynamically mounts the optimal visualization stage (`ArrayStage`, `TreeStage`, `GraphStage`, etc.) without manual UI reconfiguration.
+* **Embedded Source Code Synchronization:** Direct coupling between the original source lines written in the `.stepdsa` file and the step-by-step timeline frames, enabling the Code Inspector to highlight the executing statement in real time.
