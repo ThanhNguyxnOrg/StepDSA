@@ -23,8 +23,8 @@ describe('ArrayStage Component', () => {
   it('renders elements and toggles rainbow spectrum mode', () => {
     const state = {
       array: [
-        { id: 0, value: 10, status: 'normal' as const },
-        { id: 1, value: 50, status: 'normal' as const },
+        { id: 0, value: 10, status: 'default' as const },
+        { id: 1, value: 50, status: 'default' as const },
         { id: 2, value: 90, status: 'sorted' as const },
       ],
       pointers: { i: 0 },

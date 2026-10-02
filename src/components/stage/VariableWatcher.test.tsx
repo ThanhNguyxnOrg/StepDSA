@@ -10,7 +10,7 @@ describe('VariableWatcher Component with Delta Badges', () => {
       state: {},
     };
 
-    const { rerender } = render(<VariableWatcher frame={frame} />);
+    render(<VariableWatcher frame={frame} />);
     expect(screen.getByText('count')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.queryByText(/▲/)).toBeNull();

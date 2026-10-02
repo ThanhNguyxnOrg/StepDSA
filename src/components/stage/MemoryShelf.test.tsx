@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryShelf, extractAuxiliaryMemory } from './MemoryShelf';
-import { ExecutionFrame } from '../../core/types';
 
 describe('extractAuxiliaryMemory', () => {
   it('extracts map or seen variables from frame', () => {
