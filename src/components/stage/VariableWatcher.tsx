@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ExecutionFrame } from '../../core/types';
 import { Activity } from 'lucide-react';
 
@@ -7,14 +8,22 @@ interface VariableWatcherProps {
 }
 
 export const VariableWatcher: React.FC<VariableWatcherProps> = ({ frame }) => {
+  const prevValuesRef = React.useRef<Record<string, number>>({});
+  const lastStepIndexRef = React.useRef<number | null>(null);
+
   if (!frame) return null;
 
   // Extract variables: from explicit frame.variables, or derive from state
-  const derivedVars: { key: string; value: string | number; color?: string }[] = [];
+  const derivedVars: { key: string; value: string | number; rawNumeric?: number; color?: string }[] = [];
 
   if (frame.variables && Object.keys(frame.variables).length > 0) {
     Object.entries(frame.variables).forEach(([k, v]) => {
-      derivedVars.push({ key: k, value: String(v) });
+      // Exclude large object structures (like maps/sets handled by MemoryShelf)
+      if (typeof v === 'number') {
+        derivedVars.push({ key: k, value: v, rawNumeric: v });
+      } else if (typeof v === 'string' || typeof v === 'boolean') {
+        derivedVars.push({ key: k, value: String(v) });
+      }
     });
   } else if (frame.state) {
     const s = frame.state as any;
@@ -34,6 +43,7 @@ export const VariableWatcher: React.FC<VariableWatcherProps> = ({ frame }) => {
           derivedVars.push({
             key: name,
             value: `${idx}${valSuffix}`,
+            rawNumeric: idx,
             color,
           });
         }
@@ -41,23 +51,23 @@ export const VariableWatcher: React.FC<VariableWatcherProps> = ({ frame }) => {
     }
 
     // 2. Target or auxiliary metrics
-    if (s.target !== undefined) {
-      derivedVars.unshift({ key: 'target', value: s.target, color: 'amber' });
+    if (s.target !== undefined && typeof s.target === 'number') {
+      derivedVars.unshift({ key: 'target', value: s.target, rawNumeric: s.target, color: 'amber' });
     }
-    if (s.k !== undefined) {
-      derivedVars.push({ key: 'k', value: s.k, color: 'blue' });
+    if (s.k !== undefined && typeof s.k === 'number') {
+      derivedVars.push({ key: 'k', value: s.k, rawNumeric: s.k, color: 'blue' });
     }
-    if (s.windowSum !== undefined) {
-      derivedVars.push({ key: 'windowSum', value: s.windowSum, color: 'cyan' });
+    if (s.windowSum !== undefined && typeof s.windowSum === 'number') {
+      derivedVars.push({ key: 'windowSum', value: s.windowSum, rawNumeric: s.windowSum, color: 'cyan' });
     }
-    if (s.maxSum !== undefined) {
-      derivedVars.push({ key: 'maxSum', value: s.maxSum, color: 'emerald' });
+    if (s.maxSum !== undefined && typeof s.maxSum === 'number') {
+      derivedVars.push({ key: 'maxSum', value: s.maxSum, rawNumeric: s.maxSum, color: 'emerald' });
     }
-    if (s.currentArea !== undefined) {
-      derivedVars.push({ key: 'area', value: s.currentArea, color: 'cyan' });
+    if (s.currentArea !== undefined && typeof s.currentArea === 'number') {
+      derivedVars.push({ key: 'area', value: s.currentArea, rawNumeric: s.currentArea, color: 'cyan' });
     }
-    if (s.maxArea !== undefined) {
-      derivedVars.push({ key: 'maxArea', value: s.maxArea, color: 'emerald' });
+    if (s.maxArea !== undefined && typeof s.maxArea === 'number') {
+      derivedVars.push({ key: 'maxArea', value: s.maxArea, rawNumeric: s.maxArea, color: 'emerald' });
     }
 
     // 3. Graph traversal / Queue
@@ -77,6 +87,43 @@ export const VariableWatcher: React.FC<VariableWatcherProps> = ({ frame }) => {
       derivedVars.unshift({ key: 'inserting', value: s.insertingValue, color: 'amber' });
     }
   }
+
+  // Calculate numeric deltas across adjacent steps
+  const currentNumericValues: Record<string, number> = {};
+  derivedVars.forEach((item) => {
+    if (typeof item.rawNumeric === 'number' && !Number.isNaN(item.rawNumeric)) {
+      currentNumericValues[item.key] = item.rawNumeric;
+    } else if (typeof item.value === 'number' && !Number.isNaN(item.value)) {
+      currentNumericValues[item.key] = item.value;
+    } else if (typeof item.value === 'string' && /^-?\d+(\.\d+)?$/.test(item.value.trim())) {
+      const parsed = Number(item.value.trim());
+      if (!Number.isNaN(parsed)) {
+        currentNumericValues[item.key] = parsed;
+      }
+    }
+  });
+
+  const deltas: Record<string, { delta: number; text: string }> = {};
+  if (lastStepIndexRef.current !== null && frame.stepIndex !== lastStepIndexRef.current) {
+    if (Math.abs(frame.stepIndex - lastStepIndexRef.current) <= 2) {
+      Object.entries(currentNumericValues).forEach(([key, curVal]) => {
+        const prevVal = prevValuesRef.current[key];
+        if (prevVal !== undefined && prevVal !== curVal) {
+          const diff = curVal - prevVal;
+          deltas[key] = {
+            delta: diff,
+            text: diff > 0 ? `▲ +${diff}` : `▼ ${diff}`,
+          };
+        }
+      });
+    }
+  }
+
+  // Synchronize ref on every render cycle
+  React.useEffect(() => {
+    prevValuesRef.current = currentNumericValues;
+    lastStepIndexRef.current = frame.stepIndex;
+  });
 
   if (derivedVars.length === 0) return null;
 
@@ -111,6 +158,8 @@ export const VariableWatcher: React.FC<VariableWatcherProps> = ({ frame }) => {
             valColor = 'text-emerald-200';
           }
 
+          const deltaInfo = deltas[item.key];
+
           return (
             <div
               key={`${item.key}-${idx}`}
@@ -119,6 +168,24 @@ export const VariableWatcher: React.FC<VariableWatcherProps> = ({ frame }) => {
               <span className={`font-semibold ${keyColor}`}>{item.key}</span>
               <span className="text-slate-500">=</span>
               <span className={`font-bold ${valColor}`}>{item.value}</span>
+
+              {/* Live Variable Delta Badge */}
+              <AnimatePresence>
+                {deltaInfo && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.7, y: 2 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className={`ml-1 px-1 py-0.2 rounded text-[9px] font-mono font-bold leading-none select-none ${
+                      deltaInfo.delta > 0
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-xs'
+                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-xs'
+                    }`}
+                  >
+                    {deltaInfo.text}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}
