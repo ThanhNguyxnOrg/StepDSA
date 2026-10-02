@@ -65,7 +65,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
   onClose,
   onLoadCustomSnapshot,
 }) => {
-  const [activeTab, setActiveTab] = useState<'editor' | 'upload' | 'cli'>('cli');
+  const [activeTab, setActiveTab] = useState<'editor' | 'upload' | 'cli'>('editor');
   const [selectedLang, setSelectedLang] = useState<'javascript' | 'python'>('javascript');
   const [codeContent, setCodeContent] = useState<string>(JS_SAMPLE_CODE);
   const [testcaseInput, setTestcaseInput] = useState<string>('3');
@@ -225,17 +225,6 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
             {/* Tab Switcher */}
             <div className="flex items-center gap-1 bg-[#131D31] p-1 rounded-xl border border-slate-800">
               <button
-                onClick={() => setActiveTab('cli')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  activeTab === 'cli'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Terminal className="w-3.5 h-3.5" />
-                <span>CLI Quickstart</span>
-              </button>
-              <button
                 onClick={() => setActiveTab('editor')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                   activeTab === 'editor'
@@ -244,7 +233,18 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 }`}
               >
                 <FileCode className="w-3.5 h-3.5" />
-                <span>Code Editor</span>
+                <span>Code Editor (JS & Python)</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('cli')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === 'cli'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>CLI Quickstart (C++)</span>
               </button>
               <button
                 onClick={() => setActiveTab('upload')}
@@ -302,26 +302,28 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
               <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#131D31] border border-slate-800">
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Language Selector */}
-                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                  <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
                     <button
                       onClick={() => handleLanguageSwitch('javascript')}
-                      className={`px-2.5 py-1 rounded text-xs font-semibold font-mono transition-all ${
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold font-mono transition-all flex items-center gap-1.5 ${
                         selectedLang === 'javascript'
                           ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      JS / TS
+                      <span className="w-2 h-2 rounded-full bg-amber-400" />
+                      <span>JS / TS</span>
                     </button>
                     <button
                       onClick={() => handleLanguageSwitch('python')}
-                      className={`px-2.5 py-1 rounded text-xs font-semibold font-mono transition-all ${
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold font-mono transition-all flex items-center gap-1.5 ${
                         selectedLang === 'python'
-                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm'
+                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm ring-1 ring-blue-500/30'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      Python (WASM)
+                      <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                      <span>Python (Pyodide WASM)</span>
                     </button>
                   </div>
 

@@ -23,7 +23,7 @@
 
 **Interactive Textbook** &nbsp;•&nbsp; **Deterministic Step Visualizer** &nbsp;•&nbsp; **Multi-Language Inspector** &nbsp;•&nbsp; **DSA Playground**
 
-[🌐 Live Web Demo](https://ThanhNguyxnOrg.github.io/StepDSA/) · [📖 Master Curriculum (162 Modules)](docs/MASTER_CURRICULUM.md) · [🏗️ Architecture Spec](ARCHITECTURE.md) · [💻 CLI Guide](docs/CLI.md) · [🐛 Report Bug](.github/ISSUE_TEMPLATE/bug_report.yml)
+[🌐 Live Web Demo](https://ThanhNguyxnOrg.github.io/StepDSA/) · [📖 Master Curriculum (162 Modules)](docs/MASTER_CURRICULUM.md) · [🏗️ Architecture Spec](docs/ARCHITECTURE.md) · [💻 CLI Guide](docs/CLI.md) · [🎨 Studio Guide](docs/STUDIO_GUIDE.md) · [🐛 Report Bug](.github/ISSUE_TEMPLATE/bug_report.yml)
 
 </div>
 
