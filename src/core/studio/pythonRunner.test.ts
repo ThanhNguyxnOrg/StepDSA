@@ -59,7 +59,17 @@ class Solution:
     expect(frames[0].codeLine).toBe(3);
     expect(frames[0].callStack).toEqual(['twoSum(line=3)']);
     expect(frames[0].state.array.map((x: any) => x.value)).toEqual([2, 7, 11, 15]);
+
+    // Check pointer extraction and element highlighting in step 1
+    expect(frames[1].state.pointers).toEqual({ i: 0 });
+    expect(frames[1].state.array[0].status).toBe('comparing');
+    expect(frames[1].state.array[1].status).toBe('default');
+
+    // Check final frame highlights return value indices [0, 1] as sorted (emerald green)
     expect(frames[2].explanation).toContain('Return value: [0, 1]');
+    expect(frames[2].state.array[0].status).toBe('sorted');
+    expect(frames[2].state.array[1].status).toBe('sorted');
+    expect(frames[2].state.array[2].status).toBe('default');
   });
 
   it('handles execution errors gracefully', async () => {
