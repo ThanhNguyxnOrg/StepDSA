@@ -42,4 +42,28 @@ describe('StepperControls Milestone Bookmarks', () => {
     fireEvent.click(milestonePins[1]);
     expect(mockController.seekTo).toHaveBeenCalledWith(3);
   });
+
+  it('renders auto-pacing toggle and fires toggleAutoPacing on click', () => {
+    const toggleAutoPacing = vi.fn();
+    const controllerWithAutoPace = {
+      ...mockController,
+      isAutoPacing: true,
+      toggleAutoPacing,
+    };
+
+    render(
+      <StepperControls
+        controller={controllerWithAutoPace}
+        currentFrame={timelineWithMilestones[0]}
+        timeline={timelineWithMilestones}
+      />
+    );
+
+    const autoPaceBtn = screen.getByRole('button', { name: /auto-pace/i });
+    expect(autoPaceBtn).toBeInTheDocument();
+    expect(autoPaceBtn).toHaveClass('text-amber-300');
+
+    fireEvent.click(autoPaceBtn);
+    expect(toggleAutoPacing).toHaveBeenCalledTimes(1);
+  });
 });

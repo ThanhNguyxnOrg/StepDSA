@@ -9,6 +9,7 @@ import {
   RotateCcw,
   FastForward,
   Bookmark,
+  Zap,
 } from 'lucide-react';
 import { PlaybackController, ExecutionFrame } from '../../core/types';
 
@@ -216,8 +217,28 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
           )}
         </div>
 
-        {/* Right: Speed Toggle */}
+        {/* Right: Auto-Pacing & Speed Toggle */}
         <div className="flex items-center gap-2">
+          {controller.toggleAutoPacing && (
+            <button
+              type="button"
+              onClick={controller.toggleAutoPacing}
+              title={
+                controller.isAutoPacing
+                  ? 'Auto-Pacing ON (Smart acceleration & decel pauses on swaps)'
+                  : 'Auto-Pacing OFF (Constant playback speed)'
+              }
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all border cursor-pointer ${
+                controller.isAutoPacing
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm shadow-amber-500/10'
+                  : 'bg-[#1F2937] border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Zap className={`w-3.5 h-3.5 ${controller.isAutoPacing ? 'text-amber-400 fill-amber-400/30' : 'text-slate-500'}`} />
+              <span className="hidden sm:inline">Auto-Pace</span>
+            </button>
+          )}
+
           <button
             onClick={handleSpeedCycle}
             title="Playback Speed"

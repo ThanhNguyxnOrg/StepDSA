@@ -145,4 +145,6 @@ export interface PlaybackController {
   seekTo: (step: number) => void;
   setSpeed: (multiplier: number) => void;
   reset: () => void;
+  isAutoPacing?: boolean;
+  toggleAutoPacing?: () => void;
 }

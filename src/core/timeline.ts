@@ -2,6 +2,33 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ExecutionFrame, PlaybackController } from './types';
 
 /**
+ * Calculates adaptive delay for smart auto-pacing.
+ * Decelerates decisive milestones and swaps; accelerates repetitive scanning loops.
+ */
+export function calculateAdaptiveDelay(
+  frame: ExecutionFrame | null,
+  baseDelayMs: number,
+  isAutoPacing: boolean
+): number {
+  if (!isAutoPacing || !frame) return baseDelayMs;
+
+  const isDecisive =
+    (typeof frame.action === 'string' && frame.action.toLowerCase().includes('swap')) ||
+    frame.soundCue === 'swap' ||
+    (typeof frame.soundCue === 'object' && frame.soundCue?.type === 'swap') ||
+    Boolean(frame.isMilestone) ||
+    frame.milestoneTitle !== undefined;
+
+  // Decisive events decelerate (+50% delay + 150ms buffer)
+  if (isDecisive) {
+    return Math.round(baseDelayMs * 1.5 + 150);
+  }
+
+  // Fast forward repetitive scans
+  return Math.max(60, Math.round(baseDelayMs * 0.7));
+}
+
+/**
  * Normalizes an array of raw execution frames, guaranteeing 0-based indices and totalSteps count.
  */
 export function normalizeTimeline<TState>(rawFrames: Omit<ExecutionFrame<TState>, 'stepIndex' | 'totalSteps'>[]): ExecutionFrame<TState>[] {
@@ -33,6 +60,7 @@ export function useTimelinePlayback(frames: ExecutionFrame[]): PlaybackControlle
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [speed, setSpeed] = useState<number>(1); // 0.25, 0.5, 1, 1.5, 2
+  const [isAutoPacing, setIsAutoPacing] = useState<boolean>(true); // Smart Auto-Pacing on by default
   const timerRef = useRef<number | null>(null);
 
   const totalSteps = frames.length;
@@ -104,7 +132,11 @@ export function useTimelinePlayback(frames: ExecutionFrame[]): PlaybackControlle
     setCurrentStep(0);
   }, [pause]);
 
-  // Playback timer loop
+  const toggleAutoPacing = useCallback(() => {
+    setIsAutoPacing((prev) => !prev);
+  }, []);
+
+  // Playback timer loop with smart auto-pacing
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -113,8 +145,8 @@ export function useTimelinePlayback(frames: ExecutionFrame[]): PlaybackControlle
       return;
     }
 
-    const baseDelayMs = 600;
-    const delay = Math.max(80, Math.round(baseDelayMs / speed));
+    const baseDelayMs = Math.max(80, Math.round(600 / speed));
+    const delay = calculateAdaptiveDelay(currentFrame, baseDelayMs, isAutoPacing);
 
     timerRef.current = window.setTimeout(() => {
       setCurrentStep((prev) => {
@@ -131,7 +163,7 @@ export function useTimelinePlayback(frames: ExecutionFrame[]): PlaybackControlle
         window.clearTimeout(timerRef.current);
       }
     };
-  }, [isPlaying, currentStep, totalSteps, speed]);
+  }, [isPlaying, currentStep, totalSteps, speed, currentFrame, isAutoPacing]);
 
   return {
     currentStep,
@@ -148,5 +180,7 @@ export function useTimelinePlayback(frames: ExecutionFrame[]): PlaybackControlle
     seekTo,
     setSpeed,
     reset,
+    isAutoPacing,
+    toggleAutoPacing,
   };
 }

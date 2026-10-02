@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTimeline } from './timeline';
+import { normalizeTimeline, calculateAdaptiveDelay } from './timeline';
 
 describe('normalizeTimeline', () => {
   it('returns a fallback 1-step timeline when given empty array', () => {
@@ -22,5 +22,26 @@ describe('normalizeTimeline', () => {
     expect(timeline[0].totalSteps).toBe(3);
     expect(timeline[1].stepIndex).toBe(1);
     expect(timeline[2].stepIndex).toBe(2);
+  });
+});
+
+describe('calculateAdaptiveDelay', () => {
+  it('returns baseDelayMs unchanged when isAutoPacing is false', () => {
+    const frame: any = { action: 'swap', soundCue: 'swap' };
+    expect(calculateAdaptiveDelay(frame, 600, false)).toBe(600);
+  });
+
+  it('decelerates (increases delay) on decisive swap action or milestone', () => {
+    const swapFrame: any = { action: 'swap elements', isMilestone: false };
+    const milestoneFrame: any = { isMilestone: true, milestoneTitle: 'Partition done' };
+    const normalFrame: any = { action: 'comparing', isMilestone: false };
+
+    const swapDelay = calculateAdaptiveDelay(swapFrame, 600, true);
+    const milestoneDelay = calculateAdaptiveDelay(milestoneFrame, 600, true);
+    const normalDelay = calculateAdaptiveDelay(normalFrame, 600, true);
+
+    expect(swapDelay).toBeGreaterThan(600);
+    expect(milestoneDelay).toBeGreaterThan(600);
+    expect(normalDelay).toBeLessThan(600); // accelerates scan loops
   });
 });
