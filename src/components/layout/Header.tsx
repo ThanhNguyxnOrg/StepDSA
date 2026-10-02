@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Volume2, VolumeX, Compass, ChevronDown, LayoutDashboard, Info, Terminal } from 'lucide-react';
-import { AlgorithmModule, AlgorithmCategory } from '../../core/types';
+import { AlgorithmModule } from '../../core/types';
 import { StepDSALogo } from '../brand/StepDSALogo';
+import { AlgorithmCommandPaletteModal } from '../navigation/AlgorithmCommandPaletteModal';
 
 interface HeaderProps {
   currentView: 'dashboard' | 'visualizer';
@@ -26,37 +27,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAbout,
   onOpenPersonalStudio,
 }) => {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
-  const categories: Record<AlgorithmCategory, AlgorithmModule[]> = {
-    'sorting': [],
-    'searching': [],
-    'arrays-pointers': [],
-    'trees-bst': [],
-    'graphs': [],
-    'dynamic-programming': [],
-    'linked-lists': [],
-    'math': [],
-    'stack-queue': [],
-  };
-
-  modules.forEach((mod) => {
-    if (categories[mod.category]) {
-      categories[mod.category].push(mod);
-    }
-  });
-
-  const categoryLabels: Record<AlgorithmCategory, string> = {
-    'sorting': 'Sorting Algorithms',
-    'searching': 'Searching & Halving',
-    'arrays-pointers': 'Two Pointers & Arrays',
-    'trees-bst': 'Trees & BST',
-    'graphs': 'Graph Algorithms',
-    'dynamic-programming': 'Dynamic Programming',
-    'linked-lists': 'Linked Lists',
-    'math': 'Math & Number Theory',
-    'stack-queue': 'Stacks & Queues',
-  };
+  // Clean primary title without cluttered parentheses for compact header
+  const cleanTitle = currentModule.title.split('(')[0].trim();
 
   return (
     <header className="h-16 border-b border-[#1F293D] bg-[#0B0F19]/90 backdrop-blur-md sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between">
@@ -98,59 +72,24 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* If in Visualizer, show Algorithm Selector Dropdown & 2.5D toggle */}
+        {/* If in Visualizer, show Algorithm Quick Switcher with Command Palette */}
         {currentView === 'visualizer' && (
-          <>
-            <div className="relative">
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111827] border border-[#1F293D] hover:border-[#10B981]/50 text-xs sm:text-sm font-medium transition-colors text-slate-200 hover:text-white"
-              >
-                <Compass className="w-4 h-4 text-[#10B981]" />
-                <span className="max-w-[140px] sm:max-w-[200px] truncate">{currentModule.title}</span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {dropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                  <div className="absolute right-0 sm:left-0 mt-2 w-72 rounded-xl bg-[#111827] border border-[#1F293D] shadow-2xl p-2 z-50 max-h-[75vh] overflow-y-auto">
-                    {Object.entries(categories).map(([catKey, catMods]) => {
-                      if (catMods.length === 0) return null;
-                      return (
-                        <div key={catKey} className="mb-2 last:mb-0">
-                          <div className="px-2.5 py-1 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-                            {categoryLabels[catKey as AlgorithmCategory]}
-                          </div>
-                          <div className="space-y-0.5">
-                            {catMods.map((mod) => (
-                              <button
-                                key={mod.id}
-                                onClick={() => {
-                                  onSelectModule(mod);
-                                  setDropdownOpen(false);
-                                }}
-                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
-                                  currentModule.id === mod.id
-                                    ? 'bg-[#10B981]/20 text-[#10B981] font-semibold'
-                                    : 'text-slate-300 hover:bg-[#1F2937] hover:text-white'
-                                }`}
-                              >
-                                <span className="truncate pr-2">{mod.title}</span>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#1F293D] text-slate-400 shrink-0">
-                                  {mod.difficulty}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          </>
+          <div className="relative">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111827] border border-[#1F293D] hover:border-[#10B981]/50 text-xs sm:text-sm font-medium transition-colors text-slate-200 hover:text-white group"
+              title="Click or press ⌘K / Ctrl+K to search and switch algorithms"
+            >
+              <Compass className="w-4 h-4 text-[#10B981] group-hover:rotate-45 transition-transform" />
+              <span className="max-w-[130px] sm:max-w-[190px] truncate font-bold text-white">
+                {cleanTitle}
+              </span>
+              <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800/80 text-slate-400 border border-slate-700">
+                ⌘K
+              </kbd>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+            </button>
+          </div>
         )}
 
         {/* Sound Toggle */}
@@ -196,6 +135,15 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden lg:inline">GitHub</span>
         </a>
       </div>
+
+      {/* Algorithm Command Palette Modal (⌘K Quick Switcher) */}
+      <AlgorithmCommandPaletteModal
+        isOpen={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        modules={modules}
+        currentModule={currentModule}
+        onSelectModule={onSelectModule}
+      />
     </header>
   );
 };

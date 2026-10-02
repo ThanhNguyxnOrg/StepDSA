@@ -65,7 +65,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
   onClose,
   onLoadCustomSnapshot,
 }) => {
-  const [activeTab, setActiveTab] = useState<'editor' | 'upload' | 'cli'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'cli'>('editor');
   const [selectedLang, setSelectedLang] = useState<'javascript' | 'python'>('javascript');
   const [codeContent, setCodeContent] = useState<string>(JS_SAMPLE_CODE);
   const [testcaseInput, setTestcaseInput] = useState<string>('3');
@@ -246,17 +246,6 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 <Terminal className="w-3.5 h-3.5" />
                 <span>CLI Quickstart (C++)</span>
               </button>
-              <button
-                onClick={() => setActiveTab('upload')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  activeTab === 'upload'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Drop Snapshot</span>
-              </button>
             </div>
 
             <button
@@ -295,9 +284,22 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
             </div>
           )}
 
-          {/* TAB 1: CODE EDITOR & RUNNER */}
+          {/* TAB 1: CODE EDITOR & RUNNER (With Seamless Drag-and-Drop) */}
           {activeTab === 'editor' && (
-            <div className="space-y-4">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(e) => {
+                setDragActive(false);
+                handleFileDrop(e);
+              }}
+              className={`space-y-4 rounded-xl transition-all ${
+                dragActive ? 'ring-2 ring-indigo-500 bg-indigo-500/5 p-2' : ''
+              }`}
+            >
               {/* Header Action Bar with Smart Title Pill and Language Toggle */}
               <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#131D31] border border-slate-800">
                 <div className="flex flex-wrap items-center gap-2">
@@ -359,19 +361,41 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                   </span>
                 </div>
 
-                <button
-                  onClick={handleRunAlgorithm}
-                  disabled={isRunning}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-xs shadow-lg shadow-emerald-600/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none transition-all"
-                >
-                  {isRunning ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                  )}
-                  <span>{isRunning ? 'Tracing...' : 'Visualize Algorithm'}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".stepdsa,.json,.cpp,.py,.js,.ts"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        processSelectedFile(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all"
+                    title="Import local .py, .js, .cpp, .stepdsa, or .json file"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Import File</span>
+                  </button>
+
+                  <button
+                    onClick={handleRunAlgorithm}
+                    disabled={isRunning}
+                    className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-xs shadow-lg shadow-emerald-600/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none transition-all"
+                  >
+                    {isRunning ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                    )}
+                    <span>{isRunning ? 'Tracing...' : 'Visualize Algorithm'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               {/* Language Alert Banner for C++ Code */}
@@ -450,49 +474,6 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                   Tip: Functions and LeetCode <code className="text-indigo-400 font-mono">class Solution</code> methods are automatically invoked with your Testcase Input.
                 </span>
                 <span>Max 300 step safety guard</span>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: UPLOAD & DRAG DROP */}
-          {activeTab === 'upload' && (
-            <div className="space-y-4">
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragActive(true);
-                }}
-                onDragLeave={() => setDragActive(false)}
-                onDrop={handleFileDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`p-10 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center text-center gap-3 cursor-pointer ${
-                  dragActive
-                    ? 'border-indigo-500 bg-indigo-500/10'
-                    : 'border-slate-800 bg-[#0B0F19]/50 hover:border-slate-700'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".stepdsa,.json,.cpp,.py,.js,.ts"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      processSelectedFile(e.target.files[0]);
-                    }
-                  }}
-                />
-                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-1">
-                  <Upload className="w-7 h-7" />
-                </div>
-                <div>
-                  <h4 className="text-base font-semibold text-white">
-                    Drop your <code className="text-indigo-300 font-mono">*.stepdsa</code>, <code className="text-cyan-300 font-mono">*.json</code>, or code file here
-                  </h4>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Or click anywhere in this box to browse local files on your computer
-                  </p>
-                </div>
               </div>
             </div>
           )}
