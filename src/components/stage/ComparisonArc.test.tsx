@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calculateArcHeight, calculateArcPath } from './ComparisonArc';
+import { render, screen } from '@testing-library/react';
+import { ComparisonArc, calculateArcHeight, calculateArcPath } from './ComparisonArc';
 
 describe('calculateArcHeight', () => {
   it('scales height with distance and enforces ceiling', () => {
@@ -26,5 +27,10 @@ describe('calculateArcPath', () => {
     expect(path).toContain('M 50');
     expect(path).toContain('Q 125');
     expect(path).toContain('200');
+  });
+
+  it('renders ComparisonArc component', () => {
+    render(<ComparisonArc x1={50} x2={200} distance={2} status="comparing" label="20 < 40" />);
+    expect(screen.getByTestId('comparison-arc')).toBeInTheDocument();
   });
 });

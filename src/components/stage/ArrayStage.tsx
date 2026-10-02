@@ -33,6 +33,8 @@ export interface ArrayStageState {
   action?: string;
 }
 
+const EMPTY_POINTERS: Record<string, number> = {};
+
 interface ArrayStageProps {
   state: ArrayStageState;
   projection: '2d' | 'isometric';
@@ -51,7 +53,9 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
   conditionEval: propConditionEval,
   action: propAction,
 }) => {
-  const { array: rawArray = [], pointers = {}, discardedRange } = state;
+  const rawArray = state.array || [];
+  const pointers = state.pointers || EMPTY_POINTERS;
+  const discardedRange = state.discardedRange;
   const activeConditionEval = propConditionEval || state.conditionEval;
   const activeAction = propAction || state.action;
 
@@ -127,7 +131,7 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
     updateCoords();
     window.addEventListener('resize', updateCoords);
     return () => window.removeEventListener('resize', updateCoords);
-  }, [array, activePair?.idx1, activePair?.idx2, activePair?.status]);
+  }, [array.length, activePair?.idx1, activePair?.idx2, activePair?.status]);
 
   if (array.length === 0) {
     return (
