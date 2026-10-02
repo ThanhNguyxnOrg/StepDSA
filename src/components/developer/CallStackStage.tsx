@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ExecutionFrame } from '../../core/types';
-import { Layers, ArrowDown } from 'lucide-react';
+import { Layers } from 'lucide-react';
 
 interface CallStackStageProps {
   frame: ExecutionFrame | null;

@@ -12,11 +12,15 @@ import {
   FileCode,
   AlertCircle,
   ExternalLink,
+  Loader2,
+  Cpu,
 } from 'lucide-react';
-import { AlgorithmModule } from '../../core/types';
+import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 import { parseStepDSAFile } from '../../core/studio/parser';
 import { classifyAlgorithmPattern, detectSourceLanguage } from '../../core/studio/classifier';
 import { traceArrayExecution } from '../../core/studio/tracer';
+import { traceJavaScriptExecution } from '../../core/studio/jsTracer';
+import { tracePythonExecution } from '../../core/studio/pythonRunner';
 import {
   createCustomAlgorithmModule,
   adaptTraceSnapshotToModule,
@@ -28,18 +32,32 @@ interface PersonalCodeStudioModalProps {
   onLoadCustomSnapshot?: (module: AlgorithmModule) => void;
 }
 
-const DEFAULT_SAMPLE_CODE = `// Bubble Sort Algorithm
-const arr = [64, 34, 25, 12, 22, 11, 90];
-
-for (let i = 0; i < arr.length; i++) {
-  for (let j = 0; j < arr.length - i - 1; j++) {
-    if (arr[j] > arr[j + 1]) {
-      const temp = arr[j];
-      arr[j] = arr[j + 1];
-      arr[j + 1] = temp;
+const JS_SAMPLE_CODE = `// LeetCode: Generate Parentheses (Recursion & Backtracking)
+const generateParenthesis = function(n) {
+  const res = [];
+  const dfs = (open, close, s) => {
+    if (!open && !close) {
+      res.push(s);
+      return;
     }
-  }
-}
+    if (open > 0) dfs(open - 1, close, s + "(");
+    if (close > open) dfs(open, close - 1, s + ")");
+  };
+  dfs(n, n, "");
+  return res;
+};
+`;
+
+const PYTHON_SAMPLE_CODE = `# LeetCode: Two Sum (Hash Map Lookup)
+class Solution:
+    def twoSum(self, nums: list[int], target: int) -> list[int]:
+        lookup = {}
+        for i, num in enumerate(nums):
+            diff = target - num
+            if diff in lookup:
+                return [lookup[diff], i]
+            lookup[num] = i
+        return []
 `;
 
 export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = ({
@@ -48,11 +66,15 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
   onLoadCustomSnapshot,
 }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'upload' | 'cli'>('cli');
-  const [codeContent, setCodeContent] = useState<string>(DEFAULT_SAMPLE_CODE);
+  const [selectedLang, setSelectedLang] = useState<'javascript' | 'python'>('javascript');
+  const [codeContent, setCodeContent] = useState<string>(JS_SAMPLE_CODE);
+  const [testcaseInput, setTestcaseInput] = useState<string>('3');
   const [customTitle, setCustomTitle] = useState<string>('');
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,24 +91,53 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
 
   if (!isOpen) return null;
 
-  const handleRunAlgorithm = () => {
+  const handleLanguageSwitch = (lang: 'javascript' | 'python') => {
+    setSelectedLang(lang);
     setErrorMessage(null);
-
-    if (detectedLang !== 'javascript') {
-      const langName = detectedLang === 'cpp' ? 'C++' : detectedLang === 'python' ? 'Python' : 'Java';
-      setErrorMessage(
-        `Cannot execute ${langName} directly in browser sandbox. The Web Editor runs JavaScript/TypeScript client-side. To visualize ${langName}, run it via CLI: "stepdsa run <file>" or convert your solution to JavaScript syntax.`
-      );
-      return;
+    if (lang === 'python') {
+      setCodeContent(PYTHON_SAMPLE_CODE);
+      setTestcaseInput('[2, 7, 11, 15], 9');
+    } else {
+      setCodeContent(JS_SAMPLE_CODE);
+      setTestcaseInput('3');
     }
+  };
+
+  const handleRunAlgorithm = async () => {
+    setErrorMessage(null);
+    setIsRunning(true);
+    setStatusMessage(null);
 
     try {
-      const inputFixture = parsedFile.metadata.input ?? classifiedPattern.defaultInput;
-      const rawArray = Array.isArray(inputFixture) ? inputFixture : [10, 20, 30, 40];
+      if (detectedLang === 'cpp') {
+        setErrorMessage(
+          'C++ requires local compilation with g++/clang++. Run "stepdsa run solution.cpp" in your terminal to trace and visualize in 1 click!'
+        );
+        setIsRunning(false);
+        return;
+      }
 
-      const frames = traceArrayExecution(parsedFile.code, rawArray);
-      if (frames.length === 0) {
-        setErrorMessage('Execution emitted 0 steps. Ensure your code operates on "input".');
+      let frames: ExecutionFrame[] = [];
+
+      if (selectedLang === 'python' || detectedLang === 'python') {
+        frames = await tracePythonExecution(codeContent, testcaseInput, {
+          onStatus: (msg) => setStatusMessage(msg),
+        });
+      } else {
+        // Try JS Function Tracer first (LeetCode style)
+        try {
+          frames = traceJavaScriptExecution(codeContent, testcaseInput);
+        } catch {
+          // Fallback to legacy array tracer for imperative scripts
+          const inputFixture = parsedFile.metadata.input ?? classifiedPattern.defaultInput;
+          const rawArray = Array.isArray(inputFixture) ? inputFixture : [10, 20, 30, 40];
+          frames = traceArrayExecution(parsedFile.code, rawArray);
+        }
+      }
+
+      if (!frames || frames.length === 0) {
+        setErrorMessage('Execution emitted 0 steps. Ensure your code executes or returns statements.');
+        setIsRunning(false);
         return;
       }
 
@@ -96,7 +147,10 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
       }
       onClose();
     } catch (err: any) {
-      setErrorMessage(`Execution error: ${err.message || String(err)}`);
+      setErrorMessage(err.message || String(err));
+    } finally {
+      setIsRunning(false);
+      setStatusMessage(null);
     }
   };
 
@@ -126,8 +180,13 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
           setErrorMessage(`Invalid .stepdsa.json snapshot: ${err.message}`);
         }
       } else {
-        // It is a .stepdsa text file
+        // It is a .stepdsa or source text file
         setCodeContent(text);
+        if (file.name.endsWith('.py')) {
+          setSelectedLang('python');
+        } else if (file.name.endsWith('.js') || file.name.endsWith('.ts')) {
+          setSelectedLang('javascript');
+        }
         setActiveTab('editor');
       }
     };
@@ -185,7 +244,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 }`}
               >
                 <FileCode className="w-3.5 h-3.5" />
-                <span>Code Editor</span>
+                <span>Web Studio</span>
               </button>
               <button
                 onClick={() => setActiveTab('upload')}
@@ -216,7 +275,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
             <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
             <div className="text-xs text-slate-300 leading-relaxed">
               <span className="font-semibold text-emerald-300">100% Local Execution Security:</span>{' '}
-              Your source code runs entirely in your local browser sandbox or offline CLI. Zero remote backend servers.
+              Your source code runs entirely in your local browser sandbox (V8 / Pyodide WASM) or offline CLI. Zero remote backend servers.
             </div>
           </div>
 
@@ -224,17 +283,51 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
           {errorMessage && (
             <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{errorMessage}</span>
+              <span className="leading-relaxed">{errorMessage}</span>
+            </div>
+          )}
+
+          {/* Status Message */}
+          {statusMessage && (
+            <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 flex items-center gap-3 text-indigo-300 text-xs">
+              <Loader2 className="w-4 h-4 shrink-0 animate-spin text-indigo-400" />
+              <span>{statusMessage}</span>
             </div>
           )}
 
           {/* TAB 1: CODE EDITOR & RUNNER */}
           {activeTab === 'editor' && (
             <div className="space-y-4">
-              {/* Header Action Bar with Smart Title Pill */}
+              {/* Header Action Bar with Smart Title Pill and Language Toggle */}
               <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#131D31] border border-slate-800">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-mono">Algorithm:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Language Selector */}
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                    <button
+                      onClick={() => handleLanguageSwitch('javascript')}
+                      className={`px-2.5 py-1 rounded text-xs font-semibold font-mono transition-all ${
+                        selectedLang === 'javascript'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      JS / TS
+                    </button>
+                    <button
+                      onClick={() => handleLanguageSwitch('python')}
+                      className={`px-2.5 py-1 rounded text-xs font-semibold font-mono transition-all ${
+                        selectedLang === 'python'
+                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Python (WASM)
+                    </button>
+                  </div>
+
+                  <span className="text-xs text-slate-500 font-mono">|</span>
+
+                  <span className="text-xs text-slate-400 font-mono">Title:</span>
                   {isEditingTitle ? (
                     <input
                       type="text"
@@ -266,60 +359,79 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
 
                 <button
                   onClick={handleRunAlgorithm}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-xs shadow-lg shadow-emerald-600/20 hover:scale-105 active:scale-95 transition-all"
+                  disabled={isRunning}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-xs shadow-lg shadow-emerald-600/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none transition-all"
                 >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Visualize Algorithm</span>
+                  {isRunning ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                  )}
+                  <span>{isRunning ? 'Tracing...' : 'Visualize Algorithm'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              {/* Language Alert Banner for Non-JS Code */}
-              {detectedLang !== 'javascript' && (
-                <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 flex items-start gap-2.5 text-xs text-amber-200">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
-                  <div className="flex-1">
-                    <div className="font-semibold text-amber-300">
-                      {detectedLang === 'cpp' ? 'C++' : detectedLang === 'python' ? 'Python' : 'Java'} Source Code Detected
+              {/* Language Alert Banner for C++ Code */}
+              {detectedLang === 'cpp' && (
+                <div className="p-3.5 rounded-xl bg-blue-950/40 border border-blue-500/40 flex items-start gap-3 text-xs text-blue-200">
+                  <Cpu className="w-5 h-5 shrink-0 text-blue-400 mt-0.5" />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-blue-300 flex items-center justify-between">
+                      <span>C++ LeetCode / Native Code Detected</span>
+                      <button
+                        onClick={() => copyCommand('npx stepdsa run solution.cpp')}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/40 text-[10px] text-blue-200 transition-colors"
+                      >
+                        {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>Copy CLI Command</span>
+                      </button>
                     </div>
-                    <p className="text-[11px] text-amber-300/80 mt-0.5 leading-relaxed">
-                      The in-browser Code Editor runs on a client-side JavaScript engine (100% zero-cloud sandbox).
-                      To visualize native {detectedLang === 'cpp' ? 'C++' : detectedLang === 'python' ? 'Python' : 'Java'}:
-                      run <code className="px-1 py-0.5 rounded bg-amber-900/60 font-mono text-amber-200">stepdsa run solution.{detectedLang === 'cpp' ? 'cpp' : 'py'}</code> in your terminal via the CLI, or convert your algorithm logic to JavaScript syntax here.
+                    <p className="text-[11px] text-blue-200/80 leading-relaxed">
+                      C++ requires local compilation with your system's <code className="px-1 py-0.5 rounded bg-blue-900/60 font-mono text-blue-200">g++</code> or <code className="px-1 py-0.5 rounded bg-blue-900/60 font-mono text-blue-200">clang++</code> compiler.
+                      Save your solution to <code className="px-1 py-0.5 rounded bg-blue-900/60 font-mono text-blue-200">solution.cpp</code> and run:
+                      <code className="block mt-1 p-2 rounded bg-slate-950 font-mono text-blue-300 text-[11px]">
+                        $ npx stepdsa run solution.cpp
+                      </code>
                     </p>
                   </div>
                 </div>
               )}
+
+              {/* Testcase Input Bar */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0B0F19] border border-slate-800">
+                <span className="text-xs font-mono text-slate-400 shrink-0 flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Testcase Input:</span>
+                </span>
+                <input
+                  type="text"
+                  value={testcaseInput}
+                  onChange={(e) => setTestcaseInput(e.target.value)}
+                  placeholder={
+                    selectedLang === 'python'
+                      ? 'e.g. [2, 7, 11, 15], 9  or  nums = [3, 2, 4], target = 6'
+                      : 'e.g. 3  or  [2, 7, 11, 15], 9  or  n = 3'
+                  }
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 font-mono text-xs focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-[10px] text-slate-500 shrink-0">LeetCode argument format</span>
+              </div>
 
               {/* Code Textarea Editor */}
               <div className="relative rounded-xl border border-slate-800 bg-[#0B0F19] overflow-hidden focus-within:border-indigo-500 transition-colors">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800 bg-slate-900/60 text-[11px] font-mono text-slate-400">
                   <div className="flex items-center gap-2">
                     <FileCode className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>algorithm.stepdsa</span>
-                    {detectedLang === 'cpp' && (
-                      <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[9px] font-mono font-bold uppercase">
-                        C++
-                      </span>
-                    )}
-                    {detectedLang === 'python' && (
-                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold uppercase">
-                        Python
-                      </span>
-                    )}
-                    {detectedLang === 'java' && (
-                      <span className="px-1.5 py-0.2 rounded bg-orange-500/20 text-orange-300 border border-orange-500/40 text-[9px] font-mono font-bold uppercase">
-                        Java
-                      </span>
-                    )}
-                    {detectedLang === 'javascript' && (
-                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-mono font-bold uppercase">
-                        JavaScript
-                      </span>
-                    )}
+                    <span>solution.{selectedLang === 'python' ? 'py' : 'js'}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[9px] font-mono font-bold uppercase">
+                      {selectedLang === 'python' ? 'Python' : 'JavaScript'}
+                    </span>
                   </div>
                   <span className="text-[10px] text-slate-500">
-                    Native ES6 Proxy Sandbox • 0ms Remote Latency
+                    {selectedLang === 'python'
+                      ? 'Pyodide WebAssembly Sandbox • Client-side'
+                      : 'Native V8 Proxy Sandbox • Client-side'}
                   </span>
                 </div>
                 <textarea
@@ -333,9 +445,9 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
 
               <div className="text-[11px] text-slate-500 flex items-center justify-between px-1">
                 <span>
-                  Tip: Standard loops, conditionals, and reads/writes on <code className="text-indigo-400 font-mono">arr</code>, <code className="text-indigo-400 font-mono">nums</code>, or <code className="text-indigo-400 font-mono">input</code> are traced automatically.
+                  Tip: Functions and LeetCode <code className="text-indigo-400 font-mono">class Solution</code> methods are automatically invoked with your Testcase Input.
                 </span>
-                <span>Max 500 step safety guard</span>
+                <span>Max 300 step safety guard</span>
               </div>
             </div>
           )}
@@ -360,7 +472,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".stepdsa,.json"
+                  accept=".stepdsa,.json,.cpp,.py,.js,.ts"
                   className="hidden"
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
@@ -373,7 +485,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 </div>
                 <div>
                   <h4 className="text-base font-semibold text-white">
-                    Drop your <code className="text-indigo-300 font-mono">*.stepdsa</code> or <code className="text-cyan-300 font-mono">*.stepdsa.json</code> file here
+                    Drop your <code className="text-indigo-300 font-mono">*.stepdsa</code>, <code className="text-cyan-300 font-mono">*.json</code>, or code file here
                   </h4>
                   <p className="text-xs text-slate-400 mt-1">
                     Or click anywhere in this box to browse local files on your computer
@@ -390,8 +502,8 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                 <div className="text-xs text-slate-300 leading-relaxed">
                   <span className="font-semibold text-emerald-300">100% Local Execution Security:</span> Your
-                  source code is never transmitted or compiled on remote servers. The lightweight local tracer runs on
-                  your machine, generates deterministic execution snapshots, and pipes them directly to your browser.
+                  source code is never transmitted or compiled on remote servers. The lightweight local CLI runs on
+                  your machine, compiles C++ locally via your system compiler, and pipes traces directly to your browser.
                 </div>
               </div>
 
@@ -400,16 +512,16 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 <div className="p-3 rounded-xl bg-[#0B0F19] border border-slate-800 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-md bg-indigo-500/20 text-indigo-400 font-mono font-bold flex items-center justify-center text-[11px]">1</span>
-                    <strong className="text-white">Init Project</strong>
+                    <strong className="text-white">Init or Write C++</strong>
                   </div>
-                  <p className="text-slate-400 text-[11px] leading-relaxed">Scaffolds <code className="text-indigo-300 font-mono">solution.stepdsa</code> template with starter algorithm.</p>
+                  <p className="text-slate-400 text-[11px] leading-relaxed">Write standard C++ with <code className="text-indigo-300 font-mono">class Solution</code> or initialize a template.</p>
                 </div>
                 <div className="p-3 rounded-xl bg-[#0B0F19] border border-slate-800 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-md bg-cyan-500/20 text-cyan-400 font-mono font-bold flex items-center justify-center text-[11px]">2</span>
-                    <strong className="text-white">Run & Launch</strong>
+                    <strong className="text-white">Compile & Trace</strong>
                   </div>
-                  <p className="text-slate-400 text-[11px] leading-relaxed">Traces locally and auto-launches browser with compressed execution hash.</p>
+                  <p className="text-slate-400 text-[11px] leading-relaxed">Runs <code className="text-cyan-300 font-mono">stepdsa run solution.cpp</code> to compile locally and capture state.</p>
                 </div>
                 <div className="p-3 rounded-xl bg-[#0B0F19] border border-slate-800 space-y-1.5">
                   <div className="flex items-center gap-2">
@@ -425,7 +537,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800 bg-slate-900/50">
                   <span className="text-slate-400 text-xs">Terminal Commands:</span>
                   <button
-                    onClick={() => copyCommand('npx stepdsa run solution.stepdsa')}
+                    onClick={() => copyCommand('npx stepdsa run solution.cpp')}
                     className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800 border border-slate-700 transition-colors"
                   >
                     {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -433,11 +545,11 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                   </button>
                 </div>
                 <div className="p-4 text-slate-300 space-y-2">
-                  <div className="text-slate-500 text-[11px]"># 1. Initialize template</div>
+                  <div className="text-slate-500 text-[11px]"># Run native C++ LeetCode solution directly</div>
+                  <div className="text-emerald-400 font-bold">$ npx stepdsa run solution.cpp</div>
+                  <div className="text-slate-500 text-[11px] pt-1"># Or initialize template</div>
                   <div className="text-indigo-400 font-bold">$ npx stepdsa init</div>
-                  <div className="text-slate-500 text-[11px] pt-1"># 2. Trace and visualize in browser</div>
-                  <div className="text-emerald-400 font-bold">$ npx stepdsa run solution.stepdsa</div>
-                  <div className="text-slate-500 text-[11px] pt-1"># 3. Or export offline JSON trace</div>
+                  <div className="text-slate-500 text-[11px] pt-1"># Or export offline JSON trace</div>
                   <div className="text-cyan-400 font-bold">$ npx stepdsa trace solution.stepdsa --out trace.json</div>
                 </div>
               </div>
@@ -445,7 +557,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
               {/* Link to Full Documentation in Repo */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/20 text-xs">
                 <span className="text-slate-300">
-                  Need advanced flags (<code className="text-indigo-400 font-mono">--dev</code>, <code className="text-indigo-400 font-mono">--no-open</code>) or offline JSON schemas?
+                  Need C++ harness details or advanced flags (<code className="text-indigo-400 font-mono">--dev</code>, <code className="text-indigo-400 font-mono">--no-open</code>)?
                 </span>
                 <a
                   href="https://github.com/ThanhNguyxnOrg/StepDSA/blob/main/docs/CLI.md"

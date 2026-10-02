@@ -155,7 +155,7 @@ export function traceJavaScriptExecution(
                 const elements = target.map((v, i) => ({
                   id: `${i}`,
                   value: Number(v),
-                  status: (i === lastReadIdx || i === idx ? 'comparing' : 'normal') as const,
+                  status: (i === lastReadIdx || i === idx ? 'comparing' : 'normal') as 'comparing' | 'normal',
                 }));
                 recordFrame(
                   `Comparing ${name}[${lastReadIdx}] (${target[lastReadIdx]}) with ${name}[${idx}] (${target[idx]})`,
@@ -180,7 +180,7 @@ export function traceJavaScriptExecution(
             const elements = target.map((v, i) => ({
               id: `${i}`,
               value: Number(v),
-              status: (i === idx ? 'swapping' : 'normal') as const,
+              status: (i === idx ? 'swapping' : 'normal') as 'swapping' | 'normal',
             }));
             recordFrame(
               `Updated ${name}[${idx}] = ${JSON.stringify(value)}`,
@@ -242,7 +242,7 @@ export function traceJavaScriptExecution(
   // Matches: const dfs = (a, b) => { OR function dfs(a, b) {
   instrumentedCode = instrumentedCode.replace(
     /((?:const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*(?:\([^)]*\)|[a-zA-Z0-9_$]+)\s*=>\s*\{|function\s+([a-zA-Z0-9_$]+)\s*\([^)]*\)\s*\{)/g,
-    (match, p1, arrowFnName, standardFnName) => {
+    (match, _p1, arrowFnName, standardFnName) => {
       const fnName = arrowFnName || standardFnName;
       // Extract parameter names from match
       const paramsMatch = match.match(/\(([^)]*)\)/);
@@ -271,7 +271,7 @@ export function traceJavaScriptExecution(
   const parsedArgs = parseTestcaseInput(rawTestcaseInput);
 
   // Auto-wrap array arguments passed to entry function with Proxy
-  const processedArgs = parsedArgs.map((arg, idx) => {
+  const processedArgs = parsedArgs.map((arg) => {
     if (Array.isArray(arg)) {
       return `__tracer.trackArray(${JSON.stringify(arg)}, "nums")`;
     }
