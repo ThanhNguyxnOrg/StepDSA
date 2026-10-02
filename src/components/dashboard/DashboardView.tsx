@@ -703,7 +703,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="text-emerald-400 font-bold">READY</span>
               </div>
               <div className="p-2.5 rounded-lg bg-black/60 border border-slate-800 font-mono text-xs text-indigo-300 select-all overflow-x-auto">
-                $ npx @stepdsa/cli trace my_algo.py
+                $ npx stepdsa run solution.stepdsa
               </div>
               <button
                 onClick={onOpenPersonalStudio}

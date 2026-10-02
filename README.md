@@ -38,12 +38,16 @@ Most existing algorithm visualizers suffer from the same fundamental flaws:
 
 **StepDSA reimagines algorithm education as an interactive workbench:**
 * ⏱️ **Deterministic Time-Travel Engine:** Instant scrubbable timeline with zero-lag reverse stepping (`←`), speed controls (`0.25x` to `2x`), and step narration across **162 master curriculum modules**.
+* 📊 **Live Operational Metrics HUD:** Real-time accumulator counting cumulative **Comparisons** (amber), **Swaps/Writes** (rose), **Accesses** (cyan), and **Hash Lookups** (purple) dynamically up to the current step.
+* 💬 **Active Floating Expression Callouts:** Dynamic mathematical formulas hover directly above comparing/swapping elements (e.g. `64 > 34 ➔ SWAP` or `12 vs 45 ➔ KEEP`) so learners never have to do mental math.
+* 🧠 **Dual-Layer Intuition Subtitles:** Two-tiered pedagogical narration pairing high-level strategic takeaways (`[🔄 SWAP: Reordering active elements]`, `[⚡ HASH LOOKUP]`) with granular line mechanics.
+* 📍 **Timeline Milestone Bookmarks:** Clickable chapter pins on the scrub track with instant Prev/Next Milestone navigation buttons (`[|< / >|]`).
 * 🚀 **Personal Code Studio (BYOC — Bring Your Own Code):** Run your own custom code in-browser or import `.stepdsa` / `.stepdsa.json` traces. Smart pattern classifier identifies algorithm family and auto-generates test fixtures with zero cloud execution risks.
 * 💻 **Synchronized Multi-Language Code:** Live execution line tracking across **C++ (ICPC Standard), Python, TypeScript, Java, and Pseudocode**.
 * 🧪 **Interactive Playground & Edge Cases:** Stress-test algorithms with custom arrays, reverse-sorted inputs, duplicates, and worst-case patterns.
 * 📖 **Invariant-Driven Theory Panel:** Clear mental models, invariant breakdowns, and Big-O proofs alongside every step.
 * 🎵 **Auditory Sonification:** Web Audio API synth tones mapped to element values—hear entropy decrease in real time as arrays sort.
-* 🛠️ **Developer Studio & CLI:** Run your own `.stepdsa`, C++, Python, or TypeScript code offline, export execution traces, and replay them visually in the browser.
+* 🛠️ **Developer Studio & CLI (`stepdsa`):** Run your own `.stepdsa`, C++, Python, or TypeScript code offline, export execution traces, and replay them visually in the browser via URL hash or JSON upload.
 
 ---
 

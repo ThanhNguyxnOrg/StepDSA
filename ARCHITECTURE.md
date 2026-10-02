@@ -39,11 +39,19 @@ graph TD
     A[User Input / Preset Data] --> B[Module Generator: pure function]
     B --> C[Immutable Execution Timeline Array]
     C --> D[useTimelinePlayback Controller Hook]
-    D --> E[Stage: DOM / SVG Render]
+    D --> E[Stage: DOM / SVG Render + ActiveExpressionCallout]
     D --> F[CodeInspector: Synchronized Highlight]
-    D --> G[Narration: Invariant Banner]
+    D --> G[StepNarrationBanner: Dual-Layer Strategic Subtitles]
     D --> H[SoundEngine: Web Audio Frequency]
+    D --> I[useOperationalMetrics: Real-Time HUD Tally]
 ```
+
+### 🧠 Pedagogical Cognitive Model
+StepDSA decouples cognitive load into complementary visual layers inspired by modern EdTech:
+- **Macro Layer (Strategy):** Dual-layer subtitles in `StepNarrationBanner` immediately explain the algorithm's high-level intent (e.g. `[🔄 SWAP]`, `[⚡ HASH LOOKUP]`).
+- **Micro Layer (Formulas):** Floating `ActiveExpressionCallout` pills render dynamic mathematical checks right on the active elements without requiring mental calculations.
+- **Resource HUD:** `OperationalMetricsBar` tallies cumulative comparisons, swaps, accesses, and lookups to contrast against theoretical Big-O curves.
+- **Milestone Navigation:** Chapter pins on the scrub track allow jumping directly between algorithmic phases (Partitioning, Recursion, Completion).
 
 ---
 
