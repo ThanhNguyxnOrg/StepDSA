@@ -244,7 +244,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 }`}
               >
                 <FileCode className="w-3.5 h-3.5" />
-                <span>Web Studio</span>
+                <span>Code Editor</span>
               </button>
               <button
                 onClick={() => setActiveTab('upload')}
