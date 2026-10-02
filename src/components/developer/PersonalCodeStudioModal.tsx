@@ -11,6 +11,7 @@ import {
   Edit2,
   FileCode,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { AlgorithmModule } from '../../core/types';
 import { parseStepDSAFile } from '../../core/studio/parser';
@@ -46,7 +47,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
   onClose,
   onLoadCustomSnapshot,
 }) => {
-  const [activeTab, setActiveTab] = useState<'editor' | 'upload' | 'cli'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'upload' | 'cli'>('cli');
   const [codeContent, setCodeContent] = useState<string>(DEFAULT_SAMPLE_CODE);
   const [customTitle, setCustomTitle] = useState<string>('');
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
@@ -135,18 +136,18 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
         {/* Modal Header */}
         <div className="flex items-center justify-between p-5 border-b border-[#1E293B] bg-gradient-to-r from-[#0F172A] via-[#1E293B]/40 to-[#0F172A]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white">
               <Terminal className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white tracking-tight">Personal Code Studio</h2>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 uppercase">
-                  BYOC · 100% Client-Side
+                <h2 className="text-lg font-bold text-white tracking-tight">StepDSA CLI & Personal Code Studio</h2>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
+                  100% READY · LOCAL EXECUTION
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Author, paste LeetCode solutions, or trace custom code with zero backend
+                Trace algorithms locally via zero-setup CLI or simulate in-browser with zero backend risks
               </p>
             </div>
           </div>
@@ -154,6 +155,17 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
           <div className="flex items-center gap-2">
             {/* Tab Switcher */}
             <div className="flex items-center gap-1 bg-[#131D31] p-1 rounded-xl border border-slate-800">
+              <button
+                onClick={() => setActiveTab('cli')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === 'cli'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>CLI Quickstart</span>
+              </button>
               <button
                 onClick={() => setActiveTab('editor')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
@@ -174,18 +186,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 }`}
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span>Drop File</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('cli')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  activeTab === 'cli'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Terminal className="w-3.5 h-3.5" />
-                <span>CLI</span>
+                <span>Drop Snapshot</span>
               </button>
             </div>
 
@@ -392,6 +393,22 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                   <div className="text-slate-500 text-[11px] pt-1"># 3. Or export offline JSON trace</div>
                   <div className="text-cyan-400 font-bold">$ npx stepdsa trace solution.stepdsa --out trace.json</div>
                 </div>
+              </div>
+
+              {/* Link to Full Documentation in Repo */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/20 text-xs">
+                <span className="text-slate-300">
+                  Need advanced flags (<code className="text-indigo-400 font-mono">--dev</code>, <code className="text-indigo-400 font-mono">--no-open</code>) or offline JSON schemas?
+                </span>
+                <a
+                  href="https://github.com/ThanhNguyxnOrg/StepDSA/blob/main/docs/CLI.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 hover:text-white font-medium transition-all shrink-0"
+                >
+                  <span>Open Full docs/CLI.md</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
             </div>
           )}

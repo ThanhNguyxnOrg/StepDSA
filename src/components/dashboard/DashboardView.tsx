@@ -670,13 +670,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
             <div className="max-w-2xl space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-xs font-mono font-bold uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold uppercase tracking-wider">
                 <Terminal className="w-3.5 h-3.5" />
-                <span>Advanced Developer Capability</span>
+                <span>OFFICIAL CLI · PRODUCTION READY</span>
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Personal Code Visualization Studio
+                StepDSA CLI & Personal Code Visualization Studio
               </h2>
 
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
@@ -699,17 +699,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Quick Action Box */}
             <div className="bg-[#0B0F19]/90 border border-slate-800 p-5 rounded-xl shrink-0 lg:w-80 flex flex-col gap-3 shadow-xl">
               <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between">
-                <span>LOCAL TRACER CLI</span>
-                <span className="text-emerald-400 font-bold">READY</span>
+                <span>QUICKSTART WORKFLOW</span>
+                <span className="text-emerald-400 font-bold">100% READY</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-black/60 border border-slate-800 font-mono text-xs text-indigo-300 select-all overflow-x-auto">
-                $ npx stepdsa run solution.stepdsa
+              <div className="p-3 rounded-lg bg-black/60 border border-slate-800 font-mono text-xs text-slate-300 space-y-1.5">
+                <div className="text-slate-500 text-[10px]"># Step 1: Scaffold template</div>
+                <div className="text-indigo-400 font-bold">$ npx stepdsa init</div>
+                <div className="text-slate-500 text-[10px] pt-0.5"># Step 2: Trace & open visualizer</div>
+                <div className="text-emerald-400 font-bold">$ npx stepdsa run solution.stepdsa</div>
               </div>
               <button
                 onClick={onOpenPersonalStudio}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all"
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-indigo-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all"
               >
-                <span>Launch CLI Studio & Docs</span>
+                <span>Launch CLI Studio & Quickstart</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </button>
             </div>

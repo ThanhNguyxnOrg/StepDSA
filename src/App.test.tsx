@@ -27,7 +27,7 @@ describe('App Full Integration Smoke Test', () => {
     const studioBtn = screen.getByText(/Launch CLI Studio/i);
     fireEvent.click(studioBtn);
 
-    expect(screen.getByText(/100% Local Execution Security/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/100% Local Execution Security/i)[0]).toBeInTheDocument();
   }, 20000);
 
   it('navigates to Workbench and applies presets and custom input cleanly', () => {
@@ -60,6 +60,9 @@ describe('App Full Integration Smoke Test', () => {
     render(<App />);
     const studioBtn = screen.getByText(/Launch CLI Studio/i);
     fireEvent.click(studioBtn);
+
+    // Switch to Code Editor tab
+    fireEvent.click(screen.getByText(/Code Editor/i));
 
     // Verify modal opened with Visualize button
     const visualizeBtn = screen.getByText(/Visualize Algorithm/i);
