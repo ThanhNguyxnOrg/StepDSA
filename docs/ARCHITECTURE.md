@@ -52,6 +52,8 @@ StepDSA decouples cognitive load into complementary visual layers inspired by mo
 - **Micro Layer (Formulas):** Floating `ActiveExpressionCallout` pills render dynamic mathematical checks right on the active elements without requiring mental calculations.
 - **Resource HUD:** `OperationalMetricsBar` tallies cumulative comparisons, swaps, accesses, and lookups to contrast against theoretical Big-O curves.
 - **Milestone Navigation:** Chapter pins on the scrub track allow jumping directly between algorithmic phases (Partitioning, Recursion, Completion).
+- **Auto-Pace Engine:** Intelligent playback pacing automatically slows down during dense mathematical decisions (swaps, tree rotations, partition adjustments) and speeds through routine increments.
+- **Command Palette (`⌘K` / `Ctrl+K`):** Instant fuzzy-indexed switcher allowing keyboard navigation across all 162 curriculum modules with categorized domain tags.
 
 ---
 

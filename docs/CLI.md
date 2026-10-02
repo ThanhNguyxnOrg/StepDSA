@@ -117,7 +117,7 @@ Scaffolds a new algorithm template in the current directory.
 Traces code, compresses the snapshot, and opens the online visualizer in the default browser.
 - `--dev`, `--local`: Targets `http://localhost:5173/` for local development.
 - `--no-open`: Prints the URL without launching the browser.
-- **Automatic Fallback (>60KB):** If execution is long (>200 steps), the CLI automatically saves `<file>.stepdsa.json` locally and prints instructions to drag-and-drop into Developer Studio.
+- **Automatic Fallback (>60KB):** If execution is long (>200 steps), the CLI automatically saves `<file>.stepdsa.json` locally and prints instructions to drag-and-drop or import directly into Personal Code Studio (`[ 📂 Import File ]`).
 
 ### `stepdsa trace <file> [options]`
 Generates an offline `.stepdsa.json` snapshot file without opening the browser.

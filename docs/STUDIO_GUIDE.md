@@ -27,7 +27,11 @@ StepDSA Personal Code Studio lets you paste custom algorithms (including LeetCod
 ### How to Access:
 1. Open StepDSA in your browser: [https://thanhnguyxnorg.github.io/StepDSA/](https://thanhnguyxnorg.github.io/StepDSA/)
 2. Click the **`>_ CLI Studio`** button in the top navigation bar.
-3. Switch to the **`Code Editor`** tab.
+3. Use the streamlined **`Code Editor`** tab for direct in-browser execution or **`CLI Quickstart`** for terminal instructions.
+
+### Importing & Dropping Files:
+- Click **`[ 📂 Import File ]`** on the editor toolbar to load any `.js`, `.ts`, `.py`, `.stepdsa`, or `.json` trace file.
+- Or simply **drag and drop** a file directly onto the editor workspace to load it instantly.
 
 ### Language Toggle:
 - Click **`JS / TS`** to run JavaScript/TypeScript code using our zero-latency proxy sandbox.

@@ -9,9 +9,9 @@ Welcome to the official documentation directory for StepDSA.
 | Document | Purpose |
 | :--- | :--- |
 | [💻 CLI.md](CLI.md) | Developer CLI reference manual: scaffolding (`stepdsa init`), native C++ compilation (`stepdsa run solution.cpp`), and snapshot exports (`stepdsa trace`). |
-| [🎨 STUDIO_GUIDE.md](STUDIO_GUIDE.md) | Guide to in-browser Personal Code Studio (JavaScript & Python Pyodide WASM), LeetCode function signatures, and Call Stack visualization. |
-| [🏗️ ARCHITECTURE.md](ARCHITECTURE.md) | Technical architecture: deterministic immutable timelines, audio synthesis engine, and zero-latency time-travel playback. |
-| [🎓 MASTER_CURRICULUM.md](MASTER_CURRICULUM.md) | Complete curriculum catalog of 160+ algorithms across 12 DSA disciplines. |
+| [🎨 STUDIO_GUIDE.md](STUDIO_GUIDE.md) | Guide to in-browser Personal Code Studio (JavaScript & Python Pyodide WASM), direct file import/drop, LeetCode function signatures, and Call Stack visualization. |
+| [🏗️ ARCHITECTURE.md](ARCHITECTURE.md) | Technical architecture: deterministic immutable timelines, audio synthesis engine, Auto-Pace pacing, and zero-latency time-travel playback. |
+| [🎓 MASTER_CURRICULUM.md](MASTER_CURRICULUM.md) | Complete curriculum catalog of 162 algorithms across 15 DSA disciplines. |
 
 ---
 

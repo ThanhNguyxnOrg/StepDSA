@@ -37,12 +37,14 @@ Most existing algorithm visualizers suffer from the same fundamental flaws:
 3. **Dated Aesthetics:** Cluttered interfaces with canvas-only graphics, lack of variable tracking, and confusing modal settings.
 
 **StepDSA reimagines algorithm education as an interactive workbench:**
-* ⏱️ **Deterministic Time-Travel Engine:** Instant scrubbable timeline with zero-lag reverse stepping (`←`), speed controls (`0.25x` to `2x`), and step narration across **162 master curriculum modules**.
+* ⏱️ **Deterministic Time-Travel Engine:** Instant scrubbable timeline with zero-lag reverse stepping (`←`), speed controls (`0.25x` to `2x`), Auto-Pace cognitive pacing, and step narration across **162 master curriculum modules**.
+* ⚡ **Command Palette (`⌘K` / `Ctrl+K`):** Instant fuzzy search and keyboard switcher across all 162 algorithm modules with real-time category filtering and direct navigation.
+* 🎨 **162 Bespoke Dynamic Thumbnails:** Every module in the dashboard showcases an animated, responsive algorithmic thumbnail previewing real execution dynamics.
 * 📊 **Live Operational Metrics HUD:** Real-time accumulator counting cumulative **Comparisons** (amber), **Swaps/Writes** (rose), **Accesses** (cyan), and **Hash Lookups** (purple) dynamically up to the current step.
 * 💬 **Active Floating Expression Callouts:** Dynamic mathematical formulas hover directly above comparing/swapping elements (e.g. `64 > 34 ➔ SWAP` or `12 vs 45 ➔ KEEP`) so learners never have to do mental math.
 * 🧠 **Dual-Layer Intuition Subtitles:** Two-tiered pedagogical narration pairing high-level strategic takeaways (`[🔄 SWAP: Reordering active elements]`, `[⚡ HASH LOOKUP]`) with granular line mechanics.
 * 📍 **Timeline Milestone Bookmarks:** Clickable chapter pins on the scrub track with instant Prev/Next Milestone navigation buttons (`[|< / >|]`).
-* 🚀 **Personal Code Studio (BYOC — Bring Your Own Code):** Run your own custom code in-browser or import `.stepdsa` / `.stepdsa.json` traces. Smart pattern classifier identifies algorithm family and auto-generates test fixtures with zero cloud execution risks.
+* 🚀 **Personal Code Studio (BYOC — Bring Your Own Code):** Run your own custom code in-browser (JS V8 Sandbox & Python Pyodide WASM) or import `.stepdsa` / `.stepdsa.json` traces via direct drag-and-drop. Zero cloud execution risks.
 * 💻 **Synchronized Multi-Language Code:** Live execution line tracking across **C++ (ICPC Standard), Python, TypeScript, Java, and Pseudocode**.
 * 🧪 **Interactive Playground & Edge Cases:** Stress-test algorithms with custom arrays, reverse-sorted inputs, duplicates, and worst-case patterns.
 * 📖 **Invariant-Driven Theory Panel:** Clear mental models, invariant breakdowns, and Big-O proofs alongside every step.
@@ -115,6 +117,7 @@ export interface AlgorithmModule<TInput = any, TState = any> {
 
 | Shortcut | Action | Description |
 | :---: | :--- | :--- |
+| <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> | **Command Palette** | Quick search & switch between all 162 algorithms |
 | <kbd>Space</kbd> | **Play / Pause** | Toggle continuous timeline playback |
 | <kbd>→</kbd> | **Step Forward** | Advance exactly one deterministic execution frame |
 | <kbd>←</kbd> | **Step Backward**| Revert exactly one execution frame with zero lag |
@@ -163,11 +166,12 @@ StepDSA features a dual-mode BYOC (Bring Your Own Code) environment:
 - **Web Studio (In-Browser):**
   - **JavaScript / TypeScript:** Instant V8 sandbox with Proxy tracking for arrays, objects, and nested recursion.
   - **Python (WebAssembly):** Zero-setup client-side execution via Pyodide with `sys.settrace()` stack capturing.
-  - **LeetCode Testcase Bar:** Input testcase arguments like `n = 3` or `[2, 7, 11, 15], target = 9`.
-  - **Dedicated CallStackStage:** Visualizes call stack depth, frames, and backtracking states.
+  - **Direct File Import & Drag-and-Drop:** Seamlessly import `.js`, `.ts`, `.py`, `.stepdsa`, or `.json` trace files directly into the editor.
+  - **LeetCode Testcase Bar:** Input testcase arguments like `n = 3` or `nums = [2, 7, 11, 15], target = 9`.
+  - **Dedicated CallStackStage & ArrayStage:** Visualizes call stack frames, local variables, and array transitions.
 - **Native C++ CLI Engine:**
   - Compiles your code locally with your system `g++` (`stepdsa run solution.cpp`).
-  - Supports LeetCode `class Solution` and custom algorithms.
+  - Supports LeetCode `class Solution` and custom recursive algorithms with zero cloud transmission.
 
 ---
 

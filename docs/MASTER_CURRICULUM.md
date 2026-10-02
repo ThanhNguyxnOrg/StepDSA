@@ -1,4 +1,4 @@
-# StepDSA Master Curriculum & Specification (100+ Algorithms)
+# StepDSA Master Curriculum & Specification (162 Interactive Modules)
 
 > **Architectural Mission:**
 > Distinct from rudimentary classroom visualizers (such as CSVizTool, which strictly confines itself to Georgia Tech's introductory CS 1332 syllabus), **StepDSA** is architected as a professional **Interactive IDE-Grade Algorithm Workbench**: serving university computer science students, software engineers mastering technical interview patterns (LeetCode patterns), and competitive programmers (ICPC / IOI).
