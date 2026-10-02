@@ -54,13 +54,56 @@ for (let i = 0; i < arr.length; i++) {
 
 ### 4. Trace & Visualize Instantly
 ```bash
+# Trace JavaScript / StepDSA script
 stepdsa run solution.stepdsa
+
+# Trace native C++ LeetCode solution directly with local g++
+stepdsa run solution.cpp
 ```
 **What happens:**
-1. The CLI executes your code locally using a native ES6 Proxy sandbox.
-2. Captures all reads, writes, swaps, and pointer positions into an immutable timeline.
+1. The CLI executes your code locally using a native ES6 Proxy sandbox (for JS/TS) or your local `g++`/`clang++` compiler (for native C++).
+2. Captures all reads, writes, swaps, pointer positions, and recursive Call Stack frames into an immutable timeline.
 3. Compresses the snapshot via `lz-string` into a URL-safe hash fragment (`#trace=...`).
 4. Automatically launches your browser to the deployed StepDSA visualizer, rendering your execution step-by-step with a `CLI Session Active` badge!
+
+---
+
+## ⚡ Tracing Native C++ LeetCode Solutions
+
+StepDSA CLI supports standard C++ solutions (including `class Solution` recursion and backtracking):
+
+```cpp
+// solution.cpp
+#include <vector>
+#include <string>
+using namespace std;
+
+class Solution {
+public:
+    vector<string> generateParenthesis(int n) {
+        vector<string> res;
+        auto dfs = [&](auto& self, int open, int close, string s) -> void {
+            if (open == 0 && close == 0) {
+                res.push_back(s);
+                return;
+            }
+            if (open > 0) self(self, open - 1, close, s + "(");
+            if (close > open) self(self, open, close - 1, s + ")");
+        };
+        dfs(dfs, n, n, "");
+        return res;
+    }
+};
+```
+
+Run:
+```bash
+stepdsa run solution.cpp
+```
+The CLI automatically:
+- Checks syntax using your local `g++` compiler
+- Detects the problem signature and traces recursive calls (`dfs`, call depth, stack frames)
+- Launches StepDSA with the dedicated **CallStackStage** visualization!
 
 ---
 

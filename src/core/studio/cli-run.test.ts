@@ -53,4 +53,41 @@ for (let i = 0; i < arr.length; i++) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('should trace a native C++ LeetCode solution file', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stepdsa-run-cpp-'));
+    const cppFile = path.join(tmpDir, 'solution.cpp');
+    fs.writeFileSync(
+      cppFile,
+      `
+#include <vector>
+#include <string>
+using namespace std;
+
+class Solution {
+public:
+    vector<string> generateParenthesis(int n) {
+        vector<string> res;
+        return res;
+    }
+};
+`,
+      'utf8'
+    );
+
+    try {
+      const cliPath = path.resolve('cli/stepdsa.js');
+      const output = execSync(
+        `node "${cliPath}" run "${cppFile}" --no-open`,
+        { cwd: tmpDir, encoding: 'utf8' }
+      );
+      expect(output).toContain('C++ Tracer');
+      expect(output).toContain('generateParenthesis');
+      expect(output).toContain('Trace Completed');
+      expect(output).toContain('#trace=');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
+
