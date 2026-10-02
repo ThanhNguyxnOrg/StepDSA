@@ -1,4 +1,5 @@
 import React from 'react';
+import { renderExtraThumbnail } from './dynamicThumbnails';
 
 interface AlgorithmCardThumbnailProps {
   moduleId: string;
@@ -6,6 +7,9 @@ interface AlgorithmCardThumbnailProps {
 }
 
 export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ moduleId, category }) => {
+  const extra = renderExtraThumbnail(moduleId, category);
+  if (extra) return extra;
+
   switch (moduleId) {
     case 'bubble-sort':
       return (
@@ -1862,20 +1866,42 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
                 </div>
               ),
             };
-          default:
+          default: {
+            // Procedurally generate distinct hue and styling from moduleId hash so no two cards ever look identical
+            let hash = 0;
+            for (let i = 0; i < moduleId.length; i++) {
+              hash = (hash << 5) - hash + moduleId.charCodeAt(i);
+              hash |= 0;
+            }
+            const hue = Math.abs(hash) % 360;
+            const formattedName = moduleId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
             return {
-              grad: 'from-[#334155] to-[#1E293B]',
-              text: 'text-slate-100',
+              grad: 'from-[#0F172A] to-[#020617]',
+              text: 'text-cyan-200',
               accent: 'bg-cyan-400',
-              label: 'Interactive Visual Model',
+              label: formattedName.length > 22 ? formattedName.slice(0, 20) + '...' : formattedName,
               renderVisual: () => (
-                <div className="flex items-center justify-center gap-2 h-20 font-mono text-xs">
-                  <div className="px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-bold">
-                    [ Time-Travel ]
+                <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono text-xs relative">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center border shadow-lg animate-pulse"
+                    style={{
+                      borderColor: `hsl(${hue}, 80%, 60%)`,
+                      background: `radial-gradient(circle, hsl(${hue}, 70%, 25%) 0%, transparent 80%)`,
+                    }}
+                  >
+                    <span className="font-bold text-white text-[11px] drop-shadow">
+                      {moduleId.split('-').map(s => s[0]).join('').slice(0, 3).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[9px] text-slate-300">
+                    <span className="w-1.5 h-1.5 rounded-full animate-ping" style={{ backgroundColor: `hsl(${hue}, 80%, 60%)` }} />
+                    <span className="font-semibold tracking-wide">Interactive Topology</span>
                   </div>
                 </div>
               ),
             };
+          }
         }
       };
 
