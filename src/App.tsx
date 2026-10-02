@@ -9,6 +9,7 @@ import { TheoryDrawer } from './components/layout/TheoryDrawer';
 import { CodeInspector } from './components/code/CodeInspector';
 import { StepperControls } from './components/player/StepperControls';
 import { StepNarrationBanner } from './components/stage/StepNarrationBanner';
+import { MemoryShelf } from './components/stage/MemoryShelf';
 import { PlaygroundBar } from './components/playground/PlaygroundBar';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { AboutModal } from './components/about/AboutModal';
@@ -275,6 +276,9 @@ export default function App() {
               <div className="shrink-0 p-3 pb-0 max-w-5xl mx-auto w-full">
                 <StepNarrationBanner frame={currentFrame} />
               </div>
+
+              {/* Auxiliary Memory Shelf for Hash Maps and Temp Buffers */}
+              <MemoryShelf frame={currentFrame} />
 
               {/* Visual Stage */}
               <div className="flex-1 min-h-0 flex items-center justify-center relative overflow-hidden px-4">
