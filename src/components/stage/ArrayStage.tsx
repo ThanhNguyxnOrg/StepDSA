@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { ElementStatus } from '../../core/types';
+import { ActiveExpressionCallout } from './ActiveExpressionCallout';
 
 export interface ArrayElement {
   id: string | number;
@@ -14,15 +15,36 @@ export interface ArrayStageState {
   discardedRange?: [number, number]; // e.g. for Binary Search
   target?: number;
   auxiliary?: any;
+  conditionEval?: {
+    expr?: string;
+    condition?: string;
+    result?: any;
+    formatted?: string;
+  };
+  action?: string;
 }
 
 interface ArrayStageProps {
   state: ArrayStageState;
   projection: '2d' | 'isometric';
+  conditionEval?: {
+    expr?: string;
+    condition?: string;
+    result?: any;
+    formatted?: string;
+  };
+  action?: string;
 }
 
-export const ArrayStage: React.FC<ArrayStageProps> = ({ state, projection }) => {
+export const ArrayStage: React.FC<ArrayStageProps> = ({
+  state,
+  projection,
+  conditionEval: propConditionEval,
+  action: propAction,
+}) => {
   const { array = [], pointers = {}, discardedRange } = state;
+  const activeConditionEval = propConditionEval || state.conditionEval;
+  const activeAction = propAction || state.action;
 
   if (array.length === 0) {
     return (
@@ -56,6 +78,15 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({ state, projection }) => 
 
   return (
     <div className="w-full flex-1 flex flex-col items-center justify-center p-4 overflow-x-auto min-h-[320px]">
+      {/* Floating Active Expression Callout Pill (e.g. 64 > 34 ➔ SWAP) */}
+      <div className="mb-3 min-h-[28px] flex items-center justify-center">
+        <ActiveExpressionCallout
+          elements={array}
+          conditionEval={activeConditionEval}
+          action={activeAction}
+        />
+      </div>
+
       <div
         className={`w-full max-w-4xl flex items-end justify-center gap-2 sm:gap-3 transition-all duration-500 ${
           projection === 'isometric' ? 'stage-isometric py-8' : 'stage-flat'

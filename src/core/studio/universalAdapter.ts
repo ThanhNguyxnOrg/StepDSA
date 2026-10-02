@@ -59,6 +59,8 @@ export function createCustomAlgorithmModule(
         return React.createElement(ArrayStage, {
           state: frame.state,
           projection,
+          conditionEval: frame.conditionEval,
+          action: frame.action,
         });
       }
 
