@@ -22,6 +22,44 @@ interface DashboardViewProps {
   onOpenPersonalStudio?: () => void;
 }
 
+/**
+ * Truncates and normalizes lengthy descriptive Big-O expressions into clean,
+ * concise mathematical notation suitable for single-line card badges.
+ * e.g., "O(N!) with state pruning" -> "O(N!)"
+ *       "O(1) with two running variables (or O(N) for DP table)" -> "O(1)"
+ *       "O(N) for board configuration and recursion stack" -> "O(N)"
+ */
+export function formatCompactBigO(raw?: string): string {
+  if (!raw) return 'O(1)';
+  const trimmed = raw.trim().replace(/\.$/, '');
+
+  // 1. Separate at common clause connectors
+  const primaryClause = trimmed.split(/\s+(?:with|for|where|using|depending|or|\(or)\s+/i)[0].trim();
+
+  // 2. If it's a Big-O followed by a secondary comment parenthesis: "O(1) (running variables)" -> "O(1)"
+  let clean = primaryClause;
+  const secondaryParenMatch = clean.match(/^((?:O|Θ|Ω)\([^)]+\))\s*\([^)]*\)$/i);
+  if (secondaryParenMatch) {
+    clean = secondaryParenMatch[1];
+  }
+
+  // 3. Balance parentheses if the split sliced inside a bracket:
+  const openCount = (clean.match(/\(/g) || []).length;
+  const closeCount = (clean.match(/\)/g) || []).length;
+  if (openCount > closeCount) {
+    clean += ')'.repeat(openCount - closeCount);
+  }
+
+  // 4. If still longer than 15 chars, extract the leading O(...) / Θ(...) / Ω(...)
+  if (clean.length > 15) {
+    const mathMatch = clean.match(/(?:O|Θ|Ω)\([^)]+\)/);
+    if (mathMatch) return mathMatch[0];
+    return clean.slice(0, 14) + '…';
+  }
+
+  return clean || trimmed;
+}
+
 // Short, iconic algorithm metadata inspired by VisuAlgo
 const ALGO_METADATA: Record<
   string,
@@ -592,15 +630,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
 
                   {/* Title & Difficulty Header */}
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <div>
-                      <h3 className="text-lg font-bold text-white group-hover:text-[#10B981] transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-1.5 min-h-[44px]">
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        className="text-base font-bold text-white group-hover:text-[#10B981] transition-colors leading-tight line-clamp-1"
+                        title={mod.title}
+                      >
                         {meta.shortTitle}
                       </h3>
-                      <p className="text-xs text-slate-400 font-medium -mt-0.5">{meta.subtitle}</p>
+                      <p className="text-xs text-slate-400 font-medium truncate mt-0.5" title={meta.subtitle}>
+                        {meta.subtitle}
+                      </p>
                     </div>
                     <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 ${
                         isBeginner
                           ? 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30'
                           : 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30'
@@ -611,11 +654,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
 
                   {/* VisuAlgo Style Topic Tags */}
-                  <div className="flex flex-wrap gap-1.5 my-3">
-                    {meta.tags.map((tag) => (
+                  <div className="flex items-center gap-1.5 my-2.5 h-6 overflow-hidden">
+                    {Array.from(new Set(meta.tags)).slice(0, 3).map((tag) => (
                       <span
                         key={tag}
-                        className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/60"
+                        className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/60 whitespace-nowrap shrink-0"
                       >
                         {tag}
                       </span>
@@ -623,21 +666,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
 
                   {/* Short Overview */}
-                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
+                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4 min-h-[36px]">
                     {mod.theory.overview}
                   </p>
                 </div>
 
                 <div>
-                  {/* Complexity Metric Row */}
-                  <div className="flex items-center justify-between pt-3 border-t border-[#1F293D] mb-3 text-xs font-mono">
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                      <Clock className="w-3.5 h-3.5 text-[#10B981]" />
-                      <span>{mod.complexity.timeAverage}</span>
+                  {/* Complexity Metric Row (Clean 2-Badge Grid) */}
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#1F293D] mb-3 text-xs font-mono">
+                    <div
+                      className="flex items-center gap-1.5 text-slate-300 min-w-0 bg-[#0B0F19]/60 hover:bg-[#0B0F19] px-2.5 py-1.5 rounded-lg border border-[#1F293D]/60 hover:border-[#10B981]/40 transition-colors cursor-help"
+                      title={`Time Complexity: ${mod.complexity.timeAverage}`}
+                    >
+                      <Clock className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+                      <span className="truncate font-medium">{formatCompactBigO(mod.complexity.timeAverage)}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-400">
-                      <Database className="w-3.5 h-3.5 text-[#F59E0B]" />
-                      <span>{mod.complexity.spaceAuxiliary}</span>
+                    <div
+                      className="flex items-center gap-1.5 text-slate-400 min-w-0 justify-end bg-[#0B0F19]/60 hover:bg-[#0B0F19] px-2.5 py-1.5 rounded-lg border border-[#1F293D]/60 hover:border-[#F59E0B]/40 transition-colors cursor-help"
+                      title={`Space Complexity: ${mod.complexity.spaceAuxiliary}`}
+                    >
+                      <Database className="w-3.5 h-3.5 text-[#F59E0B] shrink-0" />
+                      <span className="truncate font-medium">{formatCompactBigO(mod.complexity.spaceAuxiliary)}</span>
                     </div>
                   </div>
 
