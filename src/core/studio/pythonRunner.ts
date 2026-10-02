@@ -198,30 +198,106 @@ export async function tracePythonExecution(
     }
 
     const total = rawFrames.length + (parsed.result !== null ? 1 : 0);
-    const frames: ExecutionFrame[] = rawFrames.map((f, idx) => ({
-      stepIndex: idx,
-      totalSteps: total,
-      codeLine: f.codeLine,
-      explanation: f.explanation,
-      callStack: f.callStack,
-      variables: f.variables,
-      state: {
-        ...(f.array ? { array: f.array } : {}),
-        callStackDepth: f.depth,
-      },
-    }));
+    const pointerVarNames = ['i', 'j', 'idx', 'index', 'left', 'right', 'mid', 'k', 'p', 'curr', 'lo', 'hi'];
+
+    const frames: ExecutionFrame[] = rawFrames.map((f, idx) => {
+      // 1. Extract array from f.array or from f.variables (e.g., nums, arr, data)
+      let rawArr = f.array;
+      if ((!rawArr || rawArr.length === 0) && f.variables) {
+        for (const [k, v] of Object.entries(f.variables)) {
+          if (['nums', 'arr', 'array', 'data', 'items'].includes(k.toLowerCase()) && Array.isArray(v)) {
+            rawArr = v;
+            break;
+          }
+        }
+      }
+
+      // 2. Extract active pointers from local variables
+      const pointers: Record<string, number> = {};
+      if (f.variables) {
+        for (const [k, v] of Object.entries(f.variables)) {
+          if (pointerVarNames.includes(k.toLowerCase()) && typeof v === 'number' && v >= 0) {
+            pointers[k] = v;
+          }
+        }
+      }
+
+      // 3. Construct ArrayElement[] for ArrayStage visualization
+      let arrayElements: any[] | undefined = undefined;
+      if (Array.isArray(rawArr) && rawArr.length > 0) {
+        const pointedIndices = Object.values(pointers);
+        arrayElements = rawArr.map((item: any, arrIdx: number) => {
+          const val = typeof item === 'number' ? item : (typeof item?.value === 'number' ? item.value : Number(item) || 0);
+          const isComparing = pointedIndices.includes(arrIdx);
+          return {
+            id: `el-${arrIdx}`,
+            value: val,
+            status: isComparing ? 'comparing' : 'default',
+          };
+        });
+      }
+
+      return {
+        stepIndex: idx,
+        totalSteps: total,
+        codeLine: f.codeLine,
+        explanation: f.explanation,
+        callStack: f.callStack,
+        variables: f.variables,
+        soundCue: Object.keys(pointers).length > 0 ? 'compare' : 'step',
+        state: {
+          ...(arrayElements ? { array: arrayElements, pointers } : {}),
+          callStackDepth: f.depth,
+        },
+      };
+    });
 
     if (parsed.result !== null) {
       const last = rawFrames[rawFrames.length - 1];
+      let lastArr = last?.array;
+      if ((!lastArr || lastArr.length === 0) && last?.variables) {
+        for (const [k, v] of Object.entries(last.variables)) {
+          if (['nums', 'arr', 'array', 'data', 'items'].includes(k.toLowerCase()) && Array.isArray(v)) {
+            lastArr = v;
+            break;
+          }
+        }
+      }
+
+      // Parse result to highlight matching indices (e.g. [0, 1]) in emerald green
+      let resultIndices: number[] = [];
+      try {
+        const parsedRes = JSON.parse(parsed.result);
+        if (Array.isArray(parsedRes)) {
+          resultIndices = parsedRes.filter((x: any) => typeof x === 'number');
+        }
+      } catch {
+        // Not a JSON array
+      }
+
+      const finalElements = Array.isArray(lastArr)
+        ? lastArr.map((item: any, arrIdx: number) => {
+            const val = typeof item === 'number' ? item : (typeof item?.value === 'number' ? item.value : Number(item) || 0);
+            return {
+              id: `el-${arrIdx}`,
+              value: val,
+              status: resultIndices.includes(arrIdx) ? 'sorted' : 'default',
+            };
+          })
+        : undefined;
+
       frames.push({
         stepIndex: frames.length,
         totalSteps: total,
         codeLine: last ? last.codeLine : 1,
-        explanation: `Execution Finished -> Return value: ${parsed.result}`,
+        explanation: `Execution Finished ➔ Return value: ${parsed.result}`,
+        action: 'FINISH',
+        soundCue: 'finish',
+        isMilestone: true,
         callStack: [],
         variables: { ...last?.variables, result: parsed.result },
         state: {
-          ...(last?.array ? { array: last.array } : {}),
+          ...(finalElements ? { array: finalElements } : {}),
           callStackDepth: 0,
         },
       });

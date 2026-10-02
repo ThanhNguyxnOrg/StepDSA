@@ -58,7 +58,7 @@ class Solution:
     expect(frames.length).toBe(3); // 2 steps + 1 completion
     expect(frames[0].codeLine).toBe(3);
     expect(frames[0].callStack).toEqual(['twoSum(line=3)']);
-    expect(frames[0].state.array).toEqual([2, 7, 11, 15]);
+    expect(frames[0].state.array.map((x: any) => x.value)).toEqual([2, 7, 11, 15]);
     expect(frames[2].explanation).toContain('Return value: [0, 1]');
   });
 

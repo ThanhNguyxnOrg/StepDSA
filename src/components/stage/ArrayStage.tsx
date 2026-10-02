@@ -51,9 +51,25 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
   conditionEval: propConditionEval,
   action: propAction,
 }) => {
-  const { array = [], pointers = {}, discardedRange } = state;
+  const { array: rawArray = [], pointers = {}, discardedRange } = state;
   const activeConditionEval = propConditionEval || state.conditionEval;
   const activeAction = propAction || state.action;
+
+  // Defensive normalization: Guarantee every element has an id, numeric value, and status
+  const array: ArrayElement[] = React.useMemo(() => {
+    return (rawArray || []).map((el: any, idx: number) => {
+      if (typeof el === 'object' && el !== null && typeof el.value === 'number') {
+        return el;
+      }
+      const val = typeof el === 'number' ? el : (typeof el?.value === 'number' ? el.value : Number(el) || 0);
+      const isPointed = pointers && Object.values(pointers).includes(idx);
+      return {
+        id: `el-${idx}`,
+        value: val,
+        status: isPointed ? 'comparing' : 'default',
+      };
+    });
+  }, [rawArray, pointers]);
 
   const [colorMode, setColorMode] = React.useState<'classic' | 'spectrum'>('classic');
   const stageRef = React.useRef<HTMLDivElement>(null);

@@ -234,7 +234,9 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
                   className="px-2 py-1 rounded bg-[#111827] border border-[#1F293D] flex items-center justify-between text-[11px] font-mono"
                 >
                   <span className="text-slate-400 font-medium">{key}</span>
-                  <span className="text-[#06B6D4] font-bold truncate max-w-[100px]">{String(val)}</span>
+                  <span className="text-[#06B6D4] font-bold truncate max-w-[120px]" title={typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)}>
+                    {typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)}
+                  </span>
                 </div>
               ))}
             </div>
