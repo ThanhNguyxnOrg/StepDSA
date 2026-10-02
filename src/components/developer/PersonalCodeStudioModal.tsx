@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { AlgorithmModule } from '../../core/types';
 import { parseStepDSAFile } from '../../core/studio/parser';
-import { classifyAlgorithmPattern } from '../../core/studio/classifier';
+import { classifyAlgorithmPattern, detectSourceLanguage } from '../../core/studio/classifier';
 import { traceArrayExecution } from '../../core/studio/tracer';
 import {
   createCustomAlgorithmModule,
@@ -65,11 +65,21 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
   );
 
   const displayedTitle = customTitle || parsedFile.metadata.title || classifiedPattern.title;
+  const detectedLang = useMemo(() => detectSourceLanguage(parsedFile.code), [parsedFile.code]);
 
   if (!isOpen) return null;
 
   const handleRunAlgorithm = () => {
     setErrorMessage(null);
+
+    if (detectedLang !== 'javascript') {
+      const langName = detectedLang === 'cpp' ? 'C++' : detectedLang === 'python' ? 'Python' : 'Java';
+      setErrorMessage(
+        `Cannot execute ${langName} directly in browser sandbox. The Web Editor runs JavaScript/TypeScript client-side. To visualize ${langName}, run it via CLI: "stepdsa run <file>" or convert your solution to JavaScript syntax.`
+      );
+      return;
+    }
+
     try {
       const inputFixture = parsedFile.metadata.input ?? classifiedPattern.defaultInput;
       const rawArray = Array.isArray(inputFixture) ? inputFixture : [10, 20, 30, 40];
@@ -264,12 +274,49 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 </button>
               </div>
 
+              {/* Language Alert Banner for Non-JS Code */}
+              {detectedLang !== 'javascript' && (
+                <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 flex items-start gap-2.5 text-xs text-amber-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="font-semibold text-amber-300">
+                      {detectedLang === 'cpp' ? 'C++' : detectedLang === 'python' ? 'Python' : 'Java'} Source Code Detected
+                    </div>
+                    <p className="text-[11px] text-amber-300/80 mt-0.5 leading-relaxed">
+                      The in-browser Code Editor runs on a client-side JavaScript engine (100% zero-cloud sandbox).
+                      To visualize native {detectedLang === 'cpp' ? 'C++' : detectedLang === 'python' ? 'Python' : 'Java'}:
+                      run <code className="px-1 py-0.5 rounded bg-amber-900/60 font-mono text-amber-200">stepdsa run solution.{detectedLang === 'cpp' ? 'cpp' : 'py'}</code> in your terminal via the CLI, or convert your algorithm logic to JavaScript syntax here.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Code Textarea Editor */}
               <div className="relative rounded-xl border border-slate-800 bg-[#0B0F19] overflow-hidden focus-within:border-indigo-500 transition-colors">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800 bg-slate-900/60 text-[11px] font-mono text-slate-400">
                   <div className="flex items-center gap-2">
                     <FileCode className="w-3.5 h-3.5 text-indigo-400" />
                     <span>algorithm.stepdsa</span>
+                    {detectedLang === 'cpp' && (
+                      <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[9px] font-mono font-bold uppercase">
+                        C++
+                      </span>
+                    )}
+                    {detectedLang === 'python' && (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold uppercase">
+                        Python
+                      </span>
+                    )}
+                    {detectedLang === 'java' && (
+                      <span className="px-1.5 py-0.2 rounded bg-orange-500/20 text-orange-300 border border-orange-500/40 text-[9px] font-mono font-bold uppercase">
+                        Java
+                      </span>
+                    )}
+                    {detectedLang === 'javascript' && (
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-mono font-bold uppercase">
+                        JavaScript
+                      </span>
+                    )}
                   </div>
                   <span className="text-[10px] text-slate-500">
                     Native ES6 Proxy Sandbox • 0ms Remote Latency

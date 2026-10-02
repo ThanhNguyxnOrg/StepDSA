@@ -21,6 +21,26 @@ export function formatToTitleCase(str: string): string {
 }
 
 /**
+ * Detects the programming language of a source snippet.
+ */
+export function detectSourceLanguage(code: string): 'javascript' | 'cpp' | 'python' | 'java' {
+  const trimmed = code.trim();
+  if (
+    /^#include\b|\bstd::|\bvector\s*<|\busing\s+namespace\s+std\b|\bcout\s*<<|\bint\s+main\s*\(|\bnullptr\b/m.test(trimmed) ||
+    /class\s+\w+\s*\{[\s\S]*?(?:public|private):/m.test(trimmed)
+  ) {
+    return 'cpp';
+  }
+  if (/^def\s+\w+\s*\(|^import\s+\w+|\bprint\s*\(|\belif\b|\b__init__\b|\bself\b/m.test(trimmed)) {
+    return 'python';
+  }
+  if (/^public\s+class\b|\bSystem\.out\.println|\bpublic\s+static\s+void\s+main/m.test(trimmed)) {
+    return 'java';
+  }
+  return 'javascript';
+}
+
+/**
  * Intelligently classifies custom user code or LeetCode snippets
  * to identify algorithm title, category, stage hint, and default testcases.
  */
