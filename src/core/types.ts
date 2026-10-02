@@ -68,18 +68,28 @@ export interface SoundCueObj {
 
 export type SoundCue = SoundCueType | SoundCueObj;
 
+export interface OperationalMetrics {
+  comparisons: number;
+  swaps: number;
+  accesses: number;
+  lookups: number;
+}
+
 export interface ExecutionFrame<TState = any> {
   stepIndex: number;
   totalSteps: number;
   codeLine: number;
   explanation: string;
+  subtitle?: string;
   action?: string;
   callStack?: (CallStackFrame | string)[];
   conditionEval?: {
     expr?: string;
     condition?: string;
     result: any;
+    formatted?: string;
   };
+  metrics?: Partial<OperationalMetrics>;
   variables?: Record<string, any>;
   scopeVariables?: Record<string, any>;
   codeHighlights?: Record<string, number[]>;
