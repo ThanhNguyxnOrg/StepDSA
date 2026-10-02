@@ -16,6 +16,8 @@ import { PersonalCodeStudioModal } from './components/developer/PersonalCodeStud
 import { soundEngine } from './utils/soundEngine';
 import { BookOpen, Code2, HelpCircle } from 'lucide-react';
 import { VisualLegendModal } from './components/workbench/VisualLegendModal';
+import { useOperationalMetrics } from './core/useOperationalMetrics';
+import { OperationalMetricsBar } from './components/stage/OperationalMetricsBar';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'visualizer'>('dashboard');
@@ -59,6 +61,9 @@ export default function App() {
     stepToPrevAction,
     reset,
   } = controller;
+
+  // Live operational metrics tallying comparisons, swaps, accesses, and lookups
+  const operationalMetrics = useOperationalMetrics(timeline, currentStep);
 
   // Sound triggering effect
   useEffect(() => {
@@ -251,15 +256,18 @@ export default function App() {
                   </button>
                 </div>
 
-                {cliSession && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>CLI Session: <strong>{cliSession.filename}</strong> ({cliSession.totalSteps} steps)</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {cliSession && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>CLI Session: <strong>{cliSession.filename}</strong> ({cliSession.totalSteps} steps)</span>
+                    </div>
+                  )}
 
-                <div className="text-[11px] font-mono text-slate-500">
-                  {currentModule.category.toUpperCase()} · {currentModule.complexity.timeAverage}
+                  <OperationalMetricsBar
+                    metrics={operationalMetrics}
+                    complexity={currentModule.complexity?.timeAverage}
+                  />
                 </div>
               </div>
 
