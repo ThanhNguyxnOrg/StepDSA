@@ -27,7 +27,7 @@ describe('App Full Integration Smoke Test', () => {
     const studioBtn = screen.getByText(/Launch CLI Studio/i);
     fireEvent.click(studioBtn);
 
-    expect(screen.getAllByText(/100% Local Execution Security/i)[0]).toBeInTheDocument();
+    expect(screen.getByText(/Personal Code Studio/i)).toBeInTheDocument();
   }, 20000);
 
   it('navigates to Workbench and applies presets and custom input cleanly', () => {
