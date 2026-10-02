@@ -1,13 +1,28 @@
-import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight, RotateCcw, FastForward } from 'lucide-react';
+import React, { useMemo } from 'react';
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  FastForward,
+  Bookmark,
+} from 'lucide-react';
 import { PlaybackController, ExecutionFrame } from '../../core/types';
 
-interface StepperControlsProps {
+export interface StepperControlsProps {
   controller: PlaybackController;
   currentFrame: ExecutionFrame | null;
+  timeline?: ExecutionFrame[];
 }
 
-export const StepperControls: React.FC<StepperControlsProps> = ({ controller, currentFrame }) => {
+export const StepperControls: React.FC<StepperControlsProps> = ({
+  controller,
+  currentFrame,
+  timeline,
+}) => {
   const {
     currentStep,
     totalSteps,
@@ -32,15 +47,30 @@ export const StepperControls: React.FC<StepperControlsProps> = ({ controller, cu
 
   const progressPercent = totalSteps > 1 ? (currentStep / (totalSteps - 1)) * 100 : 0;
 
+  // Extract milestones from timeline
+  const milestones = useMemo(() => {
+    if (!timeline || timeline.length === 0) return [];
+    return timeline
+      .map((f, idx) => ({
+        step: idx,
+        title: f.milestoneTitle || `Milestone @ Step ${idx + 1}`,
+        isMilestone: Boolean(f.isMilestone),
+      }))
+      .filter((m) => m.isMilestone);
+  }, [timeline]);
+
+  const prevMilestone = milestones.slice().reverse().find((m) => m.step < currentStep);
+  const nextMilestone = milestones.find((m) => m.step > currentStep);
+
   return (
-    <div className="bg-[#111827] border-t border-[#1F293D] px-4 py-3 flex flex-col gap-2.5">
+    <div className="bg-[#111827] border-t border-[#1F293D] px-4 py-3 flex flex-col gap-2.5 select-none">
       {/* Top row: Timeline Scrubber & Milestone tracker */}
       <div className="flex items-center gap-3">
         <span className="text-xs font-mono font-medium text-slate-400 w-16 text-right shrink-0">
           <strong className="text-white">{currentStep + 1}</strong> / {totalSteps}
         </span>
 
-        {/* Interactive Scrub Track */}
+        {/* Interactive Scrub Track with Milestone Bookmark Pins */}
         <div className="relative flex-1 flex items-center group">
           <input
             type="range"
@@ -50,6 +80,29 @@ export const StepperControls: React.FC<StepperControlsProps> = ({ controller, cu
             onChange={(e) => seekTo(Number(e.target.value))}
             className="w-full h-2 bg-[#1F2937] rounded-lg appearance-none cursor-pointer accent-[#10B981] focus:outline-none focus:ring-1 focus:ring-[#10B981]"
           />
+
+          {/* Milestone Bookmark Markers along the track */}
+          {milestones.map((m) => {
+            const pct = totalSteps > 1 ? (m.step / (totalSteps - 1)) * 100 : 0;
+            const isCurrent = currentStep === m.step;
+            return (
+              <button
+                key={m.step}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  seekTo(m.step);
+                }}
+                title={`Jump to Milestone: ${m.title}`}
+                style={{ left: `${pct}%` }}
+                className={`absolute top-1/2 -translate-y-1/2 w-2 h-3.5 -ml-1 rounded-[2px] transition-all transform hover:scale-150 z-10 ${
+                  isCurrent
+                    ? 'bg-amber-400 ring-2 ring-amber-300 shadow-md shadow-amber-400/50'
+                    : 'bg-[#06B6D4] hover:bg-cyan-300 opacity-80'
+                }`}
+              />
+            );
+          })}
         </div>
 
         {/* Milestone Badge (if current frame has one) */}
@@ -66,7 +119,7 @@ export const StepperControls: React.FC<StepperControlsProps> = ({ controller, cu
 
       {/* Bottom row: Stepper Buttons & Speed selector */}
       <div className="flex items-center justify-between">
-        {/* Left: Reset */}
+        {/* Left: Reset & Milestone Navigation */}
         <div className="flex items-center gap-2">
           <button
             onClick={reset}
@@ -76,6 +129,18 @@ export const StepperControls: React.FC<StepperControlsProps> = ({ controller, cu
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Reset</span>
           </button>
+
+          {/* Jump to Prev Milestone (if any) */}
+          {prevMilestone && (
+            <button
+              onClick={() => seekTo(prevMilestone.step)}
+              title={`Prev Chapter: ${prevMilestone.title}`}
+              className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#06B6D4]/10 border border-[#06B6D4]/30 text-[#06B6D4] hover:bg-[#06B6D4]/20 text-[10px] font-mono font-bold transition-all"
+            >
+              <Bookmark className="w-3 h-3" />
+              <span>Prev Milestone</span>
+            </button>
+          )}
         </div>
 
         {/* Center: Playback Stepper controls */}
@@ -135,6 +200,18 @@ export const StepperControls: React.FC<StepperControlsProps> = ({ controller, cu
             >
               <span>Action</span>
               <SkipForward className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Jump to Next Milestone (if any) */}
+          {nextMilestone && (
+            <button
+              onClick={() => seekTo(nextMilestone.step)}
+              title={`Next Chapter: ${nextMilestone.title}`}
+              className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#06B6D4]/10 border border-[#06B6D4]/30 text-[#06B6D4] hover:bg-[#06B6D4]/20 text-[10px] font-mono font-bold transition-all"
+            >
+              <span>Next Milestone</span>
+              <Bookmark className="w-3 h-3" />
             </button>
           )}
         </div>

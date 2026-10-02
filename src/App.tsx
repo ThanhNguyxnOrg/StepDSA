@@ -287,7 +287,11 @@ export default function App() {
 
               {/* Bottom Stepper Controls (shrink-0 to prevent viewport clipping) */}
               <div className="shrink-0">
-                <StepperControls controller={controller} currentFrame={currentFrame} />
+                <StepperControls
+                  controller={controller}
+                  currentFrame={currentFrame}
+                  timeline={timeline}
+                />
               </div>
             </main>
 
