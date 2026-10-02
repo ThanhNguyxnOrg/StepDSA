@@ -139,40 +139,46 @@ npm run dev
 # → Open http://localhost:5173/
 ```
 
-### Option B: CLI — Trace & Visualize Your Own Code
+### Option B: CLI — Trace & Visualize Your Own Code (JS, Python, C++)
 
 ```bash
 # Link the CLI globally
 git clone https://github.com/ThanhNguyxnOrg/StepDSA.git
 cd StepDSA && npm install && npm link
 
-# Initialize a new algorithm project
-mkdir my-algo && cd my-algo
-stepdsa init
-
-# Edit solution.stepdsa, then run:
+# Trace JavaScript / StepDSA script
 stepdsa run solution.stepdsa
+
+# Trace native C++ LeetCode solution directly with local g++
+stepdsa run solution.cpp
 # → Browser opens automatically with step-by-step time-travel visualization!
 ```
 
 ---
 
-## 💻 Developer CLI (`stepdsa`)
+## 💻 Developer CLI & Personal Code Studio
 
-StepDSA includes a zero-setup CLI for tracing local algorithms and visualizing them instantly:
+StepDSA features a dual-mode BYOC (Bring Your Own Code) environment:
 
-```bash
-# Initialize a new project folder with template
-stepdsa init
+- **Web Studio (In-Browser):**
+  - **JavaScript / TypeScript:** Instant V8 sandbox with Proxy tracking for arrays, objects, and nested recursion.
+  - **Python (WebAssembly):** Zero-setup client-side execution via Pyodide with `sys.settrace()` stack capturing.
+  - **LeetCode Testcase Bar:** Input testcase arguments like `n = 3` or `[2, 7, 11, 15], target = 9`.
+  - **Dedicated CallStackStage:** Visualizes call stack depth, frames, and backtracking states.
+- **Native C++ CLI Engine:**
+  - Compiles your code locally with your system `g++` (`stepdsa run solution.cpp`).
+  - Supports LeetCode `class Solution` and custom algorithms.
 
-# Trace and open visualizer in your browser
-stepdsa run solution.stepdsa
+---
 
-# Or generate an offline .stepdsa.json snapshot file
-stepdsa trace solution.stepdsa --out trace.json
-```
+## 📚 Documentation Index
 
-For full CLI documentation, see [docs/CLI.md](docs/CLI.md).
+| Guide | Description |
+| :--- | :--- |
+| 📖 [docs/CLI.md](docs/CLI.md) | Complete CLI reference manual, subcommands (`init`, `run`, `trace`), and C++ compilation flags. |
+| 🎨 [docs/STUDIO_GUIDE.md](docs/STUDIO_GUIDE.md) | Personal Code Studio guide for in-browser JavaScript, Python WASM, and LeetCode testcases. |
+| 🏗️ [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deterministic playback engine, state schemas, and stage rendering architecture. |
+| 🎓 [docs/MASTER_CURRICULUM.md](docs/MASTER_CURRICULUM.md) | Comprehensive 160+ algorithm catalog and pedagogical progression. |
 
 ---
 

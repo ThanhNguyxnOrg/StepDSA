@@ -1673,43 +1673,222 @@ export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = ({ 
         </div>
       );
 
+    case 'mergesort-recursion-tree':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#059669] to-[#047857] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>Recursion Call Tree</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="px-2 py-0.5 rounded bg-emerald-400 text-emerald-950 text-[10px] font-extrabold shadow shadow-black/20">
+              [5, 2, 9, 1]
+            </div>
+            <div className="w-24 h-2 border-t-2 border-l-2 border-r-2 border-emerald-300/60 rounded-t" />
+            <div className="flex items-center justify-between w-32 px-1">
+              <div className="px-1.5 py-0.5 rounded bg-white/90 text-emerald-950 text-[9px] font-bold shadow">
+                [5, 2]
+              </div>
+              <div className="px-1.5 py-0.5 rounded bg-amber-300 text-emerald-950 text-[9px] font-bold shadow animate-pulse">
+                [9, 1]
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'quicksort-partition-tree':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0284C7] to-[#0369A1] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-sky-100 uppercase tracking-wider">
+            <span>Pivot Tree Topology</span>
+            <span className="w-2 h-2 rounded-full bg-sky-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="px-2.5 py-0.5 rounded bg-amber-300 text-sky-950 text-[10px] font-extrabold shadow-md flex items-center gap-1">
+              <span className="text-[8px] bg-sky-900 text-amber-200 px-1 rounded">PIVOT</span>
+              <span>5</span>
+            </div>
+            <div className="w-24 h-2 border-t-2 border-l-2 border-r-2 border-sky-300/60 rounded-t" />
+            <div className="flex items-center justify-between w-36 px-1">
+              <div className="px-1.5 py-0.5 rounded bg-white/90 text-sky-950 text-[9px] font-bold shadow">
+                {'< 5: [2, 1]'}
+              </div>
+              <div className="px-1.5 py-0.5 rounded bg-sky-400 text-sky-950 text-[9px] font-bold shadow">
+                {'> 5: [9]'}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'backtracking-decision-tree':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#D97706] to-[#B45309] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-100 uppercase tracking-wider">
+            <span>State-Space Pruning</span>
+            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono">
+            <div className="px-2 py-0.5 rounded bg-amber-200 text-amber-950 text-[10px] font-extrabold shadow">
+              Target: 7
+            </div>
+            <div className="w-28 h-2 border-t-2 border-l-2 border-r-2 border-amber-300/60 rounded-t" />
+            <div className="flex items-center justify-between w-36 px-1 text-[9px]">
+              <div className="px-1.5 py-0.5 rounded bg-emerald-400 text-emerald-950 font-bold shadow flex items-center gap-0.5">
+                <span>+4</span>
+                <span className="text-[8px]">✔</span>
+              </div>
+              <div className="px-1.5 py-0.5 rounded bg-rose-500/80 text-white font-bold shadow flex items-center gap-0.5 opacity-80">
+                <span>+9</span>
+                <span className="text-[8px]">✕ Prune</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'sweep-line-intersections':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0E7490] to-[#155E75] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-cyan-100 uppercase tracking-wider">
+            <span>Bentley-Ottmann Sweep</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+          <div className="relative w-full h-24 flex items-center justify-center overflow-hidden">
+            <div className="absolute w-24 h-0.5 bg-white/70 rotate-[-25deg]" />
+            <div className="absolute w-24 h-0.5 bg-white/70 rotate-[35deg]" />
+            <div className="absolute h-full w-0.5 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-pulse" />
+            <div className="w-3 h-3 rounded-full bg-rose-400 ring-2 ring-white shadow-lg z-10 animate-ping" />
+          </div>
+        </div>
+      );
+
     default: {
-      const getCategoryGradient = (cat: string) => {
+      const getCategoryConfig = (cat: string) => {
         switch (cat) {
           case 'sorting':
-            return 'from-[#059669] to-[#047857] text-emerald-100';
+            return {
+              grad: 'from-[#059669] to-[#047857]',
+              text: 'text-emerald-100',
+              accent: 'bg-emerald-300',
+              label: 'Step-by-Step Sorting',
+              renderVisual: () => (
+                <div className="flex items-end justify-center gap-2 h-20 pb-1">
+                  <div className="w-5 bg-white/60 rounded-t h-8" />
+                  <div className="w-5 bg-emerald-400 rounded-t h-14" />
+                  <div className="w-5 bg-amber-300 rounded-t h-20 animate-pulse shadow" />
+                  <div className="w-5 bg-white/80 rounded-t h-16" />
+                  <div className="w-5 bg-white/90 rounded-t h-22" />
+                </div>
+              ),
+            };
           case 'searching':
-            return 'from-[#0284C7] to-[#0369A1] text-sky-100';
+            return {
+              grad: 'from-[#0284C7] to-[#0369A1]',
+              text: 'text-sky-100',
+              accent: 'bg-sky-300',
+              label: 'Search Interval Matrix',
+              renderVisual: () => (
+                <div className="flex items-center justify-center gap-1.5 h-20 font-mono text-xs">
+                  <div className="px-2 py-1 rounded bg-white/30 text-white">[ Low ]</div>
+                  <div className="px-2 py-1 rounded bg-amber-300 text-sky-950 font-bold animate-pulse shadow">Mid</div>
+                  <div className="px-2 py-1 rounded bg-white/30 text-white">[ High ]</div>
+                </div>
+              ),
+            };
           case 'linked-lists':
-            return 'from-[#1D4ED8] to-[#1E40AF] text-blue-100';
+            return {
+              grad: 'from-[#1D4ED8] to-[#1E40AF]',
+              text: 'text-blue-100',
+              accent: 'bg-blue-300',
+              label: 'Pointer Traversal Chain',
+              renderVisual: () => (
+                <div className="flex items-center justify-center gap-1.5 h-20 font-mono text-xs">
+                  <div className="px-2 py-1 rounded bg-white/90 text-blue-950 font-bold shadow">N1</div>
+                  <span className="text-cyan-300">→</span>
+                  <div className="px-2 py-1 rounded bg-cyan-400 text-blue-950 font-bold animate-pulse shadow">N2</div>
+                  <span className="text-cyan-300">→</span>
+                  <div className="px-2 py-1 rounded bg-white/70 text-blue-950">N3</div>
+                </div>
+              ),
+            };
           case 'trees-bst':
-            return 'from-[#4F46E5] to-[#4338CA] text-indigo-100';
+          case 'recursion':
+            return {
+              grad: 'from-[#4F46E5] to-[#4338CA]',
+              text: 'text-indigo-100',
+              accent: 'bg-indigo-300',
+              label: 'Hierarchical Tree Topology',
+              renderVisual: () => (
+                <div className="flex flex-col items-center justify-center gap-1.5 h-20 font-mono">
+                  <div className="w-6 h-6 rounded-full bg-cyan-300 text-indigo-950 font-bold text-[10px] flex items-center justify-center shadow">Root</div>
+                  <div className="w-16 h-1.5 border-t-2 border-l-2 border-r-2 border-indigo-300/60 rounded-t" />
+                  <div className="flex justify-between w-20">
+                    <div className="w-5 h-5 rounded-full bg-white text-indigo-950 font-bold text-[9px] flex items-center justify-center">L</div>
+                    <div className="w-5 h-5 rounded-full bg-amber-300 text-indigo-950 font-bold text-[9px] flex items-center justify-center animate-pulse">R</div>
+                  </div>
+                </div>
+              ),
+            };
           case 'graphs':
-            return 'from-[#0E7490] to-[#155E75] text-cyan-100';
+            return {
+              grad: 'from-[#0E7490] to-[#155E75]',
+              text: 'text-cyan-100',
+              accent: 'bg-cyan-300',
+              label: 'Graph Network Topo',
+              renderVisual: () => (
+                <div className="relative w-36 h-20 flex items-center justify-center">
+                  <div className="absolute w-24 h-0.5 bg-white/40 rotate-45" />
+                  <div className="absolute w-24 h-0.5 bg-white/40 -rotate-45" />
+                  <div className="absolute top-1 left-4 w-5 h-5 rounded-full bg-cyan-400 text-cyan-950 font-bold text-[9px] flex items-center justify-center shadow">A</div>
+                  <div className="absolute top-1 right-4 w-5 h-5 rounded-full bg-white text-cyan-950 font-bold text-[9px] flex items-center justify-center shadow">B</div>
+                  <div className="absolute bottom-1 left-4 w-5 h-5 rounded-full bg-white text-cyan-950 font-bold text-[9px] flex items-center justify-center shadow">C</div>
+                  <div className="absolute bottom-1 right-4 w-5 h-5 rounded-full bg-amber-300 text-cyan-950 font-bold text-[9px] flex items-center justify-center shadow animate-pulse">D</div>
+                </div>
+              ),
+            };
           case 'dynamic-programming':
-            return 'from-[#9333EA] to-[#7E22CE] text-purple-100';
-          case 'math':
-            return 'from-[#D97706] to-[#B45309] text-amber-100';
-          case 'stack-queue':
-            return 'from-[#6366F1] to-[#4F46E5] text-indigo-100';
+            return {
+              grad: 'from-[#9333EA] to-[#7E22CE]',
+              text: 'text-purple-100',
+              accent: 'bg-purple-300',
+              label: 'Memoization Subproblem Grid',
+              renderVisual: () => (
+                <div className="grid grid-cols-3 gap-1.5 p-2 bg-black/25 rounded-lg border border-purple-400/30 font-mono text-xs">
+                  <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center text-[10px] text-purple-300">0</div>
+                  <div className="w-6 h-6 rounded bg-purple-900/60 flex items-center justify-center text-[10px] text-purple-300">1</div>
+                  <div className="w-6 h-6 rounded bg-emerald-400 text-purple-950 font-bold flex items-center justify-center text-[10px] shadow animate-pulse">★</div>
+                </div>
+              ),
+            };
           default:
-            return 'from-[#1F2937] to-[#111827] text-slate-200';
+            return {
+              grad: 'from-[#334155] to-[#1E293B]',
+              text: 'text-slate-100',
+              accent: 'bg-cyan-400',
+              label: 'Interactive Visual Model',
+              renderVisual: () => (
+                <div className="flex items-center justify-center gap-2 h-20 font-mono text-xs">
+                  <div className="px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-bold">
+                    [ Time-Travel ]
+                  </div>
+                </div>
+              ),
+            };
         }
       };
 
-      const grad = getCategoryGradient(category);
+      const config = getCategoryConfig(category);
 
       return (
-        <div className={`w-full h-40 bg-gradient-to-b ${grad} rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform`}>
+        <div className={`w-full h-40 bg-gradient-to-b ${config.grad} rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform`}>
           <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase tracking-wider">
-            <span>{category.replace('-', ' ')}</span>
-            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span className={config.text}>{config.label}</span>
+            <span className={`w-2 h-2 rounded-full ${config.accent} animate-ping`} />
           </div>
           <div className="flex items-center justify-center h-24">
-            <div className="px-3 py-1.5 rounded-lg bg-black/30 border border-white/20 text-xs font-mono font-bold text-white shadow-md flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Interactive StepDSA Sandbox</span>
-            </div>
+            {config.renderVisual()}
           </div>
         </div>
       );
