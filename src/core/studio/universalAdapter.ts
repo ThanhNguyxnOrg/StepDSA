@@ -3,6 +3,7 @@ import { AlgorithmModule, ExecutionFrame } from '../types';
 import { StepDSAParsedFile } from './parser';
 import { ClassifiedPattern } from './classifier';
 import { ArrayStage } from '../../components/stage/ArrayStage';
+import { CallStackStage } from '../../components/developer/CallStackStage';
 
 /**
  * Creates a standard AlgorithmModule from user code parsing, smart pattern classification,
@@ -62,6 +63,11 @@ export function createCustomAlgorithmModule(
           conditionEval: frame.conditionEval,
           action: frame.action,
         });
+      }
+
+      // If callStack or callStackDepth is present, render CallStackStage
+      if ((frame.callStack && frame.callStack.length > 0) || (frame.state && typeof frame.state.callStackDepth === 'number')) {
+        return React.createElement(CallStackStage, { frame });
       }
 
       // Fallback inspector for arbitrary state objects
