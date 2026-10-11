@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="public/logo.svg" alt="StepDSA logo" width="320" />
+
 # ⚡ StepDSA
 
 ### The Modern Interactive DSA Learning Platform & Time-Travel Visualizer
