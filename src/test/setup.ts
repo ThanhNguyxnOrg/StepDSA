@@ -33,6 +33,49 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// Polyfill localStorage for Node 22/26 and JSDOM environments
+const createStorageMock = () => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+  };
+};
+
+const storageMock = createStorageMock();
+try {
+  Object.defineProperty(window, 'localStorage', {
+    value: storageMock,
+    configurable: true,
+    writable: true,
+  });
+} catch (_) {}
+
+try {
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: storageMock,
+    configurable: true,
+    writable: true,
+  });
+} catch (_) {}
+
+// Polyfill scrollIntoView for JSDOM
+if (typeof window !== 'undefined') {
+  window.HTMLElement.prototype.scrollIntoView = function () {};
+}
+
 // Polyfill SVG methods for motion.path and SVG elements in JSDOM
 if (typeof window !== 'undefined') {
   const svgProto = window.SVGElement?.prototype as any;

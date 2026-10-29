@@ -26,20 +26,20 @@ export function formatActiveExpression(
   if (conditionEval?.expr) {
     const res =
       conditionEval.result !== undefined
-        ? ` ➔ ${String(conditionEval.result).toUpperCase()}`
+        ? ` → ${String(conditionEval.result).toUpperCase()}`
         : '';
     return `${conditionEval.expr}${res}`;
   }
 
   const swapping = elements.filter((el) => el.status === 'swapping');
   if (swapping.length >= 2) {
-    return `SWAP ${swapping.map((e) => e.value).join(' ⇄ ')}`;
+    return `SWAP ${swapping.map((e) => e.value).join(' <-> ')}`;
   }
 
   const comparing = elements.filter((el) => el.status === 'comparing');
   if (comparing.length === 2) {
     const [a, b] = comparing;
-    const outcome = a.value > b.value ? '➔ SWAP' : '➔ KEEP';
+    const outcome = a.value > b.value ? '→ SWAP' : '→ KEEP';
     return `${a.value} vs ${b.value} (${outcome})`;
   }
 

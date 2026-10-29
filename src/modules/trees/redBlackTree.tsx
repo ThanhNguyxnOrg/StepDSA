@@ -435,27 +435,64 @@ export const redBlackTreeModule: AlgorithmModule<
     }
 
     const visualRoot = layoutTree(tree, 240, 45, 110);
-    const edges: { x1: number; y1: number; x2: number; y2: number }[] = [];
-    const nodesList: { key: number; color: NodeColor; x: number; y: number }[] = [];
+    const rawNodes: {
+      id: string;
+      value: number;
+      x: number;
+      y: number;
+      color: NodeColor;
+      leftId?: string;
+      rightId?: string;
+    }[] = [];
 
-    function collectVisuals(vn: VisualRBNode | null) {
+    function collectRaw(vn: VisualRBNode | null) {
       if (!vn) return;
-      nodesList.push({ key: vn.key, color: vn.color, x: vn.x, y: vn.y });
-      if (vn.left) {
-        edges.push({ x1: vn.x, y1: vn.y, x2: vn.left.x, y2: vn.left.y });
-        collectVisuals(vn.left);
+      rawNodes.push({
+        id: String(vn.key),
+        value: vn.key,
+        x: vn.x,
+        y: vn.y,
+        color: vn.color,
+        leftId: vn.left ? String(vn.left.key) : undefined,
+        rightId: vn.right ? String(vn.right.key) : undefined,
+      });
+      collectRaw(vn.left);
+      collectRaw(vn.right);
+    }
+    collectRaw(visualRoot);
+
+    // Enforce minimum horizontal distance between same-depth nodes
+    const byDepth = new Map<number, typeof rawNodes>();
+    for (const n of rawNodes) {
+      const d = Math.round((n.y - 45) / 60);
+      const list = byDepth.get(d) || [];
+      list.push(n);
+      byDepth.set(d, list);
+    }
+    let minX = 40;
+    let maxX = 440;
+    let maxY = 240;
+    for (const [, row] of byDepth.entries()) {
+      row.sort((a, b) => a.x - b.x);
+      for (let i = 1; i < row.length; i++) {
+        if (row[i].x - row[i - 1].x < 56) {
+          row[i].x = row[i - 1].x + 56;
+        }
       }
-      if (vn.right) {
-        edges.push({ x1: vn.x, y1: vn.y, x2: vn.right.x, y2: vn.right.y });
-        collectVisuals(vn.right);
+      for (const n of row) {
+        minX = Math.min(minX, n.x - 36);
+        maxX = Math.max(maxX, n.x + 36);
+        maxY = Math.max(maxY, n.y + 44);
       }
     }
-    collectVisuals(visualRoot);
+    const nodeById = new Map(rawNodes.map((n) => [n.id, n]));
+    const svgWidth = Math.max(480, maxX - Math.min(0, minX) + 40);
+    const svgHeight = Math.max(260, maxY);
 
     return (
-      <div className="flex flex-col items-center justify-center p-6 gap-6 w-full max-w-3xl mx-auto">
+      <div className="flex flex-col items-center justify-center p-4 gap-4 w-full max-w-3xl mx-auto">
         {/* Banner */}
-        <div className="flex flex-col gap-2 w-full bg-slate-900/80 border border-slate-700/60 rounded-xl p-4 shadow-lg backdrop-blur">
+        <div className="flex flex-col gap-2 w-full bg-slate-900/80 border border-slate-700/60 rounded-xl p-3.5 shadow-lg backdrop-blur">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-xs uppercase font-mono tracking-wider text-slate-400">Current Insert:</span>
@@ -477,45 +514,63 @@ export const redBlackTreeModule: AlgorithmModule<
         </div>
 
         {/* Tree SVG */}
-        <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3 w-full">
-          <svg width="480" height="280" className="overflow-visible">
-            {edges.map((e, idx) => (
-              <line
-                key={idx}
-                x1={e.x1}
-                y1={e.y1}
-                x2={e.x2}
-                y2={e.y2}
-                stroke="#334155"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
+        <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col items-center gap-3 w-full overflow-x-auto">
+          <svg
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+            style={{ width: `${Math.min(680, svgWidth)}px`, height: `${svgHeight}px` }}
+            className="overflow-visible"
+          >
+            {rawNodes.map((n) => (
+              <g key={`edges-${n.id}`}>
+                {n.leftId && nodeById.get(n.leftId) && (
+                  <line
+                    x1={n.x}
+                    y1={n.y}
+                    x2={nodeById.get(n.leftId)!.x}
+                    y2={nodeById.get(n.leftId)!.y}
+                    stroke="#334155"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                )}
+                {n.rightId && nodeById.get(n.rightId) && (
+                  <line
+                    x1={n.x}
+                    y1={n.y}
+                    x2={nodeById.get(n.rightId)!.x}
+                    y2={nodeById.get(n.rightId)!.y}
+                    stroke="#334155"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                )}
+              </g>
             ))}
 
-            {nodesList.map((n) => {
-              const isTarget = activeKey === n.key;
+            {rawNodes.map((n) => {
+              const isTarget = activeKey === n.value;
               const isRed = n.color === 'RED';
 
               return (
-                <g key={n.key} className="transition-all duration-300">
+                <g key={n.id} className="transition-all duration-300">
                   {isTarget && (
                     <circle
                       cx={n.x}
                       cy={n.y}
-                      r="26"
+                      r="25"
                       fill="none"
                       stroke="#fbbf24"
-                      strokeWidth="3"
+                      strokeWidth="2.5"
                       className="animate-pulse"
                     />
                   )}
                   <circle
                     cx={n.x}
                     cy={n.y}
-                    r="20"
+                    r="19"
                     fill={isRed ? '#dc2626' : '#020617'}
                     stroke={isTarget ? '#fbbf24' : isRed ? '#ef4444' : '#475569'}
-                    strokeWidth="3"
+                    strokeWidth="2.5"
                   />
                   <text
                     x={n.x}
@@ -526,7 +581,7 @@ export const redBlackTreeModule: AlgorithmModule<
                     fontWeight="bold"
                     fontFamily="monospace"
                   >
-                    {n.key}
+                    {n.value}
                   </text>
                 </g>
               );

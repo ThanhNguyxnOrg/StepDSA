@@ -357,7 +357,7 @@ void mergeSort(int[] a, int l, int r) {
           >
             <span className="font-bold">{node.name}</span>
             {node.result && (
-              <span className="text-[10px] text-cyan-300 font-normal">➔ {node.result}</span>
+              <span className="text-[10px] text-cyan-300 font-normal">→ {node.result}</span>
             )}
           </div>
 

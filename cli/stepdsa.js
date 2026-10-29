@@ -458,8 +458,20 @@ function generateTraceSnapshot(filePath) {
 function parseAndTrace(filePath) {
   const { snapshot, baseName, title, frames } = generateTraceSnapshot(filePath);
 
-  const outputPath = path.resolve(path.dirname(filePath), `${baseName}.stepdsa.json`);
+  const outIdx = process.argv.indexOf('--out');
+  const customOut = outIdx !== -1 && process.argv[outIdx + 1] ? process.argv[outIdx + 1] : null;
+  const outputPath = customOut
+    ? path.resolve(customOut)
+    : path.resolve(path.dirname(filePath), `${baseName}.stepdsa.json`);
+
   fs.writeFileSync(outputPath, JSON.stringify(snapshot, null, 2), 'utf8');
+
+  if (process.argv.includes('--verbose')) {
+    console.log(`\n\x1b[36m[Verbose Trace Log]\x1b[0m`);
+    frames.slice(0, 25).forEach((f) => {
+      console.log(`  Step #${f.stepIndex} (L${f.codeLine || 1}): ${f.explanation}`);
+    });
+  }
 
   console.log(`\n\x1b[32m✔ Trace Completed Successfully!\x1b[0m`);
   console.log(`  • Algorithm      : \x1b[35m${title}\x1b[0m`);
@@ -467,8 +479,32 @@ function parseAndTrace(filePath) {
   console.log(`  • Output File    : \x1b[36m${outputPath}\x1b[0m`);
   console.log(`\n\x1b[1mNext Steps:\x1b[0m`);
   console.log(`  1. Open StepDSA Web Visualizer (https://ThanhNguyxnOrg.github.io/StepDSA/)`);
-  console.log(`  2. Click '\x1b[35mCLI Studio\x1b[0m' or drag \x1b[36m${baseName}.stepdsa.json\x1b[0m into the viewer!`);
+  console.log(`  2. Click '\x1b[35mCLI Studio\x1b[0m' or drag \x1b[36m${path.basename(outputPath)}\x1b[0m into the viewer!`);
   console.log(`  3. Step and time-travel through your own local execution with zero lag.\n`);
+}
+
+function runDoctor() {
+  const cppCompiler = detectCppCompiler();
+  let pythonVer = null;
+  try {
+    pythonVer = execSync('python3 --version', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {
+    pythonVer = null;
+  }
+
+  console.log(`\x1b[32m✔ StepDSA Environment Doctor\x1b[0m\n`);
+  console.log(`  • Node.js Runtime : \x1b[36m${process.version}\x1b[0m (ES6 Proxy Tracer Ready)`);
+  console.log(
+    `  • C++ Compiler    : ${
+      cppCompiler ? `\x1b[32m${cppCompiler} detected\x1b[0m` : '\x1b[33mNot found (install g++ or clang++)\x1b[0m'
+    }`
+  );
+  console.log(
+    `  • Python Runtime  : ${
+      pythonVer ? `\x1b[32m${pythonVer}\x1b[0m` : '\x1b[33mNot found (Pyodide WASM available in browser)\x1b[0m'
+    }`
+  );
+  console.log(`  • Payload Engine  : \x1b[32mlz-string URI compressor active\x1b[0m\n`);
 }
 
 function openBrowser(url) {
@@ -595,6 +631,9 @@ if (args[0] === 'trace') {
 } else if (args[0] === 'init') {
   printBanner();
   initProject();
+} else if (args[0] === 'doctor') {
+  printBanner();
+  runDoctor();
 } else if (args[0] === 'run') {
   if (!args[1]) {
     console.error('\x1b[31m[Error]\x1b[0m Please specify a file to run (e.g. stepdsa run solution.stepdsa)');

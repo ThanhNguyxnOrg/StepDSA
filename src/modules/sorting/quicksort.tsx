@@ -197,10 +197,10 @@ function partition(arr, low, high):
       const pivot = arr[high];
       let pIndex = low;
 
-      callStack.push({ name: 'partition', params: { low, high, pivot }, line: 9 });
+      callStack.push({ name: 'partition', params: { low, high, pivot }, line: 8 });
 
       snapshot(
-        9,
+        8,
         `Selected pivot = ${pivot} at index [${high}]. Initialized partition index pIndex = ${pIndex}.`,
         { pivot: high, pIndex, j: low },
         { [high]: 'pivot', [pIndex]: 'active' },
@@ -214,7 +214,7 @@ function partition(arr, low, high):
       for (let j = low; j < high; j++) {
         const isLessOrEqual = arr[j] <= pivot;
         snapshot(
-          12,
+          11,
           `Comparing arr[j] (${arr[j]}) with pivot (${pivot}).`,
           { pivot: high, pIndex, j },
           { [high]: 'pivot', [pIndex]: 'active', [j]: 'comparing' },
@@ -228,13 +228,13 @@ function partition(arr, low, high):
         if (isLessOrEqual) {
           if (pIndex !== j) {
             snapshot(
-              13,
+              12,
               `Since arr[j] (${arr[j]}) <= pivot (${pivot}), swap arr[pIndex] (${arr[pIndex]}) with arr[j] (${arr[j]}).`,
               { pivot: high, pIndex, j },
               { [high]: 'pivot', [pIndex]: 'swapping', [j]: 'swapping' },
               true,
               undefined,
-              { pIndex, j, valPIndex: arr[pIndex], valJ: arr[j] },
+              { pivot, pIndex, j, valPIndex: arr[pIndex], valJ: arr[j] },
               { expr: `pIndex !== j (${pIndex} !== ${j})`, result: true },
               { type: 'swap' }
             );
@@ -244,13 +244,13 @@ function partition(arr, low, high):
 
           pIndex++;
           snapshot(
-            14,
+            13,
             `Incremented pIndex to ${pIndex}.`,
             { pivot: high, pIndex, j },
             { [high]: 'pivot', [pIndex]: 'active' },
             true,
             undefined,
-            { pIndex, j },
+            { pivot, pIndex, j },
             undefined,
             { type: 'step' }
           );
@@ -259,7 +259,7 @@ function partition(arr, low, high):
 
       // Final pivot swap
       snapshot(
-        15,
+        14,
         `Partition loop complete. Swapping pivot (${pivot}) into its finalized sorted position at pIndex [${pIndex}].`,
         { pivot: high, pIndex },
         { [high]: 'swapping', [pIndex]: 'swapping' },
@@ -274,13 +274,13 @@ function partition(arr, low, high):
       sortedIndices.add(pIndex);
 
       snapshot(
-        16,
+        15,
         `Pivot ${arr[pIndex]} is now settled in its finalized sorted position at index [${pIndex}].`,
         { sorted: pIndex },
         { [pIndex]: 'sorted' },
         true,
         undefined,
-        { sortedIndex: pIndex, value: arr[pIndex] },
+        { pivot: arr[pIndex], sortedIndex: pIndex },
         { expr: `isSorted(pIndex)`, result: true },
         { type: 'sorted' }
       );

@@ -75,7 +75,7 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
               <div className="px-1.5 py-0.5 rounded bg-rose-500/80 text-white text-[9px] font-bold">α = 0.85</div>
               <div className="text-[9px] text-amber-200">Table: 4</div>
             </div>
-            <span className="text-amber-300 text-sm animate-pulse">➔</span>
+            <span className="text-amber-300 text-sm animate-pulse">→</span>
             <div className="flex flex-col gap-1 p-1.5 bg-black/40 rounded border border-emerald-500/40">
               <div className="px-1.5 py-0.5 rounded bg-emerald-500 text-emerald-950 text-[9px] font-bold">α = 0.42</div>
               <div className="text-[9px] text-emerald-200">Table: 8</div>
@@ -731,7 +731,7 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
           <div className="flex items-center justify-center gap-2 h-24 font-mono text-xs">
             <div className="p-2 rounded-xl bg-black/40 border border-cyan-400/50 flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-cyan-400 text-cyan-950 font-bold text-[9px] flex items-center justify-center shadow">A</div>
-              <span className="text-cyan-300 text-xs animate-pulse">⇄</span>
+              <span className="text-cyan-300 text-xs animate-pulse">↔</span>
               <div className="w-5 h-5 rounded-full bg-amber-300 text-cyan-950 font-bold text-[9px] flex items-center justify-center shadow">B</div>
             </div>
             <span className="text-[10px] text-cyan-200 font-bold">SCC #1</span>
@@ -787,7 +787,7 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
           </div>
           <div className="flex items-center justify-center gap-2 h-24 font-mono text-xs">
             <div className="w-6 h-6 rounded bg-cyan-400 text-cyan-950 font-bold text-[10px] flex items-center justify-center">Source</div>
-            <span className="text-amber-300 font-bold animate-pulse">4/10 ➔</span>
+            <span className="text-amber-300 font-bold animate-pulse">4/10 →</span>
             <div className="w-6 h-6 rounded bg-emerald-400 text-cyan-950 font-bold text-[10px] flex items-center justify-center shadow">Sink</div>
           </div>
         </div>
@@ -912,13 +912,13 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
           <div className="flex items-center justify-center gap-1.5 h-24 font-mono text-xs">
-            <span className="text-amber-300 text-xs animate-pulse">⇄ Front</span>
-            <div className="flex gap-1 p-1 bg-black/40 rounded border border-indigo-400">
-              <div className="w-5 h-6 rounded bg-indigo-400" />
-              <div className="w-5 h-6 rounded bg-indigo-300" />
-              <div className="w-5 h-6 rounded bg-indigo-200" />
+            <span className="text-amber-300 text-xs font-bold anim-pointer-l">↔ Front</span>
+            <div className="flex gap-1 p-1.5 bg-black/40 rounded-lg border border-indigo-400">
+              <div className="w-6 h-6 rounded bg-amber-300 text-indigo-950 font-bold flex items-center justify-center text-[10px] anim-swap-a">15</div>
+              <div className="w-6 h-6 rounded bg-indigo-200 text-indigo-950 font-bold flex items-center justify-center text-[10px]">30</div>
+              <div className="w-6 h-6 rounded bg-cyan-300 text-indigo-950 font-bold flex items-center justify-center text-[10px] anim-swap-b">45</div>
             </div>
-            <span className="text-cyan-300 text-xs animate-pulse">Back ⇄</span>
+            <span className="text-cyan-300 text-xs font-bold anim-pointer-r">Back ↔</span>
           </div>
         </div>
       );
@@ -931,15 +931,14 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span className="w-2 h-2 rounded-full bg-indigo-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono text-xs">
-            <div className="flex gap-1 p-1 bg-black/40 rounded">
-              <span className="px-1.5 py-0.5 rounded bg-white/20 text-slate-300">1</span>
-              <div className="flex gap-1 p-0.5 rounded border-2 border-amber-300 bg-amber-400/20">
-                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-indigo-950 font-bold">3</span>
-                <span className="px-1.5 py-0.5 rounded bg-white text-indigo-950">-1</span>
-              </div>
-              <span className="px-1.5 py-0.5 rounded bg-white/20 text-slate-300">-3</span>
+            <div className="relative flex gap-1.5 p-1.5 bg-black/40 rounded-lg">
+              <div className="absolute top-0.5 bottom-0.5 left-1 w-[68px] rounded border-2 border-amber-300 bg-amber-400/20 anim-window-slide pointer-events-none" />
+              <span className="w-5 h-6 flex items-center justify-center rounded bg-white/20 text-slate-200 text-[10px]">1</span>
+              <span className="w-5 h-6 flex items-center justify-center rounded bg-amber-400 text-indigo-950 font-extrabold text-[10px]">3</span>
+              <span className="w-5 h-6 flex items-center justify-center rounded bg-white text-indigo-950 font-bold text-[10px]">-1</span>
+              <span className="w-5 h-6 flex items-center justify-center rounded bg-emerald-300 text-indigo-950 font-extrabold text-[10px]">5</span>
             </div>
-            <span className="text-emerald-300 text-[10px] font-bold">Window Max = 3</span>
+            <span className="text-emerald-300 text-[10px] font-bold">Deque Front = Window Max</span>
           </div>
         </div>
       );
@@ -954,10 +953,10 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono text-xs">
-            <div className="flex gap-1">
-              <span className="px-1.5 py-0.5 rounded bg-black/40 text-amber-200">A</span>
+            <div className="flex gap-1 items-center">
+              <span className="px-1.5 py-0.5 rounded bg-black/40 text-amber-200 anim-swap-a">A</span>
               <span className="text-amber-300 font-bold">^</span>
-              <span className="px-1.5 py-0.5 rounded bg-black/40 text-amber-200">A</span>
+              <span className="px-1.5 py-0.5 rounded bg-black/40 text-amber-200 anim-swap-b">A</span>
               <span className="text-amber-300 font-bold">=</span>
               <span className="px-1.5 py-0.5 rounded bg-emerald-400 text-amber-950 font-bold shadow animate-pulse">0</span>
             </div>
@@ -977,12 +976,14 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono text-xs">
-            <div className="flex gap-1.5">
-              <span className="px-2 py-0.5 rounded bg-white text-emerald-950 font-bold text-[9px]">Run A (len 32)</span>
-              <span className="text-amber-300 font-bold animate-pulse">⤾ Merge</span>
-              <span className="px-2 py-0.5 rounded bg-amber-300 text-emerald-950 font-bold text-[9px]">Run B (len 64)</span>
+            <div className="flex items-end gap-1 h-12">
+              <div className="w-3.5 h-6 bg-cyan-300 rounded-t anim-merge-left" />
+              <div className="w-3.5 h-9 bg-cyan-200 rounded-t anim-merge-left" />
+              <div className="w-1.5" />
+              <div className="w-3.5 h-7 bg-amber-300 rounded-t anim-merge-right" />
+              <div className="w-3.5 h-11 bg-amber-200 rounded-t anim-merge-right" />
             </div>
-            <div className="text-[10px] text-emerald-200">Galloping Mode Triggered</div>
+            <div className="text-[10px] text-emerald-100 font-bold">Run[0] + Run[1] → Gallop Merge</div>
           </div>
         </div>
       );
@@ -996,11 +997,11 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
           </div>
           <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono text-xs">
             <div className="flex gap-1 items-center">
-              <span className="px-1.5 py-0.5 rounded bg-white/30 text-sky-200 line-through text-[9px]">{`[ < Pivot ]`}</span>
-              <span className="px-2 py-1 rounded bg-amber-300 text-sky-950 font-extrabold text-[10px] shadow animate-pulse">Target k=3</span>
-              <span className="px-1.5 py-0.5 rounded bg-white/30 text-sky-200 text-[9px]">{`[ > Pivot ]`}</span>
+              <span className="px-1.5 py-0.5 rounded bg-white/25 text-sky-200 line-through text-[9px] anim-bsearch-fade">{`[<Pivot]`}</span>
+              <span className="px-2 py-1 rounded bg-amber-300 text-sky-950 font-extrabold text-[10px] shadow anim-pivot-lock">k=3 Found</span>
+              <span className="px-1.5 py-0.5 rounded bg-white/30 text-sky-200 text-[9px]">{`[>Pivot]`}</span>
             </div>
-            <span className="text-[10px] text-sky-200">Discard Unneeded Partition</span>
+            <span className="text-[10px] text-sky-200">Prune One Partition Per Pass</span>
           </div>
         </div>
       );
@@ -1012,10 +1013,14 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span>Hybrid Quick + Heapsort</span>
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
-          <div className="flex items-center justify-center gap-2 h-24 font-mono text-xs">
-            <span className="px-1.5 py-0.5 rounded bg-white text-emerald-950 font-bold text-[9px]">Quicksort</span>
-            <span className="text-amber-300 text-[10px] font-bold animate-pulse">{`depth > 2logN ➔`}</span>
-            <span className="px-1.5 py-0.5 rounded bg-amber-400 text-emerald-950 font-bold text-[9px] shadow">Heapsort</span>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono text-xs">
+            <div className="flex items-end gap-1.5 h-12">
+              <div className="w-3.5 h-6 bg-white/75 rounded-t anim-swap-a" />
+              <div className="w-3.5 h-10 bg-amber-300 rounded-t anim-pivot-lock" />
+              <div className="w-3.5 h-8 bg-cyan-200 rounded-t anim-swap-b" />
+              <div className="w-3.5 h-12 bg-emerald-300 rounded-t" />
+            </div>
+            <span className="text-[10px] text-amber-200 font-bold">{`Quick → depth > 2logN → Heap`}</span>
           </div>
         </div>
       );
@@ -1028,11 +1033,13 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono text-xs">
-            <div className="flex gap-3">
-              <div className="w-5 h-7 rounded bg-white text-emerald-950 font-bold flex items-center justify-center text-[10px]">A[0]</div>
-              <div className="w-5 h-7 rounded bg-amber-300 text-emerald-950 font-bold flex items-center justify-center text-[10px] shadow animate-pulse">A[4]</div>
+            <div className="flex items-end gap-1.5 h-12">
+              <div className="w-4 h-10 rounded-t bg-amber-300 text-emerald-950 font-bold flex items-center justify-center text-[9px] anim-swap-a">84</div>
+              <div className="w-3.5 h-6 rounded-t bg-white/30" />
+              <div className="w-3.5 h-8 rounded-t bg-white/30" />
+              <div className="w-4 h-5 rounded-t bg-cyan-300 text-emerald-950 font-bold flex items-center justify-center text-[9px] anim-swap-b">19</div>
             </div>
-            <span className="text-[10px] text-emerald-200 font-bold">Gap h = 4 ➔ h = 1</span>
+            <span className="text-[10px] text-emerald-200 font-bold">Stride Gap h = 3 Swap</span>
           </div>
         </div>
       );
@@ -1047,15 +1054,15 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
           <div className="flex items-center justify-center gap-2 h-24 font-mono text-xs">
             <div className="p-1.5 rounded-b-lg border-2 border-emerald-300 bg-black/40 text-[9px] text-center">
               <div>B[0]</div>
-              <div className="w-4 h-2 bg-emerald-400 rounded mt-1" />
+              <div className="w-4 h-2.5 bg-emerald-400 rounded mt-1 anim-radix-drop" />
             </div>
-            <div className="p-1.5 rounded-b-lg border-2 border-amber-300 bg-black/40 text-[9px] text-center animate-pulse shadow">
+            <div className="p-1.5 rounded-b-lg border-2 border-amber-300 bg-black/40 text-[9px] text-center shadow">
               <div>B[1]</div>
-              <div className="w-4 h-4 bg-amber-400 rounded mt-1" />
+              <div className="w-4 h-4 bg-amber-400 rounded mt-1 anim-stack-push" />
             </div>
             <div className="p-1.5 rounded-b-lg border-2 border-emerald-300 bg-black/40 text-[9px] text-center">
               <div>B[2]</div>
-              <div className="w-4 h-2 bg-emerald-400 rounded mt-1" />
+              <div className="w-4 h-3 bg-cyan-300 rounded mt-1 anim-radix-drop" />
             </div>
           </div>
         </div>
@@ -1068,13 +1075,14 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span>Bidirectional Bubble</span>
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
-          <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono text-xs">
-            <div className="flex gap-1.5 items-center">
-              <span className="text-cyan-300 font-bold">Forward ➔</span>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono text-xs">
+            <div className="flex items-end gap-1.5 h-11">
+              <div className="w-3.5 h-5 bg-emerald-300 rounded-t" />
+              <div className="w-3.5 h-9 bg-amber-300 rounded-t anim-swap-a" />
+              <div className="w-3.5 h-6 bg-cyan-200 rounded-t anim-swap-b" />
+              <div className="w-3.5 h-11 bg-emerald-300 rounded-t" />
             </div>
-            <div className="flex gap-1.5 items-center">
-              <span className="text-amber-300 font-bold">← Backward</span>
-            </div>
+            <span className="text-[10px] text-amber-200 font-bold">Forward → & ← Backward Pass</span>
           </div>
         </div>
       );
@@ -1089,10 +1097,13 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span>Esoteric / Randomized Sort</span>
             <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
           </div>
-          <div className="flex items-center justify-center gap-2 h-24 font-mono text-xs">
-            <div className="px-3 py-1.5 rounded-lg bg-black/40 border border-emerald-400/40 text-emerald-200">
-              <span className="text-amber-300 font-bold animate-pulse">🎲 Shuffle / Drop / Timer</span>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono text-xs">
+            <div className="flex items-end gap-1.5 h-11">
+              <div className="w-3.5 h-8 bg-amber-300 rounded-t anim-swap-a" />
+              <div className="w-3.5 h-5 bg-white/80 rounded-t anim-swap-b" />
+              <div className="w-3.5 h-10 bg-cyan-300 rounded-t anim-swap-a" />
             </div>
+            <span className="text-[10px] text-amber-200 font-bold">Shuffle / Drop / Timer</span>
           </div>
         </div>
       );
@@ -1108,10 +1119,10 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
           </div>
           <div className="flex items-end justify-center gap-1.5 h-24 pb-2 font-mono text-xs">
-            <div className="w-6 h-6 bg-white/40 rounded-t flex items-center justify-center text-[9px] text-white">S1</div>
-            <div className="w-6 h-10 bg-white/60 rounded-t flex items-center justify-center text-[9px] text-white">S2</div>
-            <div className="w-6 h-14 bg-white/80 rounded-t flex items-center justify-center text-[9px] text-purple-950 font-bold">S3</div>
-            <div className="w-6 h-18 bg-emerald-400 rounded-t flex items-center justify-center text-[9px] text-purple-950 font-bold shadow animate-pulse">S4</div>
+            <div className="w-6 h-6 bg-white/40 rounded-t flex items-center justify-center text-[9px] text-white">1</div>
+            <div className="w-6 h-10 bg-white/60 rounded-t flex items-center justify-center text-[9px] text-white">2</div>
+            <div className="w-6 h-14 bg-white/85 rounded-t flex items-center justify-center text-[9px] text-purple-950 font-bold anim-dp-fill">3</div>
+            <div className="w-6 h-18 bg-emerald-400 rounded-t flex items-center justify-center text-[9px] text-purple-950 font-extrabold shadow anim-stack-push">5</div>
           </div>
         </div>
       );
@@ -1124,7 +1135,7 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
             <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-2 h-24 font-mono text-xs">
-            <div className="px-2 py-1 rounded bg-black/40 border border-purple-400 text-purple-200 text-[10px]">
+            <div className="px-2 py-1 rounded bg-black/40 border border-purple-400 text-purple-200 text-[10px] anim-dp-fill">
               ((A₁ × A₂) × (A₃ × A₄))
             </div>
             <span className="text-[10px] text-emerald-300 font-bold">Min Scalar Operations</span>
@@ -1146,8 +1157,8 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
           </div>
           <div className="grid grid-cols-3 gap-1.5 p-2 bg-black/30 rounded-lg border border-purple-400/40 font-mono text-xs">
             <div className="w-6 h-6 rounded bg-purple-900 text-purple-200 flex items-center justify-center text-[9px]">T</div>
-            <div className="w-6 h-6 rounded bg-purple-900 text-purple-200 flex items-center justify-center text-[9px]">F</div>
-            <div className="w-6 h-6 rounded bg-emerald-400 text-purple-950 font-extrabold flex items-center justify-center text-[9px] shadow animate-pulse">OPT</div>
+            <div className="w-6 h-6 rounded bg-purple-800 text-purple-100 flex items-center justify-center text-[9px] anim-dp-fill">T</div>
+            <div className="w-6 h-6 rounded bg-emerald-400 text-purple-950 font-extrabold flex items-center justify-center text-[9px] shadow anim-dp-fill">OPT</div>
           </div>
         </div>
       );
@@ -1168,9 +1179,9 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
           <div className="flex items-center justify-center gap-1.5 h-24 font-mono text-xs">
             <div className="w-6 h-6 rounded bg-white text-blue-950 font-bold flex items-center justify-center text-[10px]">1</div>
             <span className="text-cyan-300">→</span>
-            <div className="w-6 h-6 rounded bg-amber-300 text-blue-950 font-extrabold flex items-center justify-center text-[10px] shadow animate-pulse">Mid</div>
+            <div className="w-7 h-6 rounded bg-amber-300 text-blue-950 font-extrabold flex items-center justify-center text-[9px] shadow anim-pointer-l">Mid</div>
             <span className="text-cyan-300">→</span>
-            <div className="w-6 h-6 rounded bg-white text-blue-950 font-bold flex items-center justify-center text-[10px]">3</div>
+            <div className="w-7 h-6 rounded bg-emerald-300 text-blue-950 font-extrabold flex items-center justify-center text-[9px] anim-pointer-r">Fast</div>
           </div>
         </div>
       );
@@ -1187,7 +1198,7 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
           <div className="flex items-center justify-center gap-2 h-24 font-mono text-xs">
             <div className="w-12 h-16 bg-black/40 border-2 border-indigo-300 rounded-b flex flex-col-reverse p-1 gap-1">
               <span className="w-full py-0.5 bg-white text-indigo-950 text-center rounded text-[9px] font-bold">5</span>
-              <span className="w-full py-0.5 bg-amber-300 text-indigo-950 text-center rounded text-[9px] font-bold animate-pulse">9</span>
+              <span className="w-full py-0.5 bg-amber-300 text-indigo-950 text-center rounded text-[9px] font-bold anim-stack-push">9</span>
             </div>
             <span className="text-emerald-300 text-xs font-bold">+ Eval</span>
           </div>
@@ -1381,7 +1392,7 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
               <span className="text-cyan-200">0 1</span>
               <span className="text-cyan-200">1 0</span>
             </div>
-            <span className="text-cyan-300 font-bold">⇄</span>
+            <span className="text-cyan-300 font-bold">↔</span>
             <div className="text-[9px] text-cyan-100">
               <div>[0] → 1</div>
               <div>[1] → 0</div>
@@ -1467,7 +1478,7 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
               <span className="w-5 h-5 rounded bg-teal-900/60 text-teal-300 flex items-center justify-center text-[10px]">1</span>
             </div>
             <div className="flex flex-col text-[10px] text-teal-200">
-              <span className="font-bold text-white">i ➔ k ➔ j</span>
+              <span className="font-bold text-white">i → k → j</span>
               <span className="text-amber-300">R[i][j] |= R[i][k]&R[k][j]</span>
             </div>
           </div>
@@ -1519,7 +1530,7 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
               <span className="text-[9px] text-sky-200">min edge: 2</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-emerald-300 font-black text-sm animate-pulse">➔ ⚡ ➔</span>
+              <span className="text-emerald-300 font-black text-sm animate-pulse">→ ⚡ →</span>
               <span className="text-[8px] text-emerald-200">Merge</span>
             </div>
             <div className="flex flex-col items-center gap-1">

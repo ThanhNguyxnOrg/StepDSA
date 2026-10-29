@@ -9,8 +9,8 @@ describe('calculateArcHeight', () => {
     const h20 = calculateArcHeight(20);
 
     expect(h5).toBeGreaterThan(h1);
-    expect(h20).toBeLessThanOrEqual(85);
-    expect(h1).toBeGreaterThanOrEqual(24);
+    expect(h20).toBeLessThanOrEqual(45);
+    expect(h1).toBeGreaterThanOrEqual(22);
   });
 });
 

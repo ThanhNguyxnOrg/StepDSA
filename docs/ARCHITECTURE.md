@@ -1,86 +1,78 @@
 <div align="center">
 
-# 🏗️ StepDSA System Architecture
+# 🏗️ StepDSA System Architecture & Engineering Design
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Architecture-Deterministic_Timeline-10b981?style=for-the-badge" alt="Timeline" />
-  <img src="https://img.shields.io/badge/Rendering-FLIP_%2B_SVG-06b6d4?style=for-the-badge" alt="Rendering" />
-  <img src="https://img.shields.io/badge/Audio-Web_Audio_Synth-8b5cf6?style=for-the-badge" alt="Web Audio" />
-  <img src="https://img.shields.io/badge/State-Immutable_Frames-ec4899?style=for-the-badge" alt="State" />
+  <img src="https://img.shields.io/badge/Architecture-Deterministic_Timeline-10b981?style=for-the-badge&logo=databricks&logoColor=white" alt="Deterministic Timeline" />
+  <img src="https://img.shields.io/badge/Rendering-FLIP_%2B_SVG_%2B_Isometric-06b6d4?style=for-the-badge&logo=svg&logoColor=white" alt="FLIP + SVG + Isometric" />
+  <img src="https://img.shields.io/badge/Themes-4_Studio_Engines-6366f1?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="4 Studio Themes" />
+  <img src="https://img.shields.io/badge/Audio-Web_Audio_Synth-8b5cf6?style=for-the-badge&logo=audacity&logoColor=white" alt="Web Audio" />
+  <img src="https://img.shields.io/badge/State-Immutable_Frames-ec4899?style=for-the-badge" alt="Immutable Frames" />
 </p>
 
-StepDSA is an interactive algorithm workbench designed around zero-latency scrubbing, deterministic reproducibility, and pedagogical rigor.
+StepDSA is architected around **deterministic $\mathcal{O}(1)$ time-travel scrubbing**, **decoupled pure stage renderers**, **multi-theme studio ergonomics**, and **client-side multi-language code tracing**.
 
 </div>
 
 ---
 
-## 📐 Core Engineering Principles
+## 📐 Core Architectural Pillars
 
 1. **Deterministic Snapshots over Stateful Mutators:**
-   Traditional visualizers use async `sleep()` loops modifying shared mutable state. StepDSA computes an array of immutable `ExecutionFrame<TState>[]` upfront in pure memory. Scrubbing backwards or jumping to any arbitrary step is instantaneous $\mathcal{O}(1)$ array indexing.
+   Every algorithm module (`AlgorithmModule<TInput, TState>`) is a pure function `generateTimeline(input) => ExecutionFrame<TState>[]`. Because the entire execution history is pre-computed into immutable frames, scrubbing backward, jumping to milestones, or changing playback speed is an $\mathcal{O}(1)$ array lookup with zero timing drift.
 
-2. **Decoupled Stage Renderers:**
-   Visual stages receive `frame.state` as a pure React rendering target. Whether rendered as 2D vertical bars, tree node graphs, or SVG pointers, stage renderers hold zero internal playback state.
+2. **Decoupled Pure Stage Renderers (`2D` & `2.5D Isometric`):**
+   Visual stages (`ArrayStage`, `CallStackStage`, custom Graph/Tree/DP SVG stages) receive `frame.state` and `projection` (`'2d' | 'isometric'`) as pure props and hold zero internal playback state.
 
-3. **Multi-Track Synchronization:**
-   Every frame indexes:
-   * **Visual Elements:** Values, statuses (`comparing`, `swapping`, `sorted`, `pivot`).
-   * **Code Line Tracker:** Synchronized active line across 5 languages.
-   * **Pedagogical Narration:** Plain-English and mathematical explanation of the invariant preserved during this step.
-   * **Sound Engine:** Frequency tone synthesized from element values.
+3. **Studio Multi-Theme Engine (`themeEngine.ts` + `index.css`):**
+   Supports four studio color palettes (**Midnight Studio**, **Daylight Paper**, **VisuAlgo Ocean**, **Dracula Cyber**) persisted via `localStorage` (`stepdsa_studio_theme_v1`) and applied via `document.documentElement.dataset.theme`, while protecting vibrant card thumbnails inside `.algo-card-thumbnail`.
+
+4. **Multi-Signal OS Auto-Detection (`platformShortcuts.ts`):**
+   Detects `mac`, `windows`, or `linux` using `navigator.userAgentData`, high-entropy platform hints, `navigator.platform`, and `navigator.userAgent`, adapting all keyboard listeners and `<kbd>` badges in real time.
 
 ---
 
-## 🔄 Execution Pipeline
+## 🔄 End-to-End Execution Pipeline
 
 ```mermaid
 graph TD
-    A[User Input / Preset Data] --> B[Module Generator: pure function]
-    B --> C[Immutable Execution Timeline Array]
-    C --> D[useTimelinePlayback Controller Hook]
-    D --> E[Stage: DOM / SVG Render + ActiveExpressionCallout]
-    D --> F[CodeInspector: Synchronized Highlight]
-    D --> G[StepNarrationBanner: Dual-Layer Strategic Subtitles]
-    D --> H[SoundEngine: Web Audio Frequency]
-    D --> I[useOperationalMetrics: Real-Time HUD Tally]
+    A[User Input / Preset / PlaygroundBar] --> B[Pure Algorithm Generator / BYOC Studio Tracer]
+    B --> C[Immutable ExecutionFrame Timeline Array]
+    C --> D[useTimelinePlayback Hook: O(1) Scrub & Auto-Pace]
+    D --> E[Central Stage: 2D / 2.5D Isometric SVG & DOM]
+    D --> F[CodeInspector: 5-Language Line Sync]
+    D --> G[StepNarrationBanner: Macro Strategy + Micro Intuition]
+    D --> H[OperationalMetricsBar: Compares / Swaps / Accesses]
+    D --> I[SoundEngine: Web Audio Pitch Sonification]
 ```
-
-### 🧠 Pedagogical Cognitive Model
-StepDSA decouples cognitive load into complementary visual layers inspired by modern EdTech:
-- **Macro Layer (Strategy):** Dual-layer subtitles in `StepNarrationBanner` immediately explain the algorithm's high-level intent (e.g. `[🔄 SWAP]`, `[⚡ HASH LOOKUP]`).
-- **Micro Layer (Formulas):** Floating `ActiveExpressionCallout` pills render dynamic mathematical checks right on the active elements without requiring mental calculations.
-- **Resource HUD:** `OperationalMetricsBar` tallies cumulative comparisons, swaps, accesses, and lookups to contrast against theoretical Big-O curves.
-- **Milestone Navigation:** Chapter pins on the scrub track allow jumping directly between algorithmic phases (Partitioning, Recursion, Completion).
-- **Auto-Pace Engine:** Intelligent playback pacing automatically slows down during dense mathematical decisions (swaps, tree rotations, partition adjustments) and speeds through routine increments.
-- **Command Palette (`⌘K` / `Ctrl+K`):** Instant fuzzy-indexed switcher allowing keyboard navigation across all 162 curriculum modules with categorized domain tags.
 
 ---
 
-## 🔗 CLI → Web Trace Bridge
+## 🧩 Repository Structure
 
-```mermaid
-graph LR
-    A[stepdsa run solution.stepdsa] --> B[Local Proxy / Deterministic Tracer]
-    B --> C[ExecutionFrame Array + Metrics]
-    C --> D[lz-string compression]
-    D --> E[Open Browser: #trace=compressed]
-    E --> F[Web App: Mount & Decompress]
-    F --> G[Universal Adapter -> AlgorithmModule]
-    G --> H[Time-Travel Visualizer + Session Badge]
+```text
+StepDSA/
+├── cli/                        # Zero-backend Node.js CLI (init, run, trace, doctor)
+├── docs/                       # Documentation Hub (CLI, Studio, Architecture, 162 Curriculum)
+├── src/
+│   ├── components/
+│   │   ├── about/              # About Platform Modal
+│   │   ├── brand/              # Custom StepDSA Vector Logo & Brand Assets
+│   │   ├── code/               # 5-Language Synchronized Code Inspector
+│   │   ├── dashboard/          # Explore Hub (162 Modules, 9 Category Palettes, SVG Thumbnails)
+│   │   ├── debugger/           # Live Call Stack & Scope Variable Watchers
+│   │   ├── developer/          # Personal Code Studio v2.0 & Python-Tutor CallStackStage
+│   │   ├── layout/             # Header (Theme Switcher, OS Detector, Quick Search) & Shortcuts Modal
+│   │   ├── navigation/         # Command Palette (Cmd+K / Ctrl+K)
+│   │   ├── player/             # Timeline Scrubber, Milestone Pins, & Playback Controls
+│   │   ├── playground/         # Universal Custom Dataset Editor & Random Generators
+│   │   ├── stage/              # ArrayStage, StepNarrationBanner, OperationalMetricsBar
+│   │   └── workbench/          # StepTraceLog & VisualLegendModal
+│   ├── core/
+│   │   ├── hooks/              # useTimelinePlayback & useOperationalMetrics
+│   │   ├── registry/           # Central 162-Module Registry & Lookup Helpers
+│   │   └── studio/             # JS Proxy Tracer, Pyodide WASM Runner, C++ Simulator, Templates
+│   ├── modules/                # 162 Algorithm & Data Structure Modules across 9 Categories
+│   └── utils/                  # Theme Engine, OS Shortcuts, Stage Geometry, Runtime Error Guard
+└── index.html                  # Entry HTML with Fetch Descriptor Guard & SEO Meta
 ```
-
-The `stepdsa run` command traces user algorithm code locally, records accumulator metrics (`comparisons`, `swaps`, `accesses`), compresses the snapshot via `lz-string`, and opens the browser with the compressed payload in the URL hash. The web app decompresses the payload on mount, adapts it via the Universal Adapter, cleans the hash with `history.replaceState`, and displays an active session badge.
-
----
-
-## 🧩 Directory Organization
-
-* **`src/core/`**: Timeline controller, types, and playback logic.
-* **`src/modules/`**: Pure algorithm implementations, theory, and stage renderers.
-* **`src/components/`**: Modular UI components (stage, player, code inspector, playground, drawer).
-* **`src/utils/`**: Web Audio synthesizer, array generators, and formatters.
-* **`cli/`**: Standalone zero-backend CLI (`init`, `run`, `trace`) for local algorithm tracing.
-* **`docs/`**: Developer guides, CLI manual, and curriculum specifications.
-
-

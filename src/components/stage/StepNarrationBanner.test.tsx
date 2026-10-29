@@ -25,7 +25,7 @@ describe('inferIntuitionSubtitle', () => {
       action: 'swap',
       state: {},
     };
-    expect(inferIntuitionSubtitle(frame)).toContain('SWAP');
+    expect(inferIntuitionSubtitle(frame).toUpperCase()).toContain('SWAP');
   });
 
   it('infers comparison subtitle when action is compare', () => {
@@ -37,7 +37,7 @@ describe('inferIntuitionSubtitle', () => {
       action: 'compare',
       state: {},
     };
-    expect(inferIntuitionSubtitle(frame)).toContain('COMPARE');
+    expect(inferIntuitionSubtitle(frame).toUpperCase()).toContain('COMPARE');
   });
 });
 

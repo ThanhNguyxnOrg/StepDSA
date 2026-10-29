@@ -2,8 +2,11 @@ import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface DequeState {
   items: number[];
-  recentAction?: 'PUSH_FRONT' | 'PUSH_BACK' | 'POP_FRONT' | 'POP_BACK';
+  recentAction?: 'INIT' | 'PUSH_FRONT' | 'PUSH_BACK' | 'POP_FRONT' | 'POP_BACK' | 'PEEK_FRONT' | 'PEEK_BACK';
   highlightedIndex?: number;
+  stagedValue?: { val: number; port: 'FRONT' | 'REAR' };
+  pendingInput?: number[];
+  poppedHistory?: { val: number; port: 'FRONT' | 'REAR' }[];
 }
 
 export const dequeVisualizerModule: AlgorithmModule<number[], DequeState> = {
@@ -48,12 +51,12 @@ export const dequeVisualizerModule: AlgorithmModule<number[], DequeState> = {
   codeSnippets: {
     python: `from collections import deque
 
-dq = deque()
-dq.append(30)       # push_back
-dq.appendleft(15)   # push_front
-dq.append(45)       # push_back
-dq.popleft()        # pop_front -> 15
-dq.pop()            # pop_back -> 45`,
+dq = deque([15])    # seed initial element
+dq.append(30)       # push_back (O(1))
+dq.appendleft(45)   # push_front (O(1))
+dq.append(60)       # push_back (O(1))
+dq.popleft()        # pop_front -> 45
+dq.pop()            # pop_back -> 60`,
     typescript: `class Deque<T> {
   private items: T[] = [];
   pushFront(val: T) { this.items.unshift(val); }
@@ -63,277 +66,381 @@ dq.pop()            # pop_back -> 45`,
   size(): number { return this.items.length; }
 }`,
     cpp: `#include <deque>
-std::deque<int> dq;
+std::deque<int> dq = {15};
 dq.push_back(30);
-dq.push_front(15);
-dq.push_back(45);
+dq.push_front(45);
+dq.push_back(60);
 dq.pop_front();
 dq.pop_back();`,
     java: `Deque<Integer> dq = new ArrayDeque<>();
+dq.addLast(15);
 dq.addLast(30);
-dq.addFirst(15);
-dq.addLast(45);
+dq.addFirst(45);
+dq.addLast(60);
 dq.removeFirst();
 dq.removeLast();`,
-    pseudocode: `deque <- empty
-push_front(deque, 15)
-push_back(deque, 30)
+    pseudocode: `deque <- [input[0]]
+for each next item x:
+    alternate push_back(deque, x) / push_front(deque, x)
 pop_front(deque)
 pop_back(deque)`,
   },
   generateTimeline: (input: number[]) => {
-    const dq: number[] = [];
+    const raw = input && input.length > 0 ? input.slice(0, 10) : [15, 30, 45, 60];
+    const seedVal = raw[0] ?? 15;
+    const dq: number[] = [seedVal];
+    const poppedHistory: { val: number; port: 'FRONT' | 'REAR' }[] = [];
     const frames: ExecutionFrame<DequeState>[] = [];
 
-    // Frame 0: Initialization
+    // Frame 0: Initialized Deque with first element seeded and remaining input queued
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 2,
-      explanation: 'Initialized empty Double-Ended Queue (Deque) with symmetric O(1) Head & Tail access ports.',
+      codeLine: 3,
+      explanation: `Initialized Double-Ended Queue (Deque) seeded with [${seedVal}]. Front = 0 (${seedVal}), Rear = 0 (${seedVal}). Pending stream: [${raw.slice(1).join(', ')}].`,
       isMilestone: true,
-      milestoneTitle: 'Initialized Empty Deque',
+      milestoneTitle: `Seeded Deque [${seedVal}]`,
       soundCue: { type: 'start' },
       callStack: [
-        { name: 'deque_init()', params: { capacity: 'dynamic' }, line: 2, isCurrent: true },
+        { name: 'deque_init()', params: { seed: seedVal, pending: raw.length - 1 }, line: 3, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
-      variables: { size: 0, front: null, rear: null, isEmpty: true },
-      conditionEval: { expr: 'size == 0', result: true },
-      state: { items: [], recentAction: undefined },
+      variables: { size: dq.length, front: dq[0], rear: dq[dq.length - 1], isEmpty: false },
+      conditionEval: { expr: 'size == 1', result: true },
+      state: {
+        items: [...dq],
+        recentAction: 'INIT',
+        highlightedIndex: 0,
+        pendingInput: raw.slice(1),
+        poppedHistory: [],
+      },
     });
 
-    const v1 = input[0] ?? 10;
-    // Step 1A: Prepare push_back
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 4,
-      explanation: `Preparing PUSH_BACK(${v1}): Checking rear port capacity. Deque currently has ${dq.length} items.`,
-      soundCue: { type: 'step' },
-      callStack: [
-        { name: 'push_back(deque, val)', params: { val: v1, currentSize: dq.length }, line: 4, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { action: 'PUSH_BACK', val: v1, sizeBefore: dq.length },
-      state: { items: [...dq], recentAction: undefined },
-    });
-    // Step 1B: Commit push_back
-    dq.push(v1);
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 4,
-      explanation: `PUSH_BACK(${v1}) Committed: Appended ${v1} to rear of Deque. Front=0, Rear=0.`,
-      isMilestone: true,
-      milestoneTitle: `Push Back (${v1})`,
-      soundCue: { type: 'swap' },
-      callStack: [
-        { name: 'push_back(deque, val)', params: { val: v1, newSize: dq.length }, line: 4, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { action: 'PUSH_BACK', val: v1, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
-      state: { items: [...dq], recentAction: 'PUSH_BACK', highlightedIndex: dq.length - 1 },
-    });
+    // Process all remaining input items without skipping any element
+    for (let i = 1; i < raw.length; i++) {
+      const val = raw[i];
+      const isPushBack = i % 2 === 1;
+      const remainingAfter = raw.slice(i + 1);
 
-    const v2 = input[1] ?? 20;
-    // Step 2A: Prepare push_front
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 5,
-      explanation: `Preparing PUSH_FRONT(${v2}): Inserting at head index 0. Existing items will shift logically.`,
-      soundCue: { type: 'step' },
-      callStack: [
-        { name: 'push_front(deque, val)', params: { val: v2, currentSize: dq.length }, line: 5, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { action: 'PUSH_FRONT', val: v2, sizeBefore: dq.length },
-      state: { items: [...dq], recentAction: undefined },
-    });
-    // Step 2B: Commit push_front
-    dq.unshift(v2);
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 5,
-      explanation: `PUSH_FRONT(${v2}) Committed: Prepended ${v2} to front of Deque in O(1). Front=${dq[0]}, Rear=${dq[dq.length - 1]}.`,
-      isMilestone: true,
-      milestoneTitle: `Push Front (${v2})`,
-      soundCue: { type: 'swap' },
-      callStack: [
-        { name: 'push_front(deque, val)', params: { val: v2, newSize: dq.length }, line: 5, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { action: 'PUSH_FRONT', val: v2, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
-      state: { items: [...dq], recentAction: 'PUSH_FRONT', highlightedIndex: 0 },
-    });
+      if (isPushBack) {
+        // Stage at REAR port
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 4,
+          explanation: `Staging PUSH_BACK(${val}) at REAR port (index ${dq.length}). Current rear element is ${dq[dq.length - 1]}.`,
+          soundCue: { type: 'compare' },
+          callStack: [
+            { name: 'push_back(dq, val)', params: { val, sizeBefore: dq.length }, line: 4, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { op: 'PUSH_BACK', stagedVal: val, sizeBefore: dq.length, rear: dq[dq.length - 1] },
+          conditionEval: { expr: 'port == REAR', result: true },
+          state: {
+            items: [...dq],
+            recentAction: 'PUSH_BACK',
+            highlightedIndex: dq.length - 1,
+            stagedValue: { val, port: 'REAR' },
+            pendingInput: remainingAfter,
+            poppedHistory: [...poppedHistory],
+          },
+        });
 
-    const v3 = input[2] ?? 30;
-    // Step 3: Push back v3
-    dq.push(v3);
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 6,
-      explanation: `PUSH_BACK(${v3}): Appended ${v3} to rear. Deque sequence is now [${dq.join(', ')}].`,
-      isMilestone: true,
-      milestoneTitle: `Push Back (${v3})`,
-      soundCue: { type: 'swap' },
-      callStack: [
-        { name: 'push_back(deque, val)', params: { val: v3, size: dq.length }, line: 6, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { action: 'PUSH_BACK', val: v3, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
-      state: { items: [...dq], recentAction: 'PUSH_BACK', highlightedIndex: dq.length - 1 },
-    });
+        dq.push(val);
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 4,
+          explanation: `PUSH_BACK(${val}) committed in O(1): Appended ${val} at rear index [${dq.length - 1}]. Deque: [${dq.join(', ')}].`,
+          isMilestone: true,
+          milestoneTitle: `Push Back (${val})`,
+          soundCue: { type: 'swap' },
+          callStack: [
+            { name: 'push_back(dq, val)', params: { val, newSize: dq.length }, line: 4, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { op: 'PUSH_BACK', val, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
+          state: {
+            items: [...dq],
+            recentAction: 'PUSH_BACK',
+            highlightedIndex: dq.length - 1,
+            pendingInput: remainingAfter,
+            poppedHistory: [...poppedHistory],
+          },
+        });
+      } else {
+        // Stage at FRONT port
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 5,
+          explanation: `Staging PUSH_FRONT(${val}) at FRONT port (head index 0). Current front element is ${dq[0]}.`,
+          soundCue: { type: 'compare' },
+          callStack: [
+            { name: 'push_front(dq, val)', params: { val, sizeBefore: dq.length }, line: 5, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { op: 'PUSH_FRONT', stagedVal: val, sizeBefore: dq.length, front: dq[0] },
+          conditionEval: { expr: 'port == FRONT', result: true },
+          state: {
+            items: [...dq],
+            recentAction: 'PUSH_FRONT',
+            highlightedIndex: 0,
+            stagedValue: { val, port: 'FRONT' },
+            pendingInput: remainingAfter,
+            poppedHistory: [...poppedHistory],
+          },
+        });
 
-    // Step 4: Peek front before pop
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 7,
-      explanation: `PEEK_FRONT(): Inspecting head element without removal -> ${dq[0]}. Underflow check: isEmpty is FALSE.`,
-      soundCue: { type: 'compare' },
-      callStack: [
-        { name: 'peek_front(deque)', params: { frontVal: dq[0] }, line: 7, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { peekVal: dq[0], isEmpty: false },
-      conditionEval: { expr: 'size > 0', result: true },
-      state: { items: [...dq], recentAction: 'PUSH_FRONT', highlightedIndex: 0 },
-    });
+        dq.unshift(val);
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 5,
+          explanation: `PUSH_FRONT(${val}) committed in O(1): Prepended ${val} at head index [0]. Deque: [${dq.join(', ')}].`,
+          isMilestone: true,
+          milestoneTitle: `Push Front (${val})`,
+          soundCue: { type: 'swap' },
+          callStack: [
+            { name: 'push_front(dq, val)', params: { val, newSize: dq.length }, line: 5, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { op: 'PUSH_FRONT', val, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
+          state: {
+            items: [...dq],
+            recentAction: 'PUSH_FRONT',
+            highlightedIndex: 0,
+            pendingInput: remainingAfter,
+            poppedHistory: [...poppedHistory],
+          },
+        });
+      }
+    }
 
-    // Step 5: Pop front
-    const poppedFront = dq.shift();
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 7,
-      explanation: `POP_FRONT(): Removed ${poppedFront} from the front port in O(1). Remaining elements: [${dq.join(', ')}].`,
-      isMilestone: true,
-      milestoneTitle: `Pop Front (${poppedFront})`,
-      soundCue: { type: 'step' },
-      callStack: [
-        { name: 'pop_front(deque)', params: { popped: poppedFront, remainingSize: dq.length }, line: 7, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { poppedVal: poppedFront, size: dq.length, newFront: dq[0] },
-      state: { items: [...dq], recentAction: 'POP_FRONT', highlightedIndex: 0 },
-    });
+    // Peek & Pop Front
+    if (dq.length > 1) {
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 7,
+        explanation: `PEEK_FRONT(): Inspecting head element dq[0] = ${dq[0]} before removal. Underflow guard size (${dq.length}) > 0 is TRUE.`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'peek_front(dq)', params: { frontVal: dq[0] }, line: 7, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { peekFront: dq[0], size: dq.length, isEmpty: false },
+        conditionEval: { expr: `size (${dq.length}) > 0`, result: true },
+        state: {
+          items: [...dq],
+          recentAction: 'PEEK_FRONT',
+          highlightedIndex: 0,
+          pendingInput: [],
+          poppedHistory: [...poppedHistory],
+        },
+      });
 
-    // Step 6: Peek back before pop
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 8,
-      explanation: `PEEK_BACK(): Inspecting rear element without removal -> ${dq[dq.length - 1]}. Underflow check passed.`,
-      soundCue: { type: 'compare' },
-      callStack: [
-        { name: 'peek_back(deque)', params: { rearVal: dq[dq.length - 1] }, line: 8, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { rearVal: dq[dq.length - 1], isEmpty: false },
-      conditionEval: { expr: 'size > 0', result: true },
-      state: { items: [...dq], recentAction: 'PUSH_BACK', highlightedIndex: dq.length - 1 },
-    });
+      const poppedFront = dq.shift()!;
+      poppedHistory.push({ val: poppedFront, port: 'FRONT' });
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 7,
+        explanation: `POP_FRONT() -> ${poppedFront}: Removed ${poppedFront} from FRONT port in O(1). New front is ${dq[0]}.`,
+        isMilestone: true,
+        milestoneTitle: `Pop Front (${poppedFront})`,
+        soundCue: { type: 'step' },
+        callStack: [
+          { name: 'pop_front(dq)', params: { popped: poppedFront, remainingSize: dq.length }, line: 7, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { poppedFront, size: dq.length, newFront: dq[0], rear: dq[dq.length - 1] },
+        state: {
+          items: [...dq],
+          recentAction: 'POP_FRONT',
+          highlightedIndex: 0,
+          pendingInput: [],
+          poppedHistory: [...poppedHistory],
+        },
+      });
+    }
 
-    // Step 7: Pop back
-    const poppedBack = dq.pop();
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 8,
-      explanation: `POP_BACK(): Removed ${poppedBack} from the rear port in O(1). Only [${dq.join(', ')}] remains.`,
-      isMilestone: true,
-      milestoneTitle: `Pop Back (${poppedBack})`,
-      soundCue: { type: 'step' },
-      callStack: [
-        { name: 'pop_back(deque)', params: { popped: poppedBack, remainingSize: dq.length }, line: 8, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      variables: { poppedVal: poppedBack, size: dq.length, front: dq[0], rear: dq[0] },
-      state: { items: [...dq], recentAction: 'POP_BACK', highlightedIndex: dq.length - 1 },
-    });
+    // Peek & Pop Back
+    if (dq.length > 1) {
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `PEEK_BACK(): Inspecting tail element dq[${dq.length - 1}] = ${dq[dq.length - 1]} before removal.`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'peek_back(dq)', params: { rearVal: dq[dq.length - 1] }, line: 8, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { peekBack: dq[dq.length - 1], size: dq.length, isEmpty: false },
+        conditionEval: { expr: `size (${dq.length}) > 0`, result: true },
+        state: {
+          items: [...dq],
+          recentAction: 'PEEK_BACK',
+          highlightedIndex: dq.length - 1,
+          pendingInput: [],
+          poppedHistory: [...poppedHistory],
+        },
+      });
 
-    // Step 8: Terminal state summary
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 9,
-      explanation: `🎉 Deque visualizer complete! Successfully demonstrated O(1) Push/Pop operations at both ends.`,
-      isMilestone: true,
-      milestoneTitle: 'Operations Complete',
-      soundCue: { type: 'complete' },
-      callStack: [
-        { name: 'main()', params: { finalSize: dq.length }, line: 9, isCurrent: true },
-      ],
-      variables: { finalSize: dq.length, remainingElement: dq[0] },
-      state: { items: [...dq], recentAction: undefined },
-    });
+      const poppedBack = dq.pop()!;
+      poppedHistory.push({ val: poppedBack, port: 'REAR' });
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `POP_BACK() -> ${poppedBack}: Removed ${poppedBack} from REAR port in O(1). Remaining Deque: [${dq.join(', ')}].`,
+        isMilestone: true,
+        milestoneTitle: `Pop Back (${poppedBack})`,
+        soundCue: { type: 'complete' },
+        callStack: [
+          { name: 'pop_back(dq)', params: { popped: poppedBack, remainingSize: dq.length }, line: 8, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { poppedBack, size: dq.length, front: dq[0], rear: dq[dq.length - 1] },
+        state: {
+          items: [...dq],
+          recentAction: 'POP_BACK',
+          highlightedIndex: dq.length - 1,
+          pendingInput: [],
+          poppedHistory: [...poppedHistory],
+        },
+      });
+    }
 
     const total = frames.length;
     return frames.map((f, idx) => ({ ...f, stepIndex: idx, totalSteps: total }));
   },
   renderStage: (frame: ExecutionFrame<DequeState>) => {
-    const { items, recentAction, highlightedIndex } = frame.state;
+    const { items, recentAction, highlightedIndex, stagedValue, pendingInput = [], poppedHistory = [] } = frame.state;
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6">
-        {/* Header HUD */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-4">
+        {/* Top Telemetry & Pending Stream Bar */}
+        <div className="flex flex-wrap items-center justify-center gap-2.5">
+          <div className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
             Size: <span className="text-emerald-400 font-bold">{items.length}</span>
           </div>
+          <div className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
+            Front: <span className="text-cyan-300 font-bold">{items[0] ?? '—'}</span>
+          </div>
+          <div className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
+            Rear: <span className="text-amber-300 font-bold">{items[items.length - 1] ?? '—'}</span>
+          </div>
           {recentAction && (
-            <div className="px-3 py-1 rounded bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold animate-pulse">
-              ACTION: {recentAction}
+            <div className="px-2.5 py-1 rounded-md bg-emerald-950/80 border border-emerald-500/40 text-xs font-mono text-emerald-300 font-bold">
+              OP: {recentAction}
             </div>
           )}
         </div>
 
-        {/* Dual-Ended Pipeline */}
-        <div className="relative flex items-center justify-center py-10 px-8 bg-slate-950/70 border-2 border-slate-700 rounded-3xl max-w-4xl w-full">
-          {/* Front Controls */}
-          <div className="absolute left-4 flex flex-col items-center text-cyan-400 font-mono text-xs font-bold gap-1">
+        {/* Dual-Ended Pipeline Container */}
+        <div className="relative flex items-center justify-between gap-3 py-6 px-4 sm:px-6 bg-slate-950/80 border-2 border-slate-700/90 rounded-2xl max-w-4xl w-full shadow-xl">
+          {/* Left: FRONT Port Controls + Staged Front Item */}
+          <div className="flex flex-col items-center font-mono text-xs font-bold gap-1 shrink-0 min-w-[88px]">
             <span className="text-[10px] text-emerald-400">PUSH_FRONT ↷</span>
-            <span className="text-slate-400">FRONT</span>
+            <span className="px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px]">
+              FRONT PORT
+            </span>
             <span className="text-[10px] text-rose-400">↶ POP_FRONT</span>
-          </div>
-
-          {/* Items */}
-          <div className="flex items-center gap-3 overflow-x-auto px-28 py-4">
-            {items.length === 0 ? (
-              <div className="text-slate-500 font-mono text-xs py-4 italic">
-                (Deque is currently empty)
+            {stagedValue?.port === 'FRONT' && (
+              <div className="mt-1 px-2 py-1 rounded-lg bg-amber-400 text-slate-950 font-extrabold text-xs shadow-lg animate-bounce">
+                +{stagedValue.val} →
               </div>
-            ) : (
-              items.map((val, idx) => {
-                const isHighlight = idx === highlightedIndex;
-                return (
-                  <div key={idx} className="flex flex-col items-center">
-                    <div
-                      className={`w-14 h-14 rounded-2xl flex items-center justify-center font-mono font-bold text-lg border-2 shadow-xl transition-all duration-300 ${
-                        isHighlight
-                          ? 'border-cyan-400 bg-cyan-950/60 text-cyan-200 ring-2 ring-cyan-400/40 scale-105'
-                          : 'border-blue-500/40 bg-slate-900/90 text-white'
-                      }`}
-                    >
-                      {val}
-                    </div>
-                    <span className="text-[9px] font-mono text-slate-500 mt-1">[{idx}]</span>
-                  </div>
-                );
-              })
             )}
           </div>
 
-          {/* Rear Controls */}
-          <div className="absolute right-4 flex flex-col items-center text-amber-400 font-mono text-xs font-bold gap-1">
-            <span className="text-[10px] text-emerald-400">↶ PUSH_BACK</span>
-            <span className="text-slate-400">REAR</span>
-            <span className="text-[10px] text-rose-400">POP_BACK ↷</span>
+          {/* Center: Active Deque Elements */}
+          <div className="flex items-center justify-center gap-2.5 overflow-x-auto py-2 px-2 flex-1">
+            {items.map((val, idx) => {
+              const isHighlight = idx === highlightedIndex;
+              const isFront = idx === 0;
+              const isRear = idx === items.length - 1;
+              return (
+                <div key={`${idx}-${val}`} className="flex flex-col items-center shrink-0">
+                  <div className="h-4 flex items-center gap-1 mb-1">
+                    {isFront && (
+                      <span className="text-[9px] font-mono font-bold text-cyan-300 uppercase">
+                        HEAD
+                      </span>
+                    )}
+                    {isFront && isRear && <span className="text-[9px] text-slate-500">/</span>}
+                    {isRear && (
+                      <span className="text-[9px] font-mono font-bold text-amber-300 uppercase">
+                        TAIL
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className={`w-13 h-13 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-mono font-bold text-base sm:text-lg border-2 shadow-lg transition-all duration-200 ${
+                      isHighlight
+                        ? 'border-emerald-400 bg-emerald-950/60 text-emerald-200 ring-2 ring-emerald-400/30 scale-105'
+                        : 'border-slate-600 bg-slate-900 text-white'
+                    }`}
+                  >
+                    {val}
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 mt-1">[{idx}]</span>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Right: REAR Port Controls + Staged Rear Item */}
+          <div className="flex flex-col items-center font-mono text-xs font-bold gap-1 shrink-0 min-w-[88px]">
+            <span className="text-[10px] text-emerald-400">↶ PUSH_BACK</span>
+            <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px]">
+              REAR PORT
+            </span>
+            <span className="text-[10px] text-rose-400">POP_BACK ↷</span>
+            {stagedValue?.port === 'REAR' && (
+              <div className="mt-1 px-2 py-1 rounded-lg bg-amber-400 text-slate-950 font-extrabold text-xs shadow-lg animate-bounce">
+                ← +{stagedValue.val}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Queue Context: Incoming Input Stream & Popped Elements */}
+        <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-mono">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800">
+            <span className="text-slate-400">Incoming Stream:</span>
+            {pendingInput.length > 0 ? (
+              <div className="flex items-center gap-1">
+                {pendingInput.map((v, i) => (
+                  <span
+                    key={i}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold text-[11px]"
+                  >
+                    {v}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-emerald-400 font-semibold">All inputs processed ✓</span>
+            )}
+          </div>
+
+          {poppedHistory.length > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800">
+              <span className="text-slate-400">Popped:</span>
+              <div className="flex items-center gap-1.5">
+                {poppedHistory.map((p, i) => (
+                  <span
+                    key={i}
+                    className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 font-bold text-[11px]"
+                  >
+                    {p.val} ({p.port})
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

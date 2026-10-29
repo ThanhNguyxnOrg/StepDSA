@@ -1,56 +1,49 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion } from 'motion/react';
 import {
-  Sparkles,
   Search,
-  Clock,
-  Database,
-  ArrowRight,
   Keyboard,
-  Layers,
-  Cpu,
-  Sliders,
   Terminal,
-  ShieldCheck,
-  ExternalLink,
+  Laptop,
+  Play,
+  Pause,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
 } from 'lucide-react';
 import { AlgorithmModule } from '../../core/types';
 import { AlgorithmCardThumbnail } from './AlgorithmCardThumbnail';
+import { usePlatformShortcuts } from '../../utils/platformShortcuts';
+import { resolveCategoryThemeColor, getCardThemePalette } from '../../utils/themeEngine';
 
 interface DashboardViewProps {
   modules: AlgorithmModule[];
   onSelectModule: (module: AlgorithmModule) => void;
   onOpenPersonalStudio?: () => void;
+  onOpenShortcuts?: () => void;
 }
 
 /**
  * Truncates and normalizes lengthy descriptive Big-O expressions into clean,
- * concise mathematical notation suitable for single-line card badges.
- * e.g., "O(N!) with state pruning" -> "O(N!)"
- *       "O(1) with two running variables (or O(N) for DP table)" -> "O(1)"
- *       "O(N) for board configuration and recursion stack" -> "O(N)"
+ * concise mathematical notation suitable for single-line card metadata.
  */
 export function formatCompactBigO(raw?: string): string {
   if (!raw) return 'O(1)';
   const trimmed = raw.trim().replace(/\.$/, '');
-
-  // 1. Separate at common clause connectors
   const primaryClause = trimmed.split(/\s+(?:with|for|where|using|depending|or|\(or)\s+/i)[0].trim();
 
-  // 2. If it's a Big-O followed by a secondary comment parenthesis: "O(1) (running variables)" -> "O(1)"
   let clean = primaryClause;
   const secondaryParenMatch = clean.match(/^((?:O|Θ|Ω)\([^)]+\))\s*\([^)]*\)$/i);
   if (secondaryParenMatch) {
     clean = secondaryParenMatch[1];
   }
 
-  // 3. Balance parentheses if the split sliced inside a bracket:
   const openCount = (clean.match(/\(/g) || []).length;
   const closeCount = (clean.match(/\)/g) || []).length;
   if (openCount > closeCount) {
     clean += ')'.repeat(openCount - closeCount);
   }
 
-  // 4. If still longer than 15 chars, extract the leading O(...) / Θ(...) / Ω(...)
   if (clean.length > 15) {
     const mathMatch = clean.match(/(?:O|Θ|Ω)\([^)]+\)/);
     if (mathMatch) return mathMatch[0];
@@ -60,7 +53,6 @@ export function formatCompactBigO(raw?: string): string {
   return clean || trimmed;
 }
 
-// Short, iconic algorithm metadata inspired by VisuAlgo
 const ALGO_METADATA: Record<
   string,
   { shortTitle: string; subtitle: string; tags: string[]; themeColor: string }
@@ -73,7 +65,7 @@ const ALGO_METADATA: Record<
   },
   'mergesort': {
     shortTitle: 'Mergesort',
-    subtitle: 'Divide & Conquer',
+    subtitle: 'Divide & Conquer Merge',
     tags: ['divide & conquer', 'stable', 'recursive'],
     themeColor: 'blue',
   },
@@ -89,11 +81,10 @@ const ALGO_METADATA: Record<
     tags: ['sorted-array', 'halving', 'O(log N)'],
     themeColor: 'purple',
   },
-
   'bst-insert': {
     shortTitle: 'BST Tree',
     subtitle: 'Binary Search Tree',
-    tags: ['binary-tree', 'hierarchical', 'inorder-traversal'],
+    tags: ['binary-tree', 'hierarchical', 'inorder'],
     themeColor: 'indigo',
   },
   'linked-list': {
@@ -110,13 +101,13 @@ const ALGO_METADATA: Record<
   },
   'graph-bfs': {
     shortTitle: 'Graph BFS',
-    subtitle: 'Breadth-First Search',
+    subtitle: 'Breadth-First Wavefront',
     tags: ['fifo-queue', 'shortest-path', 'wavefront'],
     themeColor: 'purple',
   },
   'graph-dfs': {
     shortTitle: 'Graph DFS',
-    subtitle: 'Call Stack & Cycle Detection',
+    subtitle: 'Call Stack & Backtracking',
     tags: ['call-stack', 'recursion', 'back-edge'],
     themeColor: 'rose',
   },
@@ -392,35 +383,456 @@ const ALGO_METADATA: Record<
   },
 };
 
+const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
+  sorting: 'Sorting & Order Statistics',
+  searching: 'Search & Interval Halving',
+  'arrays-pointers': 'Arrays, Two Pointers & Windows',
+  'stack-queue': 'Stacks, Queues & Monotonic Deques',
+  'linked-lists': 'Linked Lists & Pointer Manipulation',
+  'trees-bst': 'Trees, Heaps & Spatial Hierarchies',
+  graphs: 'Graph Traversal, Shortest Path & MST',
+  'dynamic-programming': 'Dynamic Programming & Memoization',
+  math: 'Number Theory, Combinatorics & Bitwise',
+};
+
+export function getModuleDisplayMeta(mod: AlgorithmModule): {
+  shortTitle: string;
+  subtitle: string;
+  tags: string[];
+  themeColor: string;
+} {
+  const existing = ALGO_METADATA[mod.id];
+  if (existing) return existing;
+
+  const parenMatch = mod.title.match(/^([^(]+)\(([^)]+)\)/);
+  const shortTitle = parenMatch ? parenMatch[1].trim() : mod.title.trim();
+  const extractedSub = parenMatch ? parenMatch[2].trim() : '';
+  const categoryName = CATEGORY_DISPLAY_NAMES[mod.category] || mod.category;
+  const subtitle = extractedSub || categoryName;
+  const compactTime = formatCompactBigO(mod.complexity?.timeAverage);
+  const compactSpace = formatCompactBigO(mod.complexity?.spaceAuxiliary);
+
+  return {
+    shortTitle,
+    subtitle,
+    tags: [mod.category, `${compactTime} time`, `${compactSpace} space`],
+    themeColor: resolveCategoryThemeColor(mod.category),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HERO "ONE LIVE THING": Interactive Algorithm Micro-Stepper
+   Lets visitors scrub and inspect a real execution trace right on the first screen
+   ═══════════════════════════════════════════════════════════════════════════ */
+interface HeroTraceFrame {
+  step: number;
+  codeLine: number;
+  codeText: string;
+  invariant: string;
+  explanation: string;
+  values: number[];
+  statuses: ('default' | 'comparing' | 'swapping' | 'pivot' | 'sorted')[];
+  pointers: Record<string, number>;
+}
+
+const HERO_LIVE_DEMOS: {
+  id: string;
+  moduleId: string;
+  label: string;
+  complexity: string;
+  frames: HeroTraceFrame[];
+}[] = [
+  {
+    id: 'quicksort',
+    moduleId: 'quicksort',
+    label: 'Quicksort',
+    complexity: 'O(n log n)',
+    frames: [
+      {
+        step: 1,
+        codeLine: 2,
+        codeText: 'pivot = arr[high]  # pivot = 24 at idx 5, i = 0, j = 0',
+        invariant: 'arr[0..i-1] <= 24 < arr[i..j-1]',
+        explanation: 'Select rightmost element 24 as pivot. Initialize partition boundary i = 0 and scanner j = 0.',
+        values: [38, 12, 45, 19, 29, 24],
+        statuses: ['comparing', 'default', 'default', 'default', 'default', 'pivot'],
+        pointers: { i: 0, j: 0, PIVOT: 5 },
+      },
+      {
+        step: 2,
+        codeLine: 3,
+        codeText: 'j = 0: arr[0] (38) > pivot (24)  # no swap, advance j -> 1',
+        invariant: 'Left [] <= 24 < Right [38]',
+        explanation: 'Compare arr[j=0] = 38 against pivot 24: since 38 > 24, keep 38 in the > pivot region and advance j → 1.',
+        values: [38, 12, 45, 19, 29, 24],
+        statuses: ['comparing', 'comparing', 'default', 'default', 'default', 'pivot'],
+        pointers: { i: 0, j: 1, PIVOT: 5 },
+      },
+      {
+        step: 3,
+        codeLine: 4,
+        codeText: 'j = 1: arr[1] (12) <= 24 -> swap(arr[0], arr[1]); i += 1',
+        invariant: 'Left [12] <= 24 < Right [38]',
+        explanation: 'At j = 1, arr[1] = 12 <= 24: swap arr[i=0] (38) ↔ arr[j=1] (12) and advance boundary i → 1.',
+        values: [12, 38, 45, 19, 29, 24],
+        statuses: ['sorted', 'swapping', 'default', 'default', 'default', 'pivot'],
+        pointers: { i: 1, j: 1, PIVOT: 5 },
+      },
+      {
+        step: 4,
+        codeLine: 3,
+        codeText: 'j = 2: arr[2] (45) > pivot (24)  # no swap, advance j -> 3',
+        invariant: 'Left [12] <= 24 < Right [38, 45]',
+        explanation: 'At j = 2, arr[2] = 45 > 24: no swap needed. 45 joins the > pivot region [38, 45]; advance j → 3.',
+        values: [12, 38, 45, 19, 29, 24],
+        statuses: ['sorted', 'comparing', 'comparing', 'default', 'default', 'pivot'],
+        pointers: { i: 1, j: 2, PIVOT: 5 },
+      },
+      {
+        step: 5,
+        codeLine: 4,
+        codeText: 'j = 3: arr[3] (19) <= 24 -> swap(arr[1], arr[3]); i += 1',
+        invariant: 'Left [12, 19] <= 24 < Right [45, 38]',
+        explanation: 'At j = 3, arr[3] = 19 <= 24: swap arr[i=1] (38) ↔ arr[j=3] (19) and advance boundary i → 2.',
+        values: [12, 19, 45, 38, 29, 24],
+        statuses: ['sorted', 'sorted', 'comparing', 'swapping', 'default', 'pivot'],
+        pointers: { i: 2, j: 3, PIVOT: 5 },
+      },
+      {
+        step: 6,
+        codeLine: 3,
+        codeText: 'j = 4: arr[4] (29) > pivot (24)  # no swap, loop ends',
+        invariant: 'Left [12, 19] <= 24 < Right [45, 38, 29]',
+        explanation: 'At j = 4, arr[4] = 29 > 24: keep 29 in the > pivot region. Scanner j reaches high - 1.',
+        values: [12, 19, 45, 38, 29, 24],
+        statuses: ['sorted', 'sorted', 'comparing', 'comparing', 'comparing', 'pivot'],
+        pointers: { i: 2, j: 4, PIVOT: 5 },
+      },
+      {
+        step: 7,
+        codeLine: 7,
+        codeText: 'swap(arr[i=2], arr[high=5])  # swap 45 <-> 24 (lock pivot)',
+        invariant: '[12, 19] <= 24 < [38, 29, 45] (Pivot Locked at idx 2)',
+        explanation: 'Final partition step: swap arr[i=2] (45) with pivot arr[5] (24). Pivot 24 is now locked at index 2.',
+        values: [12, 19, 24, 38, 29, 45],
+        statuses: ['sorted', 'sorted', 'sorted', 'comparing', 'comparing', 'swapping'],
+        pointers: { LEFT: 0, PIVOT: 2, RIGHT: 5 },
+      },
+    ],
+  },
+  {
+    id: 'insertion-sort',
+    moduleId: 'insertion-sort',
+    label: 'Insertion Sort',
+    complexity: 'O(n²)',
+    frames: [
+      {
+        step: 1,
+        codeLine: 2,
+        codeText: 'key = arr[i]  # i = 3, key = 19, j = 2',
+        invariant: 'Sorted prefix arr[0..2] = [12, 26, 34]',
+        explanation: 'Extract key = 19 at index 3 to insert into its proper spot inside sorted prefix [12, 26, 34].',
+        values: [12, 26, 34, 19, 42, 50],
+        statuses: ['sorted', 'sorted', 'sorted', 'pivot', 'default', 'default'],
+        pointers: { j: 2, KEY: 3 },
+      },
+      {
+        step: 2,
+        codeLine: 4,
+        codeText: 'j = 2: arr[2] (34) > key (19) -> shift 34 to idx 3',
+        invariant: '34 > 19 -> shift arr[2]=34 right into arr[3]',
+        explanation: 'Compare j = 2: since arr[2] = 34 > key (19), shift 34 one slot right to index 3 and decrement j → 1.',
+        values: [12, 26, 19, 34, 42, 50],
+        statuses: ['sorted', 'sorted', 'pivot', 'swapping', 'default', 'default'],
+        pointers: { j: 1, KEY: 2, SHIFT: 3 },
+      },
+      {
+        step: 3,
+        codeLine: 4,
+        codeText: 'j = 1: arr[1] (26) > key (19) -> shift 26 to idx 2',
+        invariant: '26 > 19 -> shift arr[1]=26 right into arr[2]',
+        explanation: 'Compare j = 1: since arr[1] = 26 > key (19), shift 26 one slot right to index 2 and decrement j → 0.',
+        values: [12, 19, 26, 34, 42, 50],
+        statuses: ['sorted', 'pivot', 'swapping', 'sorted', 'default', 'default'],
+        pointers: { j: 0, KEY: 1, SHIFT: 2 },
+      },
+      {
+        step: 4,
+        codeLine: 5,
+        codeText: 'j = 0: arr[0] (12) <= key (19) -> stop shifting',
+        invariant: 'arr[0] = 12 <= 19 -> insertion point is j + 1 = 1',
+        explanation: 'Compare j = 0: arr[0] = 12 <= 19, so the while-loop terminates. Slot j + 1 = 1 is ready.',
+        values: [12, 19, 26, 34, 42, 50],
+        statuses: ['comparing', 'pivot', 'sorted', 'sorted', 'default', 'default'],
+        pointers: { j: 0, INSERT: 1 },
+      },
+      {
+        step: 5,
+        codeLine: 6,
+        codeText: 'arr[j + 1] = key  # arr[1] = 19',
+        invariant: 'Prefix arr[0..3] = [12, 19, 26, 34] is now sorted',
+        explanation: 'Write key = 19 into arr[1]. The sorted prefix expands to 4 elements [12, 19, 26, 34].',
+        values: [12, 19, 26, 34, 42, 50],
+        statuses: ['sorted', 'sorted', 'sorted', 'sorted', 'default', 'default'],
+        pointers: { SORTED: 3, NEXT: 4 },
+      },
+    ],
+  },
+  {
+    id: 'binary-search',
+    moduleId: 'binary-search',
+    label: 'Binary Search',
+    complexity: 'O(log n)',
+    frames: [
+      {
+        step: 1,
+        codeLine: 3,
+        codeText: 'mid = (0 + 5) // 2  # L = 0, MID = 2 (val 31), R = 5',
+        invariant: 'Target 47 ∈ arr[0..5] if present',
+        explanation: 'Initialize L = 0, R = 5. Compute midpoint MID = (0 + 5) // 2 = 2 and inspect arr[2] = 31.',
+        values: [14, 23, 31, 47, 58, 72],
+        statuses: ['default', 'default', 'comparing', 'default', 'default', 'default'],
+        pointers: { L: 0, MID: 2, R: 5 },
+      },
+      {
+        step: 2,
+        codeLine: 6,
+        codeText: 'arr[2] (31) < 47 -> low = mid + 1 = 3',
+        invariant: 'Pruned [0..2]; search space halved to [3..5]',
+        explanation: 'Since arr[2] = 31 < target 47, discard indices 0..2 and advance L = mid + 1 = 3.',
+        values: [14, 23, 31, 47, 58, 72],
+        statuses: ['default', 'default', 'default', 'comparing', 'default', 'comparing'],
+        pointers: { L: 3, R: 5 },
+      },
+      {
+        step: 3,
+        codeLine: 3,
+        codeText: 'mid = (3 + 5) // 2  # L = 3, MID = 4 (val 58), R = 5',
+        invariant: 'Target 47 ∈ arr[3..5]; checking midpoint idx 4',
+        explanation: 'Compute new midpoint MID = (3 + 5) // 2 = 4 and compare arr[4] = 58 against target 47.',
+        values: [14, 23, 31, 47, 58, 72],
+        statuses: ['default', 'default', 'default', 'default', 'comparing', 'default'],
+        pointers: { L: 3, MID: 4, R: 5 },
+      },
+      {
+        step: 4,
+        codeLine: 8,
+        codeText: 'arr[4] (58) > 47 -> high = mid - 1 = 3',
+        invariant: 'Pruned [4..5]; search space narrowed to [3..3]',
+        explanation: 'Since arr[4] = 58 > target 47, discard indices 4..5 and move R = mid - 1 = 3.',
+        values: [14, 23, 31, 47, 58, 72],
+        statuses: ['default', 'default', 'default', 'comparing', 'default', 'default'],
+        pointers: { L: 3, MID: 3, R: 3 },
+      },
+      {
+        step: 5,
+        codeLine: 4,
+        codeText: 'mid = 3: arr[3] (47) == target (47) -> return 3',
+        invariant: 'arr[3] == 47 verified in 3 comparisons',
+        explanation: 'At MID = 3, arr[3] = 47 matches target 47! Return index 3.',
+        values: [14, 23, 31, 47, 58, 72],
+        statuses: ['default', 'default', 'default', 'sorted', 'default', 'default'],
+        pointers: { FOUND: 3 },
+      },
+    ],
+  },
+];
+
+export const ESSENTIAL_MODULE_IDS = new Set([
+  'quicksort',
+  'mergesort',
+  'bubble-sort',
+  'insertion-sort',
+  'binary-search',
+  'two-pointers-water',
+  'sliding-window-max-sum',
+  'linked-list',
+  'valid-parentheses',
+  'bst-insert',
+  'binary-heap',
+  'trie-prefix',
+  'graph-bfs',
+  'graph-dfs',
+  'dijkstra',
+  'knapsack-01',
+]);
+
+export const INTERVIEW_MODULE_IDS = new Set([
+  ...Array.from(ESSENTIAL_MODULE_IDS),
+  'rotated-sorted-array',
+  'floyd-cycle-detection',
+  'reverse-linked-list',
+  'merge-two-lists',
+  'monotonic-stack',
+  'sliding-window-max',
+  'avl-tree',
+  'tree-traversals',
+  'topological-sort',
+  'lcs',
+  'kadanes-algorithm',
+  'house-robber',
+  'coin-change',
+  'edit-distance',
+  'longest-palindromic-substring',
+]);
+
+export const DEFAULT_CATEGORY_LABELS: Record<string, string> = {
+  sorting: 'Sorting',
+  searching: 'Searching',
+  'arrays-pointers': 'Pointers & Arrays',
+  'stack-queue': 'Stacks & Queues',
+  'linked-lists': 'Linked Lists',
+  'trees-bst': 'Trees & Heaps',
+  graphs: 'Graphs',
+  'dynamic-programming': 'Dynamic Programming',
+  math: 'Math & Bitwise',
+};
+
+const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
+  pseudocode: 'Pseudocode',
+  python: 'Python',
+  cpp: 'C++',
+  typescript: 'TypeScript',
+  java: 'Java',
+  javascript: 'JavaScript',
+};
+
+export interface RegistryStats {
+  totalModules: number;
+  totalDomains: number;
+  totalLanguages: number;
+  languageLabels: string[];
+  totalPresets: number;
+  essentialsCount: number;
+  interviewCount: number;
+  advancedCount: number;
+  categories: { id: string; label: string; count: number }[];
+}
+
+/**
+ * Pure helper that dynamically derives all catalog counts, domains, languages,
+ * and track totals directly from the live `modules` array — zero hardcoded numbers.
+ */
+export function computeRegistryStats(modules: AlgorithmModule[]): RegistryStats {
+  const domainMap = new Map<string, number>();
+  let totalPresets = 0;
+  let essentialsCount = 0;
+  let interviewCount = 0;
+  let advancedCount = 0;
+  const languageKeys = new Set<string>();
+
+  for (const mod of modules) {
+    domainMap.set(mod.category, (domainMap.get(mod.category) || 0) + 1);
+    totalPresets += mod.presets?.length ? mod.presets.length : 3;
+    if (ESSENTIAL_MODULE_IDS.has(mod.id)) essentialsCount++;
+    if (INTERVIEW_MODULE_IDS.has(mod.id)) interviewCount++;
+    if (mod.difficulty === 'Advanced') advancedCount++;
+    const snippets = mod.codeSnippets || (mod as any).code;
+    if (snippets && typeof snippets === 'object') {
+      Object.keys(snippets).forEach((k) => languageKeys.add(k));
+    }
+  }
+
+  // Preserve canonical domain ordering while automatically supporting any newly added category
+  const orderedDomainIds = [
+    ...Object.keys(DEFAULT_CATEGORY_LABELS).filter((id) => domainMap.has(id)),
+    ...Array.from(domainMap.keys()).filter((id) => !(id in DEFAULT_CATEGORY_LABELS)),
+  ];
+
+  const categories = [
+    { id: 'all', label: 'All Modules', count: modules.length },
+    ...orderedDomainIds.map((id) => ({
+      id,
+      label:
+        DEFAULT_CATEGORY_LABELS[id] ||
+        id
+          .split('-')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' '),
+      count: domainMap.get(id) || 0,
+    })),
+  ];
+
+  const languageLabels =
+    languageKeys.size > 0
+      ? Array.from(languageKeys).map((k) => LANGUAGE_DISPLAY_NAMES[k] || k)
+      : ['Pseudocode', 'Python', 'C++', 'TypeScript', 'Java'];
+
+  return {
+    totalModules: modules.length,
+    totalDomains: domainMap.size,
+    totalLanguages: languageLabels.length,
+    languageLabels,
+    totalPresets,
+    essentialsCount,
+    interviewCount,
+    advancedCount,
+    categories,
+  };
+}
+
 export const DashboardView: React.FC<DashboardViewProps> = ({
   modules,
   onSelectModule,
   onOpenPersonalStudio,
+  onOpenShortcuts,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
+  const [selectedPath, setSelectedPath] = useState<'all' | 'essentials' | 'interview' | 'icpc'>('all');
+  const [viewMode, setViewMode] = useState<'topics' | 'grid' | 'table'>('grid');
+  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
+  const shortcuts = usePlatformShortcuts();
 
-  const categories: { id: string; label: string }[] = [
-    { id: 'all', label: 'All Modules' },
-    { id: 'sorting', label: 'Sorting' },
-    { id: 'searching', label: 'Searching' },
-    { id: 'arrays-pointers', label: 'Pointers & Arrays' },
-    { id: 'stack-queue', label: 'Stacks & Queues' },
-    { id: 'linked-lists', label: 'Linked Lists' },
-    { id: 'trees-bst', label: 'Trees & Heaps' },
-    { id: 'graphs', label: 'Graphs' },
-    { id: 'dynamic-programming', label: 'Dynamic Programming' },
-    { id: 'math', label: 'Math & Number Theory' },
-  ];
+  // Interactive Hero Live Stepper state
+  const [heroDemoIdx, setHeroDemoIdx] = useState(0);
+  const [heroFrameIdx, setHeroFrameIdx] = useState(0);
+  const [heroPlaying, setHeroPlaying] = useState(true);
+
+  const activeHeroDemo = HERO_LIVE_DEMOS[heroDemoIdx];
+  const activeHeroFrame =
+    activeHeroDemo.frames[heroFrameIdx % activeHeroDemo.frames.length] || activeHeroDemo.frames[0];
+
+  useEffect(() => {
+    if (!heroPlaying) return;
+    const timer = setInterval(() => {
+      setHeroFrameIdx((prev) => (prev + 1) % activeHeroDemo.frames.length);
+    }, 2400);
+    return () => clearInterval(timer);
+  }, [heroPlaying, activeHeroDemo.frames.length]);
+
+  // Dynamically derive all counts, categories, languages, and presets from `modules`
+  const registryStats = useMemo(() => computeRegistryStats(modules), [modules]);
+  const categories = registryStats.categories;
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: modules.length };
+    for (const c of registryStats.categories) {
+      counts[c.id] = c.count;
+    }
+    return counts;
+  }, [modules.length, registryStats.categories]);
 
   const filteredModules = useMemo(() => {
     return modules.filter((mod) => {
-      const meta = ALGO_METADATA[mod.id];
-      const shortName = meta?.shortTitle || mod.title;
-      const subtitle = meta?.subtitle || '';
-      const tagsStr = meta?.tags.join(' ') || '';
+      const meta = getModuleDisplayMeta(mod);
+      const shortName = meta.shortTitle;
+      const subtitle = meta.subtitle;
+      const tagsStr = meta.tags.join(' ');
 
       const matchesCategory = selectedCategory === 'all' || mod.category === selectedCategory;
+      const matchesDifficulty =
+        selectedDifficulty === 'all' || mod.difficulty === selectedDifficulty;
+      const matchesPath =
+        selectedPath === 'all'
+          ? true
+          : selectedPath === 'essentials'
+          ? ESSENTIAL_MODULE_IDS.has(mod.id)
+          : selectedPath === 'interview'
+          ? INTERVIEW_MODULE_IDS.has(mod.id)
+          : mod.difficulty === 'Advanced';
+
       const matchesSearch =
         shortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         mod.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -428,417 +840,897 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         tagsStr.toLowerCase().includes(searchQuery.toLowerCase()) ||
         mod.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         mod.complexity.timeAverage.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+      return matchesCategory && matchesDifficulty && matchesPath && matchesSearch;
     });
-  }, [modules, selectedCategory, searchQuery]);
+  }, [modules, selectedCategory, selectedDifficulty, selectedPath, searchQuery]);
+
+  const handleOpenHeroModule = () => {
+    const found = modules.find((m) => m.id === activeHeroDemo.moduleId) || modules[0];
+    if (found) onSelectModule(found);
+  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0B0F19] text-[#F9FAFB] pb-20">
-      {/* 1. Hero Section */}
-      <section className="relative px-6 pt-12 pb-14 border-b border-[#1F293D] overflow-hidden">
-        {/* Ambient Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[280px] bg-gradient-to-b from-[#10B981]/15 via-[#06B6D4]/5 to-transparent blur-3xl pointer-events-none" />
+      {/* 1. Balanced 2-Column Editorial Hero + Live Interactive Algorithm Stepper (md+ side-by-side) */}
+      <section className="px-4 sm:px-6 py-5 sm:py-7 border-b border-[#1F293D] bg-gradient-to-b from-[#0E1525] to-[#0B0F19]">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-5 lg:gap-7 items-stretch">
+          {/* Left Column (6 cols on md, 7 cols on lg): Timeless Headline, Auto-Synced Registry Telemetry & Domain Matrix */}
+          <div className="md:col-span-6 lg:col-span-7 flex flex-col justify-between space-y-3 text-left">
+            <div className="space-y-2.5">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#111827] border border-[#1F293D] text-[11px] font-mono text-slate-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse shrink-0" />
+                <span>Deterministic Time-Travel Debugger</span>
+                <span className="text-slate-600">·</span>
+                <span className="text-[#10B981] font-semibold">Auto-Synced Registry</span>
+              </div>
 
-        <div className="max-w-5xl mx-auto relative z-10 flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#10B981]/15 border border-[#10B981]/30 text-xs font-semibold text-[#10B981] mb-5 shadow-sm">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Interactive Algorithmic Learning & Time-Travel Engine</span>
-          </div>
+              <h1 className="font-display text-3xl sm:text-4xl lg:text-[42px] font-medium tracking-tight text-white leading-[1.08]">
+                See every pointer move.
+                <br />
+                Trace every branch in real time.
+              </h1>
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white max-w-3xl leading-[1.15]">
-            Master Data Structures & Algorithms{' '}
-            <span className="bg-gradient-to-r from-[#10B981] via-[#06B6D4] to-emerald-300 bg-clip-text text-transparent">
-              Visually & Interactively
-            </span>
-          </h1>
-
-          <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
-            StepDSA turns static computer science textbooks into live, interactive mental models.
-            Scrub back and forth through execution history with zero lag, inspect multi-language code line-by-line, and explore edge cases.
-          </p>
-
-          {/* Quick Metrics Bar */}
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-3xl">
-            <div className="p-3.5 rounded-xl bg-[#111827]/80 border border-[#1F293D] flex flex-col items-center">
-              <span className="text-xl sm:text-2xl font-mono font-bold text-[#10B981]">{modules.length}</span>
-              <span className="text-[11px] text-slate-400 font-medium">Curriculum Modules</span>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-[60ch] leading-relaxed">
+                Scrub forward and backward through deterministic execution frames, inspect
+                synchronized code across {registryStats.languageLabels.join(', ')}, and verify loop
+                invariants at every state transition.
+              </p>
             </div>
-            <div className="p-3.5 rounded-xl bg-[#111827]/80 border border-[#1F293D] flex flex-col items-center">
-              <span className="text-xl sm:text-2xl font-mono font-bold text-[#06B6D4]">0ms</span>
-              <span className="text-[11px] text-slate-400 font-medium">Time-Travel Lag</span>
-            </div>
-            <div className="p-3.5 rounded-xl bg-[#111827]/80 border border-[#1F293D] flex flex-col items-center">
-              <span className="text-xl sm:text-2xl font-mono font-bold text-[#F59E0B]">5</span>
-              <span className="text-[11px] text-slate-400 font-medium">Languages Synced</span>
-            </div>
-            <div className="p-3.5 rounded-xl bg-[#111827]/80 border border-[#1F293D] flex flex-col items-center">
-              <span className="text-xl sm:text-2xl font-mono font-bold text-white">100%</span>
-              <span className="text-[11px] text-slate-400 font-medium">Free & Open Source</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* 1.5 Quick Visual Legend / How to Read StepDSA (for first-time visitors) */}
-      <section className="max-w-6xl mx-auto px-6 pt-6 pb-2">
-        <div className="rounded-2xl bg-[#111827]/80 border border-[#1F293D] p-5 sm:p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-amber-400 text-lg">✦</span>
-            <h2 className="text-sm sm:text-base font-bold text-white">
-              How to Read StepDSA Simulations
-            </h2>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 border border-amber-500/20 font-semibold">
-              30-Second Guide
-            </span>
-          </div>
+            {/* Auto-Derived Live Registry Architecture Cards (Zero Hardcoded Numbers) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="p-2 rounded-lg bg-[#111827]/90 border border-[#1F293D] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                  <span>MODULES</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                </div>
+                <div className="text-base sm:text-lg font-mono font-bold text-white tabular-nums mt-0.5">
+                  {registryStats.totalModules}
+                </div>
+                <div className="text-[10px] text-slate-400 truncate">Auto-indexed</div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Color Legend */}
-            <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
-              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#10B981]" /> Color Semantics
-              </h3>
-              <div className="space-y-1.5 text-[10px] text-slate-300">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded bg-[#10B981] shrink-0" />
-                  <span><strong className="text-[#10B981]">Emerald</strong> — Sorted / Settled / Complete</span>
+              <div className="p-2 rounded-lg bg-[#111827]/90 border border-[#1F293D] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                  <span>CS DOMAINS</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded bg-[#F59E0B] shrink-0" />
-                  <span><strong className="text-[#F59E0B]">Amber</strong> — Comparing / Active Node</span>
+                <div className="text-base sm:text-lg font-mono font-bold text-cyan-300 tabular-nums mt-0.5">
+                  {registryStats.totalDomains}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded bg-[#06B6D4] shrink-0" />
-                  <span><strong className="text-[#06B6D4]">Cyan</strong> — Boundary Pointers / Queue</span>
+                <div className="text-[10px] text-slate-400 truncate">Topic tracks</div>
+              </div>
+
+              <div className="p-2 rounded-lg bg-[#111827]/90 border border-[#1F293D] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                  <span>LANGUAGES</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded bg-[#F43F5E] shrink-0" />
-                  <span><strong className="text-[#F43F5E]">Rose</strong> — Swap / Discarded / Error</span>
+                <div className="text-base sm:text-lg font-mono font-bold text-amber-300 tabular-nums mt-0.5">
+                  {registryStats.totalLanguages}
                 </div>
+                <div className="text-[10px] text-slate-400 truncate">Line-synced</div>
+              </div>
+
+              <div className="p-2 rounded-lg bg-[#111827]/90 border border-[#1F293D] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                  <span>TEST CASES</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                </div>
+                <div className="text-base sm:text-lg font-mono font-bold text-purple-300 tabular-nums mt-0.5">
+                  {registryStats.totalPresets}
+                </div>
+                <div className="text-[10px] text-slate-400 truncate">Curated inputs</div>
               </div>
             </div>
 
-            {/* Pointer Badges */}
-            <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
-              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#06B6D4]" /> Pointer Badges
-              </h3>
-              <div className="space-y-1.5 text-[10px] text-slate-300">
-                <div className="flex items-center gap-1.5">
-                  <span className="px-1 py-0.5 rounded bg-[#06B6D4] text-[#0B0F19] text-[8px] font-mono font-bold">LEFT</span>
-                  <span className="px-1 py-0.5 rounded bg-[#10B981] text-[#0B0F19] text-[8px] font-mono font-bold">RIGHT</span>
-                </div>
-                <p className="text-slate-400">Badges below bars indicate variables pointing to elements</p>
-                <div className="bg-[#1F2937] px-2 py-1 rounded font-mono text-[10px]">
-                  <span className="text-amber-400">WATCH:</span>{' '}
-                  <span className="text-white">left = 0</span>{' '}
-                  <span className="text-slate-400">[38]</span>
-                </div>
-                <p className="text-slate-500 text-[9px]">= pointer left at index 0 holds value 38</p>
+            {/* Interactive Domain Quick-Jump Strip (Fills visual space & lets users filter immediately) */}
+            <div className="p-2.5 rounded-xl bg-[#111827]/60 border border-[#1F293D] space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                <span>QUICK-JUMP BY CS DOMAIN (DYNAMICALLY SYNCED)</span>
+                {selectedCategory !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory('all')}
+                    className="text-[#10B981] hover:underline cursor-pointer"
+                  >
+                    Reset filter
+                  </button>
+                )}
               </div>
-            </div>
-
-            {/* Step Modes */}
-            <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
-              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-white" /> Stepping Modes
-              </h3>
-              <div className="space-y-1.5 text-[10px] text-slate-300">
-                <div className="flex items-center gap-2">
-                  <kbd className="px-1.5 py-0.5 rounded bg-[#1F2937] border border-[#374151] text-[9px] font-mono text-white">← →</kbd>
-                  <span><strong className="text-white">Line</strong> — Discrete CPU line step</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-1.5 py-0.5 rounded bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-[9px] font-mono text-[#06B6D4]">Shift+→</kbd>
-                  <span><strong className="text-[#06B6D4]">Action</strong> — Fast-forward to milestone</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-1.5 py-0.5 rounded bg-[#1F2937] border border-[#374151] text-[9px] font-mono text-white">Space</kbd>
-                  <span>Auto Play / Pause</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Code Inspector */}
-            <div className="p-3 rounded-xl bg-[#0B0F19]/60 border border-[#1F293D] space-y-2">
-              <h3 className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#8B5CF6]" /> Code Inspector
-              </h3>
-              <div className="space-y-1.5 text-[10px] text-slate-300">
-                <p>Right pane displays 5 synchronized languages with active line highlights.</p>
-                <p><strong className="text-white">CALL STACK</strong> — Recursive stack frames (IDE debugger style).</p>
-                <p><strong className="text-white">SCOPE VARIABLES</strong> — Live telemetry of local state.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. Visual Algorithm Catalog (VisuAlgo-inspired layout) */}
-      <section className="max-w-6xl mx-auto px-6 pt-10 pb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-          {/* Category Filter Pills (Wrap cleanly into rows, no scrollbar) */}
-          <div className="flex flex-wrap items-center gap-1.5 py-1">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                  selectedCategory === cat.id
-                    ? 'bg-[#10B981] text-[#0B0F19] font-bold shadow-md shadow-[#10B981]/20'
-                    : 'bg-[#111827] text-slate-300 border border-[#1F293D] hover:bg-[#1F2937] hover:text-white'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Search Box */}
-          <div className="relative w-full lg:w-72 shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search algorithm, Big-O, tags..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-[#111827] border border-[#1F293D] focus:border-[#10B981] text-xs text-white placeholder-slate-500 font-sans outline-none transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* Algorithm Cards Grid with Dynamic Thumbnails */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredModules.map((mod) => {
-            const meta = ALGO_METADATA[mod.id] || {
-              shortTitle: mod.title,
-              subtitle: mod.category,
-              tags: [mod.category],
-              themeColor: 'emerald',
-            };
-            const isBeginner = mod.difficulty === 'Beginner';
-
-            return (
-              <div
-                key={mod.id}
-                className="group rounded-2xl bg-[#111827] border border-[#1F293D] hover:border-[#10B981]/60 p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-[#10B981]/10 hover:-translate-y-1"
-              >
-                <div>
-                  {/* Dynamic Animation Thumbnail */}
-                  <div className="mb-3.5">
-                    <AlgorithmCardThumbnail moduleId={mod.id} category={mod.category} />
-                  </div>
-
-                  {/* Title & Difficulty Header */}
-                  <div className="flex items-start justify-between gap-2 mb-1.5 min-h-[44px]">
-                    <div className="min-w-0 flex-1">
-                      <h3
-                        className="text-base font-bold text-white group-hover:text-[#10B981] transition-colors leading-tight line-clamp-1"
-                        title={mod.title}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {categories
+                  .filter((c) => c.id !== 'all')
+                  .map((cat) => {
+                    const isSelected = selectedCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedCategory((prev) => (prev === cat.id ? 'all' : cat.id))
+                        }
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-mono transition-colors cursor-pointer flex items-center gap-1.5 border ${
+                          isSelected
+                            ? 'bg-[#10B981]/20 text-white border-[#10B981] font-semibold'
+                            : 'bg-[#0B0F19] text-slate-300 border-[#1F293D] hover:border-slate-600 hover:text-white'
+                        }`}
                       >
-                        {meta.shortTitle}
-                      </h3>
-                      <p className="text-xs text-slate-400 font-medium truncate mt-0.5" title={meta.subtitle}>
-                        {meta.subtitle}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 ${
-                        isBeginner
-                          ? 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30'
-                          : 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30'
+                        <span>{cat.label}</span>
+                        <span
+                          className={`text-[10px] px-1 rounded tabular-nums ${
+                            isSelected
+                              ? 'bg-[#10B981] text-[#0B0F19] font-bold'
+                              : 'bg-[#111827] text-[#10B981]'
+                          }`}
+                        >
+                          {cat.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Primary & Secondary Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenHeroModule}
+                className="px-4 py-2 rounded-lg bg-[#10B981] hover:bg-[#059669] text-[#0B0F19] font-semibold text-xs sm:text-sm transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Open workbench
+              </button>
+
+              {onOpenPersonalStudio && (
+                <button
+                  type="button"
+                  onClick={onOpenPersonalStudio}
+                  className="px-3.5 py-2 rounded-lg bg-[#111827] hover:bg-[#1F2937] text-slate-200 border border-[#1F293D] font-medium text-xs sm:text-sm flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-[#06B6D4]" />
+                  <span>Trace custom code</span>
+                </button>
+              )}
+
+              {onOpenShortcuts && (
+                <button
+                  type="button"
+                  onClick={onOpenShortcuts}
+                  className="px-3 py-2 rounded-lg bg-[#111827] hover:bg-[#1F2937] text-slate-400 hover:text-white border border-[#1F293D] font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                  title="OS-Adaptive Keyboard Shortcuts"
+                >
+                  <Keyboard className="w-3.5 h-3.5 text-[#10B981]" />
+                  <span>{shortcuts.osName}</span>
+                  <kbd className="px-1 py-0.2 rounded bg-[#0B0F19] border border-[#1F293D] text-[10px] text-slate-300">
+                    {shortcuts.quickSearch}
+                  </kbd>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column (6 cols on md, 5 cols on lg): Interactive Live Micro-Trace ("One Live Thing" on First Screen) */}
+          <div
+            data-ui="true"
+            className="md:col-span-6 lg:col-span-5 rounded-xl bg-[#111827] border border-[#1F293D] overflow-hidden flex flex-col justify-between shadow-xl"
+          >
+            {/* Mini-Workbench Top Bar */}
+            <div className="px-2.5 py-2 border-b border-[#1F293D] bg-[#0B0F19] flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
+                {HERO_LIVE_DEMOS.map((demo, idx) => {
+                  const isSelected = idx === heroDemoIdx;
+                  return (
+                    <button
+                      key={demo.id}
+                      type="button"
+                      onClick={() => {
+                        setHeroDemoIdx(idx);
+                        setHeroFrameIdx(0);
+                      }}
+                      className={`px-2 py-1 rounded text-[10.5px] font-mono transition-colors cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-[#1E293B] text-white font-semibold border border-slate-700/80'
+                          : 'text-slate-400 hover:text-white hover:bg-[#1F2937]/60'
                       }`}
                     >
-                      {mod.difficulty}
-                    </span>
-                  </div>
+                      {isSelected && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] shrink-0" />
+                      )}
+                      <span>{demo.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-[10.5px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded tabular-nums whitespace-nowrap shrink-0">
+                {activeHeroDemo.complexity}
+              </span>
+            </div>
 
-                  {/* VisuAlgo Style Topic Tags */}
-                  <div className="flex items-center gap-1.5 my-2.5 h-6 overflow-hidden">
-                    {Array.from(new Set(meta.tags)).slice(0, 3).map((tag) => (
+            {/* Live Interactive Array & Pointer Stage */}
+            <div className="p-3.5 bg-[#0B0F19]/60 flex-1 flex flex-col justify-between gap-2.5">
+              {/* Active Invariant Formula + Interactive Step Scrubber Dots */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                  <span className="truncate">
+                    Invariant: <strong className="text-[#10B981]">{activeHeroFrame.invariant}</strong>
+                  </span>
+                  <span className="shrink-0 tabular-nums px-1.5 py-0.5 rounded bg-[#111827] border border-[#1F293D] text-slate-300">
+                    Step {activeHeroFrame.step}/{activeHeroDemo.frames.length}
+                  </span>
+                </div>
+
+                {/* Live Scope Pointers + Step Timeline Pills */}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#1F293D]/60">
+                  <div className="flex flex-wrap items-center gap-1 text-[10px] font-mono">
+                    {Object.entries(activeHeroFrame.pointers).map(([pName, pIdx]) => (
                       <span
-                        key={tag}
-                        className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/60 whitespace-nowrap shrink-0"
+                        key={pName}
+                        className="px-1.5 py-0.5 rounded bg-[#111827] border border-[#1F293D] text-slate-300"
                       >
-                        {tag}
+                        <strong className="text-cyan-300">{pName}</strong>={pIdx}
+                        {activeHeroFrame.values[pIdx] !== undefined
+                          ? ` (${activeHeroFrame.values[pIdx]})`
+                          : ''}
                       </span>
                     ))}
                   </div>
-
-                  {/* Short Overview */}
-                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4 min-h-[36px]">
-                    {mod.theory.overview}
-                  </p>
-                </div>
-
-                <div>
-                  {/* Complexity Metric Row (Clean 2-Badge Grid) */}
-                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#1F293D] mb-3 text-xs font-mono">
-                    <div
-                      className="flex items-center gap-1.5 text-slate-300 min-w-0 bg-[#0B0F19]/60 hover:bg-[#0B0F19] px-2.5 py-1.5 rounded-lg border border-[#1F293D]/60 hover:border-[#10B981]/40 transition-colors cursor-help"
-                      title={`Time Complexity: ${mod.complexity.timeAverage}`}
-                    >
-                      <Clock className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
-                      <span className="truncate font-medium">{formatCompactBigO(mod.complexity.timeAverage)}</span>
-                    </div>
-                    <div
-                      className="flex items-center gap-1.5 text-slate-400 min-w-0 justify-end bg-[#0B0F19]/60 hover:bg-[#0B0F19] px-2.5 py-1.5 rounded-lg border border-[#1F293D]/60 hover:border-[#F59E0B]/40 transition-colors cursor-help"
-                      title={`Space Complexity: ${mod.complexity.spaceAuxiliary}`}
-                    >
-                      <Database className="w-3.5 h-3.5 text-[#F59E0B] shrink-0" />
-                      <span className="truncate font-medium">{formatCompactBigO(mod.complexity.spaceAuxiliary)}</span>
-                    </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {activeHeroDemo.frames.map((f, fIdx) => {
+                      const isCurrent = fIdx === heroFrameIdx % activeHeroDemo.frames.length;
+                      return (
+                        <button
+                          key={f.step}
+                          type="button"
+                          onClick={() => {
+                            setHeroPlaying(false);
+                            setHeroFrameIdx(fIdx);
+                          }}
+                          title={`Jump to Step ${f.step}`}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            isCurrent
+                              ? 'w-4 bg-[#10B981]'
+                              : 'w-1.5 bg-slate-700 hover:bg-slate-500'
+                          }`}
+                        />
+                      );
+                    })}
                   </div>
-
-                  {/* Launch Visualizer Button */}
-                  <button
-                    onClick={() => onSelectModule(mod)}
-                    className="w-full py-2.5 px-3 rounded-xl bg-[#1F2937] hover:bg-[#10B981] text-slate-200 hover:text-[#0B0F19] text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 group-hover:bg-[#10B981] group-hover:text-[#0B0F19] shadow-sm"
-                  >
-                    <span>Launch Visualizer</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </button>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Array Bars + Cells + Pointers */}
+              <div className="grid grid-cols-6 gap-2 py-1">
+                {(() => {
+                  const maxVal = Math.max(...activeHeroFrame.values, 1);
+                  return activeHeroFrame.values.map((val, idx) => {
+                    const st = activeHeroFrame.statuses[idx] || 'default';
+                    const activePointers = Object.entries(activeHeroFrame.pointers)
+                      .filter(([, pIdx]) => pIdx === idx)
+                      .map(([label]) => label);
+
+                    const barHeightPx = Math.max(12, Math.round((val / maxVal) * 48));
+
+                    const barFill =
+                      st === 'sorted'
+                        ? 'bg-[#10B981] border-[#34D399]'
+                        : st === 'pivot'
+                        ? 'bg-amber-400 border-amber-300'
+                        : st === 'swapping'
+                        ? 'bg-rose-500 border-rose-400'
+                        : st === 'comparing'
+                        ? 'bg-cyan-400 border-cyan-300'
+                        : 'bg-slate-600/80 border-slate-500';
+
+                    const cellStyle =
+                      st === 'sorted'
+                        ? 'bg-[#10B981]/20 border-[#10B981] text-[#10B981]'
+                        : st === 'pivot'
+                        ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                        : st === 'swapping'
+                        ? 'bg-rose-500/20 border-rose-400 text-rose-300'
+                        : st === 'comparing'
+                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                        : 'bg-[#111827] border-[#1F293D] text-slate-200';
+
+                    return (
+                      <div key={idx} className="flex flex-col items-center gap-1">
+                        {/* Proportional vertical bar */}
+                        <div className="w-full h-13 flex items-end justify-center px-1.5 border-b border-slate-800/80">
+                          <motion.div
+                            initial={false}
+                            animate={{ height: barHeightPx }}
+                            transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+                            className={`w-full max-w-[28px] rounded-t border-t ${barFill}`}
+                          />
+                        </div>
+                        <motion.div
+                          layout
+                          transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                          className={`w-full h-9 rounded-lg border flex flex-col items-center justify-center font-mono tabular-nums ${cellStyle}`}
+                        >
+                          <span className="text-xs sm:text-sm font-bold leading-none">{val}</span>
+                          <span className="text-[9px] opacity-60 mt-0.5">[{idx}]</span>
+                        </motion.div>
+                        <div className="h-3.5 flex items-center justify-center">
+                          {activePointers.length > 0 && (
+                            <span
+                              className={`text-[9px] font-mono font-bold uppercase ${
+                                st === 'pivot'
+                                  ? 'text-amber-300'
+                                  : st === 'swapping'
+                                  ? 'text-rose-400'
+                                  : st === 'sorted'
+                                  ? 'text-emerald-400'
+                                  : 'text-[#06B6D4]'
+                              }`}
+                            >
+                              ↑{activePointers.join(',')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Synchronized Code Trace & Step Explanation */}
+              <div className="pt-2 border-t border-[#1F293D] space-y-1.5">
+                <div className="rounded-lg bg-[#111827] border border-[#1F293D] overflow-hidden font-mono text-[10.5px]">
+                  <div className="px-2.5 py-1 border-b border-[#1F293D] bg-[#0B0F19]/80 flex items-center justify-between text-[10px] text-slate-400">
+                    <span>Synchronized Execution Trace</span>
+                    <span className="text-[#10B981] font-semibold">Line {activeHeroFrame.codeLine}</span>
+                  </div>
+                  <div className="px-2.5 py-1.5 bg-[#10B981]/12 border-l-2 border-[#10B981] text-white font-semibold truncate">
+                    {activeHeroFrame.codeText}
+                  </div>
+                </div>
+                <p className="text-xs text-slate-300 leading-snug">
+                  {activeHeroFrame.explanation}
+                </p>
+              </div>
+            </div>
+
+            {/* Interactive Transport Controls in Hero */}
+            <div className="px-3.5 py-2.5 border-t border-[#1F293D] bg-[#111827] flex items-center justify-between gap-2 text-xs font-mono">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHeroPlaying(false);
+                    setHeroFrameIdx(0);
+                  }}
+                  title="Reset demo trace"
+                  aria-label="Reset demo trace"
+                  className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHeroPlaying(false);
+                    setHeroFrameIdx(
+                      (prev) =>
+                        (prev - 1 + activeHeroDemo.frames.length) % activeHeroDemo.frames.length
+                    );
+                  }}
+                  title="Previous step"
+                  aria-label="Previous step"
+                  className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHeroPlaying((p) => !p)}
+                  title={heroPlaying ? 'Pause live preview' : 'Play live preview'}
+                  aria-label={heroPlaying ? 'Pause live preview' : 'Play live preview'}
+                  className="px-2.5 py-1 rounded bg-[#1E293B] hover:bg-slate-700 text-white border border-slate-700 font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  {heroPlaying ? (
+                    <>
+                      <Pause className="w-3 h-3 text-[#10B981] fill-current" />
+                      <span>Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3 h-3 text-[#10B981] fill-current" />
+                      <span>Play</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHeroPlaying(false);
+                    setHeroFrameIdx((prev) => (prev + 1) % activeHeroDemo.frames.length);
+                  }}
+                  title="Next step"
+                  aria-label="Next step"
+                  className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleOpenHeroModule}
+                className="text-[11px] font-sans font-semibold text-[#10B981] hover:underline transition-colors cursor-pointer"
+              >
+                Inspect in workbench
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Algorithm Catalog: Architectural Index Bar + Interactive Specimen Cards */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-7 pb-6">
+        {/* Row 1: Section Heading + Curated Learning Tracks (Left, 100% Dynamic Counts) | Search + View Mode (Right) */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-3.5 pb-3.5 border-b border-[#1F293D]">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h2 className="font-display text-xl font-medium text-white tracking-tight mr-2">
+              Algorithm Index
+            </h2>
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[#111827] border border-[#1F293D]">
+              {[
+                { id: 'all', label: `All (${registryStats.totalModules})` },
+                { id: 'essentials', label: `Core (${registryStats.essentialsCount})` },
+                { id: 'interview', label: `Interview (${registryStats.interviewCount})` },
+                { id: 'icpc', label: `Advanced (${registryStats.advancedCount})` },
+              ].map((path) => {
+                const isSelected = selectedPath === path.id;
+                return (
+                  <button
+                    key={path.id}
+                    type="button"
+                    onClick={() => setSelectedPath(path.id as any)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+                      isSelected
+                        ? 'bg-[#1E293B] text-white font-semibold'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {path.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search Input */}
+            <div className="relative flex-1 sm:w-64 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                aria-label="Search algorithms"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search algorithm, Big-O, topic..."
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#111827] border border-[#1F293D] focus:border-[#10B981] text-xs text-white placeholder-slate-500 font-sans outline-none transition-colors"
+              />
+            </div>
+
+            {/* View Mode Switcher */}
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[#111827] border border-[#1F293D] text-[11px] font-mono">
+              {(
+                [
+                  { id: 'grid', label: `Cards (${filteredModules.length})` },
+                  { id: 'topics', label: `Topics (${registryStats.totalDomains})` },
+                  { id: 'table', label: 'Table' },
+                ] as const
+              ).map((vm) => {
+                const isSelected = viewMode === vm.id;
+                return (
+                  <button
+                    key={vm.id}
+                    type="button"
+                    onClick={() => setViewMode(vm.id)}
+                    className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
+                      isSelected
+                        ? 'bg-[#1E293B] text-white font-semibold'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {vm.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
+        {/* Row 2: Category Filter Bar (Left) + Difficulty Level Filter (Right) */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 mb-6">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {categories.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory(cat.id);
+                    if (cat.id !== 'all' && viewMode === 'topics') {
+                      setViewMode('grid');
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                    isSelected
+                      ? 'bg-[#1E293B] text-white border-[#10B981]/60 font-semibold'
+                      : 'bg-[#111827]/70 text-slate-400 border-[#1F293D] hover:bg-[#1F2937] hover:text-slate-200'
+                  }`}
+                >
+                  <span>{cat.label}</span>
+                  <span
+                    className={`text-[10px] font-mono tabular-nums ${
+                      isSelected ? 'text-[#10B981]' : 'text-slate-500'
+                    }`}
+                  >
+                    {categoryCounts[cat.id] || 0}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Difficulty Filter */}
+          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[#111827] border border-[#1F293D] text-[11px] self-start xl:self-auto shrink-0">
+            {['all', 'Beginner', 'Intermediate', 'Advanced'].map((diff) => {
+              const isSelected = selectedDifficulty === diff;
+              return (
+                <button
+                  key={diff}
+                  type="button"
+                  onClick={() => setSelectedDifficulty(diff)}
+                  className={`px-2 py-1 rounded font-medium transition-colors cursor-pointer whitespace-nowrap ${
+                    isSelected
+                      ? 'bg-[#1E293B] text-white font-semibold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {diff === 'all' ? 'All levels' : diff}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Catalog Views: 1. Topic Groups | 2. Glanceable Motion Card Grid | 3. High-Density Table */}
+        {viewMode === 'topics' && searchQuery.trim() === '' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {categories
+              .filter((c) => c.id !== 'all')
+              .map((cat) => {
+                const catModules = filteredModules.filter((m) => m.category === cat.id);
+                if (catModules.length === 0) return null;
+                const featuredMod = catModules[0];
+                const isExpanded = expandedTopics[cat.id] ?? true;
+                const visibleItems = isExpanded ? catModules : catModules.slice(0, 8);
+
+                return (
+                  <div
+                    key={cat.id}
+                    className="rounded-xl bg-[#111827] border border-[#1F293D] hover:border-[#10B981]/50 p-4 flex flex-col justify-between transition-colors"
+                  >
+                    <div>
+                      <div
+                        onClick={() => onSelectModule(featuredMod)}
+                        className="mb-3.5 cursor-pointer group"
+                      >
+                        <AlgorithmCardThumbnail
+                          moduleId={featuredMod.id}
+                          category={featuredMod.category}
+                        />
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-2 mb-2">
+                        <h3 className="text-base font-semibold text-white tracking-tight">
+                          {cat.label}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory(cat.id);
+                            setViewMode('grid');
+                          }}
+                          className="text-xs font-mono text-slate-400 hover:text-[#10B981] transition-colors cursor-pointer shrink-0 tabular-nums"
+                        >
+                          View all {catModules.length}
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {visibleItems.map((mod) => {
+                          const meta = getModuleDisplayMeta(mod);
+                          const isEssential = ESSENTIAL_MODULE_IDS.has(mod.id);
+                          return (
+                            <button
+                              key={mod.id}
+                              type="button"
+                              onClick={() => onSelectModule(mod)}
+                              className={`px-2 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+                                isEssential
+                                  ? 'bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] hover:bg-[#10B981] hover:text-[#0B0F19] font-semibold'
+                                  : 'bg-[#0B0F19] border border-[#1F293D] text-slate-300 hover:border-slate-600 hover:text-white'
+                              }`}
+                            >
+                              {meta.shortTitle}
+                            </button>
+                          );
+                        })}
+
+                        {catModules.length > 8 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedTopics((prev) => ({
+                                ...prev,
+                                [cat.id]: !(prev[cat.id] ?? true),
+                              }))
+                            }
+                            className="px-2 py-1 rounded bg-[#1F2937] text-[10px] font-mono text-slate-300 cursor-pointer"
+                          >
+                            {isExpanded ? 'Less' : `+${catModules.length - 8}`}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onSelectModule(featuredMod)}
+                      className="w-full py-2 px-3 rounded-lg bg-[#1F2937] hover:bg-[#10B981] text-slate-200 hover:text-[#0B0F19] text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <span>Open {getModuleDisplayMeta(featuredMod).shortTitle}</span>
+                      <span className="font-mono text-[10px] opacity-80">Workbench</span>
+                    </button>
+                  </div>
+                );
+              })}
+          </div>
+        ) : viewMode === 'grid' || (viewMode === 'topics' && searchQuery.trim() !== '') ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredModules.map((mod) => {
+              const meta = getModuleDisplayMeta(mod);
+              const palette = getCardThemePalette(mod.category, meta.themeColor);
+              const isBeginner = mod.difficulty === 'Beginner';
+              const compactTime = formatCompactBigO(mod.complexity.timeAverage);
+              const compactSpace = formatCompactBigO(mod.complexity.spaceAuxiliary);
+
+              return (
+                <div
+                  key={mod.id}
+                  onClick={() => onSelectModule(mod)}
+                  className={`group rounded-xl bg-[#111827] border border-[#1F293D] ${palette.borderHover} p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer`}
+                >
+                  <div>
+                    {/* 1. Glanceable Algorithmic Motion Stage (Stationary diagram at rest, live step on hover) */}
+                    <div className="mb-3.5">
+                      <AlgorithmCardThumbnail moduleId={mod.id} category={mod.category} />
+                    </div>
+
+                    {/* 2. Title, Mechanism Subtitle & Plain Difficulty Label */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <div className="min-w-0 flex-1">
+                        <h3
+                          className={`text-base font-semibold text-white ${palette.titleHover} transition-colors leading-snug truncate`}
+                          title={mod.title}
+                        >
+                          {meta.shortTitle}
+                        </h3>
+                        <p
+                          className="text-xs text-slate-400 truncate mt-0.5"
+                          title={meta.subtitle}
+                        >
+                          {meta.subtitle}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-[11px] font-mono shrink-0 whitespace-nowrap mt-0.5 ${
+                          isBeginner
+                            ? 'text-[#10B981]'
+                            : mod.difficulty === 'Intermediate'
+                            ? 'text-[#F59E0B]'
+                            : 'text-purple-400'
+                        }`}
+                      >
+                        {mod.difficulty}
+                      </span>
+                    </div>
+
+                    {/* 3. Concise 2-Line Conceptual Summary */}
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mt-2 mb-3.5">
+                      {mod.theory.overview}
+                    </p>
+                  </div>
+
+                  {/* 4. Unboxed Typographic Footer: Tabular Complexity + Direct Action */}
+                  <div className="pt-3 border-t border-[#1F293D] flex items-center justify-between gap-2 text-[11px] font-mono tabular-nums">
+                    <div className="flex items-center gap-2 text-slate-300 truncate">
+                      <span title={`Average Time: ${mod.complexity.timeAverage}`}>
+                        Time <strong className="text-white">{compactTime}</strong>
+                      </span>
+                      <span className="text-slate-600" aria-hidden="true">
+                        ·
+                      </span>
+                      <span
+                        className="text-slate-400"
+                        title={`Auxiliary Space: ${mod.complexity.spaceAuxiliary}`}
+                      >
+                        Space {compactSpace}
+                      </span>
+                    </div>
+
+                    <span className="font-sans font-medium text-xs text-slate-400 group-hover:text-[#10B981] transition-colors shrink-0">
+                      Inspect trace
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl bg-[#111827] border border-[#1F293D] overflow-hidden">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[#1F293D] bg-[#0B0F19] text-slate-400 font-mono text-[11px]">
+                  <th className="py-3 px-4 font-semibold">Algorithm</th>
+                  <th className="py-3 px-4 hidden sm:table-cell font-semibold">Domain</th>
+                  <th className="py-3 px-4 hidden md:table-cell font-semibold">Level</th>
+                  <th className="py-3 px-4 text-right font-semibold">Avg Time</th>
+                  <th className="py-3 px-4 text-right hidden sm:table-cell font-semibold">
+                    Aux Space
+                  </th>
+                  <th className="py-3 px-4 text-right font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1F293D]">
+                {filteredModules.map((mod) => {
+                  const meta = getModuleDisplayMeta(mod);
+                  return (
+                    <tr
+                      key={mod.id}
+                      onClick={() => onSelectModule(mod)}
+                      className="hover:bg-[#1F2937]/50 transition-colors cursor-pointer"
+                    >
+                      <td className="py-2.5 px-4">
+                        <div className="font-semibold text-white">{meta.shortTitle}</div>
+                        <div className="text-[11px] text-slate-400 truncate max-w-xs">
+                          {meta.subtitle}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-4 hidden sm:table-cell font-mono text-slate-300">
+                        {mod.category}
+                      </td>
+                      <td className="py-2.5 px-4 hidden md:table-cell font-mono">
+                        <span
+                          className={
+                            mod.difficulty === 'Beginner'
+                              ? 'text-[#10B981]'
+                              : mod.difficulty === 'Intermediate'
+                              ? 'text-[#F59E0B]'
+                              : 'text-purple-400'
+                          }
+                        >
+                          {mod.difficulty}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono tabular-nums text-[#10B981] font-semibold">
+                        {formatCompactBigO(mod.complexity.timeAverage)}
+                      </td>
+                      <td className="py-2.5 px-4 text-right hidden sm:table-cell font-mono tabular-nums text-slate-300">
+                        {formatCompactBigO(mod.complexity.spaceAuxiliary)}
+                      </td>
+                      <td className="py-2.5 px-4 text-right">
+                        <span className="font-medium text-slate-300 hover:text-[#10B981]">
+                          Inspect trace
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {filteredModules.length === 0 && (
-          <div className="text-center py-16 text-slate-500">
-            <p className="text-sm font-medium">No algorithms found matching your search.</p>
+          <div className="text-center py-16 text-slate-400 rounded-xl bg-[#111827] border border-[#1F293D]">
+            <p className="text-sm font-medium text-white">No algorithms match your filter criteria.</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Try clearing the search query or switching back to All Modules.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('all');
+                setSelectedDifficulty('all');
+                setSelectedPath('all');
+              }}
+              className="mt-4 px-3.5 py-1.5 rounded-lg bg-[#10B981] text-[#0B0F19] text-xs font-bold cursor-pointer"
+            >
+              Reset Filters
+            </button>
           </div>
         )}
       </section>
 
-      {/* 3. FUTURE / ADVANCED FEATURE: Personal Code Visualization (Bring Your Own DSA) */}
-      <section className="max-w-6xl mx-auto px-6 pt-12">
-        <div className="relative rounded-2xl bg-gradient-to-br from-[#12192e] via-[#0f172a] to-[#0B0F19] border border-indigo-500/30 p-6 sm:p-8 overflow-hidden shadow-2xl">
-          {/* Subtle Background Glow */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-            <div className="max-w-2xl space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold uppercase tracking-wider">
-                <Terminal className="w-3.5 h-3.5" />
-                <span>OFFICIAL CLI · PRODUCTION READY</span>
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                StepDSA CLI & Personal Code Visualization Studio
+      {/* 3. Flat Architectural Footer Grid: Personal Code Studio + OS-Adaptive Shortcuts */}
+      <section className="max-w-6xl mx-auto px-6 pt-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left (7 cols): Personal Code Studio & Local CLI Runner */}
+        <div className="lg:col-span-7 rounded-xl bg-[#111827] border border-[#1F293D] p-6 flex flex-col justify-between gap-5">
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-white tracking-tight">
+                Personal Code Studio & Local CLI
               </h2>
-
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Want to debug and visualize your own custom algorithms? StepDSA provides a local tracing runner that executes on your machine in <strong>Python, TypeScript, C++, or Java</strong>, captures variables and pointer mutations, and plays back the execution step-by-step with zero cloud execution risks.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-slate-400">
-                <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-                  <ShieldCheck className="w-4 h-4" /> 100% Local Machine Execution
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Cpu className="w-4 h-4 text-cyan-400" /> Language AST & Debugger Tracing
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Database className="w-4 h-4 text-amber-400" /> Deterministic JSON Snapshots
-                </span>
-              </div>
+              <span className="text-xs font-mono text-[#10B981]">JS/TS · Python WASM · C++17</span>
             </div>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Write or drop your own algorithm in JavaScript, Python, or C++17 to record live variable
+              mutations and call-stack frames, or run the local CLI tracer directly from your terminal.
+            </p>
+          </div>
 
-            {/* Quick Action Box */}
-            <div className="bg-[#0B0F19]/90 border border-slate-800 p-5 rounded-xl shrink-0 lg:w-80 flex flex-col gap-3 shadow-xl">
-              <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between">
-                <span>QUICKSTART WORKFLOW</span>
-                <span className="text-emerald-400 font-bold">100% READY</span>
-              </div>
-              <div className="p-3 rounded-lg bg-black/60 border border-slate-800 font-mono text-xs text-slate-300 space-y-1.5">
-                <div className="text-slate-500 text-[10px]"># Step 1: Scaffold template</div>
-                <div className="text-indigo-400 font-bold">$ npx stepdsa init</div>
-                <div className="text-slate-500 text-[10px] pt-0.5"># Step 2: Trace & open visualizer</div>
-                <div className="text-emerald-400 font-bold">$ npx stepdsa run solution.stepdsa</div>
-              </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[#1F293D]">
+            <code className="px-3 py-1.5 rounded bg-[#0B0F19] border border-[#1F293D] font-mono text-xs text-slate-300">
+              $ npx stepdsa run solution.stepdsa
+            </code>
+            <button
+              type="button"
+              onClick={onOpenPersonalStudio}
+              className="px-4 py-2 rounded-lg bg-[#10B981] hover:bg-[#059669] text-[#0B0F19] font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
+            >
+              <Terminal className="w-3.5 h-3.5" />
+              <span>Open Code Studio</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right (5 cols): OS-Adaptive Keyboard Shortcuts Bar */}
+        <div className="lg:col-span-5 rounded-xl bg-[#111827] border border-[#1F293D] p-6 flex flex-col justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-white tracking-tight">
+                {shortcuts.osName} Keybindings
+              </h2>
               <button
-                onClick={onOpenPersonalStudio}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-indigo-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all"
+                type="button"
+                onClick={shortcuts.toggleOS}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#0B0F19] border border-[#1F293D] text-[11px] font-mono text-slate-300 hover:text-white cursor-pointer"
+                title="Switch between macOS and Windows/Linux shortcut notation"
               >
-                <span>Launch CLI Studio & Quickstart</span>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <Laptop className="w-3 h-3 text-[#10B981]" />
+                <span>Switch OS ({shortcuts.modKey})</span>
               </button>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Platform Architecture Highlights */}
-      <section className="max-w-6xl mx-auto px-6 pt-16">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <span className="text-xs font-mono uppercase tracking-widest text-[#10B981]">THE ARCHITECTURE</span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mt-1.5">
-            Designed for Deep Understanding, Not Just Eye-Candy
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-2">
-            Most algorithm visualizers fail because they treat visualization as passive animation. StepDSA builds mental models through active participation.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 rounded-2xl bg-[#111827] border border-[#1F293D] space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-[#10B981]/15 text-[#10B981] flex items-center justify-center">
-              <Cpu className="w-5 h-5" />
-            </div>
-            <h3 className="text-sm font-bold text-white">Deterministic Snapshot Engine</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Algorithms generate an immutable timeline of states instantly. Step backward, jump to pivots, and scrub without timing race conditions or desync.
+              Hardware keyboard shortcuts automatically adapt to your operating system.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-[#111827] border border-[#1F293D] space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-[#06B6D4]/15 text-[#06B6D4] flex items-center justify-center">
-              <Layers className="w-5 h-5" />
+          <div className="grid grid-cols-2 gap-2 font-mono text-xs pt-2 border-t border-[#1F293D]">
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#0B0F19] border border-[#1F293D]">
+              <span className="text-slate-400">Search</span>
+              <kbd className="text-[#10B981] font-bold">{shortcuts.quickSearch}</kbd>
             </div>
-            <h3 className="text-sm font-bold text-white">Dual Code-View Synchronizer</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Watch real code execute in Python, TypeScript, C++, Java, or Pseudocode with synchronized glowing lines for every pointer swap and branch decision.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#111827] border border-[#1F293D] space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] flex items-center justify-center">
-              <Sliders className="w-5 h-5" />
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#0B0F19] border border-[#1F293D]">
+              <span className="text-slate-400">Play/Pause</span>
+              <kbd className="text-[#10B981] font-bold">{shortcuts.playPause}</kbd>
             </div>
-            <h3 className="text-sm font-bold text-white">Interactive Edge-Case Sandbox</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Stress-test algorithms with custom inputs, reverse sorted arrays, duplicate keys, and worst-case patterns to uncover Big-O bottlenecks firsthand.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Keyboard Shortcuts Quick Reference */}
-      <section className="max-w-4xl mx-auto px-6 pt-14">
-        <div className="p-6 rounded-2xl bg-[#111827] border border-[#1F293D] flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-[#1F2937] text-white">
-              <Keyboard className="w-6 h-6 text-[#10B981]" />
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#0B0F19] border border-[#1F293D]">
+              <span className="text-slate-400">Step Line</span>
+              <kbd className="text-white font-bold">← / →</kbd>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">Pro Keyboard Shortcuts</h3>
-              <p className="text-xs text-slate-400">Control stepping and time travel without touching your mouse</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1F2937] border border-[#1F293D] text-slate-300">
-              <kbd className="text-[#10B981] font-bold">Space</kbd> <span>Play/Pause</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1F2937] border border-[#1F293D] text-slate-300">
-              <kbd className="text-[#10B981] font-bold">→</kbd> <span>Next Step</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1F2937] border border-[#1F293D] text-slate-300">
-              <kbd className="text-[#10B981] font-bold">←</kbd> <span>Prev Step</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1F2937] border border-[#1F293D] text-slate-300">
-              <kbd className="text-[#10B981] font-bold">R</kbd> <span>Reset</span>
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#0B0F19] border border-[#1F293D]">
+              <span className="text-slate-400">Next Action</span>
+              <kbd className="text-[#06B6D4] font-bold">{shortcuts.nextAction}</kbd>
             </div>
           </div>
         </div>

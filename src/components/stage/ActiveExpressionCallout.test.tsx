@@ -5,8 +5,8 @@ import { ArrayElement } from './ArrayStage';
 
 describe('formatActiveExpression', () => {
   it('formats conditionEval if present with formatted or expr', () => {
-    const expr1 = formatActiveExpression([], { formatted: '64 > 34 ➔ SWAP' });
-    expect(expr1).toBe('64 > 34 ➔ SWAP');
+    const expr1 = formatActiveExpression([], { formatted: '64 > 34 → SWAP' });
+    expect(expr1).toBe('64 > 34 → SWAP');
 
     const expr2 = formatActiveExpression([], { expr: 'arr[i] > arr[j]', result: true });
     expect(expr2).toContain('arr[i] > arr[j]');
@@ -29,7 +29,7 @@ describe('formatActiveExpression', () => {
       { id: 1, value: 12, status: 'swapping' },
     ];
     const expr = formatActiveExpression(elements);
-    expect(expr).toContain('SWAP 45 ⇄ 12');
+    expect(expr).toMatch(/SWAP 45 (<->|↔) 12/);
   });
 
   it('returns null when no active elements or conditions', () => {

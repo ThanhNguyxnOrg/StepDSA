@@ -1,5 +1,6 @@
 // binaryHeap.tsx — Max Heap Insert & Sift-Up module
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
+import { computeHeapLayout } from '../../utils/stageLayout';
 
 export interface HeapState {
   heap: number[];
@@ -283,60 +284,63 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
   },
   renderStage: (frame: ExecutionFrame<HeapState>) => {
     const { heap, activeIndices = [], swappingIndices } = frame.state;
+    const { coords, width, height } = computeHeapLayout(heap.length, 54, 62);
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6 gap-8">
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-5 overflow-auto">
         {/* Array Compact Representation */}
-        <div className="flex flex-col items-center gap-1.5">
+        <div className="flex flex-col items-center gap-1.5 max-w-full">
           <span className="text-[11px] font-mono text-cyan-400 uppercase tracking-wider font-semibold">
-            Array Representation (0-Indexed)
+            Array Backing Store (0-Indexed · Parent = floor((i-1)/2))
           </span>
-          <div className="flex gap-1.5 p-2 bg-slate-900 border border-cyan-500/30 rounded-xl shadow-lg">
+          <div className="flex flex-wrap justify-center gap-1.5 p-2.5 bg-[#111827] border border-[#1F293D] rounded-xl shadow-md">
             {heap.map((val, idx) => {
               const isActive = activeIndices.includes(idx);
               const isSwapping = swappingIndices?.includes(idx);
               return (
                 <div key={idx} className="flex flex-col items-center">
                   <div
-                    className={`w-11 h-12 rounded-lg flex items-center justify-center font-mono font-bold text-sm transition-all duration-300 ${
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-mono font-bold text-xs tabular-nums transition-all duration-200 border ${
                       isSwapping
-                        ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30 scale-110'
+                        ? 'bg-rose-500/25 border-rose-500 text-rose-200 ring-2 ring-rose-500/40 scale-105'
                         : isActive
-                        ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/30 scale-105'
-                        : 'bg-slate-800 text-white border border-slate-700'
+                        ? 'bg-amber-500/25 border-amber-500 text-amber-200 ring-2 ring-amber-500/40 scale-105'
+                        : idx === 0
+                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-200'
+                        : 'bg-slate-800/90 text-white border-slate-700'
                     }`}
                   >
                     {val}
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono mt-1">[{idx}]</span>
+                  <span className="text-[10px] text-slate-500 font-mono tabular-nums mt-0.5">
+                    [{idx}]
+                  </span>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Binary Heap Tree Topology (SVG) */}
-        <div className="flex flex-col items-center">
-          <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider mb-2">
-            Complete Binary Tree Topology
+        {/* Binary Heap Tree Topology (Dynamic Responsive SVG) */}
+        <div className="flex flex-col items-center w-full overflow-x-auto">
+          <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider mb-1.5">
+            Complete Binary Tree Topology ({heap.length} Nodes)
           </span>
-          <svg viewBox="0 0 360 160" className="w-80 h-40">
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            style={{ width: `${Math.min(720, Math.max(380, width))}px`, height: `${height}px` }}
+            className="overflow-visible"
+          >
             {/* Edges */}
             {heap.map((_, idx) => {
               if (idx === 0) return null;
               const parent = Math.floor((idx - 1) / 2);
-              const coords = [
-                { x: 180, y: 25 },
-                { x: 90, y: 75 },
-                { x: 270, y: 75 },
-                { x: 45, y: 130 },
-                { x: 135, y: 130 },
-                { x: 225, y: 130 },
-                { x: 315, y: 130 },
-              ];
               const p = coords[parent];
               const c = coords[idx];
               if (!p || !c) return null;
+              const isEdgeActive =
+                (activeIndices.includes(idx) && activeIndices.includes(parent)) ||
+                (swappingIndices?.includes(idx) && swappingIndices?.includes(parent));
               return (
                 <line
                   key={`edge-${idx}`}
@@ -344,24 +348,14 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
                   y1={p.y}
                   x2={c.x}
                   y2={c.y}
-                  stroke="#38BDF8"
-                  strokeWidth="2"
-                  opacity="0.5"
+                  stroke={isEdgeActive ? '#F59E0B' : '#334155'}
+                  strokeWidth={isEdgeActive ? '2.5' : '2'}
                 />
               );
             })}
 
             {/* Nodes */}
             {heap.map((val, idx) => {
-              const coords = [
-                { x: 180, y: 25 },
-                { x: 90, y: 75 },
-                { x: 270, y: 75 },
-                { x: 45, y: 130 },
-                { x: 135, y: 130 },
-                { x: 225, y: 130 },
-                { x: 315, y: 130 },
-              ];
               const pos = coords[idx];
               if (!pos) return null;
               const isActive = activeIndices.includes(idx);
@@ -372,22 +366,48 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
                   <circle
                     cx={pos.x}
                     cy={pos.y}
-                    r="15"
-                    className="transition-all duration-300"
-                    fill={isSwapping ? '#F59E0B' : isActive ? '#06B6D4' : '#1E293B'}
-                    stroke={isSwapping ? '#FDE047' : isActive ? '#67E8F9' : '#0284C7'}
-                    strokeWidth="2.5"
+                    r="17"
+                    className="transition-all duration-200"
+                    fill={
+                      isSwapping
+                        ? '#F43F5E'
+                        : isActive
+                        ? '#F59E0B'
+                        : idx === 0
+                        ? '#065F46'
+                        : '#1E293B'
+                    }
+                    stroke={
+                      isSwapping
+                        ? '#FDA4AF'
+                        : isActive
+                        ? '#FDE047'
+                        : idx === 0
+                        ? '#10B981'
+                        : '#475569'
+                    }
+                    strokeWidth="2"
                   />
                   <text
                     x={pos.x}
-                    y={pos.y + 4.5}
+                    y={pos.y + 4}
                     textAnchor="middle"
-                    fill={isSwapping || isActive ? '#000000' : '#FFFFFF'}
+                    fill={isSwapping || isActive ? '#0B0F19' : '#FFFFFF'}
                     fontSize="11"
                     fontWeight="bold"
                     fontFamily="monospace"
                   >
                     {val}
+                  </text>
+                  <text
+                    x={pos.x}
+                    y={pos.y + 27}
+                    textAnchor="middle"
+                    fill="#64748B"
+                    fontSize="9"
+                    fontFamily="monospace"
+                  >
+                    [{idx}]
                   </text>
                 </g>
               );

@@ -266,7 +266,11 @@ def sleep_sort(arr):
       soundCue: { type: 'complete' },
       callStack: [{ name: 'complete()', params: { ticks: maxVal }, line: 7, isCurrent: true }],
       state: {
-        array: elements.map((e) => ({ ...e, status: 'sorted' })),
+        array: sortedOrder.map((val, idx) => ({
+          id: idx,
+          value: val,
+          status: 'sorted' as ElementStatus,
+        })),
         pointers: {},
       },
     });

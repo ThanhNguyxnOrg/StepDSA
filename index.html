@@ -1,17 +1,109 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      (function () {
+        var origDefineProperty = Object.defineProperty;
+        function makeWritableFetch(desc) {
+          if (!desc || typeof desc !== 'object') return desc;
+          if ('get' in desc && typeof desc.get === 'function' && typeof desc.set !== 'function') {
+            var getter = desc.get;
+            var customFetch = null;
+            return {
+              configurable: true,
+              enumerable: desc.enumerable !== false,
+              get: function () {
+                return customFetch || getter.call(this);
+              },
+              set: function (fn) {
+                if (typeof fn === 'function') customFetch = fn;
+              }
+            };
+          }
+          if ('value' in desc && desc.writable === false) {
+            return {
+              configurable: true,
+              enumerable: desc.enumerable !== false,
+              writable: true,
+              value: desc.value
+            };
+          }
+          return desc;
+        }
+        try {
+          var existing = Object.getOwnPropertyDescriptor(window, 'fetch');
+          if (existing && existing.configurable !== false) {
+            origDefineProperty.call(Object, window, 'fetch', makeWritableFetch(existing));
+          } else if (!existing && typeof window.fetch === 'function') {
+            var boundFetch = window.fetch.bind(window);
+            origDefineProperty.call(Object, window, 'fetch', {
+              configurable: true,
+              enumerable: true,
+              get: function () {
+                return boundFetch;
+              },
+              set: function (fn) {
+                if (typeof fn === 'function') boundFetch = fn;
+              }
+            });
+          }
+          Object.defineProperty = function (target, prop, descriptor) {
+            if ((target === window || target === globalThis) && prop === 'fetch') {
+              return origDefineProperty.call(Object, target, prop, makeWritableFetch(descriptor));
+            }
+            return origDefineProperty.call(Object, target, prop, descriptor);
+          };
+        } catch (_) {}
+
+        function isExtensionFetchError(msg, file, stack) {
+          var s = String(msg || '') + ' ' + String(file || '') + ' ' + String(stack || '');
+          return (
+            s.indexOf('Cannot set property fetch') !== -1 ||
+            s.indexOf('chrome-extension://') !== -1 ||
+            s.indexOf('moz-extension://') !== -1
+          );
+        }
+        window.addEventListener(
+          'error',
+          function (e) {
+            if (isExtensionFetchError(e && e.message, e && e.filename, e && e.error && e.error.stack)) {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+              return false;
+            }
+          },
+          true
+        );
+        window.addEventListener(
+          'unhandledrejection',
+          function (e) {
+            var r = e && e.reason;
+            if (isExtensionFetchError(r && (r.message || String(r)), '', r && r.stack)) {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+              return false;
+            }
+          },
+          true
+        );
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>StepDSA — Modern Interactive DSA Learning & Time-Travel Visualizer</title>
-    <meta name="description" content="Master Data Structures and Algorithms with interactive explanations, deterministic step-by-step animations, synchronized code tracking, and live playground." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>StepDSA — Interactive Algorithm & Data Structure Workbench</title>
+    <meta name="description" content="Deterministic time-travel algorithm visualizer and interactive computer science workbench with multi-language code tracking, call stack inspection, and live invariant analysis." />
+    <meta property="og:title" content="StepDSA — Interactive Algorithm & Data Structure Workbench" />
+    <meta property="og:description" content="Deterministic time-travel algorithm visualizer and interactive computer science workbench with multi-language code tracking, call stack inspection, and live invariant analysis." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-[#0B0F19] text-[#F9FAFB] font-sans antialiased selection:bg-[#10B981]/30 selection:text-[#10B981] overflow-x-hidden min-h-[100dvh]">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+

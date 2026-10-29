@@ -204,7 +204,7 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `[Iter ${iter}] Compute mid = ⌊(${low} + ${high}) / 2⌋ = ${mid} (value ${nums[mid]}). Comparing nums[mid] == target (${target}).`,
+        explanation: `[Iter ${iter}] Compute mid = floor((${low} + ${high}) / 2) = ${mid} (value ${nums[mid]}). Comparing nums[mid] == target (${target}).`,
         soundCue: { type: 'compare' },
         callStack: [
           { name: 'search(nums, target)', params: { iter, low, mid, high, midVal: nums[mid] }, line: 4, isCurrent: true },

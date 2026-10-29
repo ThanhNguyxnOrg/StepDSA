@@ -224,7 +224,7 @@ EdgeList.append((u, v, weight))`,
       const e = edges[eIdx];
       addFrame(
         1,
-        `[Insert Edge #${eIdx + 1}] Adding edge (${e.u} <-> ${e.v}, weight=${e.weight}): Matrix updates M[${e.u}][${e.v}] = M[${e.v}][${e.u}] = ${e.weight}. List appends to List[${e.u}] and List[${e.v}]. EdgeList appends tuple.`,
+        `[Insert Edge #${eIdx + 1}] Adding edge (${e.u} ↔ ${e.v}, weight=${e.weight}): Matrix updates M[${e.u}][${e.v}] = M[${e.v}][${e.u}] = ${e.weight}. List appends to List[${e.u}] and List[${e.v}]. EdgeList appends tuple.`,
         {
           nodes,
           edges,

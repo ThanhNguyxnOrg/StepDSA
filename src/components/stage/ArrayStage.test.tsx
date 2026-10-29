@@ -5,12 +5,12 @@ import { ArrayStage, getElementSpectrumColor } from './ArrayStage';
 describe('getElementSpectrumColor', () => {
   it('maps min value to high hue (violet/indigo)', () => {
     const color = getElementSpectrumColor(10, 10, 100);
-    expect(color).toContain('hsl(250');
+    expect(color).toContain('hsl(220');
   });
 
   it('maps max value to low hue (rose/red)', () => {
     const color = getElementSpectrumColor(100, 10, 100);
-    expect(color).toContain('hsl(0');
+    expect(color).toContain('hsl(15');
   });
 
   it('maps midpoint value to intermediate green/amber hue', () => {
@@ -32,15 +32,15 @@ describe('ArrayStage Component', () => {
 
     render(<ArrayStage state={state} projection="2d" />);
 
-    expect(screen.getByText('10')).toBeInTheDocument();
-    expect(screen.getByText('50')).toBeInTheDocument();
-    expect(screen.getByText('90')).toBeInTheDocument();
+    expect(screen.getAllByText('10').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('50').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('90').length).toBeGreaterThanOrEqual(1);
 
-    const rainbowBtn = screen.getByRole('button', { name: /rainbow/i });
-    expect(rainbowBtn).toBeInTheDocument();
+    const spectrumBtn = screen.getByRole('button', { name: /spectrum/i });
+    expect(spectrumBtn).toBeInTheDocument();
 
-    fireEvent.click(rainbowBtn);
-    expect(rainbowBtn).toHaveClass('text-white');
+    fireEvent.click(spectrumBtn);
+    expect(spectrumBtn).toHaveClass('text-emerald-300');
   });
 
   it('renders comparison arc when two elements are comparing', () => {

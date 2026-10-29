@@ -175,7 +175,79 @@ import { mergesortRecursionTreeModule } from './recursion/mergesortRecursionTree
 import { quicksortPartitionTreeModule } from './recursion/quicksortPartitionTree';
 import { backtrackingDecisionTreeModule } from './recursion/backtrackingDecisionTree';
 
-export const allModules: AlgorithmModule[] = [
+function isVisuallyEmptyState(state: Record<string, any> | null | undefined): boolean {
+  if (!state || typeof state !== 'object') return false;
+  if ('tree' in state && state.tree === null) return true;
+  if ('root' in state) {
+    if (state.root === null) return true;
+    if (
+      state.root &&
+      typeof state.root === 'object' &&
+      Array.isArray(state.root.keys) &&
+      state.root.keys.length === 0
+    ) {
+      return true;
+    }
+    if (
+      state.root &&
+      typeof state.root === 'object' &&
+      Array.isArray(state.root.edges) &&
+      state.root.edges.length === 0 &&
+      (!Array.isArray(state.nodes) || state.nodes.length === 0)
+    ) {
+      return true;
+    }
+  }
+  if (Array.isArray(state.nodes) && state.nodes.length === 0) return true;
+  if (Array.isArray(state.points) && state.points.length === 0 && !Array.isArray(state.nodes)) {
+    return true;
+  }
+  if (
+    Array.isArray(state.items) &&
+    state.items.length === 0 &&
+    !Array.isArray(state.buckets) &&
+    !Array.isArray(state.table)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function wrapModuleForNonEmptyStart<TInput, TState>(
+  mod: AlgorithmModule<TInput, TState>
+): AlgorithmModule<TInput, TState> {
+  const origGenerate = mod.generateTimeline.bind(mod);
+  return {
+    ...mod,
+    generateTimeline: (input: TInput) => {
+      const frames = origGenerate(input);
+      if (!frames || frames.length < 2) return frames;
+
+      const firstPopulated = frames.find((f) => !isVisuallyEmptyState(f.state as Record<string, any>));
+      if (!firstPopulated) return frames;
+
+      const donorState = firstPopulated.state as Record<string, any>;
+      return frames.map((frame, idx) => {
+        const curState = frame.state as Record<string, any>;
+        if (idx < 3 && isVisuallyEmptyState(curState)) {
+          const patchedState: Record<string, any> = { ...curState };
+          for (const key of ['tree', 'root', 'nodes', 'edges', 'points', 'items']) {
+            if (key in donorState && donorState[key] !== null && donorState[key] !== undefined) {
+              patchedState[key] = donorState[key];
+            }
+          }
+          return {
+            ...frame,
+            state: patchedState as TState,
+          };
+        }
+        return frame;
+      });
+    },
+  };
+}
+
+const rawModules: AlgorithmModule[] = [
   quicksortModule,
   mergesortModule,
   insertionSortModule,
@@ -341,7 +413,9 @@ export const allModules: AlgorithmModule[] = [
   backtrackingDecisionTreeModule,
 ];
 
-export const defaultModule = quicksortModule;
+export const allModules: AlgorithmModule[] = rawModules.map((m) => wrapModuleForNonEmptyStart(m));
+
+export const defaultModule = allModules[0];
 
 export function getModuleById(id: string): AlgorithmModule | undefined {
   return allModules.find((m) => m.id === id);

@@ -352,7 +352,7 @@ export const boyerMooreModule: AlgorithmModule<
           </div>
 
           <div className="px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-amber-400">
-            Scan Direction: <strong className="text-white">RIGHT ➔ LEFT</strong>
+            Scan Direction: <strong className="text-white">RIGHT → LEFT</strong>
           </div>
         </div>
 

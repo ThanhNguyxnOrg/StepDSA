@@ -158,6 +158,8 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
     });
 
     const buckets: number[][] = Array.from({ length: numBuckets }, () => []);
+    const formatBucketsSummary = () =>
+      buckets.map((b, idx) => `B${idx}:[${b.join(',')}]`).join(' ');
 
     // Scatter phase
     for (let i = 0; i < n; ++i) {
@@ -169,11 +171,17 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 9,
-        explanation: `Scatter: element arr[${i}] = ${val} placed into Bucket #${bIdx} ([${bIdx * bucketRange + minVal}..${(bIdx + 1) * bucketRange + minVal - 1}]).`,
+        explanation: `Scatter: element arr[${i}] = ${val} placed into Bucket #${bIdx} ([${bIdx * bucketRange + minVal}..${(bIdx + 1) * bucketRange + minVal - 1}]). Buckets: ${formatBucketsSummary()}`,
         soundCue: { type: 'step' },
-        variables: { i, val, bIdx, bucketSize: buckets[bIdx].length },
+        variables: {
+          i,
+          val,
+          bIdx,
+          [`Bucket_${bIdx}`]: [...buckets[bIdx]],
+          bucketsOverview: formatBucketsSummary(),
+        },
         callStack: [{ name: 'scatterElement', params: { i, val, bucket: bIdx }, line: 9, isCurrent: true }],
-        conditionEval: { expr: `bIdx < numBuckets (${bIdx} < ${numBuckets})`, result: true },
+        conditionEval: { expr: `bIdx = floor((${val} - ${minVal}) / ${bucketRange}) = ${bIdx}`, result: true },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -189,11 +197,11 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 12,
-      explanation: `All ${n} elements scattered into ${numBuckets} buckets. Beginning internal bucket sorting and concatenation.`,
+      explanation: `All ${n} elements scattered into ${numBuckets} buckets (${formatBucketsSummary()}). Beginning per-bucket Insertion Sort and concatenation.`,
       isMilestone: true,
       milestoneTitle: 'Scatter Phase Complete',
       soundCue: { type: 'step' },
-      variables: { totalScattered: n, bucketsCount: numBuckets },
+      variables: { totalScattered: n, bucketsCount: numBuckets, bucketsOverview: formatBucketsSummary() },
       callStack: [{ name: 'bucketSort', params: { phase: 'scatterComplete' }, line: 12, isCurrent: true }],
       conditionEval: { expr: `allScattered == true`, result: true },
       state: {
@@ -202,21 +210,61 @@ export const bucketSortModule: AlgorithmModule<number[], ArrayStageState> = {
       },
     });
 
-    // Sort and gather
+    // Sort each bucket step-by-step and gather
     let writeIdx = 0;
-    const sortedResult: number[] = [];
     for (let b = 0; b < numBuckets; ++b) {
-      const currentBucket = [...buckets[b]].sort((a, b) => a - b);
+      const currentBucket = buckets[b];
+      if (currentBucket.length > 1) {
+        // Explicit insertion sort inside bucket b
+        for (let bi = 1; bi < currentBucket.length; bi++) {
+          let bj = bi;
+          while (bj > 0 && currentBucket[bj] < currentBucket[bj - 1]) {
+            const tmp = currentBucket[bj];
+            currentBucket[bj] = currentBucket[bj - 1];
+            currentBucket[bj - 1] = tmp;
+
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 14,
+              explanation: `Sort Bucket #${b}: swapped ${tmp} and ${currentBucket[bj]} inside Bucket #${b} → [${currentBucket.join(', ')}].`,
+              soundCue: { type: 'compare' },
+              variables: {
+                bucketIndex: b,
+                [`Bucket_${b}`]: [...currentBucket],
+                bucketsOverview: formatBucketsSummary(),
+              },
+              callStack: [{ name: `sortBucket(b=${b})`, params: { bucket: b }, line: 14, isCurrent: true }],
+              conditionEval: { expr: `${tmp} < ${currentBucket[bj]}`, result: true },
+              state: {
+                array: arr.map((v, idx) => ({
+                  id: idx,
+                  value: v,
+                  status: idx < writeIdx ? 'sorted' : 'default',
+                })),
+                pointers: { writeIdx, bucket: b },
+              },
+            });
+            bj--;
+          }
+        }
+      }
+
       for (const val of currentBucket) {
         arr[writeIdx] = val;
-        sortedResult.push(val);
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 16,
-          explanation: `Gather: sorted element ${val} from Bucket #${b} placed into position ${writeIdx}.`,
+          explanation: `Gather: sorted element ${val} from Bucket #${b} placed into arr[${writeIdx}].`,
           soundCue: { type: 'swap' },
-          variables: { b, writeIdx, val, bucketItemsCount: currentBucket.length },
+          variables: {
+            b,
+            writeIdx,
+            val,
+            [`Bucket_${b}`]: [...currentBucket],
+            bucketsOverview: formatBucketsSummary(),
+          },
           callStack: [{ name: 'gatherBucket', params: { bucket: b, writeIdx, val }, line: 16, isCurrent: true }],
           conditionEval: { expr: `writeIdx < n (${writeIdx} < ${n})`, result: true },
           state: {

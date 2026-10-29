@@ -11,6 +11,8 @@ export interface StackState {
   topIndex: number;
   capacity: number;
   recentAction?: 'PUSH' | 'POP' | 'PEEK';
+  incomingQueue?: number[];
+  poppedHistory?: number[];
 }
 
 export const stackVisualizerModule: AlgorithmModule<number[], StackState> = {
@@ -133,14 +135,16 @@ public:
         return val`,
   },
   generateTimeline: (input: number[]) => {
-    const rawItems = input.slice(0, 6);
+    const rawItems = input && input.length > 0 ? input.slice(0, 6) : [101, 202, 303, 404, 505];
     const capacity = 8;
-    const currentStack: number[] = [];
+    const currentStack: number[] = [rawItems[0]];
+    const poppedHistory: number[] = [];
     const frames: ExecutionFrame<StackState>[] = [];
 
     const getFrameState = (
       recentAction?: 'PUSH' | 'POP' | 'PEEK',
-      highlightStatus?: 'pushed' | 'popped'
+      highlightStatus?: 'pushed' | 'popped',
+      streamStartIdx: number = 1
     ): StackState => ({
       items: currentStack.map((val, idx) => ({
         id: `stack-${idx}-${val}`,
@@ -155,38 +159,40 @@ public:
       topIndex: currentStack.length - 1,
       capacity,
       recentAction,
+      incomingQueue: rawItems.slice(streamStartIdx),
+      poppedHistory: [...poppedHistory],
     });
 
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialized empty Stack with capacity ${capacity}. top = -1.`,
+      explanation: `Initialized Stack (capacity ${capacity}) and pushed base frame ${rawItems[0]} at index 0. ${rawItems.length - 1} more elements queued in input stream.`,
       isMilestone: true,
-      milestoneTitle: 'Stack Initialized',
+      milestoneTitle: `Seeded Base (${rawItems[0]})`,
       soundCue: { type: 'start' },
-      variables: { top: -1, size: 0, capacity },
-      callStack: [{ name: 'Stack.init', params: { capacity }, line: 2, isCurrent: true }],
-      conditionEval: { expr: `top == -1`, result: true },
-      state: getFrameState(),
+      variables: { top: 0, size: 1, baseVal: rawItems[0], capacity },
+      callStack: [{ name: 'Stack.init', params: { capacity, seed: rawItems[0] }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `size < capacity (1 <= ${capacity})`, result: true },
+      state: getFrameState('PUSH', 'pushed', 1),
     });
 
-    // Push initial values
-    for (let i = 0; i < rawItems.length; ++i) {
+    // Push remaining values step-by-step
+    for (let i = 1; i < rawItems.length; ++i) {
       const val = rawItems[i];
       currentStack.push(val);
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 7,
-        explanation: `PUSH(${val}): Added element to top of stack. Top is now at index ${currentStack.length - 1}.`,
+        explanation: `PUSH(${val}): Added element to top of stack. Top pointer advances to index ${currentStack.length - 1}.`,
         isMilestone: true,
         milestoneTitle: `Push ${val}`,
         soundCue: { type: 'swap' },
         variables: { pushedVal: val, top: currentStack.length - 1, size: currentStack.length },
         callStack: [{ name: 'Stack.push', params: { val }, line: 7, isCurrent: true }],
         conditionEval: { expr: `size < capacity (${currentStack.length} <= ${capacity})`, result: true },
-        state: getFrameState('PUSH', 'pushed'),
+        state: getFrameState('PUSH', 'pushed', i + 1),
       });
     }
 
@@ -197,32 +203,33 @@ public:
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 16,
-        explanation: `PEEK(): Inspecting top element without removing it. Current top is ${topVal}.`,
+        explanation: `PEEK(): Inspecting top element without removing it. Current top at index ${currentStack.length - 1} is ${topVal}.`,
         isMilestone: true,
         milestoneTitle: `Peek (${topVal})`,
         soundCue: { type: 'compare' },
         variables: { peekVal: topVal, topIndex: currentStack.length - 1, size: currentStack.length },
         callStack: [{ name: 'Stack.peek', params: {}, line: 16, isCurrent: true }],
         conditionEval: { expr: `!isEmpty() (${currentStack.length} > 0)`, result: true },
-        state: getFrameState('PEEK'),
+        state: getFrameState('PEEK', undefined, rawItems.length),
       });
     }
 
     // POP 2 values
-    for (let p = 0; p < 2 && currentStack.length > 0; ++p) {
+    for (let p = 0; p < 2 && currentStack.length > 1; ++p) {
       const poppedVal = currentStack.pop()!;
+      poppedHistory.push(poppedVal);
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 12,
-        explanation: `POP(): Removed ${poppedVal} from top of stack. New top is at index ${currentStack.length - 1}.`,
+        explanation: `POP(): Removed ${poppedVal} from top of stack (LIFO). New top is ${currentStack[currentStack.length - 1]} at index ${currentStack.length - 1}.`,
         isMilestone: true,
         milestoneTitle: `Pop ${poppedVal}`,
         soundCue: { type: 'step' },
         variables: { poppedVal, top: currentStack.length - 1, remainingSize: currentStack.length },
         callStack: [{ name: 'Stack.pop', params: {}, line: 12, isCurrent: true }],
         conditionEval: { expr: `size > 0 (${currentStack.length + 1} > 0)`, result: true },
-        state: getFrameState('POP', 'popped'),
+        state: getFrameState('POP', 'popped', rawItems.length),
       });
     }
 
@@ -233,78 +240,94 @@ public:
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 7,
-      explanation: `PUSH(${extraVal}): Re-pushed new value onto the vacated top slot.`,
+      explanation: `PUSH(${extraVal}): Re-pushed new value onto the vacated top slot at index ${currentStack.length - 1}.`,
       isMilestone: true,
       milestoneTitle: `Push ${extraVal}`,
       soundCue: { type: 'complete' },
       variables: { extraVal, top: currentStack.length - 1, size: currentStack.length },
       callStack: [{ name: 'Stack.push', params: { val: extraVal }, line: 7, isCurrent: true }],
       conditionEval: { expr: `size < capacity (${currentStack.length} <= ${capacity})`, result: true },
-      state: getFrameState('PUSH', 'pushed'),
+      state: getFrameState('PUSH', 'pushed', rawItems.length),
     });
 
     const total = frames.length;
     return frames.map((f, idx) => ({ ...f, stepIndex: idx, totalSteps: total }));
   },
   renderStage: (frame: ExecutionFrame<StackState>) => {
-    const { items, topIndex, capacity, recentAction } = frame.state;
+    const { items, topIndex, capacity, recentAction, incomingQueue = [], poppedHistory = [] } = frame.state;
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6">
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-3">
         {/* Header HUD */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
+        <div className="flex flex-wrap items-center justify-center gap-2.5">
+          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
             Capacity: <span className="text-cyan-400 font-bold">{capacity}</span>
           </div>
-          <div className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
+          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
             Size: <span className="text-emerald-400 font-bold">{items.length}</span>
           </div>
-          <div className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
+          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
             Top Index: <span className="text-amber-400 font-bold">{topIndex}</span>
           </div>
           {recentAction && (
-            <div className="px-3 py-1 rounded bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold animate-pulse">
+            <div className="px-2.5 py-1 rounded bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold">
               ACTION: {recentAction}
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/70 border border-slate-800 text-[11px] font-mono text-slate-400">
+            <span>Incoming:</span>
+            {incomingQueue.length === 0 ? (
+              <span className="text-slate-600">exhausted</span>
+            ) : (
+              incomingQueue.map((v, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">
+                  {v}
+                </span>
+              ))
+            )}
+          </div>
+          {poppedHistory.length > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-rose-950/30 border border-rose-800/40 text-[11px] font-mono text-rose-300">
+              <span>Popped (LIFO):</span>
+              {poppedHistory.map((v, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-700/50 text-rose-200 font-bold">
+                  {v}
+                </span>
+              ))}
             </div>
           )}
         </div>
 
         {/* Vertical Stack Chamber */}
-        <div className="relative flex flex-col-reverse items-center justify-start p-4 bg-slate-950/80 border-2 border-b-4 border-slate-700 rounded-b-2xl w-64 min-h-[300px]">
+        <div className="relative flex flex-col-reverse items-center justify-start p-3.5 bg-slate-950/80 border-2 border-b-4 border-slate-700 rounded-b-2xl w-64 min-h-[250px]">
           {/* Stack Base Indicator */}
-          <div className="absolute -bottom-6 text-[10px] font-mono text-slate-500 font-bold tracking-widest uppercase">
+          <div className="absolute -bottom-5 text-[10px] font-mono text-slate-500 font-bold tracking-widest uppercase">
             Stack Base (Index 0)
           </div>
 
-          {items.length === 0 ? (
-            <div className="text-slate-500 font-mono text-xs my-auto italic">
-              [Stack is empty]
-            </div>
-          ) : (
-            items.map((item, idx) => {
-              const isTop = idx === topIndex;
-              return (
-                <div
-                  key={item.id}
-                  className={`w-full h-12 my-1 rounded-xl flex items-center justify-between px-4 font-mono font-bold text-sm shadow-md transition-all duration-300 border-2 ${
-                    isTop
-                      ? 'border-amber-400 bg-amber-950/60 text-amber-200 ring-2 ring-amber-400/40 scale-102'
-                      : 'border-blue-500/40 bg-slate-900/90 text-white'
-                  }`}
-                >
-                  <span className="text-xs text-slate-400 font-normal">#{idx}</span>
-                  <span className="text-base text-cyan-300">{item.val}</span>
-                  {isTop ? (
-                    <span className="text-[9px] font-bold bg-amber-900 border border-amber-600 px-1 rounded text-amber-200">
-                      TOP
-                    </span>
-                  ) : (
-                    <span className="w-8"></span>
-                  )}
-                </div>
-              );
-            })
-          )}
+          {items.map((item, idx) => {
+            const isTop = idx === topIndex;
+            return (
+              <div
+                key={item.id}
+                className={`w-full h-11 my-1 rounded-xl flex items-center justify-between px-4 font-mono font-bold text-sm shadow-md transition-all duration-300 border-2 ${
+                  isTop
+                    ? 'border-amber-400 bg-amber-950/60 text-amber-200 ring-2 ring-amber-400/40 scale-102'
+                    : 'border-blue-500/40 bg-slate-900/90 text-white'
+                }`}
+              >
+                <span className="text-xs text-slate-400 font-normal">#{idx}</span>
+                <span className="text-base text-cyan-300">{item.val}</span>
+                {isTop ? (
+                  <span className="text-[9px] font-bold bg-amber-900 border border-amber-600 px-1.5 py-0.5 rounded text-amber-200">
+                    ← TOP
+                  </span>
+                ) : (
+                  <span className="w-8"></span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );

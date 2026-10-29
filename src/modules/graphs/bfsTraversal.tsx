@@ -348,57 +348,96 @@ def bfs(graph, start):
         </div>
 
         {/* SVG Graph Layout */}
-        <svg viewBox="0 0 380 150" className="w-96 h-40">
-          {/* Edges */}
-          {edges.map((e, idx) => {
-            const fromNode = nodes.find((n) => n.id === e.from);
-            const toNode = nodes.find((n) => n.id === e.to);
-            if (!fromNode || !toNode) return null;
-            return (
-              <line
-                key={`edge-${idx}`}
-                x1={fromNode.x}
-                y1={fromNode.y}
-                x2={toNode.x}
-                y2={toNode.y}
-                stroke="#64748B"
-                strokeWidth="2.5"
-                opacity="0.6"
-              />
-            );
-          })}
+        <div className="w-full max-w-xl bg-[#111827]/70 border border-[#1F293D] rounded-2xl p-4 flex items-center justify-center">
+          <svg viewBox="0 0 380 165" className="w-full h-52 overflow-visible">
+            {/* Edges */}
+            {edges.map((e, idx) => {
+              const fromNode = nodes.find((n) => n.id === e.from);
+              const toNode = nodes.find((n) => n.id === e.to);
+              if (!fromNode || !toNode) return null;
+              const bothVisited =
+                fromNode.status === 'visited' &&
+                (toNode.status === 'visited' || toNode.status === 'queued');
+              return (
+                <g key={`edge-${idx}`}>
+                  <line
+                    x1={fromNode.x}
+                    y1={fromNode.y}
+                    x2={toNode.x}
+                    y2={toNode.y}
+                    stroke={bothVisited ? '#10B981' : '#475569'}
+                    strokeWidth={bothVisited ? '3' : '2.25'}
+                    opacity={bothVisited ? '0.35' : '0.55'}
+                  />
+                  {bothVisited && (
+                    <line
+                      x1={fromNode.x}
+                      y1={fromNode.y}
+                      x2={toNode.x}
+                      y2={toNode.y}
+                      stroke="#34D399"
+                      strokeWidth="2.5"
+                      strokeDasharray="6 4"
+                    >
+                      <animate
+                        attributeName="stroke-dashoffset"
+                        from="20"
+                        to="0"
+                        dur="0.85s"
+                        repeatCount="indefinite"
+                      />
+                    </line>
+                  )}
+                </g>
+              );
+            })}
 
-          {/* Nodes */}
-          {nodes.map((n) => {
-            const isQueued = n.status === 'queued';
-            const isVisited = n.status === 'visited';
+            {/* Nodes */}
+            {nodes.map((n) => {
+              const isQueued = n.status === 'queued';
+              const isVisited = n.status === 'visited';
+              const visitIdx = visitedOrder.indexOf(n.id);
 
-            return (
-              <g key={n.id}>
-                <circle
-                  cx={n.x}
-                  cy={n.y}
-                  r="16"
-                  className="transition-all duration-300"
-                  fill={isVisited ? '#10B981' : isQueued ? '#A855F7' : '#1E293B'}
-                  stroke={isVisited ? '#6EE7B7' : isQueued ? '#E9D5FF' : '#475569'}
-                  strokeWidth="2.5"
-                />
-                <text
-                  x={n.x}
-                  y={n.y + 4}
-                  textAnchor="middle"
-                  fill={isVisited || isQueued ? '#000000' : '#FFFFFF'}
-                  fontSize="12"
-                  fontWeight="bold"
-                  fontFamily="monospace"
-                >
-                  {n.label}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+              return (
+                <g key={n.id}>
+                  <circle
+                    cx={n.x}
+                    cy={n.y}
+                    r="18"
+                    className="transition-all duration-300"
+                    fill={isVisited ? '#10B981' : isQueued ? '#A855F7' : '#1E293B'}
+                    stroke={isVisited ? '#6EE7B7' : isQueued ? '#E9D5FF' : '#475569'}
+                    strokeWidth="2.5"
+                  />
+                  <text
+                    x={n.x}
+                    y={n.y + 4}
+                    textAnchor="middle"
+                    fill={isVisited || isQueued ? '#0B0F19' : '#FFFFFF'}
+                    fontSize="12"
+                    fontWeight="bold"
+                    fontFamily="monospace"
+                  >
+                    {n.label}
+                  </text>
+                  {visitIdx >= 0 && (
+                    <text
+                      x={n.x}
+                      y={n.y + 30}
+                      textAnchor="middle"
+                      fill="#34D399"
+                      fontSize="9"
+                      fontWeight="bold"
+                      fontFamily="monospace"
+                    >
+                      #{visitIdx + 1}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
       </div>
     );
   },

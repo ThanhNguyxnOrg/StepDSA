@@ -189,7 +189,9 @@ export const dropSortModule: AlgorithmModule<number[], ArrayStageState> = {
       },
       callStack: [{ name: 'complete()', params: { surviving }, line: 9, isCurrent: true }],
       state: {
-        array: elements.map((e) => ({ ...e })),
+        array: elements
+          .filter((e) => e.status !== 'discarded')
+          .map((e, idx) => ({ ...e, id: idx, status: 'sorted' as ElementStatus })),
         pointers: {},
       },
     });

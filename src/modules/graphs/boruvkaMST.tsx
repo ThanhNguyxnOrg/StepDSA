@@ -294,7 +294,7 @@ void boruvkaMST(int V, vector<Edge>& edges) {
           callStack: [{ name: 'findCheapestEdge', params: { component: compId, edge: `(${e.u}-${e.v})`, weight: e.weight }, line: 12, isCurrent: true }],
           variables: { phase, component: compId, cheapestEdge: `(${e.u}, ${e.v})`, weight: e.weight },
           conditionEval: { expr: `find(${e.u}) != find(${e.v})`, result: true },
-          explanation: `Phase ${phase}: Component ${compId} selected its cheapest crossing edge (${e.u} <-> ${e.v}, weight ${e.weight}).`,
+          explanation: `Phase ${phase}: Component ${compId} selected its cheapest crossing edge (${e.u} ↔ ${e.v}, weight ${e.weight}).`,
         });
       }
 
@@ -329,7 +329,7 @@ void boruvkaMST(int V, vector<Edge>& edges) {
             callStack: [{ name: 'dsuUnion', params: { u: e.u, v: e.v, weight: e.weight }, line: 18, isCurrent: true }],
             variables: { edge: `(${e.u}, ${e.v})`, weight: e.weight, newComponentCount: countComponents() },
             conditionEval: { expr: `find(${e.u}) != find(${e.v})`, result: true },
-            explanation: `Added edge (${e.u} <-> ${e.v}, weight ${e.weight}) to MST! Unified components ${uSet} and ${vSet}.`,
+            explanation: `Added edge (${e.u} ↔ ${e.v}, weight ${e.weight}) to MST! Unified components ${uSet} and ${vSet}.`,
           });
         } else {
           frames.push({
@@ -351,7 +351,7 @@ void boruvkaMST(int V, vector<Edge>& edges) {
             callStack: [{ name: 'dsuCheckCycle', params: { u: e.u, v: e.v }, line: 16, isCurrent: true }],
             variables: { edge: `(${e.u}, ${e.v})`, uSet, vSet, cyclePrevented: true },
             conditionEval: { expr: `find(${e.u}) == find(${e.v})`, result: true },
-            explanation: `Edge (${e.u} <-> ${e.v}) already unified by earlier parallel edge in this phase. Skipping to prevent cycle.`,
+            explanation: `Edge (${e.u} ↔ ${e.v}) already unified by earlier parallel edge in this phase. Skipping to prevent cycle.`,
           });
         }
       }

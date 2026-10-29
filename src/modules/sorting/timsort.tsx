@@ -238,6 +238,28 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
             const tmp = elements[j].value;
             elements[j].value = elements[j - 1].value;
             elements[j - 1].value = tmp;
+            elements[j].status = 'swapping';
+            elements[j - 1].status = 'swapping';
+
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 5,
+              explanation: `Binary Insertion Sort extension: shifted ${tmp} left past ${elements[j].value} at index ${j - 1}.`,
+              soundCue: { type: 'swap' },
+              callStack: [
+                { name: 'binaryInsertionSort(start, end)', params: { start, i, j: j - 1 }, line: 5, isCurrent: true },
+                { name: 'timSort()', params: { n }, line: 2 },
+              ],
+              variables: { start, i, j: j - 1, key: tmp },
+              state: {
+                array: elements.map((e) => ({ ...e })),
+                pointers: { start, key: j - 1, targetEnd: targetEnd - 1 },
+              },
+            });
+
+            elements[j].status = 'default';
+            elements[j - 1].status = 'default';
             j--;
           }
         }
@@ -286,15 +308,20 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
       const mergeMid = r1.start + r1.len;
       const mergeEnd = r2.start + r2.len;
 
+      const leftArr = elements.slice(mergeStart, mergeMid).map((e) => e.value);
+      const rightArr = elements.slice(mergeMid, mergeEnd).map((e) => e.value);
+
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 8,
-        explanation: `Merging adjacent runs: Run A [${mergeStart}..${mergeMid - 1}] and Run B [${mergeMid}..${mergeEnd - 1}].`,
+        explanation: `Merging adjacent runs: Run A [${mergeStart}..${mergeMid - 1}] = [${leftArr.join(', ')}] and Run B [${mergeMid}..${mergeEnd - 1}] = [${rightArr.join(', ')}].`,
         soundCue: { type: 'compare' },
         variables: {
-          runA: `[${elements.slice(mergeStart, mergeMid).map((e) => e.value).join(', ')}]`,
-          runB: `[${elements.slice(mergeMid, mergeEnd).map((e) => e.value).join(', ')}]`,
+          runA: `[${leftArr.join(', ')}]`,
+          runB: `[${rightArr.join(', ')}]`,
+          AuxRunA: leftArr,
+          AuxRunB: rightArr,
         },
         callStack: [{ name: `mergeRuns(${mergeStart}, ${mergeEnd})`, params: { mergeStart, mergeEnd }, line: 8, isCurrent: true }],
         state: {
@@ -302,36 +329,96 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
             ...e,
             status: idx >= mergeStart && idx < mergeEnd ? 'comparing' : 'default',
           })),
-          pointers: { left: mergeStart, right: mergeEnd - 1 },
+          pointers: { left: mergeStart, mid: mergeMid, right: mergeEnd - 1 },
         },
       });
 
-      // Step-by-step two-pointer merge
-      const leftArr = elements.slice(mergeStart, mergeMid).map((e) => e.value);
-      const rightArr = elements.slice(mergeMid, mergeEnd).map((e) => e.value);
-      const mergedVals: number[] = [];
+      // Step-by-step two-pointer merge writing directly to elements[mergeStart + k]
       let pL = 0;
       let pR = 0;
+      let writeOffset = 0;
 
       while (pL < leftArr.length && pR < rightArr.length) {
-        if (leftArr[pL] <= rightArr[pR]) {
-          mergedVals.push(leftArr[pL]);
-          pL++;
-        } else {
-          mergedVals.push(rightArr[pR]);
-          pR++;
-        }
-      }
-      while (pL < leftArr.length) {
-        mergedVals.push(leftArr[pL++]);
-      }
-      while (pR < rightArr.length) {
-        mergedVals.push(rightArr[pR++]);
+        const lVal = leftArr[pL];
+        const rVal = rightArr[pR];
+        const pickLeft = lVal <= rVal;
+        const chosen = pickLeft ? lVal : rVal;
+        const targetIdx = mergeStart + writeOffset;
+
+        elements[targetIdx].value = chosen;
+        elements[targetIdx].status = 'sorted';
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 8,
+          explanation: `Merge compare: RunA[${pL}]=${lVal} <= RunB[${pR}]=${rVal} is ${pickLeft ? 'TRUE' : 'FALSE'} → write ${chosen} to arr[${targetIdx}].`,
+          soundCue: { type: 'swap' },
+          conditionEval: { expr: `${lVal} <= ${rVal}`, result: pickLeft },
+          variables: {
+            writeIdx: targetIdx,
+            chosenValue: chosen,
+            pL: pickLeft ? pL + 1 : pL,
+            pR: pickLeft ? pR : pR + 1,
+            AuxRunA: leftArr.slice(pickLeft ? pL + 1 : pL),
+            AuxRunB: rightArr.slice(pickLeft ? pR : pR + 1),
+          },
+          callStack: [{ name: `mergeStep(idx=${targetIdx})`, params: { lVal, rVal, chosen }, line: 8, isCurrent: true }],
+          state: {
+            array: elements.map((e, idx) => ({
+              ...e,
+              status: idx === targetIdx ? 'swapping' : idx >= mergeStart && idx < targetIdx ? 'sorted' : e.status,
+            })),
+            pointers: { write: targetIdx, end: mergeEnd - 1 },
+          },
+        });
+
+        elements[targetIdx].status = 'sorted';
+        if (pickLeft) pL++;
+        else pR++;
+        writeOffset++;
       }
 
-      for (let k = 0; k < mergedVals.length; k++) {
-        elements[mergeStart + k].value = mergedVals[k];
-        elements[mergeStart + k].status = 'sorted';
+      while (pL < leftArr.length) {
+        const chosen = leftArr[pL++];
+        const targetIdx = mergeStart + writeOffset++;
+        elements[targetIdx].value = chosen;
+        elements[targetIdx].status = 'sorted';
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 8,
+          explanation: `Copy remaining Run A element ${chosen} into arr[${targetIdx}].`,
+          soundCue: { type: 'step' },
+          variables: { writeIdx: targetIdx, chosenValue: chosen, AuxRunA: leftArr.slice(pL) },
+          callStack: [{ name: `flushRunA(idx=${targetIdx})`, params: { chosen }, line: 8, isCurrent: true }],
+          state: {
+            array: elements.map((e) => ({ ...e })),
+            pointers: { write: targetIdx },
+          },
+        });
+      }
+
+      while (pR < rightArr.length) {
+        const chosen = rightArr[pR++];
+        const targetIdx = mergeStart + writeOffset++;
+        elements[targetIdx].value = chosen;
+        elements[targetIdx].status = 'sorted';
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 8,
+          explanation: `Copy remaining Run B element ${chosen} into arr[${targetIdx}].`,
+          soundCue: { type: 'step' },
+          variables: { writeIdx: targetIdx, chosenValue: chosen, AuxRunB: rightArr.slice(pR) },
+          callStack: [{ name: `flushRunB(idx=${targetIdx})`, params: { chosen }, line: 8, isCurrent: true }],
+          state: {
+            array: elements.map((e) => ({ ...e })),
+            pointers: { write: targetIdx },
+          },
+        });
       }
 
       runs.unshift({ start: mergeStart, len: r1.len + r2.len });
@@ -343,9 +430,9 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
         explanation: `Runs merged and sorted into unified run: [${elements.slice(mergeStart, mergeEnd).map((e) => e.value).join(', ')}].`,
         isMilestone: true,
         milestoneTitle: `Merged [${mergeStart}..${mergeEnd - 1}]`,
-        soundCue: { type: 'swap' },
+        soundCue: { type: 'sorted' },
         variables: { mergedRange: `[${mergeStart}..${mergeEnd - 1}]`, remainingRuns: runs.length },
-        callStack: [{ name: `mergeDone()`, params: { size: mergedVals.length }, line: 9, isCurrent: true }],
+        callStack: [{ name: `mergeDone()`, params: { size: r1.len + r2.len }, line: 9, isCurrent: true }],
         state: {
           array: elements.map((e, idx) => ({
             ...e,

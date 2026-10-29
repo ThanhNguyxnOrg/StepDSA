@@ -274,19 +274,20 @@ function query(i):
             </div>
           </div>
 
-          {/* Fenwick Tree */}
+          {/* Fenwick Tree & Responsibility Range Bars */}
           <div>
             <div className="text-xs font-mono text-slate-400 mb-2 font-bold flex items-center justify-between">
-              <span>Fenwick Tree BIT[1..N]</span>
+              <span>Fenwick Tree BIT[1..N] & Power-of-2 Responsibility Ranges</span>
               <span className="text-[10px] text-cyan-400 font-normal">
-                covers range (i - lowbit(i), i]
+                T[i] covers range [i - lowbit(i) + 1 .. i]
               </span>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
               {tree.slice(1).map((val, idx) => {
                 const i = idx + 1;
                 const isCurrent = i === activeIdx;
-                const rangeLow = i - (i & -i) + 1;
+                const len = i & -i;
+                const rangeLow = i - len + 1;
 
                 return (
                   <div
@@ -297,11 +298,42 @@ function query(i):
                         : 'bg-slate-900 text-slate-300 border-slate-800'
                     }`}
                   >
-                    <span className="text-[10px] text-slate-500 block">T[{i}]</span>
+                    <span className="text-[10px] text-slate-400 block">T[{i}]</span>
                     <span className="font-bold text-sm block">{val}</span>
-                    <span className="text-[8px] text-slate-500 block">
+                    <span className="text-[9px] text-cyan-400 font-semibold block">
                       [{rangeLow}..{i}]
                     </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Visual Interval Coverage Bars (VisuAlgo BIT Tree Diagram) */}
+            <div className="mt-2 pt-2 border-t border-slate-800/80 space-y-1">
+              {tree.slice(1).map((val, idx) => {
+                const i = idx + 1;
+                const n = Math.max(1, originalArray.length);
+                const len = i & -i;
+                const rangeLow = i - len + 1;
+                const leftPct = ((rangeLow - 1) / n) * 100;
+                const widthPct = (len / n) * 100;
+                const isCurrent = i === activeIdx;
+
+                return (
+                  <div key={`bar-${i}`} className="flex items-center gap-2 text-[10px] font-mono">
+                    <span className="w-10 text-right text-slate-400 shrink-0">T[{i}]</span>
+                    <div className="flex-1 h-4 bg-slate-900/80 rounded relative overflow-hidden border border-slate-800/60">
+                      <div
+                        style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                        className={`absolute top-0.5 bottom-0.5 rounded flex items-center justify-center text-[9px] font-bold transition-all ${
+                          isCurrent
+                            ? 'bg-cyan-400 text-slate-950 shadow'
+                            : 'bg-emerald-500/30 border border-emerald-500/50 text-emerald-300'
+                        }`}
+                      >
+                        [{rangeLow}..{i}] = {val}
+                      </div>
+                    </div>
                   </div>
                 );
               })}

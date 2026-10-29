@@ -263,7 +263,7 @@ export const mergesortRecursionTreeModule: AlgorithmModule<MRTInput, MRTState> =
     overview: 'Visualizes the recursive call tree of mergesort. Each node represents a recursive call frame, showing the subarray being processed. The tree splits top-down and merges bottom-up.',
     whyItWorks: 'Mergesort divides the array into halves recursively (log N depth), then merges sorted halves back up. The call tree makes the O(N log N) structure visible: N work at each of log N levels.',
     invariant: 'At each merge step, both left and right child subarrays are already sorted before merging.',
-    pitfalls: ['Tree depth is always ⌈log₂ N⌉', 'Total nodes in the tree: 2N − 1', 'Stack depth equals tree depth — can stack-overflow on huge inputs without iterative conversion'],
+    pitfalls: ['Tree depth is always ceil(log₂ N)', 'Total nodes in the tree: 2N − 1', 'Stack depth equals tree depth — can stack-overflow on huge inputs without iterative conversion'],
   },
   codeSnippets: {
     pseudocode: `function mergesort(arr):

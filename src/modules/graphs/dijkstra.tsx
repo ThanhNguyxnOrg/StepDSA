@@ -376,7 +376,7 @@ def dijkstra(graph, start):
               <marker
                 id="arrow"
                 viewBox="0 0 10 10"
-                refX="20"
+                refX="27"
                 refY="5"
                 markerWidth="6"
                 markerHeight="6"
@@ -387,7 +387,7 @@ def dijkstra(graph, start):
               <marker
                 id="arrow-active"
                 viewBox="0 0 10 10"
-                refX="20"
+                refX="27"
                 refY="5"
                 markerWidth="7"
                 markerHeight="7"
@@ -398,7 +398,7 @@ def dijkstra(graph, start):
               <marker
                 id="arrow-relaxed"
                 viewBox="0 0 10 10"
-                refX="20"
+                refX="27"
                 refY="5"
                 markerWidth="7"
                 markerHeight="7"
@@ -431,8 +431,9 @@ def dijkstra(graph, start):
                 strokeWidth = 2.5;
               }
 
-              const midX = (fromNode.x + toNode.x) / 2;
-              const midY = (fromNode.y + toNode.y) / 2 - 8;
+              const t = idx % 2 === 0 ? 0.44 : 0.56;
+              const midX = fromNode.x + (toNode.x - fromNode.x) * t;
+              const midY = fromNode.y + (toNode.y - fromNode.y) * t;
 
               return (
                 <g key={`${edge.from}-${edge.to}-${idx}`}>
@@ -449,19 +450,19 @@ def dijkstra(graph, start):
                   {/* Weight Badge */}
                   <rect
                     x={midX - 12}
-                    y={midY - 10}
+                    y={midY - 9}
                     width={24}
                     height={18}
                     rx={5}
-                    fill="#1F2937"
+                    fill="#0B0F19"
                     stroke={strokeColor}
-                    strokeWidth={1}
+                    strokeWidth={1.25}
                   />
                   <text
                     x={midX}
-                    y={midY + 3}
+                    y={midY + 3.5}
                     textAnchor="middle"
-                    fill={strokeColor === '#334155' ? '#94A3B8' : strokeColor}
+                    fill={strokeColor === '#334155' ? '#CBD5E1' : strokeColor}
                     fontSize={11}
                     fontFamily="monospace"
                     fontWeight="bold"

@@ -12,6 +12,8 @@ export interface QueueState {
   rearIndex: number;
   capacity: number;
   recentAction?: 'ENQUEUE' | 'DEQUEUE' | 'PEEK';
+  incomingQueue?: number[];
+  servedHistory?: number[];
 }
 
 export const queueVisualizerModule: AlgorithmModule<number[], QueueState> = {
@@ -117,33 +119,39 @@ public:
   },
 
   generateTimeline: (input: number[]): ExecutionFrame<QueueState>[] => {
+    const rawItems = input && input.length > 0 ? input : [10, 25, 40, 55, 70];
     const frames: ExecutionFrame<QueueState>[] = [];
-    const queue: number[] = [];
+    const queue: number[] = [rawItems[0]];
+    const servedHistory: number[] = [];
     const capacity = 8;
 
-    // Initial empty state
+    // Initial seeded state with first element so Step 1 is immediately visual
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
-      explanation: `Initialized empty Queue with capacity ${capacity}. Front = 0, Rear = -1. FIFO discipline active.`,
+      explanation: `Initialized Queue (capacity ${capacity}) with initial arrival ${rawItems[0]} at Front [0] & Rear [0]. ${rawItems.length - 1} items queued in arriving stream.`,
       isMilestone: true,
-      milestoneTitle: 'Queue Initialized',
+      milestoneTitle: `Seeded Front (${rawItems[0]})`,
       soundCue: { type: 'start' },
-      variables: { front: 0, rear: -1, size: 0, capacity },
-      callStack: [{ name: 'Queue.init', params: { capacity }, line: 1, isCurrent: true }],
-      conditionEval: { expr: `size == 0`, result: true },
-      scopeVariables: { front: 0, rear: -1, size: 0, capacity },
+      variables: { front: 0, rear: 0, size: 1, seed: rawItems[0], capacity },
+      callStack: [{ name: 'Queue.init', params: { capacity, seed: rawItems[0] }, line: 1, isCurrent: true }],
+      conditionEval: { expr: `size < capacity (1 < ${capacity})`, result: true },
+      scopeVariables: { front: 0, rear: 0, size: 1, capacity },
       state: {
-        items: [],
+        items: [{ id: `item-0-${rawItems[0]}`, val: rawItems[0], status: 'front' }],
         frontIndex: 0,
-        rearIndex: -1,
+        rearIndex: 0,
         capacity,
+        recentAction: 'ENQUEUE',
+        incomingQueue: rawItems.slice(1),
+        servedHistory: [],
       },
     });
 
-    // Enqueue phase
-    input.forEach((val) => {
+    // Enqueue remaining elements step-by-step
+    for (let i = 1; i < rawItems.length; i++) {
+      const val = rawItems[i];
       queue.push(val);
       const rear = queue.length - 1;
 
@@ -151,7 +159,7 @@ public:
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 5,
-        explanation: `ENQUEUE(${val}): Element pushed at rear index [${rear}]. Current queue size = ${queue.length}.`,
+        explanation: `ENQUEUE(${val}): Element enters at rear index [${rear}]. Current queue size = ${queue.length}.`,
         isMilestone: true,
         milestoneTitle: `Enqueue ${val}`,
         soundCue: { type: 'swap' },
@@ -169,9 +177,11 @@ public:
           rearIndex: rear,
           capacity,
           recentAction: 'ENQUEUE',
+          incomingQueue: rawItems.slice(i + 1),
+          servedHistory: [...servedHistory],
         },
       });
-    });
+    }
 
     // Peek operation
     if (queue.length > 0) {
@@ -179,7 +189,7 @@ public:
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 12,
-        explanation: `PEEK(): Inspecting front element without removal. Value = ${queue[0]}.`,
+        explanation: `PEEK(): Inspecting oldest element at FRONT [0] without removal. Value = ${queue[0]}.`,
         soundCue: { type: 'compare' },
         variables: { frontVal: queue[0], size: queue.length },
         callStack: [{ name: 'Queue.peek', params: {}, line: 12, isCurrent: true }],
@@ -195,23 +205,26 @@ public:
           rearIndex: queue.length - 1,
           capacity,
           recentAction: 'PEEK',
+          incomingQueue: [],
+          servedHistory: [...servedHistory],
         },
       });
     }
 
-    // Dequeue 2 items
-    const dequeueCount = Math.min(2, queue.length);
+    // Dequeue 2 items (keeping at least 1 item in queue)
+    const dequeueCount = Math.min(2, Math.max(0, queue.length - 1));
     for (let i = 0; i < dequeueCount; i++) {
       const dequeuedVal = queue.shift()!;
+      servedHistory.push(dequeuedVal);
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 8,
-        explanation: `DEQUEUE(): Removed oldest element (${dequeuedVal}) from front. Next element shifts to front.`,
+        explanation: `DEQUEUE(): Removed oldest element (${dequeuedVal}) from FRONT (FIFO). ${queue[0]} advances to FRONT.`,
         isMilestone: true,
         milestoneTitle: `Dequeue ${dequeuedVal}`,
         soundCue: { type: 'step' },
-        variables: { dequeued: dequeuedVal, remainingSize: queue.length },
+        variables: { dequeued: dequeuedVal, newFront: queue[0], remainingSize: queue.length },
         callStack: [{ name: 'Queue.dequeue', params: {}, line: 8, isCurrent: true }],
         conditionEval: { expr: `size > 0 (${queue.length + 1} > 0)`, result: true },
         scopeVariables: { dequeued: dequeuedVal, remainingSize: queue.length },
@@ -225,6 +238,8 @@ public:
           rearIndex: queue.length - 1,
           capacity,
           recentAction: 'DEQUEUE',
+          incomingQueue: [],
+          servedHistory: [...servedHistory],
         },
       });
     }
@@ -233,7 +248,7 @@ public:
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 15,
-      explanation: `🎉 Queue lifecycle operations complete. FIFO ordering preserved throughout all transitions.`,
+      explanation: `🎉 Queue lifecycle operations complete. FIFO ordering preserved across all ${rawItems.length} arrivals.`,
       isMilestone: true,
       milestoneTitle: 'Queue Ready',
       soundCue: { type: 'complete' },
@@ -250,6 +265,8 @@ public:
         frontIndex: 0,
         rearIndex: queue.length - 1,
         capacity,
+        incomingQueue: [],
+        servedHistory: [...servedHistory],
       },
     });
 
@@ -258,27 +275,49 @@ public:
   },
 
   renderStage: (frame: ExecutionFrame<QueueState>) => {
-    const { items, frontIndex, rearIndex, capacity, recentAction } = frame.state;
+    const { items, frontIndex, rearIndex, capacity, recentAction, incomingQueue = [], servedHistory = [] } = frame.state;
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6">
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-4">
         {/* Header HUD */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
+        <div className="flex flex-wrap items-center justify-center gap-2.5">
+          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
             Capacity: <span className="text-cyan-400 font-bold">{capacity}</span>
           </div>
-          <div className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
+          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
             Size: <span className="text-emerald-400 font-bold">{items.length}</span>
           </div>
           {recentAction && (
-            <div className="px-3 py-1 rounded bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold animate-pulse">
+            <div className="px-2.5 py-1 rounded bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold">
               ACTION: {recentAction}
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/70 border border-slate-800 text-[11px] font-mono text-slate-400">
+            <span>Arriving Stream:</span>
+            {incomingQueue.length === 0 ? (
+              <span className="text-slate-600">exhausted</span>
+            ) : (
+              incomingQueue.map((v, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">
+                  {v}
+                </span>
+              ))
+            )}
+          </div>
+          {servedHistory.length > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-rose-950/30 border border-rose-800/40 text-[11px] font-mono text-rose-300">
+              <span>Served (FIFO):</span>
+              {servedHistory.map((v, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-700/50 text-rose-200 font-bold">
+                  {v}
+                </span>
+              ))}
             </div>
           )}
         </div>
 
         {/* Tube / Pipe Pipeline Container */}
-        <div className="relative flex items-center justify-center py-8 px-6 bg-slate-950/60 border-y-2 border-slate-800 rounded-3xl max-w-4xl w-full">
+        <div className="relative flex items-center justify-center py-6 px-6 bg-slate-950/60 border-y-2 border-slate-800 rounded-3xl max-w-4xl w-full">
           {/* Outflow Label (Front) */}
           <div className="absolute left-3 flex flex-col items-center text-rose-400 font-mono text-xs font-bold">
             <span>← EXIT</span>
@@ -286,48 +325,42 @@ public:
           </div>
 
           {/* Queue Slot Cells */}
-          <div className="flex items-center gap-3 overflow-x-auto px-16 py-4">
-            {items.length === 0 ? (
-              <div className="text-slate-500 font-mono text-sm py-4 italic">
-                (Queue is currently empty)
-              </div>
-            ) : (
-              items.map((item, idx) => {
-                const isFront = idx === frontIndex;
-                const isRear = idx === rearIndex;
+          <div className="flex items-center gap-3 overflow-x-auto px-16 py-2">
+            {items.map((item, idx) => {
+              const isFront = idx === frontIndex;
+              const isRear = idx === rearIndex;
 
-                return (
-                  <div key={item.id} className="flex flex-col items-center">
-                    {/* Item Box */}
-                    <div
-                      className={`w-14 h-14 rounded-2xl flex items-center justify-center font-mono font-bold text-lg shadow-xl border-2 transition-all duration-300 ${
-                        isFront
-                          ? 'border-rose-400 bg-rose-950/60 text-rose-200 ring-2 ring-rose-400/40 scale-105'
-                          : isRear
-                          ? 'border-emerald-400 bg-emerald-950/60 text-emerald-200 ring-2 ring-emerald-400/40 scale-105'
-                          : 'border-blue-500/40 bg-slate-900/90 text-white'
-                      }`}
-                    >
-                      {item.val}
-                    </div>
-
-                    {/* Pointer Badges */}
-                    <div className="flex flex-col gap-1 mt-2 items-center">
-                      {isFront && (
-                        <span className="text-[9px] font-mono font-bold bg-rose-950 border border-rose-600/60 text-rose-300 px-1.5 py-0.5 rounded">
-                          FRONT
-                        </span>
-                      )}
-                      {isRear && (
-                        <span className="text-[9px] font-mono font-bold bg-emerald-950 border border-emerald-600/60 text-emerald-300 px-1.5 py-0.5 rounded">
-                          REAR
-                        </span>
-                      )}
-                    </div>
+              return (
+                <div key={item.id} className="flex flex-col items-center">
+                  {/* Item Box */}
+                  <div
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center font-mono font-bold text-lg shadow-xl border-2 transition-all duration-300 ${
+                      isFront
+                        ? 'border-rose-400 bg-rose-950/60 text-rose-200 ring-2 ring-rose-400/40 scale-105'
+                        : isRear
+                        ? 'border-emerald-400 bg-emerald-950/60 text-emerald-200 ring-2 ring-emerald-400/40 scale-105'
+                        : 'border-blue-500/40 bg-slate-900/90 text-white'
+                    }`}
+                  >
+                    {item.val}
                   </div>
-                );
-              })
-            )}
+
+                  {/* Pointer Badges */}
+                  <div className="flex flex-col gap-1 mt-2 items-center">
+                    {isFront && (
+                      <span className="text-[9px] font-mono font-bold bg-rose-950 border border-rose-600/60 text-rose-300 px-1.5 py-0.5 rounded">
+                        FRONT
+                      </span>
+                    )}
+                    {isRear && (
+                      <span className="text-[9px] font-mono font-bold bg-emerald-950 border border-emerald-600/60 text-emerald-300 px-1.5 py-0.5 rounded">
+                        REAR
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Inflow Label (Rear) */}

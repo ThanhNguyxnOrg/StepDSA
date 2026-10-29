@@ -272,7 +272,7 @@ void insertAfter(Node node, int val) {
             <span className="px-2 py-1 rounded bg-slate-800/80 border border-slate-700/80 text-slate-400">
               NULL
             </span>
-            <span className="text-slate-600 font-bold">⇄</span>
+            <span className="text-slate-600 font-bold">↔</span>
           </div>
 
           {nodes.map((node, i) => {
@@ -317,11 +317,11 @@ void insertAfter(Node node, int val) {
                 {/* Bidirectional connector */}
                 {i < nodes.length - 1 ? (
                   <div className="flex items-center text-cyan-400 font-mono text-base font-bold px-1">
-                    ⇄
+                    ↔
                   </div>
                 ) : (
                   <div className="flex items-center gap-1 text-slate-500 font-mono text-xs">
-                    <span className="text-slate-600 font-bold">⇄</span>
+                    <span className="text-slate-600 font-bold">↔</span>
                     <span className="px-2 py-1 rounded bg-slate-800/80 border border-slate-700/80 text-slate-400">
                       NULL
                     </span>

@@ -307,23 +307,70 @@ export const knapsackModule: AlgorithmModule<KnapsackInput, KnapsackState> = {
     const { items, capacity, dpTable, currentItemIndex, currentWeight, activeDependencies, decision, chosenItems } =
       frame.state;
 
+    const activeItem = currentItemIndex > 0 ? items[currentItemIndex - 1] : null;
+    const excludeDepVal =
+      activeDependencies?.excludeCell &&
+      dpTable[activeDependencies.excludeCell[0]]?.[activeDependencies.excludeCell[1]];
+    const includeDepVal =
+      activeDependencies?.includeCell &&
+      dpTable[activeDependencies.includeCell[0]]?.[activeDependencies.includeCell[1]];
+    const currentCellVal = dpTable[currentItemIndex]?.[currentWeight];
+
     return (
-      <div className="w-full flex-1 flex flex-col xl:flex-row items-center justify-center p-3 gap-4 max-w-5xl mx-auto overflow-x-auto min-h-[360px]">
-        {/* DP Table */}
-        <div className="bg-[#111827]/90 border border-[#1F293D] rounded-2xl p-4 shadow-lg flex-1 min-w-[340px] max-w-full overflow-x-auto">
-          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-            <span className="flex items-center gap-1.5 text-[#10B981]">
-              <span>📊</span> 2D DP Table (Items × Capacity)
+      <div className="w-full flex-1 flex flex-col lg:flex-row items-center lg:items-start justify-center p-3 gap-3.5 max-w-5xl mx-auto overflow-x-auto min-h-[340px]">
+        {/* DP Table + Live Evaluated Recurrence Bar */}
+        <div className="bg-[#111827]/90 border border-[#1F293D] rounded-2xl p-3.5 shadow-lg flex-1 min-w-[320px] max-w-full overflow-x-auto">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs mb-2.5">
+            <span className="font-semibold text-white">
+              2D DP Table (Items × Capacity)
             </span>
-            <span className="font-mono text-[11px] text-slate-500">
-              dp[{currentItemIndex}][{currentWeight}]
+            <span className="font-mono text-[11px] text-cyan-300 bg-[#0B0F19] px-2 py-0.5 rounded border border-[#1F293D] tabular-nums">
+              Focus: dp[{currentItemIndex}][{currentWeight}] = {currentCellVal ?? 0}
             </span>
           </div>
 
-          <table className="w-full border-collapse font-mono text-xs">
+          {/* Live Evaluated Recurrence Equation Strip */}
+          {activeItem && currentItemIndex > 0 && currentWeight > 0 && (
+            <div className="mb-3 px-3 py-2 rounded-xl bg-[#0B0F19] border border-[#1F293D] font-mono text-[11px] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-amber-300 font-bold">
+                  dp[{currentItemIndex}][{currentWeight}]
+                </span>
+                <span className="text-slate-500">=</span>
+                {activeDependencies?.includeCell ? (
+                  <>
+                    <span className="text-slate-400">max(</span>
+                    <span className="px-1.5 py-0.5 rounded bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-cyan-300">
+                      Excl dp[{activeDependencies.excludeCell?.[0]}][{activeDependencies.excludeCell?.[1]}]={excludeDepVal}
+                    </span>
+                    <span className="text-slate-500">,</span>
+                    <span className="px-1.5 py-0.5 rounded bg-[#10B981]/15 border border-[#10B981]/40 text-emerald-300">
+                      Incl {activeItem.value}+dp[{activeDependencies.includeCell[0]}][{activeDependencies.includeCell[1]}]={activeItem.value + (includeDepVal ?? 0)}
+                    </span>
+                    <span className="text-slate-400">)</span>
+                  </>
+                ) : (
+                  <span className="px-1.5 py-0.5 rounded bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-cyan-300">
+                    Inherit dp[{currentItemIndex - 1}][{currentWeight}] = {excludeDepVal} (wt {activeItem.weight} &gt; W {currentWeight})
+                  </span>
+                )}
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded font-bold uppercase text-[10px] ${
+                  decision === 'include'
+                    ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40'
+                    : 'bg-slate-800 text-slate-300 border border-slate-700'
+                }`}
+              >
+                {decision === 'include' ? 'Take Item' : decision === 'exclude' ? 'Skip (Exclude >=)' : 'Too Heavy'}
+              </span>
+            </div>
+          )}
+
+          <table className="w-full border-collapse font-mono text-xs tabular-nums">
             <thead>
               <tr>
-                <th className="p-1.5 text-slate-500 border-b border-r border-[#1F293D] bg-[#1F2937]/30 text-left min-w-[70px]">
+                <th className="p-1.5 text-slate-400 border-b border-r border-[#1F293D] bg-[#1F2937]/30 text-left min-w-[70px]">
                   Item / W
                 </th>
                 {Array.from({ length: capacity + 1 }).map((_, w) => (
@@ -350,7 +397,7 @@ export const knapsackModule: AlgorithmModule<KnapsackInput, KnapsackState> = {
                     {/* Row header */}
                     <td className="p-1.5 border-r border-b border-[#1F293D] text-slate-300 font-medium text-[11px] whitespace-nowrap">
                       {i === 0 ? (
-                        <span className="text-slate-500">0 (None)</span>
+                        <span className="text-slate-500">0 (Base)</span>
                       ) : (
                         <span>
                           {item?.name} <span className="text-slate-500 text-[10px]">({item?.weight}w, {item?.value}v)</span>
@@ -380,17 +427,27 @@ export const knapsackModule: AlgorithmModule<KnapsackInput, KnapsackState> = {
                             ? 'bg-[#06B6D4]/25 text-[#06B6D4] font-bold border-[#06B6D4] ring-2 ring-[#06B6D4]/60'
                             : 'bg-[#F59E0B]/25 text-[#F59E0B] font-bold border-[#F59E0B] ring-2 ring-[#F59E0B]/60';
                       } else if (isIncludeDep) {
-                        cellStyle = 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/60';
+                        cellStyle = 'bg-[#10B981]/20 text-emerald-200 font-bold border-[#10B981] ring-1 ring-[#10B981]/50';
                       } else if (isExcludeDep) {
-                        cellStyle = 'bg-[#06B6D4]/15 text-[#06B6D4] border-[#06B6D4]/60';
+                        cellStyle = 'bg-[#06B6D4]/20 text-cyan-200 font-bold border-[#06B6D4] ring-1 ring-[#06B6D4]/50';
                       }
 
                       return (
                         <td
                           key={w}
-                          className={`p-1.5 text-center border-b border-[#1F293D] transition-all duration-200 ${cellStyle}`}
+                          className={`p-1.5 text-center border-b border-[#1F293D] transition-all duration-200 relative ${cellStyle}`}
                         >
-                          {val}
+                          <span>{val}</span>
+                          {isIncludeDep && (
+                            <span className="block text-[8px] text-[#10B981] leading-none mt-0.5">
+                              +incl
+                            </span>
+                          )}
+                          {isExcludeDep && !isIncludeDep && (
+                            <span className="block text-[8px] text-[#06B6D4] leading-none mt-0.5">
+                              ↑excl
+                            </span>
+                          )}
                         </td>
                       );
                     })}
@@ -402,14 +459,12 @@ export const knapsackModule: AlgorithmModule<KnapsackInput, KnapsackState> = {
         </div>
 
         {/* Right Info Shelf: Items, Weights & Legend */}
-        <div className="w-full xl:w-72 flex flex-col gap-3 shrink-0">
+        <div className="w-full lg:w-64 flex flex-col gap-3 shrink-0">
           {/* Items Inventory Card */}
-          <div className="bg-[#111827] border border-[#1F293D] rounded-xl p-3.5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">
-              <span className="flex items-center gap-1.5 text-[#06B6D4]">
-                <span>🎒</span> Items Available
-              </span>
-              <span className="font-mono text-[10px] text-slate-500">Cap: {capacity}</span>
+          <div className="bg-[#111827] border border-[#1F293D] rounded-xl p-3 shadow-sm">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-300 mb-2">
+              <span className="text-[#06B6D4]">Items Available</span>
+              <span className="font-mono text-[10px] text-slate-400">Cap: {capacity}</span>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -420,7 +475,7 @@ export const knapsackModule: AlgorithmModule<KnapsackInput, KnapsackState> = {
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-xs font-mono transition-all ${
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-xs font-mono transition-all ${
                       isSelected
                         ? 'bg-[#10B981]/20 border-[#10B981] text-[#10B981] font-bold'
                         : isInspecting
@@ -429,12 +484,12 @@ export const knapsackModule: AlgorithmModule<KnapsackInput, KnapsackState> = {
                     }`}
                   >
                     <span className="flex items-center gap-1.5">
-                      {isSelected ? '✓' : isInspecting ? '►' : '•'}
+                      <span>{isSelected ? '✓' : isInspecting ? '►' : '•'}</span>
                       <span>{item.name}</span>
                     </span>
-                    <span className="text-slate-400 text-[11px]">
-                      wt: <strong className="text-white">{item.weight}</strong> | val:{' '}
-                      <strong className="text-[#10B981]">{item.value}</strong>
+                    <span className="text-slate-400 text-[11px] tabular-nums">
+                      wt:<strong className="text-white ml-0.5">{item.weight}</strong> · val:
+                      <strong className="text-[#10B981] ml-0.5">{item.value}</strong>
                     </span>
                   </div>
                 );
@@ -444,17 +499,17 @@ export const knapsackModule: AlgorithmModule<KnapsackInput, KnapsackState> = {
 
           {/* Dependencies Legend */}
           <div className="bg-[#111827] border border-[#1F293D] rounded-xl p-3 shadow-sm text-xs font-mono">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Decision Formula
+            <div className="text-[11px] font-semibold text-slate-300 mb-1.5">
+              Cell Dependency Legend
             </div>
-            <div className="flex flex-col gap-1.5 text-[11px] text-slate-300">
+            <div className="flex flex-col gap-1 text-[11px] text-slate-300">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#06B6D4]" />
-                <span>Exclude: dp[i-1][w]</span>
+                <span className="w-2 h-2 rounded-xs bg-[#06B6D4]" />
+                <span>↑excl: dp[i-1][w]</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-                <span>Include: val + dp[i-1][w - wt]</span>
+                <span className="w-2 h-2 rounded-xs bg-[#10B981]" />
+                <span>+incl: val + dp[i-1][w - wt]</span>
               </div>
             </div>
           </div>

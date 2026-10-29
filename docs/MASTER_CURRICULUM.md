@@ -1,4 +1,15 @@
-# StepDSA Master Curriculum & Specification (162 Interactive Modules)
+<div align="center">
+
+# 🎓 StepDSA Master Curriculum & Specification (162 Interactive Modules)
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Curriculum-162_Active_Modules-10b981?style=for-the-badge&logo=bookstack&logoColor=white" alt="162 Active Modules" />
+  <img src="https://img.shields.io/badge/Domains-9_Core_Categories-06b6d4?style=for-the-badge&logo=buffer&logoColor=white" alt="9 Core Categories" />
+  <img src="https://img.shields.io/badge/Languages-C%2B%2B_%7C_Python_%7C_TS_%7C_Java_%7C_Pseudo-6366f1?style=for-the-badge&logo=cplusplus&logoColor=white" alt="5 Languages" />
+  <img src="https://img.shields.io/badge/Standard-CS101_to_ICPC-f59e0b?style=for-the-badge&logo=leetcode&logoColor=white" alt="CS101 to ICPC" />
+</p>
+
+</div>
 
 > **Architectural Mission:**
 > Distinct from rudimentary classroom visualizers (such as CSVizTool, which strictly confines itself to Georgia Tech's introductory CS 1332 syllabus), **StepDSA** is architected as a professional **Interactive IDE-Grade Algorithm Workbench**: serving university computer science students, software engineers mastering technical interview patterns (LeetCode patterns), and competitive programmers (ICPC / IOI).

@@ -426,7 +426,7 @@ export const binarySearchAnswerModule: AlgorithmModule<
                   <span className="text-[10px] font-mono text-slate-500">PILE #{idx + 1}</span>
                   <span className="text-xl font-mono font-bold text-white my-1">{pile}</span>
                   <span className="text-xs font-mono text-cyan-400">
-                    ⌈{pile}/{mid}⌉ = <strong className="text-white">{pileHours}h</strong>
+                    ceil({pile}/{mid}) = <strong className="text-white">{pileHours}h</strong>
                   </span>
                 </div>
               );

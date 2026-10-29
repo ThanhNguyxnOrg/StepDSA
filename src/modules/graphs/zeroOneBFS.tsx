@@ -275,8 +275,8 @@ def zero_one_bfs(graph, source, n):
             totalSteps: 1,
             codeLine: w === 0 ? 13 : 15,
             isMilestone: true,
-            milestoneTitle: `Relax Edge (${u} ➔ ${v}, w=${w})`,
-            explanation: `Relaxed edge ${u} ➔ ${v} with weight ${w}. Updated dist[${v}] = ${newDist}. Weight is ${w} ➔ Pushed to ${
+            milestoneTitle: `Relax Edge (${u} → ${v}, w=${w})`,
+            explanation: `Relaxed edge ${u} → ${v} with weight ${w}. Updated dist[${v}] = ${newDist}. Weight is ${w} → Pushed to ${
               w === 0 ? 'FRONT (unshift)' : 'BACK (push)'
             } of deque.`,
             variables: {
@@ -288,7 +288,7 @@ def zero_one_bfs(graph, source, n):
               dequeAction: w === 0 ? 'push_front' : 'push_back',
             },
             callStack: [
-              { name: `relaxEdge(${u}➔${v})`, params: { u, v, weight: w, newDist }, line: w === 0 ? 13 : 15, isCurrent: true },
+              { name: `relaxEdge(${u}→${v})`, params: { u, v, weight: w, newDist }, line: w === 0 ? 13 : 15, isCurrent: true },
               { name: 'main()', params: {}, line: 1 },
             ],
             state: {
@@ -342,12 +342,32 @@ def zero_one_bfs(graph, source, n):
   },
 
   renderStage: (frame: ExecutionFrame<ZeroOneBFSState>) => {
-    const { numNodes, source, currentNode, deque, distances } = frame.state;
+    const { numNodes, edges = [], source, currentNode, deque, distances } = frame.state;
+
+    // Circular/hexagonal node layout for 0-1 BFS graph SVG
+    const nodePositions = Array.from({ length: numNodes }, (_, i) => {
+      if (numNodes === 6) {
+        const coords = [
+          { x: 70, y: 85 },
+          { x: 195, y: 32 },
+          { x: 195, y: 138 },
+          { x: 335, y: 32 },
+          { x: 335, y: 138 },
+          { x: 455, y: 85 },
+        ];
+        return coords[i] || { x: 80 + i * 70, y: 85 };
+      }
+      const angle = (2 * Math.PI * i) / Math.max(1, numNodes) - Math.PI / 2;
+      return {
+        x: 260 + 160 * Math.cos(angle),
+        y: 85 + 60 * Math.sin(angle),
+      };
+    });
 
     return (
-      <div className="w-full flex-1 flex flex-col items-center justify-between p-6 select-none max-w-5xl mx-auto">
+      <div className="w-full flex-1 flex flex-col items-center justify-between p-4 sm:p-6 select-none max-w-5xl mx-auto gap-3">
         {/* Metric Badges */}
-        <div className="w-full flex items-center justify-between mb-4">
+        <div className="w-full flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-400">
               Source: <strong className="text-white">Node #{source}</strong>
@@ -362,14 +382,124 @@ def zero_one_bfs(graph, source, n):
           </div>
         </div>
 
-        {/* Nodes Grid & Shortest Distances */}
-        <div className="w-full flex flex-col gap-4 my-auto p-6 rounded-3xl bg-slate-950/80 border border-slate-800 shadow-2xl">
-          <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
-            <span>GRAPH VERTICES & SHORTEST DISTANCES</span>
-            <span className="text-cyan-400 font-bold">Rule: w=0 ➔ FRONT | w=1 ➔ BACK</span>
+        {/* 0-1 Weighted Graph Topology SVG + Distance Strip */}
+        <div className="w-full flex flex-col gap-3 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-2xl">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-slate-400">
+            <span>0-1 WEIGHTED GRAPH TOPOLOGY & SHORTEST DISTANCES</span>
+            <div className="flex items-center gap-3 text-[11px]">
+              <span className="text-cyan-400 font-bold">── w=0 (Push Front)</span>
+              <span className="text-amber-400 font-bold">── w=1 (Push Back)</span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="w-full flex items-center justify-center overflow-x-auto">
+            <svg viewBox="0 0 525 170" className="w-full max-w-2xl h-40 overflow-visible">
+              {edges.map((e, idx) => {
+                const p1 = nodePositions[e.u];
+                const p2 = nodePositions[e.v];
+                if (!p1 || !p2) return null;
+                const midX = (p1.x + p2.x) / 2;
+                const midY = (p1.y + p2.y) / 2;
+                const isZero = e.weight === 0;
+                const isFromCurrent = e.u === currentNode;
+
+                return (
+                  <g key={`edge-${idx}`}>
+                    <line
+                      x1={p1.x}
+                      y1={p1.y}
+                      x2={p2.x}
+                      y2={p2.y}
+                      stroke={isZero ? '#06B6D4' : '#F59E0B'}
+                      strokeWidth={isFromCurrent ? '3' : '2'}
+                      strokeDasharray={isZero ? '5 3' : undefined}
+                      opacity={isFromCurrent ? 1 : 0.7}
+                    />
+                    <rect
+                      x={midX - 12}
+                      y={midY - 8}
+                      width="24"
+                      height="16"
+                      rx="4"
+                      fill="#0B0F19"
+                      stroke={isZero ? '#06B6D4' : '#F59E0B'}
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={midX}
+                      y={midY + 3}
+                      textAnchor="middle"
+                      fill={isZero ? '#22D3EE' : '#FBBF24'}
+                      fontSize="9"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      w={e.weight}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {nodePositions.map((pos, idx) => {
+                const d = distances[idx];
+                const isCurrent = idx === currentNode;
+                const inDeque = deque.includes(idx);
+
+                return (
+                  <g key={`node-${idx}`}>
+                    <circle
+                      cx={pos.x}
+                      cy={pos.y}
+                      r="20"
+                      fill={
+                        isCurrent
+                          ? '#06B6D4'
+                          : inDeque
+                          ? '#78350F'
+                          : d !== null
+                          ? '#064E3B'
+                          : '#1E293B'
+                      }
+                      stroke={
+                        isCurrent
+                          ? '#A5F3FC'
+                          : inDeque
+                          ? '#F59E0B'
+                          : d !== null
+                          ? '#10B981'
+                          : '#475569'
+                      }
+                      strokeWidth="2.5"
+                    />
+                    <text
+                      x={pos.x}
+                      y={pos.y - 2}
+                      textAnchor="middle"
+                      fill={isCurrent ? '#0B0F19' : '#FFFFFF'}
+                      fontSize="11"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      #{idx}
+                    </text>
+                    <text
+                      x={pos.x}
+                      y={pos.y + 10}
+                      textAnchor="middle"
+                      fill={isCurrent ? '#0F172A' : '#34D399'}
+                      fontSize="9"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      d={d !== null ? d : '∞'}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {Array.from({ length: numNodes }, (_, idx) => {
               const d = distances[idx];
               const isCurrent = idx === currentNode;
@@ -378,9 +508,9 @@ def zero_one_bfs(graph, source, n):
               return (
                 <div
                   key={idx}
-                  className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all duration-300 ${
+                  className={`p-2 rounded-xl border flex flex-col items-center text-center transition-all duration-300 ${
                     isCurrent
-                      ? 'bg-cyan-500 text-slate-950 shadow-[0_0_20px_rgba(6,182,212,0.6)] scale-105 font-bold'
+                      ? 'bg-cyan-500 text-slate-950 shadow-md scale-105 font-bold'
                       : inDeque
                       ? 'bg-amber-950/40 border-amber-500/60 text-white'
                       : d !== null
@@ -388,15 +518,12 @@ def zero_one_bfs(graph, source, n):
                       : 'bg-slate-900 border-slate-800 text-slate-400'
                   }`}
                 >
-                  <span className={`text-[10px] font-mono ${isCurrent ? 'text-slate-950' : 'text-slate-500'}`}>
+                  <span className={`text-[10px] font-mono ${isCurrent ? 'text-slate-950' : 'text-slate-400'}`}>
                     VERTEX #{idx}
                   </span>
-                  <div className={`text-2xl font-bold font-mono my-1 ${isCurrent ? 'text-slate-950' : 'text-white'}`}>
+                  <div className={`text-base font-bold font-mono ${isCurrent ? 'text-slate-950' : 'text-white'}`}>
                     {d !== null ? d : '∞'}
                   </div>
-                  <span className={`text-[10px] font-mono ${isCurrent ? 'text-slate-900 font-bold' : 'text-slate-400'}`}>
-                    {idx === source ? 'SOURCE' : d !== null ? 'REACHED' : 'UNVISITED'}
-                  </span>
                 </div>
               );
             })}
@@ -404,20 +531,20 @@ def zero_one_bfs(graph, source, n):
         </div>
 
         {/* Deque State Visualizer */}
-        <div className="w-full flex flex-col p-4 rounded-2xl bg-slate-950/70 border border-slate-800 mt-4">
+        <div className="w-full flex flex-col p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800">
           <span className="text-xs font-mono font-bold text-amber-400 mb-2 uppercase tracking-wider flex items-center gap-2">
-            <span>双端队列 DEQUE (FRONT ➔ BACK)</span>
+            <span>DOUBLE-ENDED QUEUE (DEQUE: FRONT → BACK)</span>
             <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 text-[10px]">
               {deque.length} vertices
             </span>
           </span>
-          <div className="flex items-center gap-2 overflow-x-auto min-h-[44px]">
+          <div className="flex items-center gap-2 overflow-x-auto min-h-[38px]">
             {deque.length === 0 ? (
-              <span className="text-xs font-mono text-slate-600 italic">Empty Deque</span>
+              <span className="text-xs font-mono text-slate-500 italic">Empty Deque</span>
             ) : (
               deque.map((node, pos) => (
                 <div
-                  key={pos}
+                  key={`${node}-${pos}`}
                   className={`px-3 py-1.5 rounded-xl font-mono text-xs flex items-center gap-1.5 ${
                     pos === 0
                       ? 'bg-cyan-500 text-slate-950 font-extrabold shadow-md'

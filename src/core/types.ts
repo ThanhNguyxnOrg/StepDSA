@@ -94,6 +94,7 @@ export interface ExecutionFrame<TState = any> {
   scopeVariables?: Record<string, any>;
   codeHighlights?: Record<string, number[]>;
   invariantStatus?: InvariantStatus | string;
+  invariantNote?: string;
   isMilestone?: boolean;
   milestoneTitle?: string;
   soundCue?: SoundCue;
@@ -112,6 +113,8 @@ export interface TheoryContent {
   whyItWorks: string;
   invariant: string;
   pitfalls: string[];
+  steps?: string[];
+  watchOut?: string[];
 }
 
 export type SupportedLanguage = 'python' | 'typescript' | 'cpp' | 'java' | 'pseudocode';

@@ -367,6 +367,7 @@ Node buildHuffman(char[] chars, int[] freqs) {
     const {
       charFreqs,
       heap,
+      allNodes = {},
       activePair,
       justMergedId,
       prefixCodes,
@@ -374,10 +375,12 @@ Node buildHuffman(char[] chars, int[] freqs) {
       totalCompressedBits,
     } = frame.state;
 
+    const internalNodes = Object.values(allNodes).filter((n) => n.leftId && n.rightId);
+
     return (
-      <div className="w-full flex-1 flex flex-col items-center justify-between p-6 select-none max-w-5xl mx-auto">
+      <div className="w-full flex-1 flex flex-col items-center justify-between p-4 sm:p-6 select-none max-w-5xl mx-auto gap-3">
         {/* Metric Badges */}
-        <div className="w-full flex items-center justify-between mb-4">
+        <div className="w-full flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-400">
               Min-Heap Size: <strong className="text-white">{heap.length}</strong>
@@ -399,37 +402,79 @@ Node buildHuffman(char[] chars, int[] freqs) {
           </div>
         </div>
 
-        {/* Priority Queue (Min-Heap) Strip */}
-        <div className="w-full p-4 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-xl mb-4">
-          <div className="text-xs font-mono text-slate-400 mb-2 font-bold flex items-center justify-between">
-            <span>Priority Queue (Min-Heap Ordered)</span>
-            <span className="text-[10px] text-cyan-400 font-normal">Head has lowest frequency</span>
+        {/* Priority Queue (Min-Heap) Strip + Merged Tree Branches */}
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-xl">
+            <div className="text-xs font-mono text-slate-400 mb-2 font-bold flex items-center justify-between">
+              <span>Priority Queue (Min-Heap Forest)</span>
+              <span className="text-[10px] text-cyan-400 font-normal">Lowest freq at head</span>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {heap.map((node) => {
+                const isActive = activePair?.includes(node.id);
+                const isJustMerged = justMergedId === node.id;
+                return (
+                  <div
+                    key={node.id}
+                    className={`px-3 py-2 rounded-xl border font-mono text-xs flex flex-col items-center min-w-14 transition-all duration-200 ${
+                      isActive
+                        ? 'bg-amber-500/20 border-amber-400 text-amber-300 scale-105 shadow-md shadow-amber-500/20'
+                        : isJustMerged
+                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 scale-105 shadow-md shadow-emerald-500/20'
+                        : 'bg-slate-900 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    <span className="font-extrabold text-sm">{node.char ? `'${node.char}'` : 'Σ'}</span>
+                    <span className="text-[10px] text-slate-400 font-semibold">{node.freq}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {heap.map((node) => {
-              const isActive = activePair?.includes(node.id);
-              const isJustMerged = justMergedId === node.id;
-              return (
-                <div
-                  key={node.id}
-                  className={`px-3 py-2 rounded-xl border font-mono text-xs flex flex-col items-center min-w-16 transition-all duration-200 ${
-                    isActive
-                      ? 'bg-amber-500/20 border-amber-400 text-amber-300 scale-105 shadow-md shadow-amber-500/20'
-                      : isJustMerged
-                      ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 scale-105 shadow-md shadow-emerald-500/20'
-                      : 'bg-slate-900 text-slate-300 border-slate-700'
-                  }`}
-                >
-                  <span className="font-extrabold text-sm">{node.char ? `'${node.char}'` : 'Σ'}</span>
-                  <span className="text-[10px] text-slate-400 font-semibold">{node.freq}</span>
-                </div>
-              );
-            })}
+
+          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-xl">
+            <div className="text-xs font-mono text-slate-400 mb-2 font-bold flex items-center justify-between">
+              <span>Huffman Tree Merges (0 = Left, 1 = Right)</span>
+              <span className="text-[10px] text-emerald-400 font-normal">{internalNodes.length} merges</span>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {internalNodes.length === 0 ? (
+                <span className="text-xs font-mono text-slate-500 italic py-2">
+                  Step forward to merge the two lowest-frequency nodes into a parent branch.
+                </span>
+              ) : (
+                internalNodes.map((p) => {
+                  const left = p.leftId ? allNodes[p.leftId] : null;
+                  const right = p.rightId ? allNodes[p.rightId] : null;
+                  const isNewest = justMergedId === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`px-2.5 py-1.5 rounded-xl border font-mono text-[11px] flex flex-col items-center shrink-0 ${
+                        isNewest
+                          ? 'bg-emerald-500/15 border-emerald-400 text-emerald-200'
+                          : 'bg-slate-900 border-slate-800 text-slate-300'
+                      }`}
+                    >
+                      <span className="font-bold text-white">Σ={p.freq}</span>
+                      <div className="flex items-center gap-2 mt-1 text-[10px]">
+                        <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                          0→{left?.char ? `'${left.char}'` : left?.freq}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                          1→{right?.char ? `'${right.char}'` : right?.freq}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
 
         {/* Generated Prefix Code Dictionary */}
-        <div className="w-full overflow-x-auto p-4 rounded-3xl bg-slate-950/80 border border-slate-800 shadow-2xl my-auto">
+        <div className="w-full overflow-x-auto p-4 rounded-3xl bg-slate-950/80 border border-slate-800 shadow-2xl">
           <div className="text-xs font-mono text-slate-400 mb-3 font-bold">
             Prefix Codes Dictionary (Prefix-Free Optimal Encodings)
           </div>

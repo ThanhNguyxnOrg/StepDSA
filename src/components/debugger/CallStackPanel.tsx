@@ -4,10 +4,15 @@ import { CallStackFrame, ExecutionFrame } from '../../core/types';
 
 interface CallStackPanelProps {
   frame: ExecutionFrame | null;
-  moduleName: string;
+  moduleName?: string;
+  compact?: boolean;
 }
 
-export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleName }) => {
+export const CallStackPanel: React.FC<CallStackPanelProps> = ({
+  frame,
+  moduleName = 'execute',
+  compact = false,
+}) => {
   const [selectedFrameIndex, setSelectedFrameIndex] = useState<number>(0);
 
   if (!frame) return null;
@@ -81,7 +86,7 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
   let stack: CallStackFrame[] = [];
 
   if (frame.callStack && frame.callStack.length > 0) {
-    stack = frame.callStack.map((item, idx) =>
+    const mapped = frame.callStack.map((item, idx) =>
       typeof item === 'string'
         ? {
             name: item,
@@ -91,6 +96,13 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
           }
         : item
     );
+    // If the stack was built via .push() (main at index 0, current at the end),
+    // reverse it so the active top-of-stack frame is displayed first (index 0).
+    const shouldReverse =
+      mapped.length > 1 &&
+      (mapped[mapped.length - 1].isCurrent ||
+        (!mapped[0].isCurrent && mapped[0].name.toLowerCase().startsWith('main')));
+    stack = shouldReverse ? [...mapped].reverse() : mapped;
   } else {
     const s = frame.state as any;
     const cleanModName = getCleanFuncName(moduleName);
@@ -131,11 +143,14 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
     }
   }
 
-  const activeFrame = stack[selectedFrameIndex] || stack[0];
-  const activeParams: Record<string, string | number> =
-    activeFrame.params && Object.keys(activeFrame.params).length > 0
-      ? { ...activeFrame.params }
-      : { ...extractedParams };
+  const safeIndex = selectedFrameIndex < stack.length ? selectedFrameIndex : 0;
+  const activeFrame = stack[safeIndex] || stack[0];
+  const isTopSelected = safeIndex === 0;
+  const activeParams: Record<string, string | number> = isTopSelected
+    ? { ...(activeFrame.params || {}), ...extractedParams }
+    : activeFrame.params && Object.keys(activeFrame.params).length > 0
+    ? { ...activeFrame.params }
+    : { ...extractedParams };
 
   // Guaranteed fallback telemetry so Scope Variables is never blank
   if (Object.keys(activeParams).length === 0) {
@@ -151,24 +166,68 @@ export const CallStackPanel: React.FC<CallStackPanelProps> = ({ frame, moduleNam
     }
   }
 
+  if (compact) {
+    return (
+      <div className="bg-[#0E1420] border-b border-[#1F293D]/80 px-2.5 py-1.5 shrink-0">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold text-slate-300 uppercase tracking-wider shrink-0">
+            <Layers className="w-3 h-3 text-[#06B6D4] shrink-0" />
+            <span>CALL STACK</span>
+            <span className="text-[9px] px-1 py-0.2 rounded bg-[#1F2937] text-slate-400 font-mono">
+              {stack.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0">
+            {stack.map((sf, idx) => {
+              const isTop = idx === 0;
+              const isSelected = idx === selectedFrameIndex;
+              return (
+                <button
+                  key={`${sf.name}-${idx}`}
+                  type="button"
+                  onClick={() => setSelectedFrameIndex(idx)}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10px] whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                    isSelected
+                      ? 'bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-cyan-200 font-semibold'
+                      : 'bg-[#111827] text-slate-400 border border-[#1F293D] hover:text-slate-200'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      isTop ? 'bg-[#10B981]' : 'bg-slate-600'
+                    }`}
+                  />
+                  <span className="max-w-[140px] truncate">{sf.name}</span>
+                  {sf.line && <span className="text-slate-500">:{sf.line}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-[#0E1420] border-t border-[#1F293D]">
       {/* Panel Header */}
-      <div className="h-9 px-3 border-b border-[#1F293D] flex items-center justify-between bg-[#111827]/80 shrink-0">
-        <div className="flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-300">
-          <Layers className="w-3.5 h-3.5 text-[#06B6D4]" />
+      <div className="h-9 px-3 border-b border-[#1F293D] flex items-center justify-between gap-2 bg-[#111827]/80 shrink-0">
+        <div className="flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-300 shrink-0 whitespace-nowrap">
+          <Layers className="w-3.5 h-3.5 text-[#06B6D4] shrink-0" />
           <span>CALL STACK</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#1F2937] text-slate-400 font-mono">
-            {stack.length} {stack.length === 1 ? 'frame' : 'frames'}
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#1F2937] text-slate-400 font-mono">
+            {stack.length}
           </span>
         </div>
 
         {frame.conditionEval && (
-          <div className="flex items-center gap-1.5 text-[11px] font-mono">
-            <span className="text-slate-400 font-medium">{frame.conditionEval.expr}</span>
-            <span className="text-slate-500">→</span>
+          <div className="flex items-center gap-1 text-[10px] font-mono min-w-0">
+            <span className="text-slate-400 font-medium truncate" title={frame.conditionEval.expr}>
+              {frame.conditionEval.expr}
+            </span>
+            <span className="text-slate-500 shrink-0">→</span>
             <span
-              className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+              className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                 frame.conditionEval.result === true || frame.conditionEval.result === 'true'
                   ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40'
                   : 'bg-[#F43F5E]/20 text-[#F43F5E] border border-[#F43F5E]/40'

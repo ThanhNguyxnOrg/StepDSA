@@ -1,6 +1,6 @@
 import React from 'react';
 import { OperationalMetrics } from '../../core/types';
-import { GitCompare, ArrowLeftRight, Eye, Database } from 'lucide-react';
+import { formatCompactBigO } from '../dashboard/DashboardView';
 
 export interface OperationalMetricsBarProps {
   metrics: OperationalMetrics;
@@ -13,54 +13,55 @@ export const OperationalMetricsBar: React.FC<OperationalMetricsBarProps> = ({
   complexity,
   className = '',
 }) => {
+  const compactComplexity = complexity ? formatCompactBigO(complexity) : null;
+
   return (
     <div
       data-testid="operational-metrics-bar"
-      className={`flex items-center gap-2 sm:gap-3 px-3 py-1 rounded-xl bg-slate-950/80 border border-slate-800 backdrop-blur-md shadow-sm text-[11px] font-mono select-none ${className}`}
+      className={`flex items-center gap-3 px-2.5 py-1 rounded-lg bg-[#0B0F19] border border-[#1F293D] text-[11px] font-mono tabular-nums select-none ${className}`}
     >
-      {/* Comparisons */}
-      <div className="flex items-center gap-1.5 text-amber-400" title="Total comparisons performed">
-        <GitCompare className="w-3.5 h-3.5 text-amber-400" />
-        <span className="text-slate-400 hidden sm:inline">Compares:</span>
-        <span className="font-bold px-1.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/20 text-amber-300">
-          {metrics.comparisons}
-        </span>
+      <div className="flex items-center gap-1" title="Total comparisons performed">
+        <span className="text-slate-400">Compares</span>
+        <strong className="text-amber-400 font-bold">{metrics.comparisons}</strong>
       </div>
 
-      {/* Swaps / Writes */}
-      <div className="flex items-center gap-1.5 text-rose-400" title="Total swaps or array writes">
-        <ArrowLeftRight className="w-3.5 h-3.5 text-rose-400" />
-        <span className="text-slate-400 hidden sm:inline">Swaps:</span>
-        <span className="font-bold px-1.5 py-0.5 rounded bg-rose-400/10 border border-rose-400/20 text-rose-300">
-          {metrics.swaps}
-        </span>
+      <span className="text-slate-700" aria-hidden="true">
+        ·
+      </span>
+
+      <div className="flex items-center gap-1" title="Total swaps or array writes">
+        <span className="text-slate-400">Swaps</span>
+        <strong className="text-rose-400 font-bold">{metrics.swaps}</strong>
       </div>
 
-      {/* Array Accesses */}
-      <div className="flex items-center gap-1.5 text-cyan-400" title="Total element reads/accesses">
-        <Eye className="w-3.5 h-3.5 text-cyan-400" />
-        <span className="text-slate-400 hidden sm:inline">Accesses:</span>
-        <span className="font-bold px-1.5 py-0.5 rounded bg-cyan-400/10 border border-cyan-400/20 text-cyan-300">
-          {metrics.accesses}
-        </span>
+      <span className="text-slate-700" aria-hidden="true">
+        ·
+      </span>
+
+      <div className="flex items-center gap-1" title="Total element reads/accesses">
+        <span className="text-slate-400">Accesses</span>
+        <strong className="text-cyan-400 font-bold">{metrics.accesses}</strong>
       </div>
 
-      {/* Hash Lookups (rendered if > 0) */}
       {metrics.lookups > 0 && (
-        <div className="flex items-center gap-1.5 text-purple-400" title="Total map/set lookups">
-          <Database className="w-3.5 h-3.5 text-purple-400" />
-          <span className="text-slate-400 hidden sm:inline">Lookups:</span>
-          <span className="font-bold px-1.5 py-0.5 rounded bg-purple-400/10 border border-purple-400/20 text-purple-300">
-            {metrics.lookups}
+        <>
+          <span className="text-slate-700" aria-hidden="true">
+            ·
           </span>
-        </div>
+          <div className="flex items-center gap-1" title="Total map/set lookups">
+            <span className="text-slate-400">Lookups</span>
+            <strong className="text-purple-400 font-bold">{metrics.lookups}</strong>
+          </div>
+        </>
       )}
 
-      {/* Theoretical Average Complexity Indicator */}
-      {complexity && (
-        <div className="ml-auto pl-2 border-l border-slate-800 text-slate-400 text-[10px] hidden md:flex items-center gap-1">
-          <span>Avg:</span>
-          <span className="text-emerald-400 font-bold">{complexity}</span>
+      {compactComplexity && (
+        <div
+          className="hidden xl:flex items-center gap-1 pl-2.5 border-l border-[#1F293D] text-slate-400"
+          title={`Average Time Complexity: ${complexity}`}
+        >
+          <span>Avg</span>
+          <strong className="text-[#10B981] font-bold">{compactComplexity}</strong>
         </div>
       )}
     </div>

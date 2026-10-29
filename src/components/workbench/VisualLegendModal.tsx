@@ -1,5 +1,7 @@
 import React from 'react';
 import { X, Keyboard } from 'lucide-react';
+import { StepDSALogo } from '../brand/StepDSALogo';
+import { usePlatformShortcuts } from '../../utils/platformShortcuts';
 
 interface VisualLegendModalProps {
   isOpen: boolean;
@@ -53,15 +55,18 @@ const POINTER_BADGES = [
   { badge: 'J', color: 'bg-[#10B981] text-[#0B0F19]', desc: 'Secondary / comparison pointer' },
 ];
 
-const KEYBOARD_SHORTCUTS = [
-  { keys: 'Space', action: 'Play / Pause automatic execution' },
-  { keys: '← →', action: 'Step backward / forward one CPU instruction line' },
-  { keys: 'Shift + ← →', action: 'Step backward / forward to next visual milestone' },
-  { keys: 'R', action: 'Reset execution to initial state' },
-];
-
 export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, onClose }) => {
+  const shortcuts = usePlatformShortcuts();
   if (!isOpen) return null;
+
+  const KEYBOARD_SHORTCUTS = [
+    { keys: shortcuts.quickSearch, action: 'Open Quick Algorithm Search Palette' },
+    { keys: shortcuts.playPause, action: 'Play / Pause automatic execution' },
+    { keys: '← →', action: 'Step backward / forward one CPU instruction line' },
+    { keys: `${shortcuts.prevAction} / ${shortcuts.nextAction}`, action: 'Jump backward / forward to next visual milestone' },
+    { keys: shortcuts.reset, action: 'Reset execution to initial state' },
+    { keys: `${shortcuts.toggleMute} / ${shortcuts.toggleDock}`, action: 'Toggle audio synthesizer / Toggle right code dock' },
+  ];
 
   return (
     <div
@@ -71,13 +76,16 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
       <div className="relative w-full max-w-2xl max-h-[85vh] mx-4 rounded-2xl bg-[#111827] border border-[#1F293D] shadow-2xl shadow-black/40 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="shrink-0 px-6 py-4 flex items-center justify-between border-b border-[#1F293D] bg-[#0B0F19]">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span className="text-amber-400">✦</span> Visual Legend & Interface Guide
-            </h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Visual telemetry cheat sheet and UI convention guide for StepDSA
-            </p>
+          <div className="flex items-center gap-3">
+            <StepDSALogo size="sm" showText={false} />
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                Visual Legend & Interface Guide
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Visual telemetry cheat sheet and OS-adaptive shortcuts ({shortcuts.osName})
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}

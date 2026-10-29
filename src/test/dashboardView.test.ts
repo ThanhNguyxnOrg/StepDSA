@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatCompactBigO } from '../components/dashboard/DashboardView';
+import { formatCompactBigO, computeRegistryStats } from '../components/dashboard/DashboardView';
 import { allModules } from '../modules/registry';
 
 describe('formatCompactBigO', () => {
@@ -31,5 +31,24 @@ describe('formatCompactBigO', () => {
       expect(compactTime.length).toBeLessThanOrEqual(20);
       expect(compactSpace.length).toBeLessThanOrEqual(20);
     }
+  });
+});
+
+describe('computeRegistryStats (dynamic registry telemetry)', () => {
+  it('derives all module, domain, language, preset, and track counts dynamically without hardcoding', () => {
+    const fullStats = computeRegistryStats(allModules);
+    expect(fullStats.totalModules).toBe(allModules.length);
+    expect(fullStats.totalDomains).toBe(new Set(allModules.map((m) => m.category)).size);
+    expect(fullStats.totalLanguages).toBeGreaterThanOrEqual(5);
+    expect(fullStats.totalPresets).toBeGreaterThan(allModules.length);
+    expect(fullStats.essentialsCount).toBeGreaterThan(0);
+    expect(fullStats.interviewCount).toBeGreaterThanOrEqual(fullStats.essentialsCount);
+    expect(fullStats.advancedCount).toBeGreaterThan(0);
+
+    // Verify dynamic adaptation when a subset of modules or a brand new domain is passed
+    const subset = allModules.slice(0, 5);
+    const subsetStats = computeRegistryStats(subset);
+    expect(subsetStats.totalModules).toBe(5);
+    expect(subsetStats.categories[0]).toEqual({ id: 'all', label: 'All Modules', count: 5 });
   });
 });

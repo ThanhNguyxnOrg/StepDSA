@@ -70,12 +70,9 @@ export const StepDSALogo: React.FC<StepDSALogoProps> = ({
       </div>
 
       {showText && (
-        <div className="flex flex-col text-left select-none">
+        <div className="flex items-center text-left select-none">
           <span className="font-extrabold text-base sm:text-lg tracking-tight text-white leading-none">
             Step<span className="text-[#10B981]">DSA</span>
-          </span>
-          <span className="text-[9px] text-[#9CA3AF] mt-0.5 font-mono tracking-wider font-semibold">
-            TIME-TRAVEL ENGINE
           </span>
         </div>
       )}

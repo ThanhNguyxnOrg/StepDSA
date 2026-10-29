@@ -190,7 +190,7 @@ export const gasStationModule: AlgorithmModule<
           totalSteps: 1,
           codeLine: 8,
           isMilestone: true,
-          milestoneTitle: `Deficit at Station #${i} ➔ Restart at #${nextStart}`,
+          milestoneTitle: `Deficit at Station #${i} → Restart at #${nextStart}`,
           explanation: `Tank ran dry (balance ${currTank} < 0) attempting to reach station ${i + 1}. By greedy pruning, no station in [${startStation}..${i}] can work. Reset candidate start to #${nextStart} and tank to 0.`,
           variables: { failedStation: i, newCandidate: nextStart, resetTank: 0 },
           callStack: [
@@ -287,7 +287,7 @@ export const gasStationModule: AlgorithmModule<
         {/* Circular Route Stations */}
         <div className="w-full flex flex-col gap-4 my-auto p-6 rounded-3xl bg-slate-950/80 border border-slate-800 shadow-2xl">
           <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
-            <span>CIRCULAR GAS STATIONS (0 ➔ N-1 ➔ 0)</span>
+            <span>CIRCULAR GAS STATIONS (0 → N-1 → 0)</span>
             <span>Fuel Net: gas[i] - cost[i]</span>
           </div>
 

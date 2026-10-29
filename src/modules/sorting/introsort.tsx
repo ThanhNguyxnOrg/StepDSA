@@ -197,39 +197,103 @@ export const introsortModule: AlgorithmModule<number[], ArrayStageState> = {
     }
 
     function heapsortSub(low: number, high: number) {
+      const len = high - low + 1;
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 7,
         explanation: `DEPTH LIMIT HIT (0 remaining)! Aborting Quicksort recursion. Switching to Heapsort for guaranteed O(N log N) on [${low}..${high}].`,
+        isMilestone: true,
+        milestoneTitle: 'Heapsort Fallback Triggered',
+        soundCue: { type: 'compare' },
         variables: { engine: 'HEAPSORT_FALLBACK', range: `[${low}..${high}]`, reason: 'AVOID_QUADRATIC_DEGRADATION' },
         callStack: [{ name: `heapsort(${low}, ${high})`, params: { low, high }, line: 7, isCurrent: true }],
         state: {
-          array: elements.map((e) => ({ ...e })),
+          array: elements.map((e, idx) => ({
+            ...e,
+            status: idx >= low && idx <= high ? 'active' : e.status,
+          })),
           pointers: { heapLow: low, heapHigh: high },
         },
       });
 
-      // Extract and sort slice
-      const sub = elements.slice(low, high + 1).map((e) => e.value);
-      sub.sort((a, b) => a - b);
-      for (let k = 0; k < sub.length; k++) {
-        elements[low + k].value = sub[k];
-        elements[low + k].status = 'sorted';
+      function siftDown(rootOffset: number, endOffset: number) {
+        let root = rootOffset;
+        while (root * 2 + 1 <= endOffset) {
+          const leftChild = root * 2 + 1;
+          let swapIdx = root;
+
+          if (elements[low + swapIdx].value < elements[low + leftChild].value) {
+            swapIdx = leftChild;
+          }
+          if (
+            leftChild + 1 <= endOffset &&
+            elements[low + swapIdx].value < elements[low + leftChild + 1].value
+          ) {
+            swapIdx = leftChild + 1;
+          }
+          if (swapIdx === root) return;
+
+          const pIdx = low + root;
+          const cIdx = low + swapIdx;
+          elements[pIdx].status = 'swapping';
+          elements[cIdx].status = 'swapping';
+
+          const tmp = elements[pIdx].value;
+          elements[pIdx].value = elements[cIdx].value;
+          elements[cIdx].value = tmp;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 7,
+            explanation: `Heapsort siftDown on [${low}..${low + endOffset}]: swapped parent arr[${pIdx}]=${tmp} with larger child arr[${cIdx}]=${elements[pIdx].value}.`,
+            soundCue: { type: 'swap' },
+            variables: { engine: 'HEAPSORT_SIFT', parentIdx: pIdx, childIdx: cIdx },
+            callStack: [{ name: `siftDown(${pIdx}, ${cIdx})`, params: { pIdx, cIdx }, line: 7, isCurrent: true }],
+            state: {
+              array: elements.map((e) => ({ ...e })),
+              pointers: { parent: pIdx, child: cIdx },
+            },
+          });
+
+          elements[pIdx].status = 'default';
+          elements[cIdx].status = 'default';
+          root = swapIdx;
+        }
       }
 
-      frames.push({
-        stepIndex: frames.length,
-        totalSteps: 1,
-        codeLine: 7,
-        explanation: `Heapsort completed on partition [${low}..${high}]. Monotonic order restored.`,
-        variables: { engine: 'HEAPSORT_COMPLETE', sortedSlice: `[${sub.join(', ')}]` },
-        callStack: [{ name: `heapsortDone()`, params: { size: sub.length }, line: 7, isCurrent: true }],
-        state: {
-          array: elements.map((e) => ({ ...e })),
-          pointers: { low, high },
-        },
-      });
+      // Build max-heap over [low..high]
+      for (let start = Math.floor((len - 2) / 2); start >= 0; start--) {
+        siftDown(start, len - 1);
+      }
+
+      // Extract max elements one by one
+      for (let end = len - 1; end > 0; end--) {
+        const maxIdx = low;
+        const targetIdx = low + end;
+        const maxVal = elements[maxIdx].value;
+        elements[maxIdx].value = elements[targetIdx].value;
+        elements[targetIdx].value = maxVal;
+        elements[targetIdx].status = 'sorted';
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 7,
+          explanation: `Heapsort extractMax: moved heap root ${maxVal} to sorted slot [${targetIdx}].`,
+          soundCue: { type: 'sorted' },
+          variables: { engine: 'HEAPSORT_EXTRACT', extractedMax: maxVal, sortedIdx: targetIdx },
+          callStack: [{ name: `extractMax(${targetIdx})`, params: { maxVal, targetIdx }, line: 7, isCurrent: true }],
+          state: {
+            array: elements.map((e) => ({ ...e })),
+            pointers: { root: low, sorted: targetIdx },
+          },
+        });
+
+        siftDown(0, end - 1);
+      }
+      elements[low].status = 'sorted';
     }
 
     function intro(low: number, high: number, depth: number) {
@@ -257,7 +321,10 @@ export const introsortModule: AlgorithmModule<number[], ArrayStageState> = {
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 10,
-        explanation: `Quicksort step on [${low}..${high}] (depth=${depth}): Pivot selected = ${pivotVal}.`,
+        explanation: `Quicksort step on [${low}..${high}] (depth=${depth}): Pivot selected = ${pivotVal} at index ${high}.`,
+        isMilestone: true,
+        milestoneTitle: `Partition [${low}..${high}] (pivot=${pivotVal})`,
+        soundCue: { type: 'compare' },
         variables: { low, high, pivot: pivotVal, remainingDepth: depth },
         callStack: [{ name: `partition(low=${low}, high=${high})`, params: { pivotVal, depth }, line: 10, isCurrent: true }],
         state: {
@@ -268,12 +335,47 @@ export const introsortModule: AlgorithmModule<number[], ArrayStageState> = {
 
       let i = low;
       for (let j = low; j < high; j++) {
+        const curVal = elements[j].value;
+        const isLess = curVal < pivotVal;
         elements[j].status = 'comparing';
-        if (elements[j].value < pivotVal) {
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 10,
+          explanation: `Compare arr[${j}] = ${curVal} against pivot ${pivotVal}: ${curVal} ${isLess ? '<' : '>='} ${pivotVal}.`,
+          soundCue: { type: 'compare' },
+          variables: { low, high, i, j, 'arr[j]': curVal, pivot: pivotVal },
+          conditionEval: { expr: `arr[${j}] (${curVal}) < pivot (${pivotVal})`, result: isLess },
+          callStack: [{ name: `partition(${low}, ${high})`, params: { i, j, pivotVal }, line: 10, isCurrent: true }],
+          state: {
+            array: elements.map((e) => ({ ...e })),
+            pointers: { i, j, pivot: high },
+          },
+        });
+
+        if (isLess) {
           if (i !== j) {
             const tmp = elements[i].value;
             elements[i].value = elements[j].value;
             elements[j].value = tmp;
+            elements[i].status = 'swapping';
+            elements[j].status = 'swapping';
+
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 10,
+              explanation: `Swap arr[${i}] (${tmp}) and arr[${j}] (${elements[i].value}) into left partition; advance i to ${i + 1}.`,
+              soundCue: { type: 'swap' },
+              variables: { i, j, swappedLeft: elements[i].value, swappedRight: tmp, pivot: pivotVal },
+              callStack: [{ name: `swap(${i}, ${j})`, params: { i, j }, line: 10, isCurrent: true }],
+              state: {
+                array: elements.map((e) => ({ ...e })),
+                pointers: { i, j, pivot: high },
+              },
+            });
+            elements[i].status = 'default';
           }
           i++;
         }
@@ -281,9 +383,9 @@ export const introsortModule: AlgorithmModule<number[], ArrayStageState> = {
       }
 
       // Swap pivot into place
-      const tmp = elements[i].value;
+      const displaced = elements[i].value;
       elements[i].value = elements[high].value;
-      elements[high].value = tmp;
+      elements[high].value = displaced;
       elements[i].status = 'sorted';
       elements[high].status = 'default';
 
@@ -291,8 +393,11 @@ export const introsortModule: AlgorithmModule<number[], ArrayStageState> = {
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 11,
-        explanation: `Pivot ${pivotVal} placed at index ${i}. Recursing on sub-partitions.`,
-        variables: { pivotIndex: i, leftPart: `[${low}..${i - 1}]`, rightPart: `[${i + 1}..${high}]` },
+        explanation: `Pivot ${pivotVal} locked into final sorted index ${i}. Recursing on [${low}..${i - 1}] and [${i + 1}..${high}] with depth=${depth - 1}.`,
+        isMilestone: true,
+        milestoneTitle: `Pivot ${pivotVal} @ [${i}]`,
+        soundCue: { type: 'sorted' },
+        variables: { pivotIndex: i, leftPart: `[${low}..${i - 1}]`, rightPart: `[${i + 1}..${high}]`, nextDepth: depth - 1 },
         callStack: [{ name: `pivotPlaced(${i})`, params: { i }, line: 11, isCurrent: true }],
         state: {
           array: elements.map((e) => ({ ...e })),

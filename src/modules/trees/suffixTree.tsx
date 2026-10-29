@@ -332,48 +332,133 @@ class UkkonenSuffixTree {
           </div>
         </div>
 
-        {/* Compressed Edges Graph View */}
-        <div className="w-full flex flex-col p-6 bg-slate-950 border border-slate-800 rounded-2xl shadow-xl space-y-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Suffix Tree Compressed Edge Representation
-          </span>
+        {/* Compressed Edges Graph View + Live SVG Tree */}
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="flex flex-col p-4 bg-slate-950 border border-slate-800 rounded-2xl shadow-xl items-center justify-center">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 self-start">
+              Compressed Suffix Tree Topology
+            </span>
+            <svg viewBox="0 0 380 210" className="w-full h-48 overflow-visible">
+              {/* Root Node 0 */}
+              <circle
+                cx="190"
+                cy="28"
+                r="18"
+                fill={activeNode === 0 ? '#06B6D4' : '#1E293B'}
+                stroke="#38BDF8"
+                strokeWidth="2.5"
+              />
+              <text
+                x="190"
+                y="32"
+                textAnchor="middle"
+                fill={activeNode === 0 ? '#0B0F19' : '#FFFFFF'}
+                fontSize="10"
+                fontFamily="monospace"
+                fontWeight="bold"
+              >
+                Root 0
+              </text>
 
-          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto font-mono text-xs pt-1">
-            {edges.length > 0 ? (
-              edges.map((e, idx) => (
-                <div
-                  key={`edge-${idx}`}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/80 border border-slate-800"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/50 text-indigo-300 font-bold">
-                      Node {e.fromNode}
-                    </span>
-                    <span className="text-slate-500">──</span>
-                    <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-amber-300 font-bold">
-                      "{e.label}"
-                    </span>
-                    <span className="text-slate-500">──►</span>
-                    <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-bold">
-                      Leaf {e.toNode}
-                    </span>
-                  </div>
-                  {e.suffixIdx !== undefined && (
-                    <span className="text-emerald-400 font-semibold text-[11px]">
-                      Suffix #{e.suffixIdx}
-                    </span>
-                  )}
-                </div>
-              ))
-            ) : (
-              <span className="text-slate-600 italic">No edges created yet.</span>
-            )}
+              {edges.map((e, idx) => {
+                const count = Math.max(1, edges.length);
+                const leafX = count === 1 ? 190 : 35 + (idx * 310) / (count - 1);
+                const leafY = 172;
+                const midX = (190 + leafX) / 2;
+                const midY = (46 + leafY) / 2;
+
+                return (
+                  <g key={`svg-edge-${idx}`}>
+                    <line
+                      x1="190"
+                      y1="46"
+                      x2={leafX}
+                      y2={leafY - 16}
+                      stroke="#10B981"
+                      strokeWidth="2"
+                    />
+                    <rect
+                      x={midX - 24}
+                      y={midY - 9}
+                      width="48"
+                      height="16"
+                      rx="4"
+                      fill="#0B0F19"
+                      stroke="#334155"
+                    />
+                    <text
+                      x={midX}
+                      y={midY + 3}
+                      textAnchor="middle"
+                      fill="#FBBF24"
+                      fontSize="8.5"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      {e.label.length > 7 ? e.label.slice(0, 6) + '…' : e.label}
+                    </text>
+                    <circle
+                      cx={leafX}
+                      cy={leafY}
+                      r="15"
+                      fill="#064E3B"
+                      stroke="#10B981"
+                      strokeWidth="2"
+                    />
+                    <text
+                      x={leafX}
+                      y={leafY + 3}
+                      textAnchor="middle"
+                      fill="#FFFFFF"
+                      fontSize="9"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      #{e.suffixIdx ?? e.toNode}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
           </div>
-        </div>
 
-        {/* Theory Insight */}
-        <div className="w-full p-4 bg-slate-900/40 border border-slate-800 rounded-xl text-xs font-mono text-slate-400 text-center">
-          Key Advantage: Once a leaf is created, it remains a leaf for all subsequent phases via O(1) global end pointer expansion.
+          <div className="flex flex-col p-4 bg-slate-950 border border-slate-800 rounded-2xl shadow-xl space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Compressed Substring Edges ({edges.length})
+            </span>
+
+            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto font-mono text-xs pt-1">
+              {edges.length > 0 ? (
+                edges.map((e, idx) => (
+                  <div
+                    key={`edge-${idx}`}
+                    className="flex items-center justify-between p-2 rounded-lg bg-slate-900/80 border border-slate-800"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/50 text-indigo-300 font-bold">
+                        Node {e.fromNode}
+                      </span>
+                      <span className="text-slate-500">──</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300 font-bold">
+                        "{e.label}"
+                      </span>
+                      <span className="text-slate-500">──►</span>
+                      <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-bold">
+                        Leaf {e.toNode}
+                      </span>
+                    </div>
+                    {e.suffixIdx !== undefined && (
+                      <span className="text-emerald-400 font-semibold text-[11px]">
+                        Suffix #{e.suffixIdx}
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <span className="text-slate-500 italic">No edges created yet. Step forward to add leaves.</span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

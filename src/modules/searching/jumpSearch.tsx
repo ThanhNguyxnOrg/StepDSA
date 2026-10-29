@@ -142,7 +142,7 @@ def jump_search(arr, target):
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 4,
-      explanation: `Initialized Jump Search on array of size ${n}. Optimal jump block size m = ⌊√${n}⌋ = ${blockSize}. Target is ${target}.`,
+      explanation: `Initialized Jump Search on array of size ${n}. Optimal jump block size m = floor(√${n}) = ${blockSize}. Target is ${target}.`,
       isMilestone: true,
       milestoneTitle: 'Initialized Jump Search',
       soundCue: { type: 'start' },

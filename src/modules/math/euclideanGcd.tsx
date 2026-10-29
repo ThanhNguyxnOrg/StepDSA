@@ -342,7 +342,7 @@ export const euclideanGcdModule: AlgorithmModule<EuclideanGcdInput, EuclideanGcd
                   <th className="py-2 px-3">Step</th>
                   <th className="py-2 px-3">a</th>
                   <th className="py-2 px-3">b</th>
-                  <th className="py-2 px-3">q = ⌊a/b⌋</th>
+                  <th className="py-2 px-3">q = floor(a/b)</th>
                   <th className="py-2 px-3">r = a % b</th>
                 </tr>
               </thead>
