@@ -86,7 +86,7 @@ pop_front(deque)
 pop_back(deque)`,
   },
   generateTimeline: (input: number[]) => {
-    const raw = input && input.length > 0 ? input.slice(0, 10) : [15, 30, 45, 60];
+    const raw = input && input.length > 0 ? [...input] : [15, 30, 45, 60];
     const seedVal = raw[0] ?? 15;
     const dq: number[] = [seedVal];
     const poppedHistory: { val: number; port: 'FRONT' | 'REAR' }[] = [];

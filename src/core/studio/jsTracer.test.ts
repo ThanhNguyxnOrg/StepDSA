@@ -81,6 +81,19 @@ describe('traceJavaScriptExecution: Recursive LeetCode Functions', () => {
   });
 });
 
+describe('traceJavaScriptExecution: Safety ceiling', () => {
+  it('stops a tight infinite loop instead of hanging the tab', () => {
+    const code = `
+      const spin = (n) => {
+        while (true) {}
+        return n;
+      };
+    `;
+    const frames = traceJavaScriptExecution(code, '1', { maxSteps: 50 });
+    expect(frames.some((f) => f.explanation.includes('Safety limit reached'))).toBe(true);
+  });
+});
+
 describe('traceJavaScriptExecution: Procedural Array Sort', () => {
   it('traces in-place bubble sort', () => {
     const code = `

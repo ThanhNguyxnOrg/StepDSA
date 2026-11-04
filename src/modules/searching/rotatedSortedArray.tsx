@@ -12,7 +12,21 @@ export interface RotatedSearchState {
   mid: number | null;
   high: number;
   foundIndex: number | null;
-  phase: 'check' | 'narrow_left' | 'narrow_right' | 'found' | 'not_found';
+  phase: 'check' | 'narrow_left' | 'narrow_right' | 'found' | 'not_found' | 'invalid';
+}
+
+/**
+ * True when `nums` is a rotation of a non-decreasing array: at most one descent,
+ * and any descent must wrap to a first element >= the last element.
+ */
+export function isRotationOfSortedArray(nums: number[]): boolean {
+  if (nums.length <= 1) return true;
+  let descents = 0;
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] < nums[i - 1]) descents++;
+    if (descents > 1) return false;
+  }
+  return descents === 0 || nums[0] >= nums[nums.length - 1];
 }
 
 export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, RotatedSearchState> = {
@@ -169,6 +183,38 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
         phase: 'check',
       },
     });
+
+    // Precondition guard: the modified binary search is only defined for an array that is a
+    // rotation of a sorted array. Reject anything else with a clear explanation instead of
+    // silently returning "not found" for values that are actually present.
+    if (!isRotationOfSortedArray(nums)) {
+      frames.push({
+        stepIndex: 1,
+        totalSteps: 2,
+        codeLine: 2,
+        explanation: `Input rejected: [${nums.join(', ')}] is not a rotation of a sorted array (it has more than one descent). Rotated binary search requires a sorted array rotated at one pivot, e.g. [4, 5, 6, 7, 0, 1, 2]. Use a preset or an array with that shape.`,
+        isMilestone: true,
+        milestoneTitle: 'Invalid Input (Not Rotated Sorted)',
+        soundCue: { type: 'fail' },
+        callStack: [
+          { name: 'search(nums, target)', params: { note: 'precondition violated', n: nums.length }, line: 2, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { target, rotationProperty: 'at most one descent', descents: '> 1' },
+        conditionEval: { expr: 'isRotationOfSorted(nums)', result: false },
+        state: {
+          array: [...nums],
+          target,
+          low: 0,
+          mid: null,
+          high: nums.length - 1,
+          foundIndex: null,
+          phase: 'invalid',
+        },
+      });
+      const total = frames.length;
+      return frames.map((f, i) => ({ ...f, stepIndex: i, totalSteps: total }));
+    }
 
     let iter = 1;
     while (low <= high) {
@@ -396,7 +442,8 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
     return frames;
   },
   renderStage: (frame: ExecutionFrame<RotatedSearchState>) => {
-    const { array, target, low, mid, high, foundIndex } = frame.state;
+    const { array, target, low, mid, high, foundIndex, phase } = frame.state;
+    const isInvalid = phase === 'invalid';
 
     return (
       <div className="flex flex-col items-center justify-center p-6 w-full min-h-[380px] gap-6">
@@ -405,6 +452,12 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
           <span className="text-xs font-mono text-slate-400">SEARCH TARGET:</span>
           <span className="text-xl font-bold font-mono text-amber-400">{target}</span>
         </div>
+
+        {isInvalid && (
+          <div className="px-4 py-2 rounded-xl bg-rose-950/60 border border-rose-500/60 text-rose-200 text-xs font-mono font-bold text-center max-w-xl">
+            INVALID INPUT — array is not a rotation of a sorted array. Rotated binary search is undefined here.
+          </div>
+        )}
 
         {/* Array Bars */}
         <div className="flex flex-wrap items-center justify-center gap-2 max-w-4xl">
@@ -416,7 +469,8 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
             const isFound = foundIndex === idx;
 
             let barColor = 'border-slate-800 bg-slate-900/40 opacity-40';
-            if (isFound) barColor = 'border-emerald-400 bg-emerald-950/60 ring-4 ring-emerald-400 opacity-100';
+            if (isInvalid) barColor = 'border-rose-500 bg-rose-950/40 opacity-100';
+            else if (isFound) barColor = 'border-emerald-400 bg-emerald-950/60 ring-4 ring-emerald-400 opacity-100';
             else if (isMid) barColor = 'border-amber-400 bg-amber-950/60 ring-2 ring-amber-400 opacity-100';
             else if (inRange) barColor = 'border-indigo-500 bg-indigo-950/40 opacity-100';
 
@@ -428,9 +482,9 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
 
                   {/* Pointer tag */}
                   <div className="absolute -top-3 flex gap-0.5">
-                    {isLow && <span className="bg-sky-600 text-white text-[8px] px-1 py-0.2 rounded font-mono font-bold">L</span>}
-                    {isMid && <span className="bg-amber-600 text-white text-[8px] px-1 py-0.2 rounded font-mono font-bold">M</span>}
-                    {isHigh && <span className="bg-rose-600 text-white text-[8px] px-1 py-0.2 rounded font-mono font-bold">H</span>}
+                    {!isInvalid && isLow && <span className="bg-sky-600 text-white text-[8px] px-1 py-0.2 rounded font-mono font-bold">L</span>}
+                    {!isInvalid && isMid && <span className="bg-amber-600 text-white text-[8px] px-1 py-0.2 rounded font-mono font-bold">M</span>}
+                    {!isInvalid && isHigh && <span className="bg-rose-600 text-white text-[8px] px-1 py-0.2 rounded font-mono font-bold">H</span>}
                   </div>
                 </div>
               </div>

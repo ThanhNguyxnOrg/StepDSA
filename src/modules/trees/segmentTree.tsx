@@ -150,6 +150,8 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
       const nodes: TreeNode[] = [];
       Object.entries(nodeCoords).forEach(([k, coord]) => {
         const idx = Number(k);
+        const leftIdx = 2 * idx;
+        const rightIdx = 2 * idx + 1;
         nodes.push({
           id: `seg-${idx}`,
           value: tree[idx],
@@ -161,6 +163,8 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
               : selectedTreeIndices.has(idx)
               ? 'sorted'
               : 'default',
+          leftId: nodeCoords[leftIdx] ? `seg-${leftIdx}` : undefined,
+          rightId: nodeCoords[rightIdx] ? `seg-${rightIdx}` : undefined,
         });
       });
       return nodes;
@@ -184,6 +188,10 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
 
     const ql = Math.max(0, input.query[0]);
     const qr = Math.min(n - 1, input.query[1]);
+    const truncationNote =
+      input.array.length > 4
+        ? ` Note: this stage visualises the first 4 elements only (${input.array.length} provided).`
+        : '';
 
     frames.push({
       stepIndex: 0,
@@ -193,7 +201,7 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
         ', '
       )}]. Root node #1 represents interval [0, 3] with total sum ${
         tree[1]
-      }. Target Range Query: [${ql}, ${qr}].`,
+      }. Target Range Query: [${ql}, ${qr}].${truncationNote}`,
       isMilestone: true,
       milestoneTitle: 'Segment Tree Initialized',
       soundCue: { type: 'start' },

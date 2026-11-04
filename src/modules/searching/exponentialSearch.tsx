@@ -139,7 +139,6 @@ export const exponentialSearchModule: AlgorithmModule<
       conditionEval: { expr: `n > 0`, result: true },
       state: {
         array: arr.map((v, i) => ({ id: i, value: v, status: 'default' })),
-        pointers: { target },
         target,
       },
     });

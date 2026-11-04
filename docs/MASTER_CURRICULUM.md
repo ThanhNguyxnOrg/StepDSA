@@ -393,17 +393,17 @@ graph TD
 
 ### Level 3 — Advanced & Competitive Programming (~100+ Modules)
 * **Target Objective:** ICPC Regional / World Finals competitive readiness and high-performance systems engineering.
-* **Additional Coverage:**
-  - **Network Flow:** Dinic's Algorithm, Edmonds-Karp, Min-Cost Max-Flow.
+* **Additional Coverage (implemented):**
+  - **Network Flow:** Dinic's Algorithm, Edmonds-Karp.
   - **Bipartite Matching:** Hopcroft-Karp Bipartite Matching.
-  - **Advanced Trees:** Heavy-Light Decomposition (HLD), Centroid Decomposition, Treap, B-Tree, KD-Tree.
-  - **Advanced Queries:** Mo's Algorithm, Sparse Table RMQ O(1).
+  - **Advanced Trees:** Treap, B-Tree, KD-Tree, Interval Tree, Suffix Tree.
+  - **Advanced Queries:** Sparse Table RMQ O(1).
   - **Geometry:** Convex Hull (Graham Scan), Sweep-Line, Closest Pair of Points.
-  - **Advanced Mathematics:** Fast Fourier Transform (FFT / NTT).
+* **Roadmap (not implemented yet):** Min-Cost Max-Flow, Heavy-Light Decomposition (HLD), Centroid Decomposition, Mo's Algorithm, Fast Fourier Transform (FFT / NTT).
 
 ---
 
-## Current StepDSA Implementation Status (149 Active Modules)
+## Current StepDSA Implementation Status (162 Active Modules)
 
 ### Sorting & Selection (18 modules) — 100% COMPLETE
 1. [Quicksort (Lomuto Partition)](../src/modules/sorting/quicksort.tsx)
@@ -595,6 +595,21 @@ graph TD
 147. [Mergesort Recursion Call Tree](../src/modules/recursion/mergesortRecursionTree.tsx)
 148. [Quicksort Partition Tree (Pivot-Selection Tree Topology)](../src/modules/recursion/quicksortPartitionTree.tsx)
 149. [Backtracking State-Space Decision Tree Visualizer](../src/modules/recursion/backtrackingDecisionTree.tsx)
+
+### Recently Synced Modules (13 modules added after the original catalog)
+150. [Static & Dynamic Array (Amortized Doubling)](../src/modules/arrays/dynamicArray.tsx)
+151. [Dynamic Rehashing & Load-Factor Resizing](../src/modules/arrays/dynamicRehashing.tsx)
+152. [Graph Representations (Matrix / Adjacency List / Edge List)](../src/modules/graphs/graphRepresentations.tsx)
+153. [KD-Tree (K-Dimensional Spatial Partitioning)](../src/modules/trees/kdTree.tsx)
+154. [Interval Tree (Augmented Range Overlap Detection)](../src/modules/trees/intervalTree.tsx)
+155. [2-3-4 Tree (Symmetric Multi-Way Splitting)](../src/modules/trees/twoThreeFourTree.tsx)
+156. [Binary Tree Topologies (Full, Complete, Perfect, Balanced, Degenerate)](../src/modules/trees/binaryTreeTopologies.tsx)
+157. [Suffix Tree (Ukkonen's Online Construction)](../src/modules/trees/suffixTree.tsx)
+158. [Submask Enumeration (Bit-Trick Traversal)](../src/modules/math/submaskEnumeration.tsx)
+159. [Permutations & Combinations Generator](../src/modules/math/permutationsCombinations.tsx)
+160. [Strassen's Matrix Multiplication](../src/modules/math/strassenMatrix.tsx)
+161. [Recursion Call Tree Playground (Mergesort / Quicksort / Backtracking)](../src/modules/recursion/recursionTrees.tsx)
+162. [Sweep-Line Segment Intersections](../src/modules/geometry/sweepLineIntersections.tsx)
 
 
 

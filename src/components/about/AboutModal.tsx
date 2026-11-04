@@ -77,7 +77,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                   <li className="flex items-start gap-2">
                     <Layers className="w-3.5 h-3.5 text-[#06B6D4] shrink-0 mt-0.5" />
                     <span>
-                      <strong className="text-white">5-Language Synchronized Dock:</strong> Live line highlighting across Pseudocode, Python, C++, TypeScript, and Java alongside Vietnamese & English intuition notes.
+                      <strong className="text-white">5-Language Synchronized Dock:</strong> Live line highlighting across Pseudocode, Python, C++, TypeScript, and Java alongside a plain-English intuition note for every step.
                     </span>
                   </li>
                   <li className="flex items-start gap-2">

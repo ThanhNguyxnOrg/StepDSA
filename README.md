@@ -13,7 +13,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-19.x-61dafb?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
-  <img src="https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript 5.8" />
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript 5.7" />
   <img src="https://img.shields.io/badge/Vite-6.x-646cff?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 6" />
   <img src="https://img.shields.io/badge/Python-Pyodide_WASM-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Pyodide WASM" />
   <img src="https://img.shields.io/badge/C%2B%2B-17%2F20_CLI_%26_Sim-00599c?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++17/20" />
@@ -23,7 +23,6 @@
   <img src="https://img.shields.io/badge/Shortcuts-OS_Auto--Detected-f59e0b?style=for-the-badge&logo=apple&logoColor=white" alt="OS Auto-Detection" />
   <img src="https://img.shields.io/badge/Projection-2D_%26_2.5D_Isometric-14b8a6?style=for-the-badge&logo=webgl&logoColor=white" alt="2D & 2.5D Isometric" />
   <img src="https://img.shields.io/badge/Audio-Web_Audio_Synthesizer-f43f5e?style=for-the-badge&logo=audacity&logoColor=white" alt="Web Audio Synth" />
-  <img src="https://img.shields.io/badge/MCP-REA_Integrated-ec4899?style=for-the-badge&logo=modelcontextprotocol&logoColor=white" alt="REA MCP" />
   <img src="https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge" alt="MIT License" />
 </p>
 
@@ -63,7 +62,7 @@ Every algorithm card across the **9 Curriculum Domains** (`Sorting`, `Searching`
 ### 3. 💻 Personal Code Studio v2.0 (BYOC — Bring Your Own Code)
 Click **`>_ CLI Studio`** in the top header to open the 3-Tab **Personal Code Studio**:
 - **Tab 1 — Multi-Language Code Sandbox (`JS/TS` · `Python WASM` · `C++ 17/20`):**
-  - **9 Built-in Algorithm Templates:** Load *Generate Parentheses (DFS)*, *Bubble Sort*, *Binary Search*, *Two Sum (Hash Map)*, *Climbing Stairs Memo DFS*, or *C++17 Vector Sort* in 1 click.
+  - **10 Built-in Algorithm Templates:** Load *Generate Parentheses (DFS)*, *Bubble Sort*, *Binary Search*, *Two Sum (Hash Map)*, *Climbing Stairs Memo DFS*, *C++17 Vector Sort*, or *C++ Binary Search* in 1 click.
   - **Line-Numbered IDE Editor:** Synchronized line gutter, `Tab` indentation, and `Ctrl+Enter` / `Cmd+Enter` instant execution.
   - **Python Tutor-Style Heap & Call Stack Stage (`CallStackStage`):** Displays live recursive stack frames (`#1..#N`) right alongside a **Heap & Memory Objects Inspector** for arrays/lists (`res[]`, `nums[]`), dictionaries/hash maps (`lookup{}`), and local scope bindings.
 - **Tab 2 — Trace Inspector & Snapshot Exporter:**
@@ -85,21 +84,15 @@ StepDSA detects your operating system (`macOS`, `Windows`, `Linux`) via `navigat
 | **Fast Scrub 5 Steps** | `Shift` + `←` / `→` | `Shift` + `←` / `→` | `Shift` + `←` / `→` |
 | **Jump to Milestone** | `Opt` + `←` / `→` | `Alt` + `←` / `→` | `Alt` + `←` / `→` |
 | **Jump to Start / End** | `Cmd` + `←` / `→` | `Home` / `End` | `Home` / `End` |
-| **Playback Speed (`0.5x`–`4x`)** | `1` · `2` · `3` · `4` | `1` · `2` · `3` · `4` | `1` · `2` · `3` · `4` |
+| **Playback Speed (`0.5x` · `1x` · `1.5x` · `2x`)** | `1` · `2` · `3` · `4` | `1` · `2` · `3` · `4` | `1` · `2` · `3` · `4` |
 | **Toggle Auto-Pace** | `A` | `A` | `A` |
-| **Reset / Randomize Data** | `R` / `D` | `R` / `D` | `R` / `D` |
-| **Cycle Right Dock / Language** | `T` / `L` | `T` / `L` | `T` / `L` |
+| **Reset Timeline** | `R` | `R` | `R` |
+| **Toggle Code Dock / Theory / Legend** | `D` / `T` / `L` | `D` / `T` / `L` | `D` / `T` / `L` |
+| **Toggle 2D / 3D Isometric · Zoom** | `V` · `+` / `-` / `0` | `V` · `+` / `-` / `0` | `V` · `+` / `-` / `0` |
+| **Open Code Studio / Switch Hub** | `C` / `H` | `C` / `H` | `C` / `H` |
 | **Interactive Shortcut Studio** | `?` or `Cmd` + `/` | `?` or `Ctrl` + `/` | `?` or `Ctrl` + `/` |
 
 ---
-
-### 5. 🔬 REA (`morluto/rea` / `rea-agents`) MCP & Static Bundle Auditing
-StepDSA integrates **[REA — Reverse Engineer Anything](https://github.com/morluto/rea)** (`rea-agents`) via `.mcp.json` and npm scripts for deterministic static bundle reconstruction and reference visualizer benchmarking:
-```bash
-npm run rea:doctor    # Verify REA environment & provider status
-npm run rea:analyze   # Reconstruct & audit the production bundle
-npm run rea:mcp       # Launch REA Model Context Protocol (MCP) server
-```
 
 ---
 
@@ -109,18 +102,17 @@ npm run rea:mcp       # Launch REA Model Context Protocol (MCP) server
 # 1. Install dependencies
 npm install
 
-# 2. Start the interactive workbench (http://localhost:3000)
+# 2. Start the interactive workbench (http://localhost:5173)
 npm run dev
 
-# 3. Run unit tests (Theme Engine, OS Shortcuts, Studio Templates, Runtime Guards)
-npx tsx --test src/utils/themeEngine.test.ts src/utils/platformShortcuts.test.ts src/core/studio/studioTemplates.test.ts src/utils/runtimeErrorGuard.test.ts
+# 3. Run the Vitest suite (modules, theme engine, OS shortcuts, studio, runtime guards)
+npm test
 
 # 4. Run Local CLI Tracer & Environment Doctor
 node cli/stepdsa.js doctor
 node cli/stepdsa.js run cli/sample_bubble_sort.cpp --no-open
 
 # 5. Type-check & build production bundle
-npm run lint
 npm run build
 ```
 

@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/CLI-stepdsa_v2.0-10b981?style=for-the-badge&logo=gnubash&logoColor=white" alt="stepdsa CLI" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Python-3.9%2B-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/C%2B%2B-17%2F20_g%2B%2B%2Fclang%2B%2B-00599c?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++" />
   <img src="https://img.shields.io/badge/Payload-lz--string_URI-06b6d4?style=for-the-badge" alt="lz-string" />

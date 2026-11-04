@@ -135,8 +135,9 @@ public:
         return val`,
   },
   generateTimeline: (input: number[]) => {
-    const rawItems = input && input.length > 0 ? input.slice(0, 6) : [101, 202, 303, 404, 505];
-    const capacity = 8;
+    const rawItems = input && input.length > 0 ? [...input] : [101, 202, 303, 404, 505];
+    // Capacity grows with the dataset so the demo never reports a bogus overflow.
+    const capacity = Math.max(8, rawItems.length);
     const currentStack: number[] = [rawItems[0]];
     const poppedHistory: number[] = [];
     const frames: ExecutionFrame<StackState>[] = [];

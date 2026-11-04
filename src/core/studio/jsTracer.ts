@@ -47,6 +47,7 @@ export function traceJavaScriptExecution(
   const frames: ExecutionFrame[] = [];
   const sourceLines = code.split('\n');
   let stepIndex = 0;
+  let bareSteps = 0;
   let lastReadIdx: number | null = null;
   let activeLine = 1;
   let primaryNumericArray: number[] | null = null;
@@ -130,6 +131,14 @@ export function traceJavaScriptExecution(
 
   // Tracer runtime injected into sandboxed execution
   const __tracer = {
+    // Called at the top of every instrumented loop until execution stops,
+    // so a tight `while (true) {}` cannot freeze the browser tab.
+    tick() {
+      if (++bareSteps > maxSteps) {
+        throw new Error('STEPDSA_MAX_STEPS_REACHED');
+      }
+    },
+
     enter(name: string, params: Record<string, any>, lineNo?: number) {
       if (stepIndex >= maxSteps) return;
       callStack.push({ name, params, line: lineNo });
@@ -329,6 +338,13 @@ function stripTypeScriptAnnotations(code: string): string {
 
   let instrumentedCode = sanitizedCode;
 
+  // 0. Insert a step tick at the top of every braced loop body. The frame counter alone
+  // cannot stop loops that never touch a traced array/object.
+  instrumentedCode = instrumentedCode.replace(
+    /((?:while|for)\s*\([^)]*\)|do)\s*\{/g,
+    (match) => `${match}\n  __tracer.tick();`
+  );
+
   // 1. Wrap array literal declarations (like const res = []; or const arr = [5, 2, 8];)
   instrumentedCode = instrumentedCode.replace(
     /(const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*(\[[^\]]*\]);?/g,
@@ -417,7 +433,20 @@ function stripTypeScriptAnnotations(code: string): string {
     const runner = new Function('__tracer', fullExecutable);
     runner(__tracer);
   } catch (err: any) {
-    recordFrame(`Execution error: ${err.message || String(err)}`, 'error', 'step', { error: err.message });
+    if (err?.message === 'STEPDSA_MAX_STEPS_REACHED') {
+      frames.push({
+        stepIndex: stepIndex++,
+        totalSteps: 0,
+        codeLine: activeLine,
+        explanation: `Safety limit reached (${maxSteps} steps). Execution paused to protect the browser tab.`,
+        action: 'limit',
+        callStack: ['main()'],
+        soundCue: 'finish',
+        state: { callStackDepth: 0, variables: {} },
+      });
+    } else {
+      recordFrame(`Execution error: ${err.message || String(err)}`, 'error', 'step', { error: err.message });
+    }
   }
 
   // Compute cumulative operational metrics across all frames

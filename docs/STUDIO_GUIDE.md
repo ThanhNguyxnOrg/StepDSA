@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Studio-BYOC_v2.0-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="BYOC Studio v2.0" />
   <img src="https://img.shields.io/badge/JavaScript-ES6_Proxy_Tracer-f7df1e?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
-  <img src="https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Python_3-Pyodide_WASM-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python Pyodide WASM" />
   <img src="https://img.shields.io/badge/C%2B%2B-17%2F20_Sim_%2B_CLI-00599c?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++17/20" />
   <img src="https://img.shields.io/badge/Security-100%25_Client--Side-10b981?style=for-the-badge&logo=shield&logoColor=white" alt="100% Client-Side" />
@@ -41,10 +41,10 @@ graph LR
 ```
 
 ### 1️⃣ Tab 1: Code Sandbox (`JS / TS` · `Python WASM` · `C++ 17/20`)
-- **9 Built-In Algorithm Templates:** Switch languages and click any preset pill to load ready-to-run algorithms:
+- **10 Built-In Algorithm Templates:** Switch languages and click any preset pill to load ready-to-run algorithms:
   - **JS / TS:** *Generate Parentheses (DFS)*, *Bubble Sort (In-Place Swaps)*, *Binary Search (Two Pointers)*, *Two Sum (Hash Map)*
   - **Python (WASM):** *Two Sum (Hash Map)*, *Bubble Sort (Python List)*, *Climbing Stairs (Memo DFS)*
-  - **C++ 17/20:** *C++ Generate Parentheses*, *C++ Vector Bubble Sort*
+  - **C++ 17/20:** *C++ Generate Parentheses*, *C++ Vector Bubble Sort*, *C++ Binary Search*
 - **IDE Editor Features:**
   - Synchronized **Line-Number Gutter (`1..N`)**
   - `Tab` key 2-space indentation

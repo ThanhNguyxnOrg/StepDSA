@@ -25,7 +25,7 @@ StepDSA is architected around **deterministic $\mathcal{O}(1)$ time-travel scrub
    Visual stages (`ArrayStage`, `CallStackStage`, custom Graph/Tree/DP SVG stages) receive `frame.state` and `projection` (`'2d' | 'isometric'`) as pure props and hold zero internal playback state.
 
 3. **Studio Multi-Theme Engine (`themeEngine.ts` + `index.css`):**
-   Supports four studio color palettes (**Midnight Studio**, **Daylight Paper**, **VisuAlgo Ocean**, **Dracula Cyber**) persisted via `localStorage` (`stepdsa_studio_theme_v1`) and applied via `document.documentElement.dataset.theme`, while protecting vibrant card thumbnails inside `.algo-card-thumbnail`.
+   Supports four studio color palettes (**Midnight Studio**, **Daylight Paper**, **VisuAlgo Ocean**, **Dracula Cyber**) persisted via `localStorage` (`stepdsa-app-theme`) and applied via `document.documentElement.dataset.theme`, while protecting vibrant card thumbnails inside `.algo-card-thumbnail`.
 
 4. **Multi-Signal OS Auto-Detection (`platformShortcuts.ts`):**
    Detects `mac`, `windows`, or `linux` using `navigator.userAgentData`, high-entropy platform hints, `navigator.platform`, and `navigator.userAgent`, adapting all keyboard listeners and `<kbd>` badges in real time.
@@ -69,8 +69,9 @@ StepDSA/
 │   │   ├── stage/              # ArrayStage, StepNarrationBanner, OperationalMetricsBar
 │   │   └── workbench/          # StepTraceLog & VisualLegendModal
 │   ├── core/
-│   │   ├── hooks/              # useTimelinePlayback & useOperationalMetrics
-│   │   ├── registry/           # Central 162-Module Registry & Lookup Helpers
+│   │   ├── timeline.ts         # useTimelinePlayback Hook (O(1) Scrub & Auto-Pace)
+│   │   ├── useOperationalMetrics.ts  # Live Comparison/Swap/Access Counters
+│   │   ├── types.ts            # ExecutionFrame, AlgorithmModule & Shared Contracts
 │   │   └── studio/             # JS Proxy Tracer, Pyodide WASM Runner, C++ Simulator, Templates
 │   ├── modules/                # 162 Algorithm & Data Structure Modules across 9 Categories
 │   └── utils/                  # Theme Engine, OS Shortcuts, Stage Geometry, Runtime Error Guard

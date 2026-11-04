@@ -132,7 +132,7 @@ function heapify(arr, n, i):
         heapify(arr, n, largest)`,
   },
   generateTimeline: (input: number[]) => {
-    const arr = input.length > 0 ? [...input.slice(0, 7)] : [4, 10, 3, 5, 1, 9, 8];
+    const arr = input.length > 0 ? [...input] : [4, 10, 3, 5, 1, 9, 8];
     const n = arr.length;
 
     const buildTreeNodes = (
@@ -141,6 +141,8 @@ function heapify(arr, n, i):
       largestIdx?: number
     ): TreeNode[] => {
       const nodes: TreeNode[] = [];
+      // Fixed hand-tuned coordinates keep small heaps compact; TreeStage re-lays out
+      // larger heaps automatically from the parent-child links below.
       const getPos = (idx: number): { x: number; y: number } => {
         if (idx === 0) return { x: 350, y: 50 };
         if (idx === 1) return { x: 230, y: 120 };
@@ -148,13 +150,16 @@ function heapify(arr, n, i):
         if (idx === 3) return { x: 170, y: 190 };
         if (idx === 4) return { x: 290, y: 190 };
         if (idx === 5) return { x: 410, y: 190 };
-        return { x: 530, y: 190 };
+        if (idx === 6) return { x: 530, y: 190 };
+        return { x: 350, y: 190 + Math.floor(idx / 2) * 10 };
       };
 
       for (let i = 0; i < heap.length; ++i) {
         const { x, y } = getPos(i);
+        const leftIdx = 2 * i + 1;
+        const rightIdx = 2 * i + 2;
         nodes.push({
-          id: `heap-${i}-${heap[i]}`,
+          id: `heap-${i}`,
           value: heap[i],
           x,
           y,
@@ -164,6 +169,8 @@ function heapify(arr, n, i):
               : i === largestIdx
               ? 'comparing'
               : 'default',
+          leftId: leftIdx < heap.length ? `heap-${leftIdx}` : undefined,
+          rightId: rightIdx < heap.length ? `heap-${rightIdx}` : undefined,
         });
       }
       return nodes;

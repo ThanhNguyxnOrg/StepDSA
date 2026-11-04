@@ -1,4 +1,5 @@
 import { AlgorithmModule, ExecutionFrame, CallStackFrame } from '../../core/types';
+import { TreeStage, TreeNode } from '../../components/stage/TreeStage';
 
 export type TreeTopologyType = 'full' | 'complete' | 'perfect' | 'balanced' | 'degenerate';
 
@@ -27,12 +28,80 @@ export interface BinaryTreeTopologiesState {
   message: string;
 }
 
+function treeHeight(node: TopologyNode | null | undefined): number {
+  if (!node) return -1;
+  return 1 + Math.max(treeHeight(node.left), treeHeight(node.right));
+}
+
+function countTopologyNodes(node: TopologyNode | null | undefined): number {
+  if (!node) return 0;
+  return 1 + countTopologyNodes(node.left) + countTopologyNodes(node.right);
+}
+
+function isFullTopology(node: TopologyNode | null | undefined): boolean {
+  if (!node) return true;
+  const hasLeft = Boolean(node.left);
+  const hasRight = Boolean(node.right);
+  if (!hasLeft && !hasRight) return true;
+  if (hasLeft && hasRight) return isFullTopology(node.left) && isFullTopology(node.right);
+  return false;
+}
+
+function isCompleteTopology(node: TopologyNode | null | undefined): boolean {
+  if (!node) return true;
+  const queue: (TopologyNode | null)[] = [node];
+  let seenNull = false;
+  while (queue.length > 0) {
+    const current = queue.shift() ?? null;
+    if (!current) {
+      seenNull = true;
+      continue;
+    }
+    if (seenNull) return false;
+    queue.push(current.left ?? null);
+    queue.push(current.right ?? null);
+  }
+  return true;
+}
+
+function isBalancedTopology(node: TopologyNode | null | undefined): boolean {
+  if (!node) return true;
+  const leftHeight = treeHeight(node.left);
+  const rightHeight = treeHeight(node.right);
+  if (Math.abs(leftHeight - rightHeight) > 1) return false;
+  return isBalancedTopology(node.left) && isBalancedTopology(node.right);
+}
+
+function isDegenerateTopology(node: TopologyNode | null | undefined): boolean {
+  if (!node) return true;
+  if (node.left && node.right) return false;
+  if (node.left) return isDegenerateTopology(node.left);
+  if (node.right) return isDegenerateTopology(node.right);
+  return true;
+}
+
+function computeTopologyProperties(
+  root: TopologyNode | null
+): BinaryTreeTopologiesState['properties'] {
+  const height = treeHeight(root);
+  const nodeCount = countTopologyNodes(root);
+  return {
+    isFull: isFullTopology(root),
+    isComplete: isCompleteTopology(root),
+    isPerfect: nodeCount === Math.pow(2, height + 1) - 1 && isCompleteTopology(root),
+    isBalanced: isBalancedTopology(root),
+    isDegenerate: isDegenerateTopology(root),
+    height,
+    nodeCount,
+  };
+}
+
 export const binaryTreeTopologiesModule: AlgorithmModule<
   { topology: TreeTopologyType },
   BinaryTreeTopologiesState
 > = {
   id: 'binary-tree-topologies',
-  title: 'Binary Tree (Full, Complete, Perfect, Degenerate Topologies)',
+  title: 'Binary Tree Topologies (Full, Complete, Perfect, Balanced, Degenerate)',
   category: 'trees-bst',
   difficulty: 'Beginner',
   complexity: {
@@ -169,15 +238,6 @@ def is_perfect(root):
     };
 
     let root: TopologyNode;
-    let props = {
-      isFull: false,
-      isComplete: false,
-      isPerfect: false,
-      isBalanced: false,
-      isDegenerate: false,
-      height: 0,
-      nodeCount: 0,
-    };
 
     if (topo === 'perfect') {
       root = {
@@ -185,21 +245,18 @@ def is_perfect(root):
         left: { id: 2, val: 2, left: { id: 4, val: 4 }, right: { id: 5, val: 5 } },
         right: { id: 3, val: 3, left: { id: 6, val: 6 }, right: { id: 7, val: 7 } },
       };
-      props = { isFull: true, isComplete: true, isPerfect: true, isBalanced: true, isDegenerate: false, height: 2, nodeCount: 7 };
     } else if (topo === 'complete') {
       root = {
         id: 1, val: 1,
         left: { id: 2, val: 2, left: { id: 4, val: 4 }, right: { id: 5, val: 5 } },
         right: { id: 3, val: 3, left: { id: 6, val: 6 }, right: null },
       };
-      props = { isFull: false, isComplete: true, isPerfect: false, isBalanced: true, isDegenerate: false, height: 2, nodeCount: 6 };
     } else if (topo === 'full') {
       root = {
         id: 1, val: 1,
         left: { id: 2, val: 2 },
         right: { id: 3, val: 3, left: { id: 4, val: 4 }, right: { id: 5, val: 5 } },
       };
-      props = { isFull: true, isComplete: false, isPerfect: false, isBalanced: false, isDegenerate: false, height: 2, nodeCount: 5 };
     } else if (topo === 'degenerate') {
       root = {
         id: 1, val: 1,
@@ -214,15 +271,16 @@ def is_perfect(root):
           },
         },
       };
-      props = { isFull: false, isComplete: false, isPerfect: false, isBalanced: false, isDegenerate: true, height: 3, nodeCount: 4 };
     } else {
       root = {
         id: 1, val: 1,
         left: { id: 2, val: 2, left: { id: 4, val: 4 } },
         right: { id: 3, val: 3, right: { id: 5, val: 5 } },
       };
-      props = { isFull: false, isComplete: false, isPerfect: false, isBalanced: true, isDegenerate: false, height: 2, nodeCount: 5 };
     }
+
+    // Structural verdicts are computed from the generated tree, never hard-coded.
+    const props = computeTopologyProperties(root);
 
     addFrame(
       1,
@@ -436,53 +494,52 @@ def is_perfect(root):
     frames.forEach((f) => (f.totalSteps = frames.length));
     return frames;
   },
-  renderStage: (frame: ExecutionFrame<BinaryTreeTopologiesState>) => {
-    const { root, properties, message } = frame.state;
+  renderStage: (frame: ExecutionFrame<BinaryTreeTopologiesState>, projection) => {
+    const { root, properties, message, inspectedNodeId } = frame.state;
 
-    const renderNode = (node: TopologyNode | null | undefined): React.ReactNode => {
-      if (!node) return null;
-
-      return (
-        <div key={`topo-node-${node.id}`} className="flex flex-col items-center space-y-2">
-          <div className="w-10 h-10 rounded-full border-2 border-cyan-400 bg-cyan-950/80 text-cyan-200 font-mono font-bold flex items-center justify-center text-sm shadow-md shadow-cyan-500/20">
-            {node.val}
-          </div>
-          {(node.left || node.right) && (
-            <div className="flex gap-4 pt-2 border-t border-slate-700/80 justify-center">
-              <div className="flex flex-col items-center">
-                {node.left ? (
-                  renderNode(node.left)
-                ) : (
-                  <div className="w-6 h-6 rounded border border-dashed border-slate-700 flex items-center justify-center text-[10px] text-slate-600 font-mono">
-                    ø
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col items-center">
-                {node.right ? (
-                  renderNode(node.right)
-                ) : (
-                  <div className="w-6 h-6 rounded border border-dashed border-slate-700 flex items-center justify-center text-[10px] text-slate-600 font-mono">
-                    ø
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      );
+    // Flatten the topology into TreeStage nodes so edges are drawn and the
+    // currently inspected node is highlighted while stepping.
+    const flatNodes: TreeNode[] = [];
+    const layout = (
+      node: TopologyNode | null | undefined,
+      depth: number,
+      xMin: number,
+      xMax: number
+    ) => {
+      if (!node) return;
+      flatNodes.push({
+        id: String(node.id),
+        value: node.val,
+        x: (xMin + xMax) / 2,
+        y: 50 + depth * 64,
+        status: node.id === inspectedNodeId ? 'active' : 'default',
+        leftId: node.left ? String(node.left.id) : undefined,
+        rightId: node.right ? String(node.right.id) : undefined,
+        label: `${node.val}`,
+      });
+      layout(node.left, depth + 1, xMin, (xMin + xMax) / 2);
+      layout(node.right, depth + 1, (xMin + xMax) / 2, xMax);
     };
+    layout(root, 0, 60, 560);
+
+    const inspected = flatNodes.find((n) => n.id === String(inspectedNodeId));
 
     return (
-      <div className="flex flex-col items-center justify-center p-4 w-full max-w-4xl mx-auto space-y-6">
+      <div className="flex flex-col items-center justify-center p-4 w-full max-w-4xl mx-auto space-y-4">
         {/* Banner */}
         <div className="text-sm font-mono text-center text-slate-200 px-4 py-2 bg-slate-900/80 border border-slate-700/60 rounded-xl w-full">
           {message}
         </div>
 
-        {/* Tree Topology Canvas */}
-        <div className="w-full flex items-center justify-center p-8 bg-slate-950 border border-slate-800 rounded-2xl min-h-[260px] shadow-2xl overflow-x-auto">
-          {renderNode(root)}
+        {/* Tree Topology Canvas: real parent-child edges via TreeStage */}
+        <div className="w-full flex items-center justify-center p-2 bg-slate-950 border border-slate-800 rounded-2xl min-h-[260px] shadow-2xl overflow-x-auto">
+          <TreeStage
+            state={{
+              nodes: flatNodes,
+              message: inspected ? `Inspecting node ${inspected.value}` : undefined,
+            }}
+            projection={projection}
+          />
         </div>
 
         {/* Properties Matrix */}
@@ -513,6 +570,7 @@ def is_perfect(root):
           <div>• <span className="text-white font-bold">Full:</span> Every node has 0 or 2 children.</div>
           <div>• <span className="text-white font-bold">Complete:</span> All levels filled except bottom, which is left-aligned. Can be packed into array index 2i+1, 2i+2.</div>
           <div>• <span className="text-white font-bold">Perfect:</span> All internal nodes have 2 children, all leaves at identical depth. Exactly 2^(H+1) - 1 nodes.</div>
+          <div>• <span className="text-white font-bold">Balanced (AVL):</span> For every node, the left and right subtree heights differ by at most 1.</div>
           <div>• <span className="text-white font-bold">Degenerate:</span> Every parent has only 1 child; degrades search to O(N).</div>
         </div>
       </div>

@@ -18,6 +18,14 @@ export function generateReversedArray(size: number = 10): number[] {
   return generateSortedArray(size).reverse();
 }
 
+/** Sorted array rotated by a random non-zero offset: valid input for rotated binary search. */
+export function generateRotatedSortedArray(size: number = 10): number[] {
+  const sorted = generateSortedArray(size);
+  if (sorted.length <= 1) return sorted;
+  const pivot = 1 + Math.floor(Math.random() * (sorted.length - 1));
+  return [...sorted.slice(pivot), ...sorted.slice(0, pivot)];
+}
+
 export function generateNearlySortedArray(size: number = 10): number[] {
   const arr = generateSortedArray(size);
   // Swap 1 or 2 adjacent pairs

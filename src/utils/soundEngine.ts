@@ -1,3 +1,48 @@
+import type { SoundCue, SoundCueType } from '../core/types';
+
+export interface CueTone {
+  frequency: number;
+  type: OscillatorType;
+  durationSec: number;
+  volume: number;
+}
+
+/**
+ * Maps a frame `soundCue` to a short Web Audio tone. Pure and testable;
+ * `step` returns null because routine steps are already common enough.
+ */
+export function resolveCueTone(cue: SoundCue | undefined | null): CueTone | null {
+  const cueType: SoundCueType | undefined =
+    typeof cue === 'string' ? cue : cue && typeof cue === 'object' ? cue.type : undefined;
+  if (!cueType) return null;
+  switch (cueType) {
+    case 'compare':
+      return { frequency: 520, type: 'triangle', durationSec: 0.05, volume: 0.035 };
+    case 'swap':
+      return { frequency: 330, type: 'square', durationSec: 0.055, volume: 0.035 };
+    case 'pivot':
+      return { frequency: 660, type: 'sine', durationSec: 0.07, volume: 0.045 };
+    case 'select':
+    case 'insert':
+      return { frequency: 590, type: 'triangle', durationSec: 0.05, volume: 0.04 };
+    case 'sorted':
+    case 'success':
+    case 'complete':
+    case 'finish':
+      return { frequency: 784, type: 'sine', durationSec: 0.09, volume: 0.05 };
+    case 'discard':
+    case 'fail':
+      return { frequency: 220, type: 'sawtooth', durationSec: 0.06, volume: 0.03 };
+    case 'pop':
+      return { frequency: 440, type: 'square', durationSec: 0.045, volume: 0.03 };
+    case 'start':
+      return { frequency: 700, type: 'sine', durationSec: 0.06, volume: 0.045 };
+    case 'step':
+    default:
+      return null;
+  }
+}
+
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
@@ -84,8 +129,12 @@ class SoundEngine {
     this.playTone(pentatonicFreqs[index], 'triangle', 0.06, 0.05);
   }
 
-  public playSwapSound() {
-    this.playTone(320, 'square', 0.05, 0.03);
+  /** Plays the tone mapped from a frame's `soundCue` (no-op for routine `step` cues). */
+  public playCue(cue: SoundCue | undefined | null) {
+    const tone = resolveCueTone(cue);
+    if (tone) {
+      this.playTone(tone.frequency, tone.type, tone.durationSec, tone.volume);
+    }
   }
 
   public playCompleteSound() {

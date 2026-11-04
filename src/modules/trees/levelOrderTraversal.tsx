@@ -135,9 +135,10 @@ def level_order(root):
     return result`,
   },
   generateTimeline: (input: number[]) => {
-    // Build tree
+    // Build tree. Ids come from a counter so duplicate values never collide.
+    let nodeSeq = 0;
     const insertBST = (root: TreeInternalNode | null, val: number): TreeInternalNode => {
-      if (!root) return { id: `node-${val}`, val, left: null, right: null };
+      if (!root) return { id: `node-${++nodeSeq}`, val, left: null, right: null };
       if (val < root.val) root.left = insertBST(root.left, val);
       else root.right = insertBST(root.right, val);
       return root;
@@ -152,8 +153,8 @@ def level_order(root):
       x = 350,
       y = 50,
       offset = 120,
-      activeVal?: number,
-      visitedSet = new Set<number>()
+      activeId?: string,
+      visitedSet = new Set<string>()
     ): TreeNode[] => {
       if (!node) return [];
       const res: TreeNode[] = [
@@ -163,24 +164,26 @@ def level_order(root):
           x,
           y,
           status:
-            node.val === activeVal
+            node.id === activeId
               ? 'active'
-              : visitedSet.has(node.val)
+              : visitedSet.has(node.id)
               ? 'sorted'
               : 'default',
+          leftId: node.left ? node.left.id : undefined,
+          rightId: node.right ? node.right.id : undefined,
         },
       ];
       if (node.left) {
-        res.push(...flattenTree(node.left, x - offset, y + 70, offset / 2, activeVal, visitedSet));
+        res.push(...flattenTree(node.left, x - offset, y + 70, offset / 2, activeId, visitedSet));
       }
       if (node.right) {
-        res.push(...flattenTree(node.right, x + offset, y + 70, offset / 2, activeVal, visitedSet));
+        res.push(...flattenTree(node.right, x + offset, y + 70, offset / 2, activeId, visitedSet));
       }
       return res;
     };
 
     const frames: ExecutionFrame<LevelOrderState>[] = [];
-    const visitedSet = new Set<number>();
+    const visitedSet = new Set<string>();
     const visitedLevels: number[][] = [];
 
     if (!root) {
@@ -208,7 +211,7 @@ def level_order(root):
       callStack: [{ name: 'levelOrder', params: { root: root.val }, line: 4, isCurrent: true }],
       conditionEval: { expr: `queue.length > 0`, result: true },
       state: {
-        nodes: flattenTree(root, 350, 50, 120, root.val, visitedSet),
+        nodes: flattenTree(root, 350, 50, 120, root.id, visitedSet),
         visitedLevels: [],
         queueItems: [root.val],
         currentNodeVal: root.val,
@@ -241,7 +244,7 @@ def level_order(root):
 
       for (let i = 0; i < levelSize; ++i) {
         const curr = queue.shift()!;
-        visitedSet.add(curr.val);
+        visitedSet.add(curr.id);
         currentLevel.push(curr.val);
 
         frames.push({
@@ -254,7 +257,7 @@ def level_order(root):
           callStack: [{ name: 'visitNode', params: { val: curr.val }, line: 9, isCurrent: true }],
           conditionEval: { expr: `i < levelSize (${i} < ${levelSize})`, result: true },
           state: {
-            nodes: flattenTree(root, 350, 50, 120, curr.val, visitedSet),
+            nodes: flattenTree(root, 350, 50, 120, curr.id, visitedSet),
             visitedLevels: [...visitedLevels, [...currentLevel]],
             queueItems: queue.map((n) => n.val),
             currentNodeVal: curr.val,
@@ -273,7 +276,7 @@ def level_order(root):
             callStack: [{ name: 'enqueueChild', params: { parent: curr.val, left: curr.left.val }, line: 11, isCurrent: true }],
             conditionEval: { expr: `curr.left !== null`, result: true },
             state: {
-              nodes: flattenTree(root, 350, 50, 120, curr.left.val, visitedSet),
+              nodes: flattenTree(root, 350, 50, 120, curr.left.id, visitedSet),
               visitedLevels: [...visitedLevels, [...currentLevel]],
               queueItems: queue.map((n) => n.val),
               currentNodeVal: curr.val,
@@ -293,7 +296,7 @@ def level_order(root):
             callStack: [{ name: 'enqueueChild', params: { parent: curr.val, right: curr.right.val }, line: 12, isCurrent: true }],
             conditionEval: { expr: `curr.right !== null`, result: true },
             state: {
-              nodes: flattenTree(root, 350, 50, 120, curr.right.val, visitedSet),
+              nodes: flattenTree(root, 350, 50, 120, curr.right.id, visitedSet),
               visitedLevels: [...visitedLevels, [...currentLevel]],
               queueItems: queue.map((n) => n.val),
               currentNodeVal: curr.val,

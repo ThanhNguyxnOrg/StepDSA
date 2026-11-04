@@ -74,11 +74,16 @@ import json
 __stepdsa_frames = []
 __stepdsa_max_steps = 300
 
+class __StepDsaLimitReached(Exception):
+    pass
+
 def __stepdsa_tracer(frame, event, arg):
-    if len(__stepdsa_frames) >= __stepdsa_max_steps:
-        return None
     if frame.f_code.co_filename != '<user_code>':
         return __stepdsa_tracer
+    # Raising from the trace hook aborts the running loop, so an endless loop
+    # cannot freeze the page. Python unsets the trace function when it raises.
+    if len(__stepdsa_frames) >= __stepdsa_max_steps:
+        raise __StepDsaLimitReached()
     
     # Call stack
     curr = frame
@@ -153,6 +158,15 @@ try:
         __script_globals = {'__name__': '__main__'}
         exec("from typing import List, Dict, Set, Tuple, Optional, Any, Union\\nfrom collections import deque, defaultdict, Counter\\nimport math, heapq, bisect, functools", __script_globals)
         exec(__compiled, __script_globals)
+except __StepDsaLimitReached:
+    __stepdsa_frames.append({
+        'codeLine': 1,
+        'explanation': f'Safety limit reached ({__stepdsa_max_steps} steps). Execution paused to protect the browser tab.',
+        'callStack': ['main()'],
+        'variables': {},
+        'array': None,
+        'depth': 0
+    })
 finally:
     sys.settrace(None)
 

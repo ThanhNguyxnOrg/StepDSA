@@ -638,10 +638,10 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] text-slate-500 hidden sm:inline">
                       {selectedLang === 'python'
-                        ? 'Pyodide WebAssembly Sandbox • sys.settrace()'
+                        ? 'Pyodide WebAssembly Runtime • sys.settrace()'
                         : selectedLang === 'cpp'
                         ? 'C++17 Deterministic Simulator + Local g++ CLI'
-                        : 'Native V8 Proxy Sandbox • Line & Pointer Tracking'}
+                        : 'Native V8 Proxy Runner • Line & Pointer Tracking'}
                     </span>
                     <button
                       type="button"
@@ -872,7 +872,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                             onChange={(e) => setCliFlagDev(e.target.checked)}
                             className="rounded border-slate-700"
                           />
-                          <span>--dev (localhost:3000)</span>
+                          <span>--dev (localhost:5173)</span>
                         </label>
                         <label className="flex items-center gap-1.5 cursor-pointer">
                           <input
@@ -984,7 +984,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-emerald-400/90 font-mono text-[11px]">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>100% Client-Side Sandbox</span>
+              <span>100% Client-Side Execution</span>
             </span>
             <span className="text-slate-700 hidden sm:inline">|</span>
             <div className="hidden sm:flex items-center gap-1.5">

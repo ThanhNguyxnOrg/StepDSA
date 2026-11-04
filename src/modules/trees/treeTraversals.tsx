@@ -118,13 +118,15 @@ def postorder(root, res):
     const frames: ExecutionFrame<TreeTraversalState>[] = [];
     const { values, mode } = input;
 
-    // Build BST from values
+    // Build BST from values. Ids come from a counter so duplicate values never collide;
+    // duplicate keys are ignored by the strict < / > comparisons below.
     let root: TreeTraversalInternalNode | null = null;
+    let nodeSeq = 0;
     const bstInsert = (
       node: TreeTraversalInternalNode | null,
       val: number
     ): TreeTraversalInternalNode => {
-      if (!node) return { id: `node-${val}`, val, left: null, right: null };
+      if (!node) return { id: `node-${++nodeSeq}`, val, left: null, right: null };
       if (val < node.val) node.left = bstInsert(node.left, val);
       else if (val > node.val) node.right = bstInsert(node.right, val);
       return node;
@@ -132,14 +134,17 @@ def postorder(root, res):
     values.forEach((v) => {
       root = bstInsert(root, v);
     });
+    const countNodes = (node: TreeTraversalInternalNode | null): number =>
+      node ? 1 + countNodes(node.left) + countNodes(node.right) : 0;
+    const nodeCount = countNodes(root);
 
     const flatten = (
       r: TreeTraversalInternalNode | null,
       x = 350,
       y = 50,
       offset = 120,
-      activeVal?: number,
-      visitedVals: Set<number> = new Set()
+      activeId?: string,
+      visitedVals: Set<string> = new Set()
     ): TreeNode[] => {
       if (!r) return [];
       const current: TreeNode = {
@@ -148,9 +153,9 @@ def postorder(root, res):
         x,
         y,
         status:
-          r.val === activeVal
+          r.id === activeId
             ? 'active'
-            : visitedVals.has(r.val)
+            : visitedVals.has(r.id)
             ? 'sorted'
             : 'default',
         leftId: r.left ? r.left.id : undefined,
@@ -158,31 +163,31 @@ def postorder(root, res):
       };
 
       const leftNodes = r.left
-        ? flatten(r.left, x - offset, y + 65, offset / 1.8, activeVal, visitedVals)
+        ? flatten(r.left, x - offset, y + 65, offset / 1.8, activeId, visitedVals)
         : [];
       const rightNodes = r.right
-        ? flatten(r.right, x + offset, y + 65, offset / 1.8, activeVal, visitedVals)
+        ? flatten(r.right, x + offset, y + 65, offset / 1.8, activeId, visitedVals)
         : [];
 
       return [current, ...leftNodes, ...rightNodes];
     };
 
     const visitedList: number[] = [];
-    const visitedSet = new Set<number>();
+    const visitedSet = new Set<string>();
 
     // Initial frame
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 1,
-      explanation: `Initialized ${mode.toUpperCase()} tree traversal on ${values.length} nodes. Call stack initialized.`,
+      explanation: `Initialized ${mode.toUpperCase()} tree traversal on ${nodeCount} nodes. Call stack initialized.`,
       isMilestone: true,
       milestoneTitle: `Start ${mode.toUpperCase()}`,
       soundCue: { type: 'start' },
-      variables: { mode, totalNodes: values.length, rootVal: (root as any)?.val ?? null },
+      variables: { mode, totalNodes: nodeCount, rootVal: (root as any)?.val ?? null },
       callStack: [{ name: `${mode}Traversal`, params: { mode }, line: 1, isCurrent: true }],
       conditionEval: { expr: `root !== null`, result: Boolean(root) },
-      scopeVariables: { mode, totalNodes: values.length },
+      scopeVariables: { mode, totalNodes: nodeCount },
       state: {
         nodes: flatten(root, 350, 50, 120),
         visitedSequence: [],
@@ -223,7 +228,7 @@ def postorder(root, res):
         conditionEval: { expr: `node !== null`, result: true },
         scopeVariables: { currentNode: node.val, depth },
         state: {
-          nodes: flatten(root, 350, 50, 120, node.val, visitedSet),
+          nodes: flatten(root, 350, 50, 120, node.id, visitedSet),
           visitedSequence: [...visitedList],
           currentMode: mode,
           actionPhase: `Enter Node ${node.val}`,
@@ -232,7 +237,7 @@ def postorder(root, res):
 
       if (mode === 'preorder') {
         visitedList.push(node.val);
-        visitedSet.add(node.val);
+        visitedSet.add(node.id);
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
@@ -246,7 +251,7 @@ def postorder(root, res):
           conditionEval: { expr: `mode == 'preorder'`, result: true },
           scopeVariables: { recorded: node.val, sequence: visitedList.join(' → ') },
           state: {
-            nodes: flatten(root, 350, 50, 120, node.val, visitedSet),
+            nodes: flatten(root, 350, 50, 120, node.id, visitedSet),
             visitedSequence: [...visitedList],
             currentMode: mode,
             actionPhase: `Preorder Record ${node.val}`,
@@ -259,7 +264,7 @@ def postorder(root, res):
 
       if (mode === 'inorder') {
         visitedList.push(node.val);
-        visitedSet.add(node.val);
+        visitedSet.add(node.id);
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
@@ -273,7 +278,7 @@ def postorder(root, res):
           conditionEval: { expr: `mode == 'inorder'`, result: true },
           scopeVariables: { recorded: node.val, sequence: visitedList.join(' → ') },
           state: {
-            nodes: flatten(root, 350, 50, 120, node.val, visitedSet),
+            nodes: flatten(root, 350, 50, 120, node.id, visitedSet),
             visitedSequence: [...visitedList],
             currentMode: mode,
             actionPhase: `Inorder Record ${node.val}`,
@@ -286,7 +291,7 @@ def postorder(root, res):
 
       if (mode === 'postorder') {
         visitedList.push(node.val);
-        visitedSet.add(node.val);
+        visitedSet.add(node.id);
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
@@ -300,7 +305,7 @@ def postorder(root, res):
           conditionEval: { expr: `mode == 'postorder'`, result: true },
           scopeVariables: { recorded: node.val, sequence: visitedList.join(' → ') },
           state: {
-            nodes: flatten(root, 350, 50, 120, node.val, visitedSet),
+            nodes: flatten(root, 350, 50, 120, node.id, visitedSet),
             visitedSequence: [...visitedList],
             currentMode: mode,
             actionPhase: `Postorder Record ${node.val}`,
@@ -321,7 +326,7 @@ def postorder(root, res):
       soundCue: { type: 'complete' },
       variables: { completedSequence: visitedList.join(', '), totalVisited: visitedList.length },
       callStack: [{ name: `${mode}Traversal.done`, params: { count: visitedList.length }, line: 7, isCurrent: true }],
-      conditionEval: { expr: `visitedList.length == totalNodes`, result: true },
+      conditionEval: { expr: `visitedList.length == totalNodes`, result: visitedList.length === nodeCount },
       scopeVariables: { result: visitedList.join(' → ') },
       state: {
         nodes: flatten(root, 350, 50, 120, undefined, visitedSet),

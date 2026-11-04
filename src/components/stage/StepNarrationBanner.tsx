@@ -94,8 +94,6 @@ export function deriveStepIntuition(frame: ExecutionFrame): string {
   return 'Execute the active statement and synchronize pointer positions across the memory stage.';
 }
 
-export const inferVietnameseIntuition = deriveStepIntuition;
-
 export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
   frame,
   compact = false,

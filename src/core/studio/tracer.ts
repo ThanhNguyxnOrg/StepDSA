@@ -139,7 +139,16 @@ export function traceArrayExecution(
       /(?:const|let|var)\s+(arr|nums|input)\s*=\s*\[[\d\s,.-]*\];?/g,
       'var $1 = input;'
     );
-    const runner = new Function('input', `var arr = input; var nums = input;\n${sanitizedCode}`);
+    // Guard every braced loop so loops that never touch the traced array
+    // (e.g. `while (true) {}`) still stop at the step ceiling.
+    const instrumentedCode = sanitizedCode.replace(
+      /((?:while|for)\s*\([^)]*\)|do)\s*\{/g,
+      (match) => `${match}\n  if (++__guard > ${maxSteps}) throw new Error('STEPDSA_MAX_STEPS_REACHED');`
+    );
+    const runner = new Function(
+      'input',
+      `var arr = input; var nums = input; var __guard = 0;\n${instrumentedCode}`
+    );
     runner(proxiedArray);
   } catch (err: any) {
     hasErrorOrLimit = true;

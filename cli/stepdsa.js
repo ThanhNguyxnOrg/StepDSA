@@ -15,7 +15,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
+import vm from 'node:vm';
 import LZString from 'lz-string';
 
 function printBanner() {
@@ -160,11 +161,16 @@ function traceWithProxy(code, initialInput, options = {}) {
       /(?:const|let|var)\s+(arr|nums|input)\s*=\s*\[[\d\s,.-]*\];?/g,
       'var $1 = input;'
     );
-    const runner = new Function('input', `var arr = input; var nums = input;\n${sanitizedCode}`);
-    runner(proxiedArray);
+    // Run in a fresh V8 context with a hard timeout so an infinite loop in user code
+    // can never freeze the CLI (the Proxy alone cannot interrupt a tight loop).
+    vm.runInNewContext(
+      `var arr = input; var nums = input;\n${sanitizedCode}`,
+      { input: proxiedArray, console },
+      { timeout: 2000 }
+    );
   } catch (err) {
-    // If JS execution failed or unsupported syntax, return empty to trigger fallback
-    return [];
+    // Timeouts and unsupported syntax fall back to the deterministic engine.
+    if (frames.length <= 1) return [];
   }
 
   if (frames.length > 1) {
@@ -195,7 +201,13 @@ function traceCppLeetCode(rawContent, metadata, filePath) {
   if (compiler) {
     console.log(`\x1b[32m[C++ Local Compiler]\x1b[0m Verified native ${compiler} on system.`);
     try {
-      execSync(`${compiler} -std=c++17 -fsyntax-only "${filePath}"`, { stdio: 'pipe' });
+      // Argument array (no shell) so a file name can never inject shell commands.
+      const syntaxCheck = spawnSync(compiler, ['-std=c++17', '-fsyntax-only', filePath], {
+        stdio: 'pipe',
+      });
+      if (syntaxCheck.error || syntaxCheck.status !== 0) {
+        throw syntaxCheck.error || new Error(`syntax check exited with code ${syntaxCheck.status}`);
+      }
       console.log(`\x1b[32m[C++ Syntax Check]\x1b[0m 0 compiler syntax errors.`);
     } catch (syntaxErr) {
       console.log(`\x1b[33m[C++ Compiler Output]\x1b[0m Note: standalone syntax validation notice.`);

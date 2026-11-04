@@ -187,6 +187,8 @@ export default function App() {
 
     if (currentFrame.isMilestone) {
       soundEngine.playCompleteSound();
+    } else if (currentFrame.soundCue) {
+      soundEngine.playCue(currentFrame.soundCue);
     } else {
       const elements: any[] = currentFrame.state?.array || [];
       const activeEl = elements.find(

@@ -18,6 +18,7 @@ import {
   generateReversedArray,
   generateFewUniqueArray,
   generateSortedArray,
+  generateRotatedSortedArray,
   parseCustomArray,
 } from '../../utils/arrayGenerators';
 import { AlgorithmModule } from '../../core/types';
@@ -42,6 +43,9 @@ const ARRAY_KEYS = [
 ] as const;
 
 const STRING_KEYS = ['text', 'str', 'expression', 'word'] as const;
+
+// Digit-bucket sorts index their count arrays by value, so negative keys cannot be routed.
+const NON_NEGATIVE_ONLY_IDS = new Set(['counting-sort', 'radix-sort']);
 
 export function detectNumericArrayField(data: any): { key: string | null; values: number[] } | null {
   if (Array.isArray(data) && data.every((x) => typeof x === 'number')) {
@@ -159,7 +163,13 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
   const handleSizeChange = (newSize: number) => {
     setArraySize(newSize);
     setErrorMsg(null);
-    if (isSortedSearch) {
+    if (currentModule.id === 'rotated-sorted-array') {
+      const rotated = generateRotatedSortedArray(newSize);
+      const rotatedTarget = rotated[Math.floor(rotated.length / 2)];
+      setCustomText(rotated.join(', '));
+      setTargetText(String(rotatedTarget));
+      onApplyData(rotated, rotatedTarget);
+    } else if (isSortedSearch) {
       const sorted = generateSortedArray(newSize);
       const midTarget = sorted[Math.floor(sorted.length / 2)];
       setCustomText(sorted.join(', '));
@@ -188,6 +198,13 @@ export const PlaygroundBar: React.FC<PlaygroundBarProps> = ({
       const result = parseCustomArray(customText);
       if (result.error) {
         setErrorMsg(result.error);
+      } else if (
+        NON_NEGATIVE_ONLY_IDS.has(currentModule.id) &&
+        result.data.some((value) => value < 0)
+      ) {
+        setErrorMsg(
+          `${currentModule.title.split('(')[0].trim()} only supports non-negative integers (digit buckets are indexed by value).`
+        );
       } else {
         let parsedTarget: number | undefined = undefined;
         if (isTargetSearch && targetText.trim() !== '') {

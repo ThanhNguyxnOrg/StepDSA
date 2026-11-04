@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Keyboard } from 'lucide-react';
 import { StepDSALogo } from '../brand/StepDSALogo';
 import { usePlatformShortcuts } from '../../utils/platformShortcuts';
@@ -57,13 +57,23 @@ const POINTER_BADGES = [
 
 export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, onClose }) => {
   const shortcuts = usePlatformShortcuts();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const KEYBOARD_SHORTCUTS = [
     { keys: shortcuts.quickSearch, action: 'Open Quick Algorithm Search Palette' },
     { keys: shortcuts.playPause, action: 'Play / Pause automatic execution' },
     { keys: '← →', action: 'Step backward / forward one CPU instruction line' },
-    { keys: `${shortcuts.prevAction} / ${shortcuts.nextAction}`, action: 'Jump backward / forward to next visual milestone' },
+    { keys: `${shortcuts.prevAction} / ${shortcuts.nextAction}`, action: 'Jump backward / forward to the next state mutation or milestone' },
     { keys: shortcuts.reset, action: 'Reset execution to initial state' },
     { keys: `${shortcuts.toggleMute} / ${shortcuts.toggleDock}`, action: 'Toggle audio synthesizer / Toggle right code dock' },
   ];
@@ -89,6 +99,7 @@ export const VisualLegendModal: React.FC<VisualLegendModalProps> = ({ isOpen, on
           </div>
           <button
             onClick={onClose}
+            aria-label="Close Visual Legend"
             className="p-1.5 rounded-lg hover:bg-[#1F2937] text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />

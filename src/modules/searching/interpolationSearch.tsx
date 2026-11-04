@@ -167,7 +167,10 @@ export const interpolationSearchModule: AlgorithmModule<
         },
       });
 
-      if (low === high) {
+      // `low === high` is the singleton case; `arr[low] === arr[high]` means every value in the
+      // window is equal. The loop guard already proved the target lies in that span, so in both
+      // cases a match at `low` is guaranteed and the interpolation fraction would divide by zero.
+      if (low === high || arr[high] === arr[low]) {
         if (arr[low] === target) {
           frames.push({
             stepIndex: frames.length,
@@ -179,7 +182,10 @@ export const interpolationSearchModule: AlgorithmModule<
             callStack,
             conditionEval: { expr: `arr[${low}] === ${target}`, result: true },
             variables: { low, high, target, foundIndex: low },
-            explanation: `Search space narrowed to single index ${low}. Value matches target ${target}!`,
+            explanation:
+              low === high
+                ? `Search space narrowed to single index ${low}. Value matches target ${target}!`
+                : `Active window [${low}..${high}] contains only equal values; target ${target} matches arr[${low}] directly (no interpolation needed).`,
             state: {
               array: arr.map((v, i) => ({
                 id: i,
