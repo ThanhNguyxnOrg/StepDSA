@@ -56,7 +56,7 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
   activeTab: controlledTab,
   onTabChange,
 }) => {
-  const [selectedLang, setSelectedLang] = useState<SupportedLanguage>('python');
+  const [selectedLang, setSelectedLang] = useState<SupportedLanguage>('pseudocode');
   const [copied, setCopied] = useState(false);
   const [internalTab, setInternalTab] = useState<'code' | 'trace' | 'theory'>('code');
   const [showInsightDetails, setShowInsightDetails] = useState(false);
@@ -84,7 +84,7 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
 
   useEffect(() => {
     if (currentTab === 'code' && activeLineRef.current && typeof activeLineRef.current.scrollIntoView === 'function') {
-      activeLineRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      activeLineRef.current.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     }
   }, [resolvedActiveLine, currentTab, selectedLang]);
 
@@ -301,35 +301,38 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
             </div>
           </div>
 
-          {/* Code Lines Scroll Area with Synchronized Line Highlight (guaranteed min-h-[140px]) */}
-          <div className="flex-1 min-h-[140px] overflow-y-auto py-1.5 font-mono text-xs leading-relaxed select-text">
-            {lines.map((lineText, idx) => {
-              const lineNum = idx + 1;
-              const isHighlighted = lineNum === resolvedActiveLine;
+          {/* Code Lines Scroll Area: one shared scrollbar scrolls the whole block
+              (VSCode-style) with synchronized line highlight (min-h-[140px]). */}
+          <div className="flex-1 min-h-[140px] overflow-auto py-1.5 font-mono text-xs leading-relaxed select-text">
+            <div className="min-w-max">
+              {lines.map((lineText, idx) => {
+                const lineNum = idx + 1;
+                const isHighlighted = lineNum === resolvedActiveLine;
 
-              return (
-                <div
-                  key={lineNum}
-                  ref={isHighlighted ? activeLineRef : null}
-                  className={`flex items-start px-3 py-0.5 transition-colors relative ${
-                    isHighlighted
-                      ? 'text-white font-semibold bg-[#10B981]/15 border-l-2 border-[#10B981]'
-                      : 'text-slate-400 hover:bg-[#111827]/60'
-                  }`}
-                >
-                  <span
-                    className={`w-7 shrink-0 text-right pr-3 select-none text-[10px] tabular-nums ${
-                      isHighlighted ? 'text-[#10B981] font-bold' : 'text-slate-600'
+                return (
+                  <div
+                    key={lineNum}
+                    ref={isHighlighted ? activeLineRef : null}
+                    className={`flex items-start px-3 py-0.5 transition-colors relative ${
+                      isHighlighted
+                        ? 'text-white font-semibold bg-[#10B981]/15 border-l-2 border-[#10B981]'
+                        : 'text-slate-400 hover:bg-[#111827]/60'
                     }`}
                   >
-                    {lineNum}
-                  </span>
-                  <pre className="whitespace-pre overflow-x-auto flex-1 font-mono">
-                    <code>{lineText || ' '}</code>
-                  </pre>
-                </div>
-              );
-            })}
+                    <span
+                      className={`w-7 shrink-0 text-right pr-3 select-none text-[10px] tabular-nums ${
+                        isHighlighted ? 'text-[#10B981] font-bold' : 'text-slate-600'
+                      }`}
+                    >
+                      {lineNum}
+                    </span>
+                    <pre className="whitespace-pre flex-1 font-mono">
+                      <code>{lineText || ' '}</code>
+                    </pre>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Live Variable Watch with Before -> After Delta Highlighting & Call Stack */}
