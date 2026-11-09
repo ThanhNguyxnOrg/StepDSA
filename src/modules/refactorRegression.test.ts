@@ -173,6 +173,37 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, [5, 1, 4, 2, 8, 0, 2]).errorCount).toBe(0);
   });
 
+  it('shellsort exposes held-key chains with both guard outcomes and per-shift frames', () => {
+    const mod = moduleById('shellsort');
+    const input = [62, 83, 18, 53, 7, 17, 95, 22, 47, 34];
+    const timeline = mod.generateTimeline(input);
+
+    // The held key lives in the auxiliary slot during the inner scan.
+    const heldKeys = timeline.filter((frame) => frame.state.auxiliary?.type === 'value');
+    expect(heldKeys.length).toBeGreaterThan(0);
+    expect(heldKeys[0].state.auxiliary.name).toBe('temp');
+
+    // Guard frames at line 8 show BOTH outcomes (shift-needed and fits-here).
+    const guardFrames = timeline.filter((frame) => frame.codeLine === 8);
+    expect(guardFrames.length).toBeGreaterThan(0);
+    expect(guardFrames.some((frame) => frame.conditionEval?.result === true)).toBe(true);
+    expect(guardFrames.some((frame) => frame.conditionEval?.result === false)).toBe(true);
+
+    // Shift frames carry the moved value; decrement frames exist per shift.
+    const shiftFrames = timeline.filter((frame) => frame.codeLine === 9);
+    expect(shiftFrames.length).toBeGreaterThan(0);
+    expect(shiftFrames.every((frame) => typeof frame.variables?.shiftedVal === 'number')).toBe(
+      true
+    );
+    expect(timeline.some((frame) => frame.codeLine === 10)).toBe(true);
+    expect(
+      timeline.some((frame) => frame.checkpoint?.id === 'shellsort-first-guard')
+    ).toBe(true);
+
+    expectSorted(arrayValues(timeline[timeline.length - 1]));
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('counting sort visualizes frequency tallies, prefix sums, and duplicate placement slots', () => {
     const mod = moduleById('counting-sort');
     const input = [4, 2, 2, 8, 3, 3, 1];

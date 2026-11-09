@@ -25,7 +25,7 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | selection-sort | ✅ | no-swap guard frame, pedagogy everywhere, first-scan checkpoint |
 | bubble-sort | ✅ | pedagogy + checkpoint, empty-final-pass false-positive fixed (no bogus early-exit) |
 | cocktail-shaker-sort | ✅ | explicit early-exit frame, direction-aware pedagogy, turtle-rescue notes, checkpoint |
-| shellsort | ⬜ | |
+| shellsort | ✅ | held-key auxiliary, per-shift/per-decrement frames, both guard outcomes, gap-chain highlight, checkpoint, code-line fixes |
 | counting-sort | ✅ | pedagogy on all phases, duplicate-slot checkpoint, stability explained per placement |
 | radix-sort | ✅ | per-bucket drain frames (never bulk), drained buckets emptied, collect-order checkpoint |
 | bucket-sort | ✅ | new BucketSortStage (array + range-labelled bucket columns), per-bucket sorted frames, ordered gather, range-invariant checkpoint |
