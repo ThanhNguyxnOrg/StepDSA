@@ -203,6 +203,46 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, input).errorCount).toBe(0);
   });
 
+  it('bucket sort visualizes scatter routing, per-bucket sorting, and ordered gather', () => {
+    const mod = moduleById('bucket-sort');
+    const input = [29, 25, 3, 49, 9, 37, 21, 43];
+    const timeline = mod.generateTimeline(input);
+
+    // Every frame carries the bucket view.
+    for (const frame of timeline) {
+      expect(frame.state.bucketView).toBeTruthy();
+    }
+
+    // Scatter routes by value range: one frame per element.
+    const scatterFrames = timeline.filter((frame) =>
+      frame.state.bucketView.statusLabel?.startsWith('SCATTER ')
+    );
+    expect(scatterFrames.length).toBe(input.length);
+    expect(scatterFrames.some((frame) => frame.state.bucketView.buckets[0].includes(3))).toBe(true);
+    expect(scatterFrames[input.length - 1].state.bucketView.buckets[4]).toContain(49);
+
+    // Per-bucket sorting is explicit, including the sorted snapshot per bucket.
+    expect(
+      timeline.some((frame) => frame.state.bucketView.statusLabel?.startsWith('SORT '))
+    ).toBe(true);
+    expect(
+      timeline.filter((frame) => frame.state.bucketView.statusLabel?.includes('SORTED')).length
+    ).toBeGreaterThan(0);
+
+    // Gather drains ascending buckets, one element per frame.
+    const gatherFrames = timeline.filter((frame) =>
+      frame.state.bucketView.statusLabel?.startsWith('GATHER')
+    );
+    expect(gatherFrames.length).toBe(input.length);
+    expect(
+      timeline.some((frame) => frame.checkpoint?.id === 'bucket-sort-range-invariant')
+    ).toBe(true);
+
+    const finalArray = timeline[timeline.length - 1].state.array.map((el: any) => el.value);
+    expect(finalArray).toEqual([3, 9, 21, 25, 29, 37, 43, 49]);
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('radix sort drains buckets one at a time in ascending order', () => {
     const mod = moduleById('radix-sort');
     const input = [170, 45, 75, 90, 802, 24, 2, 66];

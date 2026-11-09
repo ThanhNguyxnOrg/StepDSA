@@ -28,7 +28,7 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | shellsort | ⬜ | |
 | counting-sort | ✅ | pedagogy on all phases, duplicate-slot checkpoint, stability explained per placement |
 | radix-sort | ✅ | per-bucket drain frames (never bulk), drained buckets emptied, collect-order checkpoint |
-| bucket-sort | ⬜ | bucket funnel view |
+| bucket-sort | ✅ | new BucketSortStage (array + range-labelled bucket columns), per-bucket sorted frames, ordered gather, range-invariant checkpoint |
 | quickselect | ⬜ | reuse quicksort partition patterns |
 | timsort | ⬜ | |
 | introsort | ⬜ | |
