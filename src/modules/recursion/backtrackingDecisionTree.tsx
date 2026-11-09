@@ -155,7 +155,7 @@ function generateTimeline(input: BDTInput): ExecutionFrame<BDTState>[] {
     return nodeIdx;
   }
 
-  push(0, `Backtracking: find subsets of [${items}] that sum to ${target}`, 'init', 'init', undefined, ['backtrackingDecisionTree()'], { items: JSON.stringify(items), target }, { condition: 'start', result: true }, 'step');
+  push(1, `Backtracking: find subsets of [${items}] that sum to ${target}`, 'init', 'init', undefined, ['backtrackingDecisionTree()'], { items: JSON.stringify(items), target }, { condition: 'start', result: true }, 'step');
   backtrack(0, [], 0, 0);
   push(9, 'State-space exploration complete', 'complete', 'complete', undefined, ['backtrackingDecisionTree()'], { target }, { condition: 'complete', result: true }, 'finish', true);
 

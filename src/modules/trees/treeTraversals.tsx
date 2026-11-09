@@ -195,23 +195,27 @@ def postorder(root, res):
       },
     });
 
-    const runTraversal = (node: TreeTraversalInternalNode | null, depth: number) => {
+    const runTraversal = (
+      node: TreeTraversalInternalNode | null,
+      depth: number,
+      branch: string
+    ) => {
       if (!node) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 2,
-          explanation: `Base case: encountered NULL pointer at depth ${depth}. Returning to previous stack frame.`,
+          explanation: `Base case: ${branch} is NULL at depth ${depth}. Returning to previous stack frame.`,
           soundCue: { type: 'step' },
-          variables: { depth, node: 'NULL' },
-          callStack: [{ name: `${mode}Helper`, params: { node: 'null', depth }, line: 2, isCurrent: true }],
+          variables: { depth, node: 'NULL', branch },
+          callStack: [{ name: `${mode}Helper`, params: { node: 'null', branch, depth }, line: 2, isCurrent: true }],
           conditionEval: { expr: `node == null`, result: true },
-          scopeVariables: { depth, node: 'NULL' },
+          scopeVariables: { depth, node: 'NULL', branch },
           state: {
             nodes: flatten(root, 350, 50, 120, undefined, visitedSet),
             visitedSequence: [...visitedList],
             currentMode: mode,
-            actionPhase: 'Base Case (NULL)',
+            actionPhase: `Base Case (NULL ${branch})`,
           },
         });
         return;
@@ -221,12 +225,12 @@ def postorder(root, res):
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 1,
-        explanation: `Entering recursive call for node ${node.val} (depth ${depth}).`,
+        explanation: `Entering recursive call for node ${node.val} (depth ${depth}, via ${branch}).`,
         soundCue: { type: 'compare' },
-        variables: { currentNode: node.val, depth, hasLeft: !!node.left, hasRight: !!node.right },
+        variables: { currentNode: node.val, depth, branch, hasLeft: !!node.left, hasRight: !!node.right },
         callStack: [{ name: `${mode}Helper`, params: { node: node.val, depth }, line: 1, isCurrent: true }],
         conditionEval: { expr: `node !== null`, result: true },
-        scopeVariables: { currentNode: node.val, depth },
+        scopeVariables: { currentNode: node.val, depth, branch },
         state: {
           nodes: flatten(root, 350, 50, 120, node.id, visitedSet),
           visitedSequence: [...visitedList],
@@ -260,7 +264,7 @@ def postorder(root, res):
       }
 
       // Left
-      runTraversal(node.left, depth + 1);
+      runTraversal(node.left, depth + 1, `left child of ${node.val}`);
 
       if (mode === 'inorder') {
         visitedList.push(node.val);
@@ -287,7 +291,7 @@ def postorder(root, res):
       }
 
       // Right
-      runTraversal(node.right, depth + 1);
+      runTraversal(node.right, depth + 1, `right child of ${node.val}`);
 
       if (mode === 'postorder') {
         visitedList.push(node.val);
@@ -314,7 +318,7 @@ def postorder(root, res):
       }
     };
 
-    runTraversal(root, 1);
+    runTraversal(root, 1, 'root of the tree');
 
     frames.push({
       stepIndex: frames.length,

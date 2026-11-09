@@ -45,6 +45,34 @@ export interface InvariantStatus {
   isValid: boolean;
 }
 
+/**
+ * Optional, algorithm-authored teaching context for a single frame.
+ * Modules should fill these in with concrete values from the current state
+ * instead of relying on generic keyword matching in the UI.
+ */
+export interface StepPedagogy {
+  /** What just happened, in one precise sentence. */
+  what?: string;
+  /** Why this operation is correct / necessary at this point. */
+  why?: string;
+  /** What the learner should watch for on the next step. */
+  whatNext?: string;
+}
+
+/**
+ * Optional prediction checkpoint shown before the learner advances.
+ * The answer is deliberately part of the deterministic frame data so tests
+ * can verify that every checkpoint is answerable from the current state.
+ */
+export interface PredictionCheckpoint {
+  id?: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  hint?: string;
+}
+
 export type SoundCueType =
   | 'compare'
   | 'swap'
@@ -95,6 +123,8 @@ export interface ExecutionFrame<TState = any> {
   codeHighlights?: Record<string, number[]>;
   invariantStatus?: InvariantStatus | string;
   invariantNote?: string;
+  pedagogy?: StepPedagogy;
+  checkpoint?: PredictionCheckpoint;
   isMilestone?: boolean;
   milestoneTitle?: string;
   soundCue?: SoundCue;

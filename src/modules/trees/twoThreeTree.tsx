@@ -153,7 +153,7 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
     clearHighlights();
   }
 
-  frames.push(snap(nodes, rootIdx, step++, 0, 0,
+  frames.push(snap(nodes, rootIdx, step++, 0, 1,
     'Begin 2-3 Tree construction', 'init', 'init'));
 
   for (const key of input.keys) {

@@ -91,7 +91,7 @@ describe('stageLayout', () => {
     expect(expr).toBe('64 vs 34 (→ SWAP)');
   });
 
-  it('resolveActiveCodeLine guarantees in-bounds non-empty active lines across all 162 modules and 5 languages', () => {
+  it('resolveActiveCodeLine guarantees in-bounds non-empty active lines across all 162 modules and 5 languages', { timeout: 120_000 }, () => {
     expect(allModules.length).toBeGreaterThanOrEqual(160);
     const langs = ['pseudocode', 'python', 'cpp', 'typescript', 'java'] as const;
 

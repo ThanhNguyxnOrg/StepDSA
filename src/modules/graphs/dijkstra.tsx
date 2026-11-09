@@ -23,6 +23,13 @@ export interface DijkstraState {
   settledOrder: string[];
   currentNode?: string;
   evaluatingEdge?: { from: string; to: string; weight: number; newDist: number; isRelaxed: boolean };
+  /** Predecessor tree: predecessor[v] is the node that gave v its final distance. */
+  predecessor: Record<string, string | null>;
+  /** Edges that belong to the shortest-path tree, not merely edges between settled nodes. */
+  shortestPathEdges: { from: string; to: string }[];
+  /** Source-to-target path highlighted during reconstruction. */
+  pathToTarget?: string[];
+  targetNode?: string;
 }
 
 export interface DijkstraGraphInput {
@@ -220,37 +227,70 @@ def dijkstra(graph, start):
 
     const pq: { node: string; dist: number }[] = [{ node: startNode, dist: 0 }];
     const settledOrder: string[] = [];
+    const targetNode = nodes[nodes.length - 1]?.id ?? startNode;
+    const predecessor: Record<string, string | null> = {};
+    nodes.forEach((n) => {
+      predecessor[n.id] = null;
+    });
+
+    const reconstructPath = (target: string): string[] => {
+      const path: string[] = [];
+      let cursor: string | null = target;
+      const guard = new Set<string>();
+      while (cursor !== null && !guard.has(cursor)) {
+        guard.add(cursor);
+        path.unshift(cursor);
+        const parent: string | null = predecessor[cursor] ?? null;
+        if (parent === null) {
+          return cursor === startNode ? path : [];
+        }
+        cursor = parent;
+      }
+      return [];
+    };
 
     const buildState = (
       currentNode?: string,
-      evalEdge?: { from: string; to: string; weight: number; newDist: number; isRelaxed: boolean }
-    ): DijkstraState => ({
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        label: n.label,
-        x: n.x,
-        y: n.y,
-        dist: distMap[n.id],
-        status: settledSet.has(n.id)
-          ? 'settled'
-          : n.id === currentNode
-          ? 'evaluating'
-          : 'unvisited',
-      })),
-      edges: edges.map((e) => {
-        let status: 'default' | 'evaluating' | 'relaxed' | 'shortest-path' = 'default';
-        if (evalEdge && e.from === evalEdge.from && e.to === evalEdge.to) {
-          status = evalEdge.isRelaxed ? 'relaxed' : 'evaluating';
-        } else if (settledSet.has(e.from) && settledSet.has(e.to)) {
-          status = 'shortest-path';
-        }
-        return { ...e, status };
-      }),
-      priorityQueue: [...pq].sort((a, b) => a.dist - b.dist),
-      settledOrder: [...settledOrder],
-      currentNode,
-      evaluatingEdge: evalEdge,
-    });
+      evalEdge?: { from: string; to: string; weight: number; newDist: number; isRelaxed: boolean },
+      explicitPath?: string[]
+    ): DijkstraState => {
+      const predecessorEdges = Object.entries(predecessor)
+        .filter(([, parent]) => parent !== null)
+        .map(([child, parent]) => ({ from: parent as string, to: child }));
+      const pathToTarget = explicitPath ?? reconstructPath(targetNode);
+      return {
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          label: n.label,
+          x: n.x,
+          y: n.y,
+          dist: distMap[n.id],
+          status: settledSet.has(n.id)
+            ? 'settled'
+            : n.id === currentNode
+            ? 'evaluating'
+            : 'unvisited',
+        })),
+        edges: edges.map((e) => {
+          let status: 'default' | 'evaluating' | 'relaxed' | 'shortest-path' = 'default';
+          if (evalEdge && e.from === evalEdge.from && e.to === evalEdge.to) {
+            status = evalEdge.isRelaxed ? 'relaxed' : 'evaluating';
+          } else if (settledSet.has(e.to) && predecessor[e.to] === e.from) {
+            // Only a settled node's predecessor edge is guaranteed final.
+            status = 'shortest-path';
+          }
+          return { ...e, status };
+        }),
+        priorityQueue: [...pq].sort((a, b) => a.dist - b.dist),
+        settledOrder: [...settledOrder],
+        currentNode,
+        evaluatingEdge: evalEdge,
+        predecessor: { ...predecessor },
+        shortestPathEdges: predecessorEdges,
+        pathToTarget,
+        targetNode,
+      };
+    };
 
     // Frame 0: Init
     frames.push({
@@ -263,6 +303,18 @@ def dijkstra(graph, start):
         label: `dist[${startNode}] = 0 (Global Minimum)`,
         isValid: true,
       },
+      pedagogy: {
+        what: `Only the source has a finite tentative distance: dist[${startNode}] = 0.`,
+        why: 'All edge weights are non-negative, so any path leaving the source costs at least 0.',
+        whatNext: `Extract the minimum entry from the priority queue. It must be (${startNode}, 0).`,
+      },
+      checkpoint: {
+        id: 'dijkstra-first-extract',
+        question: 'Which node must the min-priority queue extract first?',
+        options: [`${startNode} (distance 0)`, 'The node with the largest label', 'A random unvisited node'],
+        correctIndex: 0,
+        explanation: `The source is the only queued node and has distance 0, which is the global minimum.`,
+      },
       state: buildState(),
     });
 
@@ -271,7 +323,23 @@ def dijkstra(graph, start):
       pq.sort((a, b) => a.dist - b.dist);
       const { node: u, dist: d } = pq.shift()!;
 
-      if (settledSet.has(u)) {
+      if (settledSet.has(u) || d > distMap[u]) {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 12,
+          explanation: `Skipped stale priority-queue entry (${u}, ${d}): ${
+            settledSet.has(u) ? 'the node is already settled' : `the current best distance is ${distMap[u]}`
+          }.`,
+          soundCue: 'discard',
+          variables: { staleNode: u, staleDist: d, bestDist: distMap[u], skipped: true },
+          pedagogy: {
+            what: `The heap still contains an outdated entry for ${u}.`,
+            why: 'Lazy deletion keeps the heap simple: stale entries are ignored when popped instead of being removed eagerly.',
+            whatNext: 'Pop the next heap entry; only the smallest current distance matters.',
+          },
+          state: buildState(),
+        });
         continue;
       }
 
@@ -285,10 +353,22 @@ def dijkstra(graph, start):
         explanation: `Popped node '${u}' from Min-Heap with min distance ${d}. Node '${u}' is now permanently settled!`,
         isMilestone: true,
         milestoneTitle: `Settled Node ${u} (dist: ${d})`,
-        variables: { current: u, dist: d, heapSize: pq.length, settledCount: settledSet.size },
+        soundCue: 'sorted',
+        variables: {
+          current: u,
+          dist: d,
+          heapSize: pq.length,
+          settledCount: settledSet.size,
+          predecessor: predecessor[u] ?? 'none',
+        },
         invariantStatus: {
           label: `Optimal shortest path to ${u} confirmed = ${d}`,
           isValid: true,
+        },
+        pedagogy: {
+          what: `The smallest tentative distance is ${d}, so ${u} is finalized.`,
+          why: 'Any alternative route would have to leave the heap with an even smaller key; non-negative weights make that impossible.',
+          whatNext: `Relax each outgoing edge ${u}→v and update predecessor[v] only when the distance strictly improves.`,
         },
         state: buildState(u),
       });
@@ -297,7 +377,23 @@ def dijkstra(graph, start):
       const outgoingEdges = edges.filter((e) => e.from === u);
       for (const edge of outgoingEdges) {
         const v = edge.to;
-        if (settledSet.has(v)) continue;
+        if (settledSet.has(v)) {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 16,
+            explanation: `Edge ${u}→${v} (wt: ${edge.weight}) is skipped because ${v} is already settled with dist ${distMap[v]}.`,
+            soundCue: 'discard',
+            variables: { u, v, weight: edge.weight, skipped: 'settled' },
+            pedagogy: {
+              what: `${v} already has a finalized shortest distance.`,
+              why: 'Relaxing an edge into a settled node cannot improve it, because its distance was already the global minimum when it was extracted.',
+              whatNext: `Continue with the next outgoing edge of ${u}.`,
+            },
+            state: buildState(u),
+          });
+          continue;
+        }
 
         const candidateDist = d + edge.weight;
         const currentDist = distMap[v];
@@ -305,6 +401,7 @@ def dijkstra(graph, start):
 
         if (isRelaxed) {
           distMap[v] = candidateDist;
+          predecessor[v] = u;
           pq.push({ node: v, dist: candidateDist });
         }
 
@@ -313,18 +410,34 @@ def dijkstra(graph, start):
           totalSteps: 1,
           codeLine: 16,
           explanation: isRelaxed
-            ? `⚡ Edge Relaxed: dist[${u}] (${d}) + wt(${edge.weight}) = ${candidateDist} < dist[${v}] (${currentDist === Infinity ? '∞' : currentDist}). Updated dist[${v}] = ${candidateDist}.`
-            : `Edge ${u}→${v} (wt: ${edge.weight}) gives ${candidateDist} >= current dist[${v}] (${currentDist}). No relaxation.`,
+            ? `Edge relaxed: dist[${u}] (${d}) + wt(${edge.weight}) = ${candidateDist} < dist[${v}] (${currentDist === Infinity ? '∞' : currentDist}). Updated dist[${v}] = ${candidateDist} and predecessor[${v}] = ${u}.`
+            : `Edge ${u}→${v} (wt: ${edge.weight}) gives ${candidateDist} >= current dist[${v}] (${currentDist === Infinity ? '∞' : currentDist}). No relaxation; predecessor unchanged.`,
+          soundCue: isRelaxed ? 'swap' : 'compare',
+          isMilestone: isRelaxed,
+          milestoneTitle: isRelaxed ? `Relaxed ${u}→${v} (dist ${candidateDist})` : undefined,
           variables: {
             u,
             v,
             weight: edge.weight,
             candidateDist,
+            previousDist: currentDist === Infinity ? '∞' : currentDist,
             newDist: distMap[v],
+            predecessor: predecessor[v] ?? 'none',
           },
           invariantStatus: {
             label: `Triangular Inequality checked: dist[${u}] + wt(${edge.weight})`,
             isValid: true,
+          },
+          pedagogy: {
+            what: isRelaxed
+              ? `The candidate distance ${candidateDist} beats the old tentative distance ${currentDist === Infinity ? '∞' : currentDist}.`
+              : `The candidate distance ${candidateDist} does not beat the old tentative distance ${currentDist === Infinity ? '∞' : currentDist}.`,
+            why: isRelaxed
+              ? 'A strictly smaller path was found, so dist[v] and the predecessor pointer must be updated together.'
+              : 'Keeping the old path is correct because the new route is no better.',
+            whatNext: isRelaxed
+              ? `Push (${v}, ${candidateDist}) into the heap; it may be extracted later.`
+              : `Continue with the next outgoing edge of ${u}.`,
           },
           state: buildState(u, {
             from: u,
@@ -337,22 +450,69 @@ def dijkstra(graph, start):
       }
     }
 
+    // Post-run path reconstruction: follow predecessor pointers from target to source.
+    // These frames are explicitly labelled as visualization-only; the source snippets
+    // return the distance table, while the predecessor table is built during relaxation.
+    const fullPath = reconstructPath(targetNode);
+    if (fullPath.length > 0) {
+      for (let i = fullPath.length - 1; i >= 0; i--) {
+        const partial = fullPath.slice(i);
+        const current = partial[0];
+        const parent = predecessor[current] ?? null;
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 21,
+          explanation:
+            i === fullPath.length - 1
+              ? `Post-processing visualization (not a new source line): start backtracking at target ${current}. predecessor[${current}] = ${parent ?? 'none'}.`
+              : `Follow predecessor[${current}] = ${parent ?? 'none'}. Partial path to target: [${partial.join(' → ')}].`,
+          soundCue: 'step',
+          variables: {
+            reconstructFrom: current,
+            predecessor: parent ?? 'none',
+            partialPath: partial.join(' → '),
+            note: 'predecessor[] was recorded during relaxation',
+          },
+          pedagogy: {
+            what: `The reconstruction walks backwards from ${current} to ${startNode}.`,
+            why: 'Each predecessor pointer stores the edge that produced the final distance, so the path is recovered without searching again.',
+            whatNext:
+              parent !== null
+                ? `Follow predecessor[${current}] = ${parent}.`
+                : 'The source has been reached; reverse the collected nodes to display source → target.',
+          },
+          state: buildState(undefined, undefined, partial),
+        });
+      }
+    }
+
     // Final frame
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 24,
+      codeLine: 21,
       isMilestone: true,
       milestoneTitle: 'Dijkstra Complete',
       explanation: `All reachable vertices have been settled! Shortest distances from ${startNode}: ${Object.entries(
         distMap
       )
         .map(([k, v]) => `${k}:${v === Infinity ? '∞' : v}`)
-        .join(', ')}.`,
-      variables: { status: 'COMPLETED', totalSettled: settledSet.size },
+        .join(', ')}.${fullPath.length > 0 ? ` Shortest path to ${targetNode}: ${fullPath.join(' → ')}.` : ''}`,
+      soundCue: 'complete',
+      variables: {
+        status: 'COMPLETED',
+        totalSettled: settledSet.size,
+        pathToTarget: fullPath.join(' → ') || 'unreachable',
+      },
       invariantStatus: {
         label: 'All shortest paths globally verified',
         isValid: true,
+      },
+      pedagogy: {
+        what: 'Every reachable node has been extracted once and has a final distance.',
+        why: 'The predecessor tree contains exactly the edges that achieved those distances.',
+        whatNext: 'Compare the settled distances with the highlighted source-to-target path.',
       },
       state: buildState(),
     });
@@ -366,6 +526,10 @@ def dijkstra(graph, start):
 
   renderStage: (frame: ExecutionFrame<DijkstraState>) => {
     const { nodes, edges, priorityQueue, settledOrder, currentNode } = frame.state;
+    const pathToTarget = frame.state.pathToTarget ?? [];
+    const pathEdgeKeys = new Set(
+      pathToTarget.slice(1).map((to, i) => `${pathToTarget[i]}->${to}`)
+    );
 
     return (
       <div className="w-full flex-1 flex flex-col md:flex-row items-center justify-center p-4 gap-4 max-w-5xl mx-auto min-h-[360px]">
@@ -406,6 +570,17 @@ def dijkstra(graph, start):
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#10B981" />
               </marker>
+              <marker
+                id="arrow-path"
+                viewBox="0 0 10 10"
+                refX="27"
+                refY="5"
+                markerWidth="8"
+                markerHeight="8"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#A78BFA" />
+              </marker>
             </defs>
 
             {/* Edges */}
@@ -417,8 +592,15 @@ def dijkstra(graph, start):
               let strokeColor = '#334155';
               let strokeWidth = 2;
               let marker = 'url(#arrow)';
+              let dash: string | undefined;
+              const onTargetPath = pathEdgeKeys.has(`${edge.from}->${edge.to}`);
 
-              if (edge.status === 'relaxed') {
+              if (onTargetPath) {
+                strokeColor = '#A78BFA';
+                strokeWidth = 4;
+                marker = 'url(#arrow-path)';
+                dash = '7 4';
+              } else if (edge.status === 'relaxed') {
                 strokeColor = '#10B981';
                 strokeWidth = 3.5;
                 marker = 'url(#arrow-relaxed)';
@@ -445,6 +627,7 @@ def dijkstra(graph, start):
                     stroke={strokeColor}
                     strokeWidth={strokeWidth}
                     markerEnd={marker}
+                    strokeDasharray={dash}
                     className="transition-colors duration-300"
                   />
                   {/* Weight Badge */}
@@ -492,8 +675,21 @@ def dijkstra(graph, start):
                 strokeWidth = 3;
               }
 
+              const onTargetPath = pathToTarget.includes(node.id);
               return (
                 <g key={node.id} className="cursor-pointer group">
+                  {onTargetPath && (
+                    <circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={27}
+                      fill="none"
+                      stroke="#A78BFA"
+                      strokeWidth={2.5}
+                      strokeDasharray="5 3"
+                      opacity={0.95}
+                    />
+                  )}
                   {/* Outer glow ring for active node */}
                   {node.id === currentNode && (
                     <circle
@@ -616,6 +812,34 @@ def dijkstra(graph, start):
                 );
               })}
             </div>
+          </div>
+
+          {/* Predecessor Path Reconstruction */}
+          <div className="bg-[#111827] border border-[#1F293D] rounded-xl p-3 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-violet-300">
+                <span>↩</span> Predecessor Path
+              </span>
+              <span className="font-mono text-[10px] text-slate-500">
+                target {frame.state.targetNode ?? '—'}
+              </span>
+            </div>
+            {pathToTarget.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1 text-[11px] font-mono text-violet-200">
+                {pathToTarget.map((id, idx) => (
+                  <span key={`${id}-${idx}`} className="flex items-center gap-1">
+                    {idx > 0 && <span className="text-slate-500">→</span>}
+                    <span className="px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/40">
+                      {id}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[11px] font-mono text-slate-500 italic">
+                No complete predecessor chain to target yet
+              </div>
+            )}
           </div>
         </div>
       </div>

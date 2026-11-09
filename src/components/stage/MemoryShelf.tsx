@@ -3,9 +3,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ExecutionFrame } from '../../core/types';
 
 export interface AuxiliaryMemoryData {
-  type: 'map' | 'buffer' | 'set';
+  type: 'map' | 'buffer' | 'set' | 'value';
   name: string;
   data: any;
+  /** Index of the item currently being written/read, for buffer highlighting. */
+  activeIndex?: number;
+  /** Optional short explanation rendered under the shelf title. */
+  note?: string;
 }
 
 export function extractAuxiliaryMemory(frame?: ExecutionFrame | null): AuxiliaryMemoryData | null {
@@ -13,6 +17,24 @@ export function extractAuxiliaryMemory(frame?: ExecutionFrame | null): Auxiliary
 
   // 1. Check frame.state?.auxiliary / buffer / temp
   const stateAux = (frame.state as any)?.auxiliary ?? (frame.state as any)?.buffer ?? (frame.state as any)?.temp;
+  if (
+    stateAux &&
+    typeof stateAux === 'object' &&
+    !Array.isArray(stateAux) &&
+    typeof stateAux.name === 'string' &&
+    'data' in stateAux
+  ) {
+    const type = ['map', 'buffer', 'set', 'value'].includes(stateAux.type)
+      ? stateAux.type
+      : 'map';
+    return {
+      type,
+      name: stateAux.name,
+      data: stateAux.data,
+      activeIndex: stateAux.activeIndex,
+      note: stateAux.note,
+    };
+  }
   if (Array.isArray(stateAux) && stateAux.length > 0) {
     return {
       type: 'buffer',
@@ -106,16 +128,39 @@ export const MemoryShelf: React.FC<MemoryShelfProps> = ({ frame }) => {
           <span className="text-[10px] font-mono text-slate-500">
             {memory.type === 'buffer'
               ? `${memory.data.length} item${memory.data.length > 1 ? 's' : ''}`
+              : memory.type === 'value'
+              ? 'held aside'
               : `${Object.keys(memory.data).length} entr${Object.keys(memory.data).length > 1 ? 'ies' : 'y'}`}
           </span>
         </div>
 
+        {memory.note && (
+          <p className="text-[10px] font-mono text-slate-400 -mt-1 mb-1.5 leading-snug">
+            {memory.note}
+          </p>
+        )}
+
         {/* Content Body */}
-        {memory.type === 'buffer' ? (
+        {memory.type === 'value' ? (
+          <div className="flex items-center gap-2 py-1">
+            <div className="flex flex-col items-center min-w-[48px] px-3 py-1.5 rounded-lg bg-[#0B0F19]/80 border border-amber-500/50 text-amber-200 shadow-sm">
+              <span className="text-base font-mono font-bold leading-none">
+                {typeof memory.data === 'object' && memory.data !== null
+                  ? String(memory.data.value ?? JSON.stringify(memory.data))
+                  : String(memory.data)}
+              </span>
+              <span className="text-[9px] font-mono text-amber-400/80 mt-1">key</span>
+            </div>
+            <span className="text-[10px] font-mono text-slate-400 leading-snug">
+              This value is held in a temporary variable while the array slot is overwritten.
+            </span>
+          </div>
+        ) : memory.type === 'buffer' ? (
           <div className="flex items-center gap-2 overflow-x-auto py-1">
             <AnimatePresence mode="popLayout">
               {memory.data.map((item: any, idx: number) => {
                 const val = typeof item === 'object' && item !== null && 'value' in item ? item.value : item;
+                const isActive = memory.activeIndex === idx;
                 return (
                   <motion.div
                     key={`buf-${idx}-${val}`}
@@ -123,10 +168,16 @@ export const MemoryShelf: React.FC<MemoryShelfProps> = ({ frame }) => {
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.8, opacity: 0 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                    className="flex flex-col items-center min-w-[36px] px-2 py-1 rounded-lg bg-slate-950/80 border border-indigo-500/30 text-indigo-200"
+                    className={`flex flex-col items-center min-w-[36px] px-2 py-1 rounded-lg border ${
+                      isActive
+                        ? 'bg-amber-500/15 border-amber-400/70 text-amber-200 ring-1 ring-amber-400/50'
+                        : 'bg-[#0B0F19]/80 border-indigo-500/30 text-indigo-200'
+                    }`}
                   >
                     <span className="text-xs font-mono font-bold">{String(val)}</span>
-                    <span className="text-[9px] font-mono text-slate-500 mt-0.5">[{idx}]</span>
+                    <span className="text-[9px] font-mono text-slate-500 mt-0.5">
+                      [{idx}]{isActive ? ' ←' : ''}
+                    </span>
                   </motion.div>
                 );
               })}
@@ -142,7 +193,7 @@ export const MemoryShelf: React.FC<MemoryShelfProps> = ({ frame }) => {
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.8, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 border border-indigo-500/30 hover:border-indigo-400/50 transition-colors shadow-xs"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0B0F19]/80 border border-indigo-500/30 hover:border-indigo-400/50 transition-colors shadow-xs"
                 >
                   <span className="text-xs font-mono font-bold text-indigo-300">{key}</span>
                   <span className="text-[10px] font-mono text-slate-500">:</span>

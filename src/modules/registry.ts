@@ -1,4 +1,5 @@
 import { AlgorithmModule } from '../core/types';
+import { withNavigationAnchors } from '../core/navigationAnchors';
 import { quicksortModule } from './sorting/quicksort';
 import { mergesortModule } from './sorting/mergesort';
 import { bubbleSortModule } from './sorting/bubbleSort';
@@ -181,7 +182,7 @@ import { backtrackingDecisionTreeModule } from './recursion/backtrackingDecision
  * the narration (e.g. "empty tree" showing an inserted node). Stages already render a
  * proper empty state, so the raw timelines are used directly.
  */
-export const allModules: AlgorithmModule[] = [
+const curriculumModules: AlgorithmModule[] = [
   quicksortModule,
   mergesortModule,
   insertionSortModule,
@@ -346,6 +347,13 @@ export const allModules: AlgorithmModule[] = [
   quicksortPartitionTreeModule,
   backtrackingDecisionTreeModule,
 ];
+
+/**
+ * Every registered module, wrapped so each generated timeline exposes
+ * deterministic Start/Complete jump targets for time-travel navigation
+ * (see withNavigationAnchors). Curated milestones are preserved untouched.
+ */
+export const allModules: AlgorithmModule[] = curriculumModules.map(withNavigationAnchors);
 
 export const defaultModule = allModules[0];
 

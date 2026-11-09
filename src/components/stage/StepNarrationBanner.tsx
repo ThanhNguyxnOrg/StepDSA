@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { CheckCircle2, AlertTriangle, Lightbulb } from 'lucide-react';
-import { ExecutionFrame } from '../../core/types';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, AlertTriangle, Lightbulb, HelpCircle, ArrowRight } from 'lucide-react';
+import { ExecutionFrame, PredictionCheckpoint } from '../../core/types';
 import { VariableWatcher } from './VariableWatcher';
 
 export interface StepNarrationBannerProps {
@@ -94,6 +94,98 @@ export function deriveStepIntuition(frame: ExecutionFrame): string {
   return 'Execute the active statement and synchronize pointer positions across the memory stage.';
 }
 
+/**
+ * Interactive prediction checkpoint. It never mutates the timeline; it only
+ * asks the learner to commit to an answer before the next frame is revealed.
+ */
+export const PredictionCheckpointCard: React.FC<{
+  checkpoint: PredictionCheckpoint;
+  compact?: boolean;
+}> = ({ checkpoint, compact = false }) => {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    setSelectedIndex(null);
+  }, [checkpoint.id, checkpoint.question]);
+
+  const answered = selectedIndex !== null;
+  const isCorrect = selectedIndex === checkpoint.correctIndex;
+
+  return (
+    <div
+      data-testid="prediction-checkpoint"
+      className={`rounded-lg border border-amber-500/30 bg-amber-500/5 ${
+        compact ? 'px-2 py-1.5' : 'px-3 py-2'
+      }`}
+    >
+      <div className="flex items-start gap-1.5">
+        <HelpCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold text-amber-200 leading-snug">
+            {checkpoint.question}
+          </p>
+          {checkpoint.hint && !answered && (
+            <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{checkpoint.hint}</p>
+          )}
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {checkpoint.options.map((option, idx) => {
+              const isChosen = selectedIndex === idx;
+              const isRight = answered && idx === checkpoint.correctIndex;
+              const isWrongChoice = answered && isChosen && !isRight;
+              return (
+                <button
+                  key={`${option}-${idx}`}
+                  type="button"
+                  onClick={() => setSelectedIndex(idx)}
+                  disabled={answered}
+                  aria-pressed={isChosen}
+                  className={`px-2 py-0.5 rounded border text-[10px] font-mono transition-colors ${
+                    isRight
+                      ? 'border-emerald-400/60 bg-emerald-500/20 text-emerald-200 font-bold'
+                      : isWrongChoice
+                      ? 'border-rose-400/60 bg-rose-500/20 text-rose-200'
+                      : answered
+                      ? 'border-[#1F293D] text-slate-500'
+                      : 'border-[#1F293D] text-slate-300 hover:border-amber-400/50 hover:text-amber-200 cursor-pointer'
+                  }`}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+          {answered && (
+            <p
+              aria-live="polite"
+              className={`mt-1.5 text-[10.5px] leading-snug ${
+                isCorrect ? 'text-emerald-300' : 'text-rose-300'
+              }`}
+            >
+              <strong className="font-mono mr-1">{isCorrect ? 'Correct.' : 'Not quite.'}</strong>
+              {checkpoint.explanation}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PedagogyLine: React.FC<{
+  label: string;
+  text: string;
+  tone: 'what' | 'why' | 'next';
+}> = ({ label, text, tone }) => {
+  const color =
+    tone === 'what' ? 'text-slate-200' : tone === 'why' ? 'text-cyan-300' : 'text-emerald-300';
+  return (
+    <p className="text-[11px] leading-snug">
+      <strong className={`font-mono mr-1 ${color}`}>{label}:</strong>
+      <span className="text-slate-300">{text}</span>
+    </p>
+  );
+};
+
 export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
   frame,
   compact = false,
@@ -103,7 +195,8 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
   if (!frame) return null;
 
   const subtitle = inferIntuitionSubtitle(frame);
-  const intuitionHint = deriveStepIntuition(frame);
+  const pedagogy = frame.pedagogy;
+  const intuitionHint = pedagogy?.why || deriveStepIntuition(frame);
   const guardExpr = frame.conditionEval?.expr || frame.conditionEval?.condition;
 
   if (compact) {
@@ -186,10 +279,28 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
         </div>
 
         {showIntuition && (
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-300 pl-0.5">
-            <strong className="font-mono text-cyan-400 shrink-0">Intuition:</strong>
-            <span className="leading-snug">{intuitionHint}</span>
+          <div className="flex flex-col gap-0.5 pl-0.5">
+            {pedagogy?.what && <PedagogyLine label="What" text={pedagogy.what} tone="what" />}
+            <div className="flex items-start gap-1.5 text-[11px] text-slate-300">
+              <strong className="font-mono text-cyan-400 shrink-0">
+                {pedagogy?.why ? 'Why' : 'Intuition'}:
+              </strong>
+              <span className="leading-snug">{intuitionHint}</span>
+            </div>
+            {pedagogy?.whatNext && (
+              <div className="flex items-start gap-1.5 text-[11px]">
+                <ArrowRight className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
+                <span className="text-slate-300 leading-snug">
+                  <strong className="font-mono text-emerald-300 mr-1">Next:</strong>
+                  {pedagogy.whatNext}
+                </span>
+              </div>
+            )}
           </div>
+        )}
+
+        {frame.checkpoint && (
+          <PredictionCheckpointCard checkpoint={frame.checkpoint} compact />
         )}
       </div>
     );
@@ -276,11 +387,21 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
           {frame.explanation}
         </p>
         {showIntuition && (
-          <p className="text-[11px] text-slate-300 font-sans leading-snug">
-            <strong className="font-mono text-cyan-400 mr-1.5">Why:</strong>
-            <span>{intuitionHint}</span>
-          </p>
+          <div className="space-y-0.5">
+            {pedagogy?.what && <PedagogyLine label="What" text={pedagogy.what} tone="what" />}
+            <p className="text-[11px] text-slate-300 font-sans leading-snug">
+              <strong className="font-mono text-cyan-400 mr-1.5">
+                {pedagogy?.why ? 'Why' : 'Intuition'}:
+              </strong>
+              <span>{intuitionHint}</span>
+            </p>
+            {pedagogy?.whatNext && (
+              <PedagogyLine label="Next" text={pedagogy.whatNext} tone="next" />
+            )}
+          </div>
         )}
+
+        {frame.checkpoint && <PredictionCheckpointCard checkpoint={frame.checkpoint} />}
       </div>
 
       {/* Row 3: Live Variable Watcher */}

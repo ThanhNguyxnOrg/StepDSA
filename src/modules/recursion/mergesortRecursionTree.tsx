@@ -156,9 +156,9 @@ function generateTimeline(input: MRTInput): ExecutionFrame<MRTState>[] {
     return idx;
   }
 
-  push(0, 'Begin Mergesort Recursion Tree', 'init', 'init', undefined, ['mergesortRecursionTree()'], { input: JSON.stringify(input.array) }, { condition: 'start', result: true }, 'step');
+  push(1, 'Begin Mergesort Recursion Tree', 'init', 'init', undefined, ['mergesortRecursionTree()'], { input: JSON.stringify(input.array) }, { condition: 'start', result: true }, 'step');
   mergesort([...input.array], 0);
-  push(9, 'Mergesort complete — all frames resolved', 'complete', 'complete', undefined, ['mergesortRecursionTree()'], { sortedResult: JSON.stringify(nodes[0]?.arr ?? []) }, { condition: 'complete', result: true }, 'finish', true);
+  push(7, 'Mergesort complete — all frames resolved', 'complete', 'complete', undefined, ['mergesortRecursionTree()'], { sortedResult: JSON.stringify(nodes[0]?.arr ?? []) }, { condition: 'complete', result: true }, 'finish', true);
 
   const total = frames.length;
   frames.forEach((f, i) => { f.stepIndex = i; f.totalSteps = total; });

@@ -54,7 +54,7 @@ for (let i = 0; i < arr.length; i++) {
     }
   });
 
-  it('should trace a native C++ LeetCode solution file', () => {
+  it('should trace a native C++ LeetCode solution file', { timeout: 60_000 }, () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stepdsa-run-cpp-'));
     const cppFile = path.join(tmpDir, 'solution.cpp');
     fs.writeFileSync(

@@ -165,7 +165,7 @@ function generateTimeline(input: QPTInput): ExecutionFrame<QPTState>[] {
     return idx;
   }
 
-  push(0, 'Begin Quicksort Partition Tree', 'init', 'init', undefined, ['quicksortPartitionTree()'], { input: JSON.stringify(input.array) }, { condition: 'start', result: true }, 'step');
+  push(1, 'Begin Quicksort Partition Tree', 'init', 'init', undefined, ['quicksortPartitionTree()'], { input: JSON.stringify(input.array) }, { condition: 'start', result: true }, 'step');
   quicksort([...input.array], 0);
   push(10, 'Quicksort complete — partition tree fully resolved', 'complete', 'complete', undefined, ['quicksortPartitionTree()'], { sortedResult: JSON.stringify(nodes[0]?.arr ?? []) }, { condition: 'complete', result: true }, 'finish', true);
 

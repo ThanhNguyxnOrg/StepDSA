@@ -116,6 +116,11 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
       variables: { prev: null, curr: n > 0 ? 0 : null, length: n },
       callStack: [{ name: 'reverseList', params: { head: n > 0 ? initialNodes[0].val : null }, line: 2, isCurrent: true }],
       conditionEval: { expr: `curr !== null`, result: n > 0 },
+      pedagogy: {
+        what: `prev = null and curr points at the original head${n > 0 ? ` (${initialNodes[0].val})` : ''}.`,
+        why: 'The reversed list starts empty; prev becomes the head of the already-reversed prefix as the loop advances.',
+        whatNext: n > 0 ? 'Cache curr.next before changing any pointer.' : 'The list is empty; return null.',
+      },
       state: {
         nodes: JSON.parse(JSON.stringify(initialNodes)),
         prev: null,
@@ -141,6 +146,26 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
         variables: { currIdx: curr, currVal: currentNodes[curr].val, nextIdx: next, prevIdx: prev },
         callStack: [{ name: 'reverseStep', params: { curr: currentNodes[curr].val, next: next !== null ? currentNodes[next].val : null }, line: 4, isCurrent: true }],
         conditionEval: { expr: `curr !== null`, result: true },
+        pedagogy: {
+          what: `next = ${next !== null ? `node(${currentNodes[next].val})` : 'null'} is cached before the pointer flip.`,
+          why: 'Changing curr.next would otherwise destroy the only reference to the rest of the original list.',
+          whatNext: `Redirect curr.next (node ${currentNodes[curr].val}) to prev ${prev !== null ? `node(${currentNodes[prev].val})` : 'null'}.`,
+        },
+        checkpoint:
+          prev === null && curr === 0
+            ? {
+                id: 'reverse-linked-list-first-cache',
+                question: 'Why must curr.next be saved before redirecting it?',
+                options: [
+                  'To keep the unprocessed remainder of the list reachable',
+                  'To sort the node values',
+                  'To update the prev pointer automatically',
+                ],
+                correctIndex: 0,
+                explanation:
+                  'Once curr.next is overwritten with prev, the saved next pointer is the only way to continue to the rest of the original list.',
+              }
+            : undefined,
         state: {
           nodes: JSON.parse(JSON.stringify(currentNodes)),
           prev,
@@ -160,6 +185,11 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
         variables: { currVal: currentNodes[curr].val, newNext: prev !== null ? currentNodes[prev].val : null },
         callStack: [{ name: 'redirectPointer', params: { from: currentNodes[curr].val, to: prev !== null ? currentNodes[prev].val : null }, line: 5, isCurrent: true }],
         conditionEval: { expr: `curr.next = prev`, result: true },
+        pedagogy: {
+          what: `node(${currentNodes[curr].val}).next now points backwards to ${prev !== null ? `node(${currentNodes[prev].val})` : 'null'}.`,
+          why: 'This is the actual reversal: the edge direction flips while the saved next pointer keeps the forward chain available.',
+          whatNext: 'Advance prev to curr, then advance curr to the saved next node.',
+        },
         state: {
           nodes: JSON.parse(JSON.stringify(currentNodes)),
           prev,
@@ -180,6 +210,11 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
         variables: { prevIdx: prev, prevVal: currentNodes[prev].val, currIdx: curr, currVal: curr !== null ? currentNodes[curr].val : null },
         callStack: [{ name: 'advancePointers', params: { prev: currentNodes[prev].val, curr: curr !== null ? currentNodes[curr].val : null }, line: 6, isCurrent: true }],
         conditionEval: { expr: `curr !== null (${curr !== null})`, result: curr !== null },
+        pedagogy: {
+          what: `prev now points at node(${currentNodes[prev].val}); curr points at ${curr !== null ? `node(${currentNodes[curr].val})` : 'null'}.`,
+          why: 'The reversed prefix grows by one node, and the unprocessed suffix shrinks by one node.',
+          whatNext: curr !== null ? 'Repeat: cache next, flip the link, then advance both pointers.' : 'curr is null; return prev as the new head.',
+        },
         state: {
           nodes: JSON.parse(JSON.stringify(currentNodes)),
           prev,
@@ -201,6 +236,11 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
       variables: { newHeadVal: prev !== null ? currentNodes[prev].val : null, isComplete: true },
       callStack: [{ name: 'reverseList', params: { returnVal: prev !== null ? currentNodes[prev].val : null }, line: 8, isCurrent: true }],
       conditionEval: { expr: `curr == null`, result: true },
+      pedagogy: {
+        what: `curr is null, so every original edge has been reversed; prev points at node(${prev !== null ? currentNodes[prev].val : 'null'}).`,
+        why: 'The reversed prefix now contains all nodes, and its head is exactly the last node processed.',
+        whatNext: 'Return prev. The original head is now the tail and points to null.',
+      },
       state: {
         nodes: JSON.parse(JSON.stringify(currentNodes)),
         prev,
@@ -219,10 +259,26 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
   },
   renderStage: (frame: ExecutionFrame<ReverseLLState>) => {
     const { nodes, prev, curr, next } = frame.state;
+    const n = Math.max(nodes.length, 1);
+    const nodeWidth = 66;
+    const gap = 48;
+    const leftPad = 34;
+    const width = Math.max(520, leftPad * 2 + n * nodeWidth + (n - 1) * gap);
+    const y = 108;
+    const nodeX = (idx: number) => leftPad + idx * (nodeWidth + gap);
+
+    const pointerBadge = (idx: number) => {
+      const badges: { label: string; color: string }[] = [];
+      if (prev === idx) badges.push({ label: 'prev', color: '#10B981' });
+      if (curr === idx) badges.push({ label: 'curr', color: '#F59E0B' });
+      if (next === idx) badges.push({ label: 'next', color: '#38BDF8' });
+      return badges;
+    };
+
     return (
-      <div className="flex flex-col items-center justify-center p-6 w-full min-h-[340px]">
+      <div className="flex flex-col items-center justify-center p-4 w-full min-h-[340px]">
         {/* Pointer Legend Badges */}
-        <div className="flex items-center gap-6 mb-6">
+        <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
             <span className="text-xs font-mono text-emerald-300">prev: {prev !== null ? nodes[prev]?.val : 'null'}</span>
@@ -237,42 +293,163 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
           </div>
         </div>
 
-        {/* Nodes and Links */}
-        <div className="flex flex-wrap items-center justify-center gap-4 max-w-4xl">
-          {nodes.map((node, idx) => {
-            const isPrev = prev === idx;
-            const isCurr = curr === idx;
-            const isNext = next === idx;
+        {/* Spatial list view: node positions stay stable; arrows show the actual next pointers. */}
+        <div className="w-full max-w-5xl overflow-x-auto bg-[#111827]/60 border border-[#1F293D] rounded-2xl p-3">
+          <svg
+            viewBox={`0 0 ${width} 230`}
+            className="w-full h-[230px]"
+            style={{ minWidth: `${Math.min(width, 920)}px` }}
+            role="img"
+            aria-label="Linked list pointer diagram"
+          >
+            <defs>
+              <marker id="ll-arrow-forward" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748B" />
+              </marker>
+              <marker id="ll-arrow-reversed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#34D399" />
+              </marker>
+              <marker id="ll-arrow-cached" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#38BDF8" />
+              </marker>
+            </defs>
 
-            let borderColor = 'border-slate-700 bg-slate-900/80';
-            if (isCurr) borderColor = 'border-amber-400 bg-amber-950/40 ring-2 ring-amber-400';
-            else if (isPrev) borderColor = 'border-emerald-500 bg-emerald-950/40';
-            else if (isNext) borderColor = 'border-sky-400 bg-sky-950/30';
+            {/* Edges are drawn from the actual nextIndex values, not from array order. */}
+            {nodes.map((node, idx) => {
+              const x1 = nodeX(idx) + nodeWidth / 2;
+              if (node.nextIndex === null) {
+                return (
+                  <g key={`null-${node.id}`}>
+                    <line
+                      x1={x1}
+                      y1={y + 26}
+                      x2={x1}
+                      y2={y + 52}
+                      stroke="#64748B"
+                      strokeWidth="2"
+                      strokeDasharray="3 3"
+                    />
+                    <text x={x1} y={y + 68} textAnchor="middle" fill="#94A3B8" fontSize="11" fontFamily="monospace">
+                      null
+                    </text>
+                  </g>
+                );
+              }
 
-            return (
-              <div key={node.id} className="flex items-center gap-3">
-                <div className={`relative flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 transition-all duration-200 ${borderColor}`}>
-                  <span className="text-xl font-bold font-mono text-white">{node.val}</span>
-                  <span className="text-[10px] text-slate-400 font-mono mt-1">idx: {idx}</span>
-                  
-                  {/* Floating pointer tag */}
-                  <div className="absolute -top-3 flex gap-1">
-                    {isPrev && <span className="bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">PREV</span>}
-                    {isCurr && <span className="bg-amber-600 text-white text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">CURR</span>}
-                    {isNext && <span className="bg-sky-600 text-white text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">NEXT</span>}
-                  </div>
-                </div>
+              const target = node.nextIndex;
+              const x2 = nodeX(target) + nodeWidth / 2;
+              const isReversed = target < idx;
+              const isCached = next !== null && target === next && curr === idx;
+              const midY = isReversed ? 38 : 182;
+              const controlY = isReversed ? 16 : 212;
+              const path = `M ${x1} ${y + (isReversed ? -26 : 26)} Q ${(x1 + x2) / 2} ${controlY} ${x2} ${y + (isReversed ? -26 : 26)}`;
+              const stroke = isReversed ? '#34D399' : isCached ? '#38BDF8' : '#64748B';
+              const marker = isReversed
+                ? 'url(#ll-arrow-reversed)'
+                : isCached
+                ? 'url(#ll-arrow-cached)'
+                : 'url(#ll-arrow-forward)';
 
-                {/* Pointer indicator */}
-                <div className="flex flex-col items-center justify-center">
-                  <span className="text-xs font-mono text-slate-400 mb-0.5">
-                    {node.nextIndex !== null ? `→ [${node.nextIndex}]` : '→ ∅'}
-                  </span>
-                  <div className="w-8 h-0.5 bg-slate-600"></div>
-                </div>
-              </div>
-            );
-          })}
+              return (
+                <g key={`edge-${node.id}`}>
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke={stroke}
+                    strokeWidth={isReversed ? 2.8 : 2}
+                    markerEnd={marker}
+                    opacity={0.95}
+                  />
+                  <text
+                    x={(x1 + x2) / 2}
+                    y={midY}
+                    textAnchor="middle"
+                    fill={stroke}
+                    fontSize="9"
+                    fontFamily="monospace"
+                  >
+                    {isReversed ? `reversed → ${nodes[target]?.val}` : `next → ${nodes[target]?.val}`}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Nodes */}
+            {nodes.map((node, idx) => {
+              const x = nodeX(idx);
+              const isPrev = prev === idx;
+              const isCurr = curr === idx;
+              const isNext = next === idx;
+              const fill = isCurr ? '#78350F' : isPrev ? '#064E3B' : isNext ? '#0C4A6E' : '#111827';
+              const stroke = isCurr ? '#F59E0B' : isPrev ? '#10B981' : isNext ? '#38BDF8' : '#475569';
+
+              return (
+                <g key={node.id}>
+                  <rect
+                    x={x}
+                    y={y - 26}
+                    width={nodeWidth}
+                    height={52}
+                    rx={10}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={isCurr || isPrev || isNext ? 3 : 1.8}
+                  />
+                  <text
+                    x={x + nodeWidth / 2}
+                    y={y + 4}
+                    textAnchor="middle"
+                    fill="#F8FAFC"
+                    fontSize="16"
+                    fontWeight="bold"
+                    fontFamily="monospace"
+                  >
+                    {node.val}
+                  </text>
+                  <text
+                    x={x + nodeWidth / 2}
+                    y={y + 19}
+                    textAnchor="middle"
+                    fill="#94A3B8"
+                    fontSize="8.5"
+                    fontFamily="monospace"
+                  >
+                    idx {idx}
+                  </text>
+
+                  {pointerBadge(idx).map((badge, badgeIdx) => (
+                    <g key={badge.label}>
+                      <rect
+                        x={x + 4 + badgeIdx * 22}
+                        y={y - 46}
+                        width={20}
+                        height={13}
+                        rx={3}
+                        fill={badge.color}
+                      />
+                      <text
+                        x={x + 14 + badgeIdx * 22}
+                        y={y - 36.5}
+                        textAnchor="middle"
+                        fill="#0B0F19"
+                        fontSize="7"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        {badge.label}
+                      </text>
+                    </g>
+                  ))}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-4 mt-3 text-[10px] font-mono text-slate-400">
+          <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-emerald-400 inline-block" /> reversed edge</span>
+          <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-sky-400 inline-block" /> cached next edge</span>
+          <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-slate-500 inline-block" /> untouched edge</span>
         </div>
       </div>
     );

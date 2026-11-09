@@ -91,6 +91,19 @@ export const insertionSortModule: AlgorithmModule<number[], ArrayStageState> = {
     const frames: ExecutionFrame<ArrayStageState>[] = [];
     const arr = [...input];
     const n = arr.length;
+    let checkpointAdded = false;
+
+    const keyAuxiliary = (key: number, i: number) => ({
+      type: 'value' as const,
+      name: 'key',
+      data: key,
+      note: `arr[${i}] was copied into key; index [${i}] is now free to overwrite.`,
+    });
+
+    const callStackAt = (line: number, params: Record<string, any> = {}) => [
+      { name: 'insertionSort(arr)', params: { n, ...params }, line, isCurrent: true },
+      { name: 'main()', params: {}, line: 1 },
+    ];
 
     // Step 0: Initial frame
     frames.push({
@@ -98,10 +111,12 @@ export const insertionSortModule: AlgorithmModule<number[], ArrayStageState> = {
       totalSteps: 1,
       codeLine: 1,
       explanation: 'Array loaded. Subarray arr[0..0] is trivially sorted.',
-      callStack: [
-        { name: 'insertionSort(arr)', params: { n, i: 1 }, line: 1, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
+      pedagogy: {
+        what: `The sorted prefix is just arr[0] = ${arr[0] ?? '∅'}.`,
+        why: 'A one-element prefix can never violate sorted order, so it is a valid base case.',
+        whatNext: 'Take the next element as key and compare it with the element immediately to its left.',
+      },
+      callStack: callStackAt(1, { i: 1 }),
       variables: { n, i: 1 },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: idx === 0 ? 'sorted' : 'default' })),
@@ -117,28 +132,27 @@ export const insertionSortModule: AlgorithmModule<number[], ArrayStageState> = {
       const key = arr[i];
       let j = i - 1;
 
-      // Frame: pick key
+      // Frame: pick key and remember the hole it leaves behind.
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Picked key = ${key} at index [${i}]. Searching insertion point in sorted prefix arr[0..${i - 1}].`,
-        callStack: [
-          { name: 'insertionSort(arr)', params: { i, key, j }, line: 4, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { i, key, j },
-        conditionEval: {
-          expr: `i < ${n}`,
-          result: true,
+        explanation: `Picked key = ${key} at index [${i}]. The prefix arr[0..${i - 1}] is already sorted; find where key belongs.`,
+        pedagogy: {
+          what: `key = arr[${i}] = ${key} is copied into a temporary variable.`,
+          why: 'The slot at index i may be overwritten while larger prefix values shift right, so key must be saved first.',
+          whatNext: `Compare key with arr[${j}]${j >= 0 ? ` = ${arr[j]}` : ''} to decide whether another shift is needed.`,
         },
+        callStack: callStackAt(4, { i, key, j }),
+        variables: { i, key, j },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
             value: v,
             status: idx < i ? 'sorted' : idx === i ? 'pivot' : 'default',
           })),
-          pointers: { key: i, j },
+          pointers: { i, j },
+          auxiliary: keyAuxiliary(key, i),
         },
         invariantStatus: {
           isValid: true,
@@ -146,97 +160,167 @@ export const insertionSortModule: AlgorithmModule<number[], ArrayStageState> = {
         },
       });
 
-      while (j >= 0 && arr[j] > key) {
-        // Frame: compare arr[j] > key
+      // Frame: initialize j = i - 1.
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        explanation: `Set j = ${j}. Scan the sorted prefix from right to left looking for the first value <= key.`,
+        pedagogy: {
+          what: `j points at the last element of the sorted prefix: arr[${j}]${j >= 0 ? ` = ${arr[j]}` : ''}.`,
+          why: 'Scanning backwards visits candidates in decreasing index order, so the first value <= key marks the insertion boundary.',
+          whatNext: 'Evaluate the loop guard j >= 0 && arr[j] > key.',
+        },
+        callStack: callStackAt(5, { i, key, j }),
+        variables: { i, key, j },
+        state: {
+          array: arr.map((v, idx) => ({
+            id: idx,
+            value: v,
+            status: idx < i ? 'sorted' : idx === i ? 'pivot' : 'default',
+          })),
+          pointers: { i, j },
+          auxiliary: keyAuxiliary(key, i),
+        },
+      });
+
+      // Evaluate the real loop guard on every iteration, including the exit case.
+      while (true) {
+        const jInBounds = j >= 0;
+        const valueAtJ = jInBounds ? arr[j] : undefined;
+        const isGreater = jInBounds && valueAtJ! > key;
+        const guardResult = jInBounds && isGreater;
+
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 6,
-          explanation: `arr[${j}] (${arr[j]}) > key (${key}). Shifting arr[${j}] right to [${j + 1}].`,
-          callStack: [
-            { name: 'insertionSort(arr)', params: { i, key, j, 'arr[j]': arr[j] }, line: 6, isCurrent: true },
-            { name: 'main()', params: {}, line: 1 },
-          ],
-          variables: { i, key, j, 'arr[j]': arr[j] },
-          conditionEval: {
-            expr: `arr[${j}] (${arr[j]}) > key (${key})`,
-            result: true,
+          explanation: !jInBounds
+            ? `j = ${j} is out of bounds, so the scan stops. key = ${key} belongs at index 0.`
+            : isGreater
+            ? `arr[${j}] (${valueAtJ}) > key (${key}). Shift arr[${j}] one slot right.`
+            : `arr[${j}] (${valueAtJ}) <= key (${key}). The insertion boundary is index ${j + 1}.`,
+          pedagogy: {
+            what: !jInBounds
+              ? 'The left boundary was crossed; no smaller prefix element exists.'
+              : isGreater
+              ? `The guard is true because ${valueAtJ} > ${key}.`
+              : `The guard is false because ${valueAtJ} <= ${key}.`,
+            why: 'The prefix is sorted, so once a value <= key is found, every earlier value is also <= key and can stay in place.',
+            whatNext: guardResult
+              ? `Write arr[${j}] into arr[${j + 1}], then decrement j.`
+              : `Insert key at index ${j + 1} and stop scanning.`,
           },
+          callStack: callStackAt(6, { i, key, j }),
+          variables: { i, key, j, 'arr[j]': valueAtJ ?? '∅' },
+          conditionEval: {
+            expr: `j >= 0 && arr[${j}] > ${key}`,
+            result: guardResult,
+          },
+          checkpoint:
+            i === 1 && !checkpointAdded
+              ? {
+                  id: 'insertion-sort-first-compare',
+                  question: guardResult
+                    ? `key = ${key} and arr[0] = ${valueAtJ}. What should happen next?`
+                    : `key = ${key} and arr[0] = ${valueAtJ}. What should happen next?`,
+                  options: guardResult
+                    ? ['Shift arr[0] right', 'Insert key at index 1 immediately', 'Swap key with arr[0]']
+                    : ['Insert key at index 1', 'Shift arr[0] right', 'Keep scanning left'],
+                  correctIndex: 0,
+                  explanation: guardResult
+                    ? `Because arr[0] > key, arr[0] moves right to index 1 and the scan continues left.`
+                    : `Because arr[0] <= key, the prefix is already ordered; key is inserted at index 1.`,
+                }
+              : undefined,
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
               value: v,
               status: idx === j ? 'comparing' : idx === i ? 'pivot' : idx < i ? 'sorted' : 'default',
             })),
-            pointers: { key: i, j },
+            pointers: { j },
+            auxiliary: keyAuxiliary(key, i),
           },
         });
+        if (i === 1) checkpointAdded = true;
 
-        // Perform shift
+        if (!guardResult) break;
+
+        // Perform shift: this creates a deliberate duplicate; key is still held aside.
         arr[j + 1] = arr[j];
-
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 7,
-          explanation: `Shifted value ${arr[j]} into position [${j + 1}]. Decrementing j.`,
-          callStack: [
-            { name: 'insertionSort(arr)', params: { i, key, j: j - 1 }, line: 7, isCurrent: true },
-            { name: 'main()', params: {}, line: 1 },
-          ],
-          variables: { i, key, j: j - 1 },
+          explanation: `Copied arr[${j}] (${arr[j]}) into arr[${j + 1}]. Index [${j}] now holds a duplicate that will be overwritten or filled by key.`,
+          pedagogy: {
+            what: `arr[${j + 1}] now contains ${arr[j]}, temporarily duplicating the value at arr[${j}].`,
+            why: 'Shifting right opens a hole at index j without losing any prefix value.',
+            whatNext: `Decrement j to ${j - 1} and compare the next value with key.`,
+          },
+          soundCue: 'swap',
+          callStack: callStackAt(7, { i, key, j }),
+          variables: { i, key, j, shiftedValue: arr[j], writeTo: j + 1 },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
               value: v,
-              status: idx === j + 1 ? 'active' : idx < i ? 'sorted' : 'default',
+              status:
+                idx === j + 1
+                  ? 'active'
+                  : idx === j
+                  ? 'comparing'
+                  : idx < i
+                  ? 'sorted'
+                  : 'default',
             })),
-            pointers: { key: i, j: j - 1 },
+            pointers: { j, write: j + 1 },
+            auxiliary: keyAuxiliary(key, i),
           },
         });
 
         j--;
-      }
-
-      // Check condition exit
-      if (j >= 0) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 6,
-          explanation: `arr[${j}] (${arr[j]}) <= key (${key}). Found insertion slot at [${j + 1}].`,
-          callStack: [
-            { name: 'insertionSort(arr)', params: { i, key, insertAt: j + 1 }, line: 6, isCurrent: true },
-            { name: 'main()', params: {}, line: 1 },
-          ],
-          variables: { i, key, insertAt: j + 1 },
-          conditionEval: {
-            expr: `arr[${j}] > ${key}`,
-            result: false,
+          codeLine: 8,
+          explanation: `Decremented j to ${j}. The hole to fill is now index ${j + 1}.`,
+          pedagogy: {
+            what: `j moved one slot left to ${j}.`,
+            why: 'Each shifted element is already in its final relative position; the hole moves left with j.',
+            whatNext: j >= 0 ? `Compare arr[${j}] = ${arr[j]} with key.` : 'The hole is at index 0; insert key there.',
           },
+          callStack: callStackAt(8, { i, key, j }),
+          variables: { i, key, j },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
               value: v,
-              status: idx <= i ? 'sorted' : 'default',
+              status: idx < i ? 'sorted' : 'default',
             })),
-            pointers: { insertAt: j + 1 },
+            pointers: { j },
+            auxiliary: keyAuxiliary(key, i),
           },
         });
       }
 
-      // Place key
+      // Place key into the final hole.
       arr[j + 1] = key;
-
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 9,
-        explanation: `Inserted key = ${key} into position [${j + 1}]. Prefix arr[0..${i}] is now sorted.`,
-        callStack: [
-          { name: 'insertionSort(arr)', params: { i, placedKey: key, pos: j + 1 }, line: 9, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
+        codeLine: 10,
+        explanation: `Inserted key = ${key} into index [${j + 1}]. Prefix arr[0..${i}] is now sorted.`,
+        pedagogy: {
+          what: `key = ${key} fills the hole at index ${j + 1}.`,
+          why: 'Every value to the right was shifted, and every value to the left is <= key, so the prefix invariant is restored.',
+          whatNext: i + 1 < n ? `Move to i = ${i + 1} and pick the next key.` : 'All elements have been inserted; the array is sorted.',
+        },
+        isMilestone: true,
+        milestoneTitle: `Inserted ${key} at index ${j + 1}`,
+        soundCue: 'sorted',
+        callStack: callStackAt(10, { i, placedKey: key, pos: j + 1 }),
         variables: { i, placedKey: key, pos: j + 1 },
         state: {
           array: arr.map((v, idx) => ({
@@ -257,12 +341,17 @@ export const insertionSortModule: AlgorithmModule<number[], ArrayStageState> = {
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 11,
+      codeLine: 12,
       explanation: 'Insertion Sort completed. Entire array is sorted.',
-      callStack: [
-        { name: 'insertionSort(arr)', params: { status: 'DONE' }, line: 11, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
+      pedagogy: {
+        what: 'The outer loop has inserted every element into the sorted prefix.',
+        why: 'After iteration i = n - 1, the invariant says arr[0..n-1] is sorted, which is the whole array.',
+        whatNext: 'Try the Reversed preset to see the worst-case quadratic shift count.',
+      },
+      isMilestone: true,
+      milestoneTitle: 'Insertion Sort Complete',
+      soundCue: 'complete',
+      callStack: callStackAt(12, { status: 'DONE' }),
       variables: { status: 'COMPLETE' },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),

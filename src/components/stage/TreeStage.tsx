@@ -11,6 +11,8 @@ export interface TreeNode {
   leftId?: string;
   rightId?: string;
   label?: string;
+  /** Optional compact annotation rendered beside the node, e.g. "h2 bf0". */
+  annotation?: string;
 }
 
 export interface TreeStageState {
@@ -273,6 +275,14 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
               {node.childRole === 'root' && (
                 <span className="absolute -top-4 px-1 py-0.2 rounded bg-slate-900 border border-slate-700 text-[8px] font-mono text-cyan-400 uppercase tracking-wider leading-none">
                   ROOT
+                </span>
+              )}
+              {node.annotation && (
+                <span
+                  title={node.annotation}
+                  className="absolute -top-2.5 -right-2 px-1 py-0.2 rounded bg-slate-900/95 border border-slate-600 text-[7.5px] font-mono text-slate-300 whitespace-nowrap leading-none"
+                >
+                  {node.annotation}
                 </span>
               )}
               <span>{node.value}</span>
