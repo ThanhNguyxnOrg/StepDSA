@@ -26,7 +26,7 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | bubble-sort | ✅ | pedagogy + checkpoint, empty-final-pass false-positive fixed (no bogus early-exit) |
 | cocktail-shaker-sort | ✅ | explicit early-exit frame, direction-aware pedagogy, turtle-rescue notes, checkpoint |
 | shellsort | ⬜ | |
-| counting-sort | ⬜ | histogram / cumulative / placement frames |
+| counting-sort | ✅ | pedagogy on all phases, duplicate-slot checkpoint, stability explained per placement |
 | radix-sort | ⬜ | per-digit bucket view |
 | bucket-sort | ⬜ | bucket funnel view |
 | quickselect | ⬜ | reuse quicksort partition patterns |

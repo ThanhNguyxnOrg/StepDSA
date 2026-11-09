@@ -173,6 +173,36 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, [5, 1, 4, 2, 8, 0, 2]).errorCount).toBe(0);
   });
 
+  it('counting sort visualizes frequency tallies, prefix sums, and duplicate placement slots', () => {
+    const mod = moduleById('counting-sort');
+    const input = [4, 2, 2, 8, 3, 3, 1];
+    const timeline = mod.generateTimeline(input);
+
+    // Frequency pass records real before/after tallies (the duplicate 2 reaches 2).
+    expect(
+      timeline.some((frame) => frame.codeLine === 8 && frame.scopeVariables?.updatedFreq === 2)
+    ).toBe(true);
+
+    // Prefix sums turn frequencies into cumulative "last free slot" pointers.
+    const prefixFrames = timeline.filter((frame) => frame.codeLine === 11);
+    expect(prefixFrames.length).toBe(8); // keys 1..8
+    const finalCount = prefixFrames[prefixFrames.length - 1].state.count as number[];
+    expect(Math.max(...finalCount)).toBe(input.length);
+
+    // One placement frame per element; duplicates shrink their block right-to-left.
+    const placedFrames = timeline.filter((frame) => frame.codeLine === 16);
+    expect(placedFrames.length).toBe(input.length);
+    expect(
+      timeline.some((frame) => frame.checkpoint?.id === 'counting-sort-duplicate-slot')
+    ).toBe(true);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.state.output).toEqual([1, 2, 2, 3, 3, 4, 8]);
+    expect(final.state.phase).toBe('done');
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('selection sort exposes the no-swap guard, pedagogy, and a first-scan checkpoint', () => {
     const mod = moduleById('selection-sort');
     // Pass 0 already has the minimum at index 0 (guard false), later passes swap (guard true).

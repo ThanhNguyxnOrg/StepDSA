@@ -186,10 +186,11 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
     };
 
     let step = 0;
+    let checkpointAdded = false;
 
     // Step 0: Initial Frame
-    timeline.push(
-      baseFrame(
+    timeline.push({
+      ...baseFrame(
         step++,
         state,
         3,
@@ -198,8 +199,13 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
         true,
         { N: n, K: maxVal, phase: 'find-max' },
         'start'
-      )
-    );
+      ),
+      pedagogy: {
+        what: `The range of values is [0..${maxVal}], so a count table of ${maxVal + 1} slots can index every possible key directly.`,
+        why: 'No comparisons are needed at all: integer keys act as their own array indices.',
+        whatNext: `Scan the input left to right and tally each value into count[value].`,
+      },
+    });
 
     // Phase 1: Count frequencies
     state.phase = 'count-freq';
@@ -207,9 +213,10 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
       const val = state.original[i];
       state.currOrigIdx = i;
       state.currCountIdx = val;
+      const freqBefore = state.count[val];
 
-      timeline.push(
-        baseFrame(
+      timeline.push({
+        ...baseFrame(
           step++,
           state,
           7,
@@ -218,13 +225,18 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
           false,
           { i, val, currentFreq: state.count[val] },
           'compare'
-        )
-      );
+        ),
+        pedagogy: {
+          what: `Reading arr[${i}] = ${val}; the tally slot count[${val}] currently holds ${freqBefore}.`,
+          why: 'Every occurrence of the same value lands in the identical slot, which is how duplicates are counted in one pass.',
+          whatNext: `Increment count[${val}] to ${freqBefore + 1}.`,
+        },
+      });
 
       state.count[val]++;
 
-      timeline.push(
-        baseFrame(
+      timeline.push({
+        ...baseFrame(
           step++,
           state,
           8,
@@ -233,16 +245,24 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
           i === n - 1,
           { i, val, updatedFreq: state.count[val] },
           'swap'
-        )
-      );
+        ),
+        pedagogy: {
+          what: `count[${val}] is now ${state.count[val]}.`,
+          why: `The table records the frequency of key ${val}: ${freqBefore} occurrence(s) before, ${state.count[val]} after this read.`,
+          whatNext:
+            i < n - 1
+              ? `Continue scanning at index ${i + 1}.`
+              : 'Frequency pass done — compute prefix sums next.',
+        },
+      });
     }
 
     // Phase 2: Prefix sums
     state.phase = 'prefix-sum';
     state.currOrigIdx = null;
 
-    timeline.push(
-      baseFrame(
+    timeline.push({
+      ...baseFrame(
         step++,
         state,
         10,
@@ -250,8 +270,13 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
         'Start prefix sums',
         true,
         { K: maxVal, phase: 'prefix-sum' }
-      )
-    );
+      ),
+      pedagogy: {
+        what: `Every slot count[v] currently holds a raw frequency; duplicates share one slot.`,
+        why: 'A slot alone cannot tell duplicates apart, so the next pass turns each frequency into a cumulative "last free position" pointer.',
+        whatNext: `Sweep left to right: count[i] += count[i-1] starting at i = 1.`,
+      },
+    });
 
     for (let i = 1; i <= maxVal; i++) {
       state.currCountIdx = i;
@@ -259,8 +284,8 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
       const curVal = state.count[i];
       state.count[i] += prevVal;
 
-      timeline.push(
-        baseFrame(
+      timeline.push({
+        ...baseFrame(
           step++,
           state,
           11,
@@ -269,14 +294,22 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
           i === maxVal,
           { i, 'count[i-1]': prevVal, 'count[i]': state.count[i] },
           'step'
-        )
-      );
+        ),
+        pedagogy: {
+          what: `count[${i}] becomes ${state.count[i]}: the frequency of key ${i} (${curVal}) plus everything smaller (${prevVal}).`,
+          why: 'This is the count of elements ≤ i, so count[i] - 1 is the exact 0-indexed slot of the LAST occurrence of key i.',
+          whatNext:
+            i < maxVal
+              ? `Continue to key ${i + 1}.`
+              : 'Prefix sums complete — place elements right-to-left for stability.',
+        },
+      });
     }
 
     // Phase 3: Build output (traverse right-to-left)
     state.phase = 'build-output';
-    timeline.push(
-      baseFrame(
+    timeline.push({
+      ...baseFrame(
         step++,
         state,
         13,
@@ -284,18 +317,24 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
         'Start output placement',
         true,
         { phase: 'build-output' }
-      )
-    );
+      ),
+      pedagogy: {
+        what: 'Prefix sums now reserve one contiguous output block per key.',
+        why: 'Walking the input right-to-left is deliberate: the original last occurrence of a key claims the highest slot, so equal keys keep their input order (stability).',
+        whatNext: `Read arr[${n - 1}] = ${state.original[n - 1]} and compute its slot as count[${state.original[n - 1]}] - 1.`,
+      },
+    });
 
     for (let i = n - 1; i >= 0; i--) {
       const val = state.original[i];
       state.currOrigIdx = i;
       state.currCountIdx = val;
+      const countBefore = state.count[val];
       const targetPos = state.count[val] - 1;
       state.currOutputIdx = targetPos;
 
-      timeline.push(
-        baseFrame(
+      timeline.push({
+        ...baseFrame(
           step++,
           state,
           15,
@@ -304,24 +343,49 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
           false,
           { i, val, targetPos, 'count[val]': state.count[val] },
           'compare'
-        )
-      );
+        ),
+        pedagogy: {
+          what: `arr[${i}] = ${val}; count[${val}] = ${countBefore} points one past the last free slot of this key's block.`,
+          why: 'Prefix sums guarantee every key owns a contiguous range of output slots, so count[val] - 1 is exactly the last free one.',
+          whatNext: `Write ${val} into output[${targetPos}], then shrink the block by decrementing count[${val}].`,
+        },
+      });
 
       state.output[targetPos] = val;
       state.count[val]--;
+      const remaining = state.count[val];
+      const attachCheckpoint = !checkpointAdded && remaining >= 1;
 
-      timeline.push(
-        baseFrame(
+      timeline.push({
+        ...baseFrame(
           step++,
           state,
           16,
-          `Placed ${val} at output[${targetPos}]. Decremented count[${val}] to ${state.count[val]} for previous duplicate instances.`,
+          `Placed ${val} at output[${targetPos}]. Decremented count[${val}] to ${remaining} for previous duplicate instances.`,
           `output[${targetPos}] = ${val}`,
           true,
-          { i, val, targetPos, remainingCount: state.count[val] },
+          { i, val, targetPos, remainingCount: remaining },
           'success'
-        )
-      );
+        ),
+        pedagogy: {
+          what: `${val} now occupies output[${targetPos}]; count[${val}] dropped to ${remaining} so the slot cannot be used twice.`,
+          why: 'Right-to-left placement plus decrement means earlier duplicates from the input claim lower slots, which preserves their relative order.',
+          whatNext:
+            remaining > 0
+              ? `The next ${val} encountered will land at output[${remaining - 1}].`
+              : `All occurrences of ${val} are placed.`,
+        },
+        checkpoint: attachCheckpoint
+          ? {
+              id: 'counting-sort-duplicate-slot',
+              question: `${val} landed at output[${targetPos}] and count[${val}] dropped to ${remaining}. When the scan reaches the next ${val}, which slot will it take?`,
+              options: [`output[${remaining - 1}]`, `output[${targetPos}]`],
+              correctIndex: 0,
+              explanation: `The next placement uses count[${val}] - 1 = ${remaining - 1}, so duplicates fill their block from right to left, keeping stability.`,
+            }
+          : undefined,
+      });
+      if (attachCheckpoint) checkpointAdded = true;
     }
 
     // Phase 4: Done
@@ -330,8 +394,8 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
     state.currCountIdx = null;
     state.currOutputIdx = null;
 
-    timeline.push(
-      baseFrame(
+    timeline.push({
+      ...baseFrame(
         step++,
         state,
         18,
@@ -340,8 +404,13 @@ export const countingSortModule: AlgorithmModule<number[], CountingSortState> = 
         true,
         { status: 'complete', N: n, K: maxVal },
         'complete'
-      )
-    );
+      ),
+      pedagogy: {
+        what: `Output is fully sorted: [${state.output.join(', ')}] — zero element-to-element comparisons were made.`,
+        why: `Placement was pure arithmetic (count[value] - 1), so the cost is bounded by the input size N and value range K, not by log-factors.`,
+        whatNext: `Watch the count table during placement: each key's block shrinks from the right, which is the stability mechanism.`,
+      },
+    });
 
     const total = timeline.length;
     timeline.forEach((f) => {
