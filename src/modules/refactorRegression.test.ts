@@ -173,6 +173,42 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, [5, 1, 4, 2, 8, 0, 2]).errorCount).toBe(0);
   });
 
+  it('timsort exposes natural-run scanning, extension, and per-step merging', () => {
+    const mod = moduleById('timsort');
+    const input = [1, 2, 8, 7, 6, 3, 4, 9];
+    const timeline = mod.generateTimeline(input);
+
+    // Run discovery + descending-run reversal frames exist.
+    expect(timeline.some((frame) => frame.codeLine === 3)).toBe(true);
+    expect(
+      timeline.some((frame) => frame.explanation.includes('Reversed strictly descending'))
+    ).toBe(true);
+
+    // minRun extension guard frame is explicit.
+    expect(
+      timeline.some((frame) => frame.codeLine === 5 && frame.conditionEval?.result === true)
+    ).toBe(true);
+
+    // Merge phase compares step by step, in BOTH outcomes, with a checkpoint.
+    const compares = timeline.filter(
+      (frame) => frame.codeLine === 8 && frame.conditionEval !== undefined
+    );
+    expect(compares.length).toBeGreaterThan(0);
+    expect(compares.some((frame) => frame.conditionEval?.result === true)).toBe(true);
+    expect(compares.some((frame) => frame.conditionEval?.result === false)).toBe(true);
+    expect(timeline.some((frame) => frame.checkpoint?.id === 'timsort-first-merge-compare')).toBe(
+      true
+    );
+
+    // Best case: one natural run covers everything — no merge comparisons at all.
+    const best = mod.generateTimeline([1, 2, 3, 4, 5, 6]);
+    expect(best.some((frame) => frame.explanation.includes('Merge compare'))).toBe(false);
+
+    expectSorted(arrayValues(timeline[timeline.length - 1]));
+    expectSorted(arrayValues(best[best.length - 1]));
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('quickselect visualizes the rank decision, no-op swaps, and one-sided pruning', () => {
     const mod = moduleById('quickselect');
     const input = { array: [7, 10, 4, 3, 20, 15, 8], k: 3 };

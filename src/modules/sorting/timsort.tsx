@@ -125,6 +125,7 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
     }));
 
     const frames: ExecutionFrame<ArrayStageState>[] = [];
+    let checkpointAdded = false;
 
     // Frame 0: Start
     frames.push({
@@ -134,6 +135,11 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
       explanation: `Initialize Timsort on ${n} elements. MinRun target = ${minRun}. Scanning for natural monotonic runs.`,
       variables: { size: n, minRun, array: `[${arr.join(', ')}]` },
       callStack: [{ name: 'timSort()', params: { n, minRun }, line: 2, isCurrent: true }],
+      pedagogy: {
+        what: `Timsort first looks for already-ordered segments ("natural runs") instead of sorting blindly.`,
+        why: 'Real data is often partially sorted; exploiting existing runs is what makes the best case O(N).',
+        whatNext: 'Scan from index 0: measure the first run and its direction (ascending or strictly descending).',
+      },
       state: {
         array: elements.map((e) => ({ ...e })),
         pointers: { scan: 0 },
@@ -165,6 +171,13 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
           { name: 'timSort()', params: { n, minRun }, line: 2 },
         ],
         variables: { start, 'arr[start]': elements[start].value, minRun, direction: isAscending ? 'asc' : 'desc' },
+        pedagogy: {
+          what: `From index ${start} (value ${elements[start].value}) the run direction is ${isAscending ? 'ascending (≥)' : 'strictly descending (<)'}.`,
+          why: 'Descending runs are legal because they can be reversed in place — but only strict descent keeps ties stable.',
+          whatNext: isAscending
+            ? 'Grow the run while values stay non-decreasing.'
+            : 'Grow the run while values strictly decrease, then reverse it to ascending.',
+        },
         state: {
           array: elements.map((e, idx) => ({ ...e, status: idx === start ? 'active' : 'default' })),
           pointers: { scan: start },
@@ -201,6 +214,11 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
               { name: 'timSort()', params: { n }, line: 2 },
             ],
             variables: { reversedRange: `[${start}..${end - 1}]`, newValues: elements.slice(start, end).map((e) => e.value) },
+            pedagogy: {
+              what: `The descending run [${start}..${end - 1}] was reversed into ascending order.`,
+              why: 'Reversing (instead of insertion-sorting) turns a ready-made descending run into a ready-made ascending one for free.',
+              whatNext: 'If this run is still shorter than minRun, extend it with insertion sort.',
+            },
             state: {
               array: elements.map((e, idx) => ({ ...e, status: idx >= start && idx < end ? 'active' : 'default' })),
               pointers: { start, end: end - 1 },
@@ -226,6 +244,11 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
           ],
           variables: { naturalLength: runLen, minRunTarget: minRun, targetEnd },
           conditionEval: { expr: `runLen (${runLen}) < minRun (${minRun})`, result: true },
+          pedagogy: {
+            what: `The natural run has length ${runLen}, below the minRun target ${minRun}.`,
+            why: 'Tiny runs make merging unbalanced; enforcing a minimum size keeps the merge tree near-logarithmic.',
+            whatNext: `Extend the ascending prefix up to index ${targetEnd - 1} using binary insertion sort.`,
+          },
           state: {
             array: elements.map((e, idx) => ({ ...e, status: idx >= start && idx < targetEnd ? 'comparing' : 'default' })),
             pointers: { start, targetEnd: targetEnd - 1 },
@@ -286,6 +309,14 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
           length: runLen,
           stackSize: runs.length,
         },
+        pedagogy: {
+          what: `Run #${runs.length} is finalized: sorted range [${start}..${end - 1}] of length ${runLen}.`,
+          why: 'Every run is an already-ascending block, so the remaining work is pure merging — no element-level sorting later.',
+          whatNext:
+            start + runLen < n
+              ? `Continue scanning for the next natural run at index ${start + runLen}.`
+              : 'All natural runs are stacked — merge them pairwise.',
+        },
         callStack: [
           { name: `pushRun(start=${start})`, params: { start, length: runLen }, line: 6, isCurrent: true },
           { name: 'timSort()', params: { n }, line: 2 },
@@ -323,6 +354,11 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
           AuxRunA: leftArr,
           AuxRunB: rightArr,
         },
+        pedagogy: {
+          what: `Two adjacent sorted runs are merged: A = [${leftArr.join(', ')}] and B = [${rightArr.join(', ')}].`,
+          why: 'Merging two sorted runs is linear and stable — the same reason mergesort works.',
+          whatNext: 'Two pointers walk the runs; each step writes the smaller front value into the target position.',
+        },
         callStack: [{ name: `mergeRuns(${mergeStart}, ${mergeEnd})`, params: { mergeStart, mergeEnd }, line: 8, isCurrent: true }],
         state: {
           array: elements.map((e, idx) => ({
@@ -355,6 +391,24 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
           explanation: `Merge compare: RunA[${pL}]=${lVal} <= RunB[${pR}]=${rVal} is ${pickLeft ? 'TRUE' : 'FALSE'} → write ${chosen} to arr[${targetIdx}].`,
           soundCue: { type: 'swap' },
           conditionEval: { expr: `${lVal} <= ${rVal}`, result: pickLeft },
+          pedagogy: {
+            what: `Heads of the runs: RunA[${pL}] = ${lVal} vs RunB[${pR}] = ${rVal}; ${chosen} is smaller-or-equal and gets written to arr[${targetIdx}].`,
+            why: 'Because each run is sorted, only the two front values can be the next smallest overall — one comparison decides.',
+            whatNext: pickLeft
+              ? `Advance Run A to index ${pL + 1}.`
+              : `Advance Run B to index ${pR + 1}.`,
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'timsort-first-merge-compare',
+                question: `Front values: RunA[${pL}] = ${lVal} and RunB[${pR}] = ${rVal}. Which lands next in the merged output?`,
+                options: [`${lVal} (from Run A)`, `${rVal} (from Run B)`],
+                correctIndex: pickLeft ? 0 : 1,
+                explanation: pickLeft
+                  ? `${lVal} ≤ ${rVal}, so the left run's head is written next (ties prefer the left run, keeping stability).`
+                  : `${rVal} < ${lVal}, so the right run's head is written next.`,
+              }
+            : undefined,
           variables: {
             writeIdx: targetIdx,
             chosenValue: chosen,
@@ -372,6 +426,7 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
             pointers: { write: targetIdx, end: mergeEnd - 1 },
           },
         });
+        checkpointAdded = true;
 
         elements[targetIdx].status = 'sorted';
         if (pickLeft) pL++;
@@ -392,6 +447,11 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
           explanation: `Copy remaining Run A element ${chosen} into arr[${targetIdx}].`,
           soundCue: { type: 'step' },
           variables: { writeIdx: targetIdx, chosenValue: chosen, AuxRunA: leftArr.slice(pL) },
+          pedagogy: {
+            what: `Run B is exhausted; the rest of Run A (${leftArr.length - pL + 1} element(s) left) is copied in order.`,
+            why: 'Remaining values are already sorted and larger than everything written so far, so no comparisons are needed.',
+            whatNext: 'Continue copying until Run A empties.',
+          },
           callStack: [{ name: `flushRunA(idx=${targetIdx})`, params: { chosen }, line: 8, isCurrent: true }],
           state: {
             array: elements.map((e) => ({ ...e })),
@@ -413,6 +473,11 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
           explanation: `Copy remaining Run B element ${chosen} into arr[${targetIdx}].`,
           soundCue: { type: 'step' },
           variables: { writeIdx: targetIdx, chosenValue: chosen, AuxRunB: rightArr.slice(pR) },
+          pedagogy: {
+            what: `Run A is exhausted; the rest of Run B (${rightArr.length - pR + 1} element(s) left) is copied in order.`,
+            why: 'Remaining values are already sorted and larger than everything written so far, so no comparisons are needed.',
+            whatNext: 'Continue copying until Run B empties.',
+          },
           callStack: [{ name: `flushRunB(idx=${targetIdx})`, params: { chosen }, line: 8, isCurrent: true }],
           state: {
             array: elements.map((e) => ({ ...e })),
@@ -432,6 +497,14 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
         milestoneTitle: `Merged [${mergeStart}..${mergeEnd - 1}]`,
         soundCue: { type: 'sorted' },
         variables: { mergedRange: `[${mergeStart}..${mergeEnd - 1}]`, remainingRuns: runs.length },
+        pedagogy: {
+          what: `Runs A and B fused into one sorted run [${mergeStart}..${mergeEnd - 1}]; the stack now holds ${runs.length} run(s).`,
+          why: 'Each merge halves the number of runs, so O(log R) merge levels remain — the logarithmic half of O(N log N).',
+          whatNext:
+            runs.length > 1
+              ? 'Merge the next adjacent pair of runs.'
+              : 'A single run spans the array — fully sorted.',
+        },
         callStack: [{ name: `mergeDone()`, params: { size: r1.len + r2.len }, line: 9, isCurrent: true }],
         state: {
           array: elements.map((e, idx) => ({
@@ -456,6 +529,11 @@ export const timsortModule: AlgorithmModule<number[], ArrayStageState> = {
       variables: {
         totalElements: n,
         finalArray: `[${elements.map((e) => e.value).join(', ')}]`,
+      },
+      pedagogy: {
+        what: `Final array: [${elements.map((e) => e.value).join(', ')}].`,
+        why: 'The cost was dominated by discovering existing order: sorted input needs just one scan (O(N)), adversarial input degenerates to classic O(N log N) merging.',
+        whatNext: 'Try the "Best Case O(N)" preset: a single natural run spans the whole array and nothing is merged.',
       },
       callStack: [{ name: 'complete()', params: { n }, line: 11, isCurrent: true }],
       state: {
