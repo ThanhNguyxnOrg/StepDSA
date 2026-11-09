@@ -203,6 +203,37 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, input).errorCount).toBe(0);
   });
 
+  it('radix sort drains buckets one at a time in ascending order', () => {
+    const mod = moduleById('radix-sort');
+    const input = [170, 45, 75, 90, 802, 24, 2, 66];
+    const timeline = mod.generateTimeline(input);
+
+    // Routing frames expose the extracted digit (the 1s pass routes 170 via digit 0).
+    expect(
+      timeline.some((frame) => frame.codeLine === 8 && frame.scopeVariables?.digit === 0)
+    ).toBe(true);
+
+    // Collect phase: one drain frame per non-empty bucket — never one bulk jump.
+    const drainFrames = timeline.filter((frame) => frame.state.collectBucket !== null);
+    expect(drainFrames.length).toBeGreaterThan(8);
+    expect(
+      timeline.some(
+        (frame) =>
+          frame.codeLine === 10 &&
+          frame.scopeVariables?.bucket === 0 &&
+          frame.state.array.length > 0
+      )
+    ).toBe(true);
+
+    // A drained bucket is genuinely empty — items are never shown twice.
+    const firstDrain = drainFrames[0];
+    expect(firstDrain.state.buckets[0]).toEqual([]);
+
+    expect(timeline.some((frame) => frame.checkpoint?.id === 'radix-collect-order')).toBe(true);
+    expect(timeline[timeline.length - 1].state.array).toEqual([2, 24, 45, 66, 75, 90, 170, 802]);
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('selection sort exposes the no-swap guard, pedagogy, and a first-scan checkpoint', () => {
     const mod = moduleById('selection-sort');
     // Pass 0 already has the minimum at index 0 (guard false), later passes swap (guard true).
