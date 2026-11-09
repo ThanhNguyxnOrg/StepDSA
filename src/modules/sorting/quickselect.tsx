@@ -138,6 +138,7 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
     let high = n - 1;
     const finalPlaced = new Set<number>();
     const frames: ExecutionFrame<ArrayStageState>[] = [];
+    let checkpointAdded = false;
 
     const baseCallStack = [{ name: 'quickselect', params: { k, n }, line: 1, isCurrent: true }];
 
@@ -152,6 +153,11 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
       callStack: baseCallStack,
       conditionEval: { expr: `k >= 0 && k < ${n}`, result: true },
       explanation: `Initialized Quickselect. Searching for target rank k = ${k} (0-indexed). Array size = ${n}.`,
+      pedagogy: {
+        what: `We need the element of rank k = ${k} in [0..${n - 1}] — not a fully sorted array.`,
+        why: 'Partitioning tells us the exact final rank of the pivot, so we can discard half of the search space each round: N + N/2 + N/4 + … = O(N).',
+        whatNext: `Partition the window [${low}..${high}] around the last element as pivot.`,
+      },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: { low, high, targetK: k },
@@ -165,14 +171,46 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 4,
+        codeLine: 13,
+        soundCue: { type: 'step' },
+        variables: { low, high, targetK: k, windowSize: high - low + 1 },
+        callStack: baseCallStack,
+        conditionEval: { expr: `low <= high (${low} <= ${high})`, result: true },
+        explanation: `Search window is [${low}..${high}] (${high - low + 1} element(s)). Rank k = ${k} must lie inside it if it exists.`,
+        pedagogy: {
+          what: `A new iteration starts on window [${low}..${high}].`,
+          why: 'All indices outside this window were proven to be on the wrong side of rank k and can never be the answer.',
+          whatNext: `Pick the window's last element arr[${high}] = ${pivot} as the pivot.`,
+        },
+        state: {
+          array: arr.map((v, idx) => ({
+            id: idx,
+            value: v,
+            status: finalPlaced.has(idx)
+              ? 'sorted'
+              : idx >= low && idx <= high
+              ? 'active'
+              : 'discarded',
+          })),
+          pointers: { low, high, targetK: k },
+        },
+      });
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 3,
         isMilestone: true,
         milestoneTitle: `Pivot ${pivot} Selected`,
         soundCue: { type: 'pivot' },
         variables: { pivot, low, high, targetK: k },
-        callStack: [{ name: 'partition', params: { low, high, pivot }, line: 4, isCurrent: true }],
-        conditionEval: { expr: `low <= high (${low} <= ${high})`, result: true },
+        callStack: [{ name: 'partition', params: { low, high, pivot }, line: 3, isCurrent: true }],
         explanation: `Subarray [${low}..${high}]: Selected pivot arr[${high}] = ${pivot}. Partitioning around pivot.`,
+        pedagogy: {
+          what: `Pivot = ${pivot} (last element of the window).`,
+          why: 'After one partition pass, the pivot sits at its exact global rank — the only fact quickselect needs.',
+          whatNext: `Scan j = ${low}..${high - 1}: everything ≤ ${pivot} moves into the left (≤) partition.`,
+        },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -194,12 +232,19 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 7,
+          codeLine: 6,
           soundCue: { type: 'compare' },
           variables: { 'arr[j]': arr[j], pivot, i, j, isLessOrEqual },
-          callStack: [{ name: 'compare', params: { j, pivot }, line: 7, isCurrent: true }],
+          callStack: [{ name: 'compare', params: { j, pivot }, line: 6, isCurrent: true }],
           conditionEval: { expr: `arr[${j}] <= pivot (${arr[j]} <= ${pivot})`, result: isLessOrEqual },
           explanation: `Comparing arr[${j}] (${arr[j]}) with pivot (${pivot}).`,
+          pedagogy: {
+            what: `Candidate arr[${j}] = ${arr[j]} faces pivot ${pivot}.`,
+            why: 'The left partition holds only values ≤ pivot; this test decides which side of the boundary this element belongs to.',
+            whatNext: isLessOrEqual
+              ? `It belongs left: swap it into slot i = ${i} (if needed) and advance i.`
+              : 'It belongs right: leave it where it is and keep scanning.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -226,17 +271,46 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
-              codeLine: 8,
+              codeLine: 7,
               soundCue: { type: 'swap' },
               variables: { swapped: true, indexA: i, indexB: j, valA: arr[i], valB: arr[j] },
-              callStack: [{ name: 'swap', params: { i, j }, line: 8, isCurrent: true }],
+              callStack: [{ name: 'swap', params: { i, j }, line: 7, isCurrent: true }],
               conditionEval: { expr: `i !== j (${i} !== ${j})`, result: true },
               explanation: `Swapped arr[${i}] (${temp}) with arr[${j}] (${arr[i]}) so smaller element is at left partition.`,
+              pedagogy: {
+                what: `${temp} moved right past ${arr[i]}; the ≤-partition boundary advanced to i = ${i}.`,
+                why: 'Swapping (instead of shifting) keeps the partition loop linear with at most one exchange per element.',
+                whatNext: `Advance i to ${i + 1} and continue the scan at j = ${j + 1}.`,
+              },
               state: {
                 array: arr.map((v, idx) => ({
                   id: idx,
                   value: v,
                   status: idx === i || idx === j ? 'swapping' : idx === high ? 'pivot' : 'default',
+                })),
+                pointers: { low, i, j, high, targetK: k },
+              },
+            });
+          } else {
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 7,
+              soundCue: { type: 'step' },
+              variables: { noSwap: true, i, j, pivot },
+              callStack: [{ name: 'swap', params: { i, j, skipped: true }, line: 7, isCurrent: true }],
+              conditionEval: { expr: `i !== j (${i} === ${j})`, result: false },
+              explanation: `arr[${j}] (${arr[j]}) ≤ pivot and i === j (${i}): the element already sits inside the left partition, so the swap is skipped.`,
+              pedagogy: {
+                what: `The candidate is already exactly where the left partition expects it (i === j = ${i}).`,
+                why: 'The `i !== j` guard avoids a useless self-swap — the same short-circuit a real implementation uses.',
+                whatNext: `Advance i to ${i + 1} and continue scanning.`,
+              },
+              state: {
+                array: arr.map((v, idx) => ({
+                  id: idx,
+                  value: v,
+                  status: idx === j ? 'active' : idx === high ? 'pivot' : 'default',
                 })),
                 pointers: { low, i, j, high, targetK: k },
               },
@@ -252,6 +326,7 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
       arr[high] = temp;
       const pIdx = i;
       finalPlaced.add(pIdx);
+      const attachRankCheckpoint = !checkpointAdded;
 
       frames.push({
         stepIndex: frames.length,
@@ -264,6 +339,36 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
         callStack: [{ name: 'partitionComplete', params: { pIdx, k }, line: 10, isCurrent: true }],
         conditionEval: { expr: `pIdx === k (${pIdx} === ${k})`, result: pIdx === k },
         explanation: `Placed pivot ${arr[pIdx]} at its final sorted rank index ${pIdx}. Comparing pIdx (${pIdx}) with target k (${k}).`,
+        pedagogy: {
+          what: `The pivot ${arr[pIdx]} now sits at global rank ${pIdx} — everything left is ≤ it, everything right is ≥ it.`,
+          why: 'That rank is final: no future operation can move this value, which is why we can discard one side entirely.',
+          whatNext:
+            pIdx === k
+              ? `pIdx equals k = ${k} — this is the answer!`
+              : pIdx < k
+              ? `Rank ${k} is to the RIGHT of ${pIdx}; discard the left side.`
+              : `Rank ${k} is to the LEFT of ${pIdx}; discard the right side.`,
+        },
+        checkpoint: attachRankCheckpoint
+          ? pIdx === k
+            ? {
+                id: 'quickselect-rank-decision',
+                question: `The pivot settled at rank ${pIdx}, and the target is k = ${k}. Is the search over?`,
+                options: ['Yes — the pivot IS the k-th element', 'No — partition the remaining window again'],
+                correctIndex: 0,
+                explanation: `pIdx = ${pIdx} === k: exactly ${k} values are ≤ the pivot, so it is the k-th smallest element.`,
+              }
+            : {
+                id: 'quickselect-rank-decision',
+                question: `The pivot settled at rank ${pIdx}, but the target rank is k = ${k}. Where must the k-th element be?`,
+                options: ['In the left window', 'In the right window'],
+                correctIndex: pIdx < k ? 1 : 0,
+                explanation:
+                  pIdx < k
+                    ? `${pIdx} < ${k}: rank ${k} lies beyond the pivot — keep the right window.`
+                    : `${pIdx} > ${k}: rank ${k} lies before the pivot — keep the left window.`,
+              }
+          : undefined,
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -273,6 +378,7 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
           pointers: { low, high, pIdx, targetK: k },
         },
       });
+      checkpointAdded = true;
 
       if (pIdx === k) {
         frames.push({
@@ -286,6 +392,11 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
           callStack: baseCallStack,
           conditionEval: { expr: `pIdx === k`, result: true },
           explanation: `Rank match found! Pivot index ${pIdx} == k (${k}). The k-th smallest element is ${arr[pIdx]}.`,
+          pedagogy: {
+            what: `The partition placed ${arr[pIdx]} at exactly rank k = ${k}.`,
+            why: 'The left partition contains k smaller-or-equal values, so by definition this element is the k-th smallest.',
+            whatNext: `Total work was N + N/2 + N/4 + … — about 2N comparisons, not a full O(N log N) sort.`,
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -305,10 +416,15 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
           totalSteps: 1,
           codeLine: 18,
           soundCue: { type: 'step' },
-          variables: { pIdx, k, pruneDirection: 'LEFT', newLow: pIdx + 1 },
+          variables: { pIdx, k, pruneDirection: 'RIGHT-KEEP', newLow: pIdx + 1 },
           callStack: baseCallStack,
           conditionEval: { expr: `pIdx < k (${pIdx} < ${k})`, result: true },
           explanation: `pIdx (${pIdx}) < k (${k}): Target lies in right partition. Pruning left half [${low}..${pIdx}]. New low = ${pIdx + 1}.`,
+          pedagogy: {
+            what: `The pivot is smaller than the target rank, so the k-th element must be somewhere to the right.`,
+            why: 'All of [low..pIdx] holds values with ranks < k — none of them can be the answer, so the left side is discarded in one move.',
+            whatNext: `Continue with the window [${pIdx + 1}..${high}].`,
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -325,10 +441,15 @@ export const quickselectModule: AlgorithmModule<{ array: number[]; k: number }, 
           totalSteps: 1,
           codeLine: 20,
           soundCue: { type: 'step' },
-          variables: { pIdx, k, pruneDirection: 'RIGHT', newHigh: pIdx - 1 },
+          variables: { pIdx, k, pruneDirection: 'LEFT-KEEP', newHigh: pIdx - 1 },
           callStack: baseCallStack,
           conditionEval: { expr: `pIdx > k (${pIdx} > ${k})`, result: true },
           explanation: `pIdx (${pIdx}) > k (${k}): Target lies in left partition. Pruning right half [${pIdx}..${high}]. New high = ${pIdx - 1}.`,
+          pedagogy: {
+            what: `The pivot already outranks the target, so the k-th element must be somewhere to the left.`,
+            why: 'All of [pIdx..high] holds values with ranks ≥ pIdx > k — the right side cannot contain the answer.',
+            whatNext: `Continue with the window [${low}..${pIdx - 1}].`,
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,

@@ -173,6 +173,43 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, [5, 1, 4, 2, 8, 0, 2]).errorCount).toBe(0);
   });
 
+  it('quickselect visualizes the rank decision, no-op swaps, and one-sided pruning', () => {
+    const mod = moduleById('quickselect');
+    const input = { array: [7, 10, 4, 3, 20, 15, 8], k: 3 };
+    const timeline = mod.generateTimeline(input);
+
+    // Window-entry + pivot frames exist for every iteration.
+    expect(timeline.some((frame) => frame.codeLine === 13)).toBe(true);
+    expect(
+      timeline.some((frame) => frame.codeLine === 3 && frame.milestoneTitle?.includes('Pivot'))
+    ).toBe(true);
+
+    // Both outcomes of the partition comparison are visible.
+    const compares = timeline.filter((frame) => frame.codeLine === 6);
+    expect(compares.some((frame) => frame.conditionEval?.result === true)).toBe(true);
+    expect(compares.some((frame) => frame.conditionEval?.result === false)).toBe(true);
+
+    // The no-op swap branch (i === j) is explicit instead of hidden.
+    expect(
+      timeline.some((frame) => frame.codeLine === 7 && frame.conditionEval?.result === false)
+    ).toBe(true);
+
+    // The rank-decision checkpoint fires on the first pivot placement.
+    expect(timeline.some((frame) => frame.checkpoint?.id === 'quickselect-rank-decision')).toBe(
+      true
+    );
+
+    // Pruning frames appear when the target rank lies on one side (preset: k = 0).
+    const smallest = mod.generateTimeline({ array: [25, 12, 48, 6, 33, 19], k: 0 });
+    expect(smallest.some((frame) => frame.codeLine === 20)).toBe(true);
+
+    const found = timeline[timeline.length - 1];
+    expect(found.explanation).toContain('Rank match found');
+    expect(found.state.array[3].value).toBe(8);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('shellsort exposes held-key chains with both guard outcomes and per-shift frames', () => {
     const mod = moduleById('shellsort');
     const input = [62, 83, 18, 53, 7, 17, 95, 22, 47, 34];

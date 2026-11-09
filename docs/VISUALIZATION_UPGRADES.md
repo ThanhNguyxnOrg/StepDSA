@@ -29,7 +29,7 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | counting-sort | ✅ | pedagogy on all phases, duplicate-slot checkpoint, stability explained per placement |
 | radix-sort | ✅ | per-bucket drain frames (never bulk), drained buckets emptied, collect-order checkpoint |
 | bucket-sort | ✅ | new BucketSortStage (array + range-labelled bucket columns), per-bucket sorted frames, ordered gather, range-invariant checkpoint |
-| quickselect | ⬜ | reuse quicksort partition patterns |
+| quickselect | ✅ | window-entry + pivot frames, no-op swap branch, rank-decision checkpoint, code-line fixes |
 | timsort | ⬜ | |
 | introsort | ⬜ | |
 | bogosort / stooge-sort / drop-sort / sleep-sort | ⬜ | novelty; lower priority |
