@@ -161,6 +161,7 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
     let start = 0;
     let end = n - 1;
     const sortedIndices = new Set<number>();
+    let checkpointAdded = false;
     const frames: ExecutionFrame<ArrayStageState>[] = [];
 
     const makeFrameState = (
@@ -199,6 +200,11 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
       callStack: baseCallStack,
       conditionEval: { expr: `start < end`, result: start < end },
       explanation: `Begin Cocktail Shaker Sort. Window bounds [start=${start}, end=${end}].`,
+      pedagogy: {
+        what: `The unsorted window is the whole array [${start}..${end}]; nothing is locked yet.`,
+        why: 'Shaking in both directions fixes the classic bubble-sort weakness: "turtles" (small values near the end) move only one slot per pass.',
+        whatNext: `Forward pass: walk i = ${start}..${end - 1} and swap every out-of-order neighbour.`,
+      },
       state: makeFrameState(),
     });
 
@@ -217,8 +223,27 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
           callStack: [{ name: 'forwardPass', params: { i, end }, line: 8, isCurrent: true }],
           conditionEval: { expr: `arr[${i}] > arr[${i + 1}] (${arr[i]} > ${arr[i + 1]})`, result: shouldSwap },
           explanation: `Forward pass: comparing arr[${i}] (${arr[i]}) with arr[${i + 1}] (${arr[i + 1]}).`,
+          pedagogy: {
+            what: `Forward sweep compares the pair (${arr[i]}, ${arr[i + 1]}) at indices ${i}, ${i + 1}.`,
+            why: 'A left-to-right sweep pushes the largest value of the window toward the right boundary, exactly like bubble sort.',
+            whatNext: shouldSwap
+              ? `${arr[i]} > ${arr[i + 1]} — swap and keep moving right.`
+              : `${arr[i]} ≤ ${arr[i + 1]} — already ordered, move the pair window right.`,
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'cocktail-first-forward-compare',
+                question: `Forward pass, window [${start}..${end}]: arr[${i}] = ${arr[i]} vs arr[${i + 1}] = ${arr[i + 1]}. Swap?`,
+                options: ['Yes — left is bigger', 'No — already in order'],
+                correctIndex: shouldSwap ? 0 : 1,
+                explanation: shouldSwap
+                  ? `${arr[i]} > ${arr[i + 1]}, so the larger value keeps moving right.`
+                  : `${arr[i]} ≤ ${arr[i + 1]}; the sweep just moves on.`,
+              }
+            : undefined,
           state: makeFrameState(i, i + 1, 'comparing'),
         });
+        checkpointAdded = true;
 
         if (shouldSwap) {
           const temp = arr[i];
@@ -237,16 +262,43 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
             callStack: [{ name: 'swap', params: { i, next: i + 1 }, line: 10, isCurrent: true }],
             conditionEval: { expr: `swapped = true`, result: true },
             explanation: `Swapped arr[${i}] and arr[${i + 1}] (${temp} > ${arr[i]}).`,
+            pedagogy: {
+              what: `${temp} moved right past ${arr[i]}; the larger value continues its journey toward the right boundary.`,
+              why: 'Recording swapped = true disables the early-exit check for this sweep.',
+              whatNext: `Continue comparing at index ${i + 1}.`,
+            },
             state: makeFrameState(i, i + 1, 'swapping'),
           });
         }
+      }
+
+      if (!swapped) {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 13,
+          isMilestone: true,
+          milestoneTitle: 'Early Exit (Sorted)',
+          soundCue: { type: 'complete' },
+          variables: { earlyExit: true, pass: 'forward' },
+          callStack: baseCallStack,
+          conditionEval: { expr: `swapped === false`, result: true },
+          explanation: 'Forward pass made zero swaps: the window is already ordered, so the sort stops early.',
+          pedagogy: {
+            what: 'A full forward sweep found no out-of-order neighbour.',
+            why: 'Zero swaps in one complete sweep proves the whole window is sorted — no later pass could change anything.',
+            whatNext: 'Break out and finish.',
+          },
+          state: makeFrameState(),
+        });
+        break;
       }
 
       sortedIndices.add(end);
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 13,
+        codeLine: 14,
         isMilestone: true,
         milestoneTitle: `Max Placed at Index ${end}`,
         soundCue: { type: 'sorted' },
@@ -254,10 +306,14 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
         callStack: baseCallStack,
         conditionEval: { expr: `isSorted(end)`, result: true },
         explanation: `Forward pass completed. Maximum element bubbled to index ${end}. Decrementing end to ${end - 1}.`,
+        pedagogy: {
+          what: `The maximum of the window, ${arr[end]}, is parked at index ${end} — one more element is final.`,
+          why: 'Every forward comparison pushed larger values right, so after the sweep the window maximum must sit at its right edge.',
+          whatNext: `Shrink the window (end = ${end - 1}) and sweep backward.`,
+        },
         state: makeFrameState(),
       });
 
-      if (!swapped) break;
       end--;
 
       swapped = false;
@@ -274,6 +330,13 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
           callStack: [{ name: 'backwardPass', params: { i, start }, line: 17, isCurrent: true }],
           conditionEval: { expr: `arr[${i}] > arr[${i + 1}] (${arr[i]} > ${arr[i + 1]})`, result: shouldSwap },
           explanation: `Backward pass: comparing arr[${i}] (${arr[i]}) with arr[${i + 1}] (${arr[i + 1]}).`,
+          pedagogy: {
+            what: `Backward sweep compares the pair (${arr[i]}, ${arr[i + 1]}) moving right-to-left.`,
+            why: 'The reverse sweep is what drags "turtles" (small values near the end) back to the left quickly instead of one slot per pass.',
+            whatNext: shouldSwap
+              ? `${arr[i]} > ${arr[i + 1]} — swap so the smaller value keeps moving left.`
+              : `${arr[i]} ≤ ${arr[i + 1]} — already ordered, move the pair window left.`,
+          },
           state: makeFrameState(i, i + 1, 'comparing'),
         });
 
@@ -294,6 +357,11 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
             callStack: [{ name: 'swap', params: { i, next: i + 1 }, line: 19, isCurrent: true }],
             conditionEval: { expr: `swapped = true`, result: true },
             explanation: `Swapped arr[${i}] and arr[${i + 1}] (${temp} > ${arr[i]}). Turtle element dragged to left.`,
+            pedagogy: {
+              what: `${arr[i]} moved left past ${temp}; the smaller value closes in on its final position.`,
+              why: 'Direction reversal after each pass is exactly what fixes the turtle problem.',
+              whatNext: `Continue comparing at index ${i - 1}.`,
+            },
             state: makeFrameState(i, i + 1, 'swapping'),
           });
         }
@@ -311,6 +379,11 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
         callStack: baseCallStack,
         conditionEval: { expr: `isSorted(start)`, result: true },
         explanation: `Backward pass completed. Minimum element bubbled to index ${start}. Incrementing start to ${start + 1}.`,
+        pedagogy: {
+          what: `The minimum of the window, ${arr[start]}, is parked at index ${start} — the left boundary is now final too.`,
+          why: 'The backward sweep pushed smaller values left on every comparison, so the window minimum ends at its left edge.',
+          whatNext: `Shrink the window (start = ${start + 1}) and start another forward pass while swaps still happen.`,
+        },
         state: makeFrameState(),
       });
 
@@ -330,6 +403,11 @@ export const cocktailShakerSortModule: AlgorithmModule<number[], ArrayStageState
       callStack: baseCallStack,
       conditionEval: { expr: `isSorted(arr)`, result: true },
       explanation: 'Array fully sorted in both directions. Cocktail Shaker Sort complete.',
+      pedagogy: {
+        what: `Both boundaries met after sweeping left and right, leaving the array sorted: [${arr.join(', ')}].`,
+        why: 'Every outer iteration finalized one maximum (right) and one minimum (left), so the window shrank by two.',
+        whatNext: 'Try the "Turtle Problem" preset: the reverse sweep rescues the small trailing value in a single pass.',
+      },
       state: {
         array: arr.map((v, i) => ({ id: i, value: v, status: 'sorted' })),
         pointers: {},

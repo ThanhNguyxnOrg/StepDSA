@@ -143,6 +143,36 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, input).errorCount).toBe(0);
   });
 
+  it('cocktail shaker visualizes both sweep directions, early exit, and turtle rescue', () => {
+    const mod = moduleById('cocktail-shaker-sort');
+
+    // Sorted input: the forward sweep makes no swaps -> explicit early-exit frame.
+    const sortedTimeline = mod.generateTimeline([1, 2, 3, 4, 5]);
+    expect(
+      sortedTimeline.some(
+        (frame) => frame.codeLine === 13 && frame.conditionEval?.result === true
+      )
+    ).toBe(true);
+    expect(sortedTimeline.some((frame) => frame.explanation.includes('stops early'))).toBe(true);
+
+    // Turtle preset: the backward sweep runs and drags the trailing 1 left.
+    const turtle = mod.generateTimeline([2, 3, 4, 5, 6, 7, 8, 9, 1]);
+    expect(turtle.some((frame) => frame.variables?.direction === 'BACKWARD')).toBe(true);
+    expect(
+      turtle.some((frame) => frame.explanation.includes('Turtle element dragged to left'))
+    ).toBe(true);
+
+    expect(
+      mod
+        .generateTimeline(mod.defaultInput)
+        .some((frame) => frame.checkpoint?.id === 'cocktail-first-forward-compare')
+    ).toBe(true);
+
+    expectSorted(arrayValues(sortedTimeline[sortedTimeline.length - 1]));
+    expectSorted(arrayValues(turtle[turtle.length - 1]));
+    expect(auditTimeline(mod, [5, 1, 4, 2, 8, 0, 2]).errorCount).toBe(0);
+  });
+
   it('selection sort exposes the no-swap guard, pedagogy, and a first-scan checkpoint', () => {
     const mod = moduleById('selection-sort');
     // Pass 0 already has the minimum at index 0 (guard false), later passes swap (guard true).

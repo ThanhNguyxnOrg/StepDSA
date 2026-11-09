@@ -24,7 +24,7 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | heapsort | ✅ | HeapSortStage (array + heap tree), per-child comparison frames, snippet re-alignment (0 audit warnings) |
 | selection-sort | ✅ | no-swap guard frame, pedagogy everywhere, first-scan checkpoint |
 | bubble-sort | ✅ | pedagogy + checkpoint, empty-final-pass false-positive fixed (no bogus early-exit) |
-| cocktail-shaker-sort | ⬜ | |
+| cocktail-shaker-sort | ✅ | explicit early-exit frame, direction-aware pedagogy, turtle-rescue notes, checkpoint |
 | shellsort | ⬜ | |
 | counting-sort | ⬜ | histogram / cumulative / placement frames |
 | radix-sort | ⬜ | per-digit bucket view |
