@@ -64,6 +64,81 @@ describe('pedagogical timeline regressions', () => {
     expect(copyFrames.every((frame) => typeof frame.variables?.tempIndex === 'number')).toBe(true);
 
     expect(timeline.some((frame) => frame.checkpoint?.id === 'mergesort-first-compare')).toBe(true);
+
+    // ── Divide/merge decomposition view (split-apart → rejoin) ──────────────
+    for (const frame of timeline) {
+      expect(frame.state.mergeView, 'every mergesort frame carries a mergeView').toBeTruthy();
+    }
+
+    // Every depth row stays a non-overlapping, in-bounds partition of the array.
+    for (const frame of timeline) {
+      const byDepth = new Map<number, any[]>();
+      for (const node of frame.state.mergeView.nodes) {
+        if (!byDepth.has(node.depth)) byDepth.set(node.depth, []);
+        byDepth.get(node.depth)!.push(node);
+      }
+      for (const nodes of byDepth.values()) {
+        const sortedNodes = [...nodes].sort((a, b) => a.left - b.left);
+        for (let index = 1; index < sortedNodes.length; index++) {
+          expect(sortedNodes[index].left).toBeGreaterThan(sortedNodes[index - 1].right);
+        }
+        for (const node of sortedNodes) {
+          expect(node.left).toBeGreaterThanOrEqual(0);
+          expect(node.right).toBeLessThan(input.length);
+          expect(node.right).toBeGreaterThanOrEqual(node.left);
+        }
+      }
+    }
+
+    // A divide frame shows the splitting parent plus its two contiguous children.
+    const divideFrame = timeline.find(
+      (frame) => frame.state.mergeView.statusKind === 'divide'
+    )!;
+    const splitNode = divideFrame.state.mergeView.nodes.find(
+      (node: any) => node.phase === 'splitting'
+    );
+    expect(splitNode).toBeTruthy();
+    const spawnedChildren = divideFrame.state.mergeView.nodes
+      .filter(
+        (node: any) =>
+          node.depth === splitNode.depth + 1 &&
+          node.left >= splitNode.left &&
+          node.right <= splitNode.right
+      )
+      .sort((a: any, b: any) => a.left - b.left);
+    expect(spawnedChildren).toHaveLength(2);
+    expect(spawnedChildren[0].left).toBe(splitNode.left);
+    expect(spawnedChildren[0].right + 1).toBe(spawnedChildren[1].left);
+    expect(spawnedChildren[1].right).toBe(splitNode.right);
+
+    // Merge phases occur, and copy-back cursors carry an explicit destination index.
+    const phases = new Set<string>(
+      timeline.flatMap((frame) =>
+        frame.state.mergeView.nodes.map((node: any) => node.phase)
+      )
+    );
+    for (const phase of ['base', 'left', 'right', 'merging', 'sorted', 'consumed']) {
+      expect(phases.has(phase), `mergeView must use the ${phase} phase`).toBe(true);
+    }
+    expect(
+      timeline.some(
+        (frame) =>
+          frame.state.mergeView.merge?.phase === 'copy' &&
+          typeof frame.state.mergeView.merge.copyTo === 'number'
+      )
+    ).toBe(true);
+
+    // The final frame collapses back to one sorted root; everything else is consumed.
+    const finalView = timeline[timeline.length - 1].state.mergeView;
+    const root = finalView.nodes.find(
+      (node: any) => node.left === 0 && node.right === input.length - 1
+    );
+    expect(root?.phase).toBe('sorted');
+    expect(finalView.statusKind).toBe('done');
+    expect(finalView.nodes.filter((node: any) => node.phase === 'consumed')).toHaveLength(
+      finalView.nodes.length - 1
+    );
+
     expectSorted(arrayValues(timeline[timeline.length - 1]));
     expect(auditTimeline(mod, input).errorCount).toBe(0);
   });

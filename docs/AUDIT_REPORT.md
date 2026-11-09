@@ -144,7 +144,7 @@ WHAT/WHY/WHAT-NEXT, exact variable/call-stack synchronization, and regression te
 | Module | Key visualization fixes |
 | --- | --- |
 | **Insertion sort** | Held key lives in a real "held" auxiliary slot; `j` index is accurate per frame; separate true/false guard frames for `j >= 0` and `arr[j] > key`; per-shift and per-decrement frames (no hidden loop iterations); first-comparison checkpoint. |
-| **Mergesort** | Explicit temp buffer with per-append and drain frames; **per-element** copy-back frames (previously one bulk copy); base-case frames; split/merge phase labels; checkpoint on the first merge. |
+| **Mergesort** | Dedicated `MergeSortStage` divide/merge segment-tree view: the array **visually breaks apart** into depth rows (children appear under their parent at each split, aligned cell-for-cell) and then **rejoins level by level** (source halves tinted LEFT/RIGHT, parent fills cell-by-cell during copy-back, finished ranges turn emerald while consumed children dim). Plus explicit temp buffer with per-append and drain frames; **per-element** copy-back frames (previously one bulk copy); base-case frames; split/merge phase labels; checkpoint on the first merge. |
 | **Quicksort** | False comparison frames (when the scan condition fails), a no-op swap frame (i == j, previously invisible), recursion enter/base/return frames, pivot badges; checkpoint on the first partition decision. |
 | **BFS** | Distance table + predecessor tree built incrementally; active enqueue/skip (already-visited) edges highlighted; path-to-current-node rendering; final shortest path in the SVG; checkpoint at the first enqueue wave. |
 | **Dijkstra** | Predecessor tracking; stale priority-queue entry frames (the classic relaxation subtlety); settled-edge skips; only settled predecessor edges drawn as the shortest-path tree; explicit reconstruction frames labelled as **post-processing visualization** (snippets return only the distance table — no fake code mapping); target-path HUD; checkpoint. |
@@ -290,10 +290,12 @@ Modified (23):
 | `src/modules/trees/twoThreeTree.tsx`, `recursion/*Tree*.tsx` | first-frame `codeLine: 0` → 1 fixes |
 | `src/utils/stageLayout.test.ts`, `src/core/studio/cli-run.test.ts` | deterministic timeouts |
 
-Added (7):
+Added (9):
 
 | File | Purpose |
 | --- | --- |
+| `src/components/stage/MergeSortStage.tsx` | divide/merge segment-tree stage for mergesort (split-apart → rejoin view) |
+| `src/components/stage/MergeSortStage.test.tsx` | row-partition layout + render/badge/divider regression tests |
 | `src/core/timelineAudit.ts` | reusable structural timeline validator |
 | `src/core/timelineAudit.test.ts` | 162-module × default/preset audit |
 | `src/core/navigationAnchors.ts` | start/complete milestone contract |
@@ -302,8 +304,8 @@ Added (7):
 | `src/utils/themeRegression.test.ts` | theme dock-override regression |
 | `docs/AUDIT_REPORT.md` | this report |
 
-Net diff on tracked files: ~3,200 insertions / ~530 deletions, plus the 6 new
-source/test files and this report (all currently uncommitted on `main`).
+Net diff on tracked files: ~3,200 insertions / ~530 deletions, plus the 8 new
+source/test files and this report.
 
 ---
 

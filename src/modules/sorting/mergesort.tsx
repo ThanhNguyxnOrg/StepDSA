@@ -1,7 +1,20 @@
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
-import { ArrayStage, ArrayStageState } from '../../components/stage/ArrayStage';
+import { ArrayStageState } from '../../components/stage/ArrayStage';
+import {
+  MergeSortStage,
+  MergeSortMergeCursor,
+  MergeSortNodePhase,
+  MergeSortNodeView,
+  MergeSortStatusKind,
+  MergeSortView,
+} from '../../components/stage/MergeSortStage';
 
-export const mergesortModule: AlgorithmModule<number[], ArrayStageState> = {
+/** Array state plus the divide/merge decomposition view consumed by MergeSortStage. */
+interface MergeSortState extends ArrayStageState {
+  mergeView: MergeSortView;
+}
+
+export const mergesortModule: AlgorithmModule<number[], MergeSortState> = {
   id: 'mergesort',
   title: 'Mergesort (Divide & Conquer)',
   category: 'sorting',
@@ -120,12 +133,48 @@ function merge(arr, left, mid, right):
     copy temp buffer back into arr[left..right]`,
   },
 
-  generateTimeline: (input: number[]): ExecutionFrame<ArrayStageState>[] => {
-    const frames: ExecutionFrame<ArrayStageState>[] = [];
+  generateTimeline: (input: number[]): ExecutionFrame<MergeSortState>[] => {
+    const frames: ExecutionFrame<MergeSortState>[] = [];
     const arr = [...input];
     const n = arr.length;
-    const sortedSegments = new Set<string>();
     let checkpointAdded = false;
+
+    // Divide/merge decomposition tracking: nodes are created when a range is
+    // first reached and never removed, so each recursion depth keeps its own
+    // aligned row of segments in the stage.
+    const nodeMap = new Map<string, MergeSortNodeView>();
+    const nodeOrder: MergeSortNodeView[] = [];
+    const makeNode = (
+      left: number,
+      right: number,
+      depth: number,
+      phase: MergeSortNodePhase = 'ready'
+    ): MergeSortNodeView => {
+      const id = `${left}-${right}`;
+      const existing = nodeMap.get(id);
+      if (existing) return existing;
+      const node: MergeSortNodeView = { id, left, right, depth, phase };
+      nodeMap.set(id, node);
+      nodeOrder.push(node);
+      return node;
+    };
+    const setPhase = (left: number, right: number, phase: MergeSortNodePhase) => {
+      const node = nodeMap.get(`${left}-${right}`);
+      if (node) node.phase = phase;
+    };
+
+    let statusLabel = `READY: divide [0..${n - 1}] into two halves`;
+    let statusKind: MergeSortStatusKind = 'init';
+    let mergeCursor: MergeSortMergeCursor | null = null;
+
+    const mergeViewSnapshot = (): MergeSortView => ({
+      nodes: nodeOrder.map((node) => ({ ...node })),
+      merge: mergeCursor ? { ...mergeCursor } : null,
+      statusLabel,
+      statusKind,
+    });
+
+    makeNode(0, n - 1, 0, 'ready');
 
     const callStack: { name: string; params: Record<string, string | number>; line?: number; isCurrent?: boolean }[] = [
       { name: 'main', params: { n }, line: 1, isCurrent: true },
@@ -150,6 +199,7 @@ function merge(arr, left, mid, right):
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: {},
+        mergeView: mergeViewSnapshot(),
       },
     });
 
@@ -198,6 +248,7 @@ function merge(arr, left, mid, right):
           }),
           pointers,
           auxiliary,
+          mergeView: mergeViewSnapshot(),
         },
       });
     }
@@ -207,6 +258,14 @@ function merge(arr, left, mid, right):
       const temp: number[] = [];
       let i = left;
       let j = mid + 1;
+
+      // Stage phases: the parent range is being rebuilt from its two halves.
+      setPhase(left, right, 'merging');
+      setPhase(left, mid, 'left');
+      setPhase(mid + 1, right, 'right');
+      mergeCursor = { left, mid, right, i, j, phase: 'merge' };
+      statusLabel = `MERGE [${left}..${right}]: combine [${left}..${mid}] + [${mid + 1}..${right}]`;
+      statusKind = 'merge';
 
       const tempAuxiliary = (activeIndex?: number, note?: string) => ({
         type: 'buffer' as const,
@@ -239,6 +298,9 @@ function merge(arr, left, mid, right):
         const isLessOrEqual = arr[i] <= arr[j];
         const leftValue = arr[i];
         const rightValue = arr[j];
+        mergeCursor = { left, mid, right, i, j, phase: 'compare' };
+        statusLabel = `COMPARE arr[${i}] = ${leftValue} vs arr[${j}] = ${rightValue}`;
+        statusKind = 'compare';
         snapshot(
           12,
           `Comparing left element arr[${i}] (${leftValue}) with right element arr[${j}] (${rightValue}).`,
@@ -274,6 +336,9 @@ function merge(arr, left, mid, right):
           temp.push(arr[i]);
           const appended = arr[i];
           i++;
+          mergeCursor = { left, mid, right, i, j, phase: 'append' };
+          statusLabel = `APPEND ${appended} (left half) → temp[${temp.length - 1}]`;
+          statusKind = 'append';
           snapshot(
             14,
             `Appended ${appended} from the left half to temp[${temp.length - 1}]. Advanced i to ${i}.`,
@@ -294,6 +359,9 @@ function merge(arr, left, mid, right):
           temp.push(arr[j]);
           const appended = arr[j];
           j++;
+          mergeCursor = { left, mid, right, i, j, phase: 'append' };
+          statusLabel = `APPEND ${appended} (right half) → temp[${temp.length - 1}]`;
+          statusKind = 'append';
           snapshot(
             16,
             `Appended ${appended} from the right half to temp[${temp.length - 1}]. Advanced j to ${j}.`,
@@ -317,6 +385,9 @@ function merge(arr, left, mid, right):
         temp.push(arr[i]);
         const appended = arr[i];
         i++;
+        mergeCursor = { left, mid, right, i, j, phase: 'append' };
+        statusLabel = `APPEND ${appended} (left remainder) → temp[${temp.length - 1}]`;
+        statusKind = 'append';
         snapshot(
           19,
           `Left half still has values: appended ${appended} to temp[${temp.length - 1}].`,
@@ -338,6 +409,9 @@ function merge(arr, left, mid, right):
         temp.push(arr[j]);
         const appended = arr[j];
         j++;
+        mergeCursor = { left, mid, right, i, j, phase: 'append' };
+        statusLabel = `APPEND ${appended} (right remainder) → temp[${temp.length - 1}]`;
+        statusKind = 'append';
         snapshot(
           21,
           `Right half still has values: appended ${appended} to temp[${temp.length - 1}].`,
@@ -356,6 +430,9 @@ function merge(arr, left, mid, right):
         );
       }
 
+      mergeCursor = { left, mid, right, i, j, phase: 'merge' };
+      statusLabel = `BUFFER READY [${temp.join(', ')}] → copy back into arr[${left}..${right}]`;
+      statusKind = 'merge';
       snapshot(
         24,
         `Merge buffer is complete: [${temp.join(', ')}]. Now copy it back into arr[${left}..${right}].`,
@@ -377,6 +454,9 @@ function merge(arr, left, mid, right):
       for (let k = 0; k < temp.length; k++) {
         arr[left + k] = temp[k];
         const copied = temp[k];
+        mergeCursor = { left, mid, right, i, j, phase: 'copy', copyTo: left + k };
+        statusLabel = `COPY BACK temp[${k}] = ${copied} → arr[${left + k}]`;
+        statusKind = 'copy';
         snapshot(
           24,
           `Copied temp[${k}] (${copied}) into arr[${left + k}].`,
@@ -398,11 +478,16 @@ function merge(arr, left, mid, right):
         );
       }
 
-      const segmentKey = `${left}-${right}`;
-      sortedSegments.add(segmentKey);
-
       const active: Record<number, any> = {};
       for (let k = left; k <= right; k++) active[k] = 'sorted';
+
+      // Fragments rejoin: the parent range is sorted; the two source halves are consumed.
+      setPhase(left, right, 'sorted');
+      setPhase(left, mid, 'consumed');
+      setPhase(mid + 1, right, 'consumed');
+      mergeCursor = null;
+      statusLabel = `MERGED [${left}..${right}] → [${temp.join(', ')}]`;
+      statusKind = 'merged';
 
       snapshot(
         24,
@@ -424,10 +509,17 @@ function merge(arr, left, mid, right):
       callStack.pop();
     }
 
-    function mergesort(left: number, right: number) {
+    function mergesort(left: number, right: number, depth: number) {
       callStack.push({ name: 'mergesort', params: { left, right }, line: 2 });
+      makeNode(left, right, depth, 'ready');
       if (left < right) {
         const mid = Math.floor((left + right) / 2);
+        // The range visibly breaks apart: children appear on the next depth row.
+        setPhase(left, right, 'splitting');
+        makeNode(left, mid, depth + 1, 'ready');
+        makeNode(mid + 1, right, depth + 1, 'ready');
+        statusLabel = `DIVIDE [${left}..${right}] at mid ${mid} → [${left}..${mid}] + [${mid + 1}..${right}]`;
+        statusKind = 'divide';
         snapshot(
           3,
           `Dividing range [${left}..${right}] at mid index ${mid}.`,
@@ -438,10 +530,14 @@ function merge(arr, left, mid, right):
           { expr: `left < right (${left} < ${right})`, result: true },
           { type: 'step' }
         );
-        mergesort(left, mid);
-        mergesort(mid + 1, right);
+        setPhase(left, right, 'ready');
+        mergesort(left, mid, depth + 1);
+        mergesort(mid + 1, right, depth + 1);
         merge(left, mid, right);
       } else {
+        setPhase(left, right, 'base');
+        statusLabel = `BASE CASE [${left}..${right}] = ${arr[left]} — a single element is already sorted`;
+        statusKind = 'base';
         snapshot(
           2,
           `Base case: range [${left}..${right}] contains one element (${arr[left]}), already sorted.`,
@@ -462,9 +558,18 @@ function merge(arr, left, mid, right):
       callStack.pop();
     }
 
-    mergesort(0, n - 1);
+    mergesort(0, n - 1, 0);
 
-    // Final frame
+    // Final frame: the whole decomposition collapses back to one sorted range.
+    const rootNode = makeNode(0, n - 1, 0);
+    rootNode.phase = 'sorted';
+    for (const node of nodeOrder) {
+      if (node !== rootNode) node.phase = 'consumed';
+    }
+    mergeCursor = null;
+    statusLabel = `DONE: [${arr.join(', ')}] is fully sorted`;
+    statusKind = 'done';
+
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
@@ -479,6 +584,7 @@ function merge(arr, left, mid, right):
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
         pointers: {},
+        mergeView: mergeViewSnapshot(),
       },
     });
 
@@ -487,6 +593,6 @@ function merge(arr, left, mid, right):
   },
 
   renderStage: (frame, projection) => {
-    return <ArrayStage state={frame.state} projection={projection} />;
+    return <MergeSortStage state={frame.state} projection={projection} />;
   },
 };
