@@ -95,6 +95,7 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
     const frames: ExecutionFrame<ArrayStageState>[] = [];
     const arr = [...input];
     const n = arr.length;
+    let checkpointAdded = false;
 
     // Step 0: Initial frame
     frames.push({
@@ -107,6 +108,11 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
         { name: 'main()', params: {}, line: 1 },
       ],
       variables: { n, i: 0 },
+      pedagogy: {
+        what: 'The whole array is unsorted; a sorted prefix of length 0 is fixed.',
+        why: 'Selection sort never moves an element more than once: each pass places the true minimum of the remaining range.',
+        whatNext: `Pass 1: scan [0..${n - 1}] for the minimum, starting with the candidate arr[0] = ${arr[0]}.`,
+      },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: {},
@@ -127,6 +133,11 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
           { name: 'main()', params: {}, line: 1 },
         ],
         variables: { i, minIdx, minVal: arr[i] },
+        pedagogy: {
+          what: `Pass ${i + 1} begins: everything left of index ${i} is already final; the minimum search covers [${i}..${n - 1}].`,
+          why: 'Assuming the first candidate as the minimum gives the scan a concrete reference value to beat.',
+          whatNext: `Scan j = ${i + 1}..${n - 1}; every time arr[j] < arr[minIdx], minIdx moves to j.`,
+        },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -159,6 +170,24 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
             expr: `arr[${j}] (${arr[j]}) < arr[${minIdx}] (${arr[minIdx]})`,
             result: isSmaller,
           },
+          pedagogy: {
+            what: `Candidate arr[${j}] = ${arr[j]} faces the current minimum arr[${minIdx}] = ${arr[minIdx]}.`,
+            why: 'Only one running candidate is tracked; nothing is swapped during the scan.',
+            whatNext: isSmaller
+              ? `${arr[j]} is smaller, so minIdx will move to ${j}.`
+              : `${arr[minIdx]} stays the minimum; continue scanning.`,
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'selection-sort-first-scan',
+                question: `Current minimum is ${arr[minIdx]} (index ${minIdx}); the next candidate is ${arr[j]} (index ${j}). Does the minimum move?`,
+                options: ['Yes — the new candidate is smaller', 'No — the current minimum stays'],
+                correctIndex: isSmaller ? 0 : 1,
+                explanation: isSmaller
+                  ? `${arr[j]} < ${arr[minIdx]}, so minIdx becomes ${j}.`
+                  : `${arr[j]} ≥ ${arr[minIdx]}, so the minimum stays at index ${minIdx}.`,
+              }
+            : undefined,
           soundCue: { type: 'compare' },
           state: {
             array: arr.map((v, idx) => ({
@@ -169,6 +198,7 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
             pointers: { i, min: minIdx, j },
           },
         });
+        checkpointAdded = true;
 
         if (isSmaller) {
           minIdx = j;
@@ -184,6 +214,11 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
               { name: 'main()', params: {}, line: 1 },
             ],
             variables: { i, minIdx, newMin: arr[minIdx] },
+            pedagogy: {
+              what: `A new minimum was found: ${arr[minIdx]} at index ${minIdx}.`,
+              why: 'Tracking the best candidate avoids re-scanning: the minimum only ever moves forward.',
+              whatNext: `Compare the remaining candidates against ${arr[minIdx]}.`,
+            },
             soundCue: { type: 'active' as any },
             state: {
               array: arr.map((v, idx) => ({
@@ -209,8 +244,14 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
             { name: 'main()', params: {}, line: 1 },
           ],
           variables: { swapI: i, swapMin: minIdx },
+          conditionEval: { expr: `minIdx !== i (${minIdx} !== ${i})`, result: true },
           isMilestone: true,
           milestoneTitle: `Swap to index ${i}`,
+          pedagogy: {
+            what: `The scan is over: ${arr[minIdx]} is the smallest value in [${i}..${n - 1}].`,
+            why: `Placing it at index ${i} extends the sorted prefix by one and is the only write this pass performs.`,
+            whatNext: `Swap ${arr[i]} ↔ ${arr[minIdx]}, then index ${i} is locked forever.`,
+          },
           soundCue: { type: 'swap' },
           state: {
             array: arr.map((v, idx) => ({
@@ -225,6 +266,34 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
         const temp = arr[i];
         arr[i] = arr[minIdx];
         arr[minIdx] = temp;
+      } else {
+        // Frame: Guard evaluates false — the minimum is already at index i.
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 10,
+          explanation: `minIdx == i (${minIdx}): the minimum of [${i}..${n - 1}] is already at index ${i}, so the swap is skipped.`,
+          callStack: [
+            { name: 'selectionSort(arr)', params: { i, minIdx, swapSkipped: true }, line: 10, isCurrent: true },
+            { name: 'main()', params: {}, line: 1 },
+          ],
+          variables: { i, minIdx, swapSkipped: true },
+          conditionEval: { expr: `minIdx !== i (${minIdx} !== ${i})`, result: false },
+          soundCue: { type: 'step' },
+          pedagogy: {
+            what: `arr[${i}] = ${arr[i]} is already the smallest value in the remaining range.`,
+            why: 'The swap guard exists precisely to avoid useless self-swaps; taking the shorter path is part of the algorithm.',
+            whatNext: `Lock index ${i} as final and move to the next pass.`,
+          },
+          state: {
+            array: arr.map((v, idx) => ({
+              id: idx,
+              value: v,
+              status: idx < i ? 'sorted' : idx === i ? 'pivot' : 'default',
+            })),
+            pointers: { i, min: minIdx },
+          },
+        });
       }
 
       // Frame: Position i is now finalized
@@ -238,6 +307,11 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
           { name: 'main()', params: {}, line: 1 },
         ],
         variables: { sortedPrefixLen: i + 1 },
+        pedagogy: {
+          what: `Index ${i} is final: arr[${i}] = ${arr[i]} is the ${i + 1}-th smallest element.`,
+          why: 'Every earlier pass already placed all smaller values to the left, so this position can never change again.',
+          whatNext: `Continue with the unsorted range [${i + 1}..${n - 1}].`,
+        },
         soundCue: { type: 'sorted' },
         state: {
           array: arr.map((v, idx) => ({
@@ -265,6 +339,11 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
         { name: 'main()', params: {}, line: 1 },
       ],
       variables: { status: 'DONE' },
+      pedagogy: {
+        what: `All ${n - 1} passes are done and the last remaining element is trivially the maximum.`,
+        why: 'Selection sort guaranteed the invariant after every pass with at most one swap each.',
+        whatNext: 'Try the "Already Sorted" preset: it performs the same O(N²) comparisons but zero swaps.',
+      },
       isMilestone: true,
       milestoneTitle: 'Sorting Complete',
       soundCue: { type: 'sorted' },

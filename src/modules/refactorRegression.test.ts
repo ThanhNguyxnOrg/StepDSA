@@ -143,6 +143,117 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, input).errorCount).toBe(0);
   });
 
+  it('selection sort exposes the no-swap guard, pedagogy, and a first-scan checkpoint', () => {
+    const mod = moduleById('selection-sort');
+    // Pass 0 already has the minimum at index 0 (guard false), later passes swap (guard true).
+    const input = [10, 25, 12, 22, 11, 48, 9];
+    const timeline = mod.generateTimeline(input);
+
+    // The `minIdx !== i` guard is visualized in BOTH outcomes: the guard-true
+    // path leads to a swap frame, the guard-false path to an explicit no-op frame.
+    expect(
+      timeline.some(
+        (frame) => frame.codeLine === 11 && frame.conditionEval?.result === true
+      )
+    ).toBe(true);
+    expect(
+      timeline.some(
+        (frame) => frame.codeLine === 10 && frame.conditionEval?.result === false
+      )
+    ).toBe(true);
+
+    expect(timeline.some((frame) => frame.checkpoint?.id === 'selection-sort-first-scan')).toBe(true);
+    expect(timeline.some((frame) => frame.pedagogy?.why)).toBe(true);
+
+    expectSorted(arrayValues(timeline[timeline.length - 1]));
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('bubble sort visualizes every comparison outcome, swap, early exit, and checkpoint', () => {
+    const mod = moduleById('bubble-sort');
+    const sortedInput = [10, 15, 25, 30, 45, 60];
+    const timeline = mod.generateTimeline(sortedInput);
+
+    // Sorted input: compares exist but every guard is false, so early exit fires.
+    expect(
+      timeline.some((frame) => frame.codeLine === 6 && frame.conditionEval?.result === false)
+    ).toBe(true);
+    expect(timeline.some((frame) => frame.explanation.includes('Early termination'))).toBe(true);
+
+    // Reversed input: swaps happen and no bogus early-exit frame may fire
+    // (including from the empty final outer iteration).
+    const reversedTimeline = mod.generateTimeline([60, 45, 30, 25, 15, 10]);
+    expect(reversedTimeline.some((frame) => frame.codeLine === 7)).toBe(true);
+    expect(
+      reversedTimeline.some((frame) => frame.explanation.includes('Early termination'))
+    ).toBe(false);
+
+    expect(timeline.some((frame) => frame.checkpoint?.id === 'bubble-sort-first-compare')).toBe(true);
+    expectSorted(arrayValues(timeline[timeline.length - 1]));
+    expectSorted(arrayValues(reversedTimeline[reversedTimeline.length - 1]));
+    expect(auditTimeline(mod, sortedInput).errorCount).toBe(0);
+  });
+
+  it('heapsort visualizes every child comparison, the swap decision, and the shrinking heap tree', () => {
+    const mod = moduleById('heapsort');
+    const input = [35, 12, 45, 9, 28, 50, 18];
+    const timeline = mod.generateTimeline(input);
+
+    // Every frame carries the heap view; the heap never grows.
+    let previousHeapSize = input.length;
+    for (const frame of timeline) {
+      const view = frame.state.heapView;
+      expect(view).toBeTruthy();
+      expect(view.heapSize).toBeGreaterThanOrEqual(0);
+      expect(view.heapSize).toBeLessThanOrEqual(input.length);
+      expect(view.heapSize).toBeLessThanOrEqual(previousHeapSize);
+      previousHeapSize = view.heapSize;
+    }
+
+    // Both outcomes of a left-child comparison are visualized.
+    const leftCompares = timeline.filter((frame) => frame.codeLine === 17);
+    expect(leftCompares.length).toBeGreaterThan(0);
+    const outcomes = new Set(leftCompares.map((frame) => frame.conditionEval?.result));
+    expect(outcomes.has(true)).toBe(true);
+    expect(outcomes.has(false)).toBe(true);
+
+    // A real swap frame and a no-swap decision frame both occur.
+    expect(timeline.some((frame) => frame.state.heapView.statusKind === 'swap')).toBe(true);
+    expect(
+      timeline.some(
+        (frame) => frame.codeLine === 21 && frame.conditionEval?.result === true
+      )
+    ).toBe(true);
+
+    // One extraction per element: the heap shrinks from n to 1, then locks index 0.
+    const extractFrames = timeline.filter(
+      (frame) => frame.state.heapView.statusKind === 'extract'
+    );
+    expect(extractFrames.length).toBe(input.length - 1);
+    expect(timeline[timeline.length - 1].state.heapView.heapSize).toBe(0);
+
+    expect(timeline.some((frame) => frame.checkpoint?.id === 'heapsort-first-left-compare')).toBe(
+      true
+    );
+
+    // Clean audit: no structural errors AND no code-line range warnings.
+    const audit = auditTimeline(mod, input);
+    expect(audit.errorCount).toBe(0);
+    expect(audit.warningCount).toBe(0);
+
+    // Frame lines must fit inside every language snippet so mapping stays direct.
+    for (const lang of ['python', 'typescript', 'cpp', 'java', 'pseudocode'] as const) {
+      const lineCount = mod.codeSnippets[lang].split('\n').length;
+      const maxFrameLine = Math.max(...timeline.map((frame) => frame.codeLine));
+      expect(
+        lineCount,
+        `${lang} snippet must cover line ${maxFrameLine}`
+      ).toBeGreaterThanOrEqual(maxFrameLine);
+    }
+
+    expectSorted(arrayValues(timeline[timeline.length - 1]));
+  });
+
   it('quicksort separates false comparisons, no-op swaps, recursion entry, and base cases', () => {
     const mod = moduleById('quicksort');
     const input = [45, 12, 85, 32, 89, 39, 69, 44, 42, 1, 98];

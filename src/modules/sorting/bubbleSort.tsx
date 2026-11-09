@@ -98,6 +98,7 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
     const arr = [...input];
     const n = arr.length;
     const sortedIndices = new Set<number>();
+    let checkpointAdded = false;
     const baseCallStack = [{ name: 'bubbleSort', params: { n }, line: 1, isCurrent: true }];
 
     frames.push({
@@ -111,6 +112,11 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
       callStack: baseCallStack,
       conditionEval: { expr: `n > 1`, result: n > 1 },
       explanation: 'Starting Bubble Sort. Ready to compare adjacent pairs.',
+      pedagogy: {
+        what: 'Nothing is sorted yet; the full array is the unsorted region.',
+        why: 'Bubble sort repeatedly walks adjacent pairs, so the largest unsorted value "bubbles" to the right boundary of each pass.',
+        whatNext: `Pass 1 starts: compare arr[0] = ${arr[0]} with arr[1] = ${arr[1]}.`,
+      },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: {},
@@ -131,6 +137,24 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
           callStack: [{ name: 'bubbleSort', params: { pass: i + 1, j, limit: n - i - 1 }, line: 6, isCurrent: true }],
           conditionEval: { expr: `arr[${j}] > arr[${j + 1}] (${arr[j]} > ${arr[j + 1]})`, result: shouldSwap },
           explanation: `Comparing adjacent pair arr[${j}] (${arr[j]}) and arr[${j + 1}] (${arr[j + 1]}).`,
+          pedagogy: {
+            what: `Adjacent pair (${arr[j]}, ${arr[j + 1]}) is compared at positions ${j} and ${j + 1} in pass ${i + 1}.`,
+            why: 'Only out-of-order neighbours violate sortedness; fixing them one pair at a time over enough passes is exactly bubble sort.',
+            whatNext: shouldSwap
+              ? `${arr[j]} > ${arr[j + 1]}, so the two will swap.`
+              : `${arr[j]} ≤ ${arr[j + 1]}, already in order — move the pair window right.`,
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'bubble-sort-first-compare',
+                question: `arr[${j}] = ${arr[j]} and arr[${j + 1}] = ${arr[j + 1]}. Will this pair swap?`,
+                options: ['Yes — left is bigger', 'No — already in order'],
+                correctIndex: shouldSwap ? 0 : 1,
+                explanation: shouldSwap
+                  ? `${arr[j]} > ${arr[j + 1]}, so the larger left value bubbles right.`
+                  : `${arr[j]} ≤ ${arr[j + 1]}; the pair already satisfies sorted order.`,
+              }
+            : undefined,
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -140,6 +164,7 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
             pointers: { j, 'j+1': j + 1 },
           },
         });
+        checkpointAdded = true;
 
         if (shouldSwap) {
           frames.push({
@@ -151,6 +176,11 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
             callStack: [{ name: 'swap', params: { j, next: j + 1 }, line: 7, isCurrent: true }],
             conditionEval: { expr: `swapped = true`, result: true },
             explanation: `arr[${j}] (${arr[j]}) > arr[${j + 1}] (${arr[j + 1]}). Swapping them.`,
+            pedagogy: {
+              what: `${arr[j]} and ${arr[j + 1]} trade places; the larger value keeps moving right.`,
+              why: 'Marking swapped = true is what disables the early-exit check for this pass.',
+              whatNext: `Continue with the next adjacent pair starting at index ${j + 1}.`,
+            },
             state: {
               array: arr.map((v, idx) => ({
                 id: idx,
@@ -166,6 +196,11 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
         }
       }
 
+      // The final iteration of the outer loop has no adjacent pairs left to
+      // compare; nothing observable happens there, so it emits no frames.
+      const passHasPairs = n - i - 1 > 0;
+      if (!passHasPairs) break;
+
       sortedIndices.add(n - i - 1);
       frames.push({
         stepIndex: frames.length,
@@ -178,6 +213,11 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
         callStack: [{ name: 'bubbleSort', params: { pass: i + 1, settled: arr[n - i - 1] }, line: 9, isCurrent: true }],
         conditionEval: { expr: `isSettled(n - i - 1)`, result: true },
         explanation: `Pass ${i + 1} complete. Largest unsorted element settled at index [${n - i - 1}].`,
+        pedagogy: {
+          what: `The pass swept the whole unsorted region and pushed its maximum ${arr[n - i - 1]} to index ${n - i - 1}.`,
+          why: 'Every comparison moved the larger value right, so after one full sweep the largest value must be at the boundary.',
+          whatNext: `The unsorted region shrinks to [0..${n - i - 2}]; start pass ${i + 2}.`,
+        },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -200,6 +240,11 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
           callStack: baseCallStack,
           conditionEval: { expr: `swapped === false`, result: true },
           explanation: 'No swaps occurred in this pass. Array is already fully sorted (Early termination).',
+          pedagogy: {
+            what: `Pass ${i + 1} made zero swaps.`,
+            why: 'A full pass with no out-of-order neighbours proves the array is sorted — no later pass could change anything.',
+            whatNext: 'Stop early: skip all remaining passes.',
+          },
           state: {
             array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
             pointers: {},
@@ -221,6 +266,11 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
       variables: { completed: true, totalSorted: n },
       callStack: baseCallStack,
       conditionEval: { expr: `isSorted(arr)`, result: true },
+      pedagogy: {
+        what: 'All elements are in non-decreasing order after pass-by-pass bubbling.',
+        why: 'Each pass guarantees one more maximum in its final position, so n-1 passes always suffice.',
+        whatNext: 'Try the "Nearly Sorted" preset to watch the early-exit fire after a single clean pass.',
+      },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'sorted' })),
         pointers: {},
