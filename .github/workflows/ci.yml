@@ -2,36 +2,25 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 22
-        cache: 'npm'
-
-    - name: Install Dependencies
-      run: npm ci
-
-    - name: Type Check
-      run: npx tsc --noEmit
-
-    - name: Run Unit Tests
-      run: npm test
-      env:
-        NODE_OPTIONS: "--max-old-space-size=4096"
-        CI: true
-
-    - name: Production Build Check
-      run: npm run build
+    uses: ThanhNguyxnOrg/.github/.github/workflows/ci-node.yml@18a3fd8b46540a0cc8895b08437d6150d7deda6f
+    with:
+      job_name: test
+      node_version: "22"
+      package_manager: npm
+      cache: npm
+      typecheck_command: npx tsc --noEmit
+      test_command: npm test
+      build_command: npm run build
