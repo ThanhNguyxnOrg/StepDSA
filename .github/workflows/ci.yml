@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   test:
-    uses: ThanhNguyxnOrg/.github/.github/workflows/ci-node.yml@18a3fd8b46540a0cc8895b08437d6150d7deda6f
+    uses: ThanhNguyxnOrg/.github/.github/workflows/ci-node.yml@2bda8e8e8073a2578db4bbb1e0f6aaf21d061bcd
     with:
       job_name: test
       node_version: "22"
