@@ -173,6 +173,55 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, [5, 1, 4, 2, 8, 0, 2]).errorCount).toBe(0);
   });
 
+  it('novelty sorts carry pedagogy, checkpoints, and honest simulation rails', () => {
+    // Stooge: base-case frame + third-branch checkpoint.
+    const stooge = moduleById('stooge-sort');
+    const stoogeTimeline = stooge.generateTimeline([5, 2, 4, 1, 3]);
+    expect(
+      stoogeTimeline.some((frame) => frame.codeLine === 3 && frame.conditionEval?.result === false)
+    ).toBe(true);
+    expect(stoogeTimeline.some((frame) => frame.checkpoint?.id === 'stooge-third-branch')).toBe(
+      true
+    );
+    expectSorted(arrayValues(stoogeTimeline[stoogeTimeline.length - 1]));
+    expect(auditTimeline(stooge, [5, 2, 4, 1, 3]).errorCount).toBe(0);
+
+    // Bogo: natural success path AND the honestly-labelled forced rail
+    // ([3,4,2,1] is never hit by the deterministic PRNG within 24 attempts).
+    const bogo = moduleById('bogosort');
+    const bogoNatural = bogo.generateTimeline([4, 1, 3, 2]);
+    expect(bogoNatural.some((frame) => frame.milestoneTitle?.startsWith('Sorted in'))).toBe(true);
+    expect(bogoNatural.some((frame) => frame.explanation.includes('rejected'))).toBe(true);
+    expect(
+      bogoNatural.some((frame) => frame.checkpoint?.id === 'bogosort-shuffle-independence')
+    ).toBe(true);
+
+    const bogoForced = bogo.generateTimeline([3, 4, 2, 1]);
+    expect(bogoForced.some((frame) => frame.variables?.status?.includes('safety rail'))).toBe(true);
+    expect(bogoForced.some((frame) => frame.milestoneTitle?.includes('Forced'))).toBe(true);
+    expect(auditTimeline(bogo, [4, 1, 3, 2]).errorCount).toBe(0);
+
+    // Drop sort: guard conditionEval + survival checkpoint; output loses data.
+    const drop = moduleById('drop-sort');
+    const dropTimeline = drop.generateTimeline([3, 1, 4, 2, 5, 3, 6]);
+    expect(
+      dropTimeline.some((frame) => frame.codeLine === 4 && frame.conditionEval !== undefined)
+    ).toBe(true);
+    expect(dropTimeline.some((frame) => frame.checkpoint?.id === 'dropsort-survival')).toBe(true);
+    const dropFinal = dropTimeline[dropTimeline.length - 1];
+    expect(dropFinal.state.array.length).toBeLessThan(7);
+    expect(auditTimeline(drop, [3, 1, 4, 2, 5, 3, 6]).errorCount).toBe(0);
+
+    // Sleep sort: wake-order checkpoint + sorted output.
+    const sleep = moduleById('sleep-sort');
+    const sleepTimeline = sleep.generateTimeline([3, 1, 4, 2, 5]);
+    expect(sleepTimeline.some((frame) => frame.checkpoint?.id === 'sleepsort-wake-order')).toBe(
+      true
+    );
+    expectSorted(arrayValues(sleepTimeline[sleepTimeline.length - 1]));
+    expect(auditTimeline(sleep, [3, 1, 4, 2, 5]).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

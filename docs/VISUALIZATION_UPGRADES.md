@@ -32,7 +32,10 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | quickselect | ✅ | window-entry + pivot frames, no-op swap branch, rank-decision checkpoint, code-line fixes |
 | timsort | ✅ | run-scan/reversal/extension/merge pedagogy, per-compare checkpoint, best-case O(N) regression |
 | introsort | ✅ | heapsort fallback actually reachable (scaled depth, documented), engine-dispatch checkpoint, insertion-complete frame, code-line fixes |
-| bogosort / stooge-sort / drop-sort / sleep-sort | ⬜ | novelty; lower priority |
+| bogosort | ✅ | rejection frames, independence checkpoint, honest forced-permutation rail |
+| stooge-sort | ✅ | base-case frame, boundary conditionEval, third-branch checkpoint |
+| drop-sort | ✅ | guard conditionEval, survival checkpoint, "data loss" honesty notes |
+| sleep-sort | ✅ | wake-order checkpoint, tick/append pedagogy, tie-race caveat |
 
 ### Searching (8) — all currently generic ArrayStage
 binary-search, linear-search, jump-search, interpolation-search, exponential-search,
@@ -84,8 +87,9 @@ sweep-line-intersections / recursion-trees / lps → ⬜
 
 ## Batch plan (execution order)
 
-1. **S1 — sorting mechanics (in progress):** heapsort ✅, selection ✅, bubble ✅ →
-   cocktail, counting, radix, bucket, shellsort, quickselect.
+1. **S1 — sorting mechanics ✅ COMPLETE (18/18):** insertion, mergesort, quicksort,
+   heapsort, selection, bubble, cocktail, counting, radix, bucket, shellsort,
+   quickselect, timsort, introsort, bogosort, stooge-sort, drop-sort, sleep-sort.
 2. **S2 — searching:** mid/lo/hi frontier stage for all 8 search modules.
 3. **G1 — graph traversals & shortest paths:** DFS, bellman-ford, floyd-warshall, a-star,
    zero-one-bfs.

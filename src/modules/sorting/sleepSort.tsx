@@ -116,6 +116,7 @@ def sleep_sort(arr):
     }));
 
     const frames: ExecutionFrame<ArrayStageState>[] = [];
+    let checkpointAdded = false;
 
     // Frame 0: Initialization
     frames.push({
@@ -126,6 +127,11 @@ def sleep_sort(arr):
       milestoneTitle: `Init Sleep Sort (${n} threads)`,
       explanation: `Initialize Sleep Sort: Preparing to schedule ${n} concurrent timer threads for values [${arr.join(', ')}].`,
       variables: { totalElements: n, maxValue: maxVal, activeThreads: 0 },
+      pedagogy: {
+        what: `Sleep sort creates one thread per value; each thread sleeps for a time proportional to its value, then appends it to the output.`,
+        why: 'Sorting emerges from concurrency, not comparisons: smaller values wake earlier and are appended earlier.',
+        whatNext: `Dispatch one thread per element (${n} threads).`,
+      },
       conditionEval: { expr: 'arr.length > 0', result: true },
       soundCue: { type: 'step' },
       callStack: [{ name: 'sleepSort()', params: { n, maxVal }, line: 2, isCurrent: true }],
@@ -144,6 +150,24 @@ def sleep_sort(arr):
         codeLine: 3,
         explanation: `Dispatch Thread #${i + 1}: Registered worker timer for value ${arr[i]} with sleep duration ${arr[i]} virtual ticks.`,
         variables: { threadIndex: i, elementValue: arr[i], sleepDelay: `${arr[i]} ticks` },
+        pedagogy: {
+          what: `Thread for value ${arr[i]} starts its sleep timer of ${arr[i]} ticks.`,
+          why: 'The value itself is the delay — that is the entire "comparison": time replaces order comparison.',
+          whatNext: 'Dispatch the remaining threads, then advance the virtual clock.',
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'sleepsort-wake-order',
+              question: `All ${n} threads are dispatched with sleep delays equal to their values. In what order will they wake?`,
+              options: [
+                'Ascending value order — smaller values sleep less',
+                'Input order — threads that started first wake first',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Each thread sleeps val ticks, so the smallest value fires first and is appended first — the output comes out sorted.',
+            }
+          : undefined,
         conditionEval: { expr: `spawnWorker(val=${arr[i]})`, result: true },
         soundCue: { type: 'select' },
         callStack: [
@@ -155,6 +179,7 @@ def sleep_sort(arr):
           pointers: { spawning: i },
         },
       });
+      checkpointAdded = true;
       elements[i].status = 'default';
     }
 
@@ -190,6 +215,11 @@ def sleep_sort(arr):
             expiredThreadCount: wakingThisTick.length,
             wakingValues: wakingThisTick.map((i) => arr[i]),
           },
+          pedagogy: {
+            what: `Thread(s) sleeping for ${tick} tick(s) finish now: value(s) ${wakingThisTick.map((i) => arr[i]).join(', ')}.`,
+            why: `t = ${tick} is exactly the sleep duration of these values; no other thread has waited that exact time and finished yet.`,
+            whatNext: 'Append the woken values to the output stream in wake order.',
+          },
           conditionEval: { expr: `tick (${tick}) === threadDelay`, result: true },
           soundCue: { type: 'compare' },
           callStack: [
@@ -219,6 +249,11 @@ def sleep_sort(arr):
             wokenCount: wakingThisTick.length,
             sortedSoFar: `[${sortedOrder.join(', ')}]`,
           },
+          pedagogy: {
+            what: `Value(s) ${wakingThisTick.map((i) => arr[i]).join(', ')} joined the output; ${sortedOrder.length}/${n} collected.`,
+            why: 'Wake order is value order, so each append lands exactly one position after the previous smaller value — no reordering needed.',
+            whatNext: `Continue the clock until every thread has fired.`,
+          },
           conditionEval: { expr: `output.push(${wakingThisTick.map((i) => arr[i]).join(', ')})`, result: true },
           soundCue: { type: 'insert' },
           callStack: [
@@ -238,6 +273,11 @@ def sleep_sort(arr):
           codeLine: 4,
           explanation: `Virtual tick t = ${tick}: No timers expiring this cycle. All remaining threads still sleeping... (${sortedOrder.length}/${n} awake).`,
           variables: { currentTick: tick, awake: sortedOrder.length, sleeping: n - sortedOrder.length },
+          pedagogy: {
+            what: `The clock advanced to t = ${tick} with no thread reaching its sleep duration.`,
+            why: 'Values are integers, so ticks without a matching value are simply idle — the algorithm waits for time, not for comparisons.',
+            whatNext: `Keep ticking until the next thread's sleep duration is reached.`,
+          },
           conditionEval: { expr: `hasExpiredTimers(t=${tick})`, result: false },
           soundCue: { type: 'step' },
           callStack: [{ name: `sleep(tick=${tick})`, params: { tick }, line: 4, isCurrent: true }],
@@ -261,6 +301,11 @@ def sleep_sort(arr):
         totalTicks: maxVal,
         sortedResult: `[${sortedOrder.join(', ')}]`,
         allThreadsTerminated: true,
+      },
+      pedagogy: {
+        what: `Output: [${sortedOrder.join(', ')}] — sorted purely by timer expiry order.`,
+        why: `Runtime is proportional to the largest value (${maxVal} ticks), not to n: great for small numbers, terrible for big ones — and real concurrent threads race, so ties are unsafe.`,
+        whatNext: 'Compare with counting sort: both trade value range for speed, but counting sort does it deterministically.',
       },
       conditionEval: { expr: 'threads.allJoined()', result: true },
       soundCue: { type: 'complete' },

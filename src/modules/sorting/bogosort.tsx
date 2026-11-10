@@ -120,6 +120,7 @@ public static void bogosort(int[] arr) {
     const arr = [...raw];
 
     const frames: ExecutionFrame<ArrayStageState>[] = [];
+    let checkpointAdded = false;
 
     // Simple deterministic PRNG for reproducible shuffle timeline
     let seed = 123456789;
@@ -135,6 +136,11 @@ public static void bogosort(int[] arr) {
       codeLine: 8,
       explanation: `Initialize Bogosort for array [${arr.join(', ')}]. Checking if array is already sorted.`,
       variables: { elements: arr.length, attempt: 0, status: 'verifying' },
+      pedagogy: {
+        what: `Bogosort's entire strategy: check whether the array happens to be sorted, otherwise shuffle randomly and retry.`,
+        why: 'Instead of arranging elements, it samples permutations — the expected number of tries is N!/2, which explodes factorially.',
+        whatNext: `Attempt 1 verification starts with the pair arr[0] vs arr[1].`,
+      },
       callStack: [
         { name: 'bogosort(arr)', params: { length: arr.length }, line: 8, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
@@ -187,6 +193,32 @@ public static void bogosort(int[] arr) {
         if (!ok) {
           sortedSoFar = false;
           failIndex = i;
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 4,
+            explanation: `Attempt #${attempt}: violation arr[${i}] (${arr[i]}) > arr[${i + 1}] (${arr[i + 1]}). This permutation is rejected.`,
+            soundCue: { type: 'fail' },
+            variables: { attempt, failIndex: i, rejectedPermutation: arr.join(', ') },
+            conditionEval: { expr: `isSorted(attempt #${attempt})`, result: false },
+            callStack: [
+              { name: `isSorted(attempt=${attempt})`, params: { failAt: i }, line: 4, isCurrent: true },
+              { name: 'main()', params: {}, line: 1 },
+            ],
+            pedagogy: {
+              what: `The first out-of-order pair (${arr[i]}, ${arr[i + 1]}) rejects this permutation.`,
+              why: 'One counterexample is enough: a sorted array allows no adjacent descent anywhere.',
+              whatNext: `Shuffle the whole array and try a fresh permutation.`,
+            },
+            state: {
+              array: arr.map((v, idx) => ({
+                id: `el-${idx}`,
+                value: v,
+                status: idx === i || idx === i + 1 ? 'comparing' : 'default',
+              })),
+              pointers: { i, 'i+1': i + 1 },
+            },
+          });
           break;
         }
       }
@@ -201,6 +233,11 @@ public static void bogosort(int[] arr) {
           milestoneTitle: `Sorted in ${attempt} Attempt(s)!`,
           explanation: `All pairwise comparisons verified! Array is sorted: [${arr.join(', ')}] after ${attempt} permutation attempt(s).`,
           variables: { totalAttempts: attempt, isSorted: 'true' },
+          pedagogy: {
+            what: `Attempt #${attempt} passed every adjacent check — the permutation finally came out sorted.`,
+            why: 'This success was pure luck: the expected number of attempts grows factorially, so even 10 elements average millions of shuffles.',
+            whatNext: 'Compare with insertion sort: same array, a handful of frames, and a guarantee.',
+          },
           callStack: [
             { name: 'complete()', params: { attempts: attempt }, line: 12, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
@@ -215,8 +252,10 @@ public static void bogosort(int[] arr) {
 
       // If not sorted, perform shuffle
       // If we are near maxAttempts, force the sorted permutation to guarantee termination
+      let forced = false;
       if (attempt === maxAttempts - 1) {
         arr.sort((a, b) => a - b);
+        forced = true;
       } else {
         // Fisher-Yates random shuffle
         for (let i = arr.length - 1; i > 0; i--) {
@@ -230,11 +269,33 @@ public static void bogosort(int[] arr) {
         totalSteps: 1,
         codeLine: 10,
         isMilestone: true,
-        milestoneTitle: `Random Shuffle #${attempt}`,
-        explanation: `Violation detected at index ${failIndex}. Shuffled array uniformly at random to new permutation: [${arr.join(
-          ', '
-        )}].`,
-        variables: { attempt, newPermutation: arr.join(', '), status: 'shuffled' },
+        milestoneTitle: forced ? `Forced Sorted Permutation #${attempt}` : `Random Shuffle #${attempt}`,
+        explanation: forced
+          ? `Safety rail: after ${maxAttempts - 1} failed attempts the visualizer stops shuffling and forces the sorted permutation. Real bogosort would keep sampling — its expected work is N! · N.`
+          : `Violation detected at index ${failIndex}. Shuffled array uniformly at random to new permutation: [${arr.join(
+              ', '
+            )}].`,
+        variables: {
+          attempt,
+          newPermutation: arr.join(', '),
+          status: forced ? 'forced-sorted (demo safety rail)' : 'shuffled',
+        },
+        pedagogy: {
+          what: forced
+            ? 'The demo terminates by force: no real information was gained about the algorithm from this permutation.'
+            : `A brand-new uniformly random permutation: [${arr.join(', ')}].`,
+          why: 'Shuffling does not use any knowledge from the failed verification — that ignorance is exactly why bogosort is a joke, not a strategy.',
+          whatNext: 'Verify the new permutation from index 0 again.',
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'bogosort-shuffle-independence',
+              question: 'The verification just failed at some index. Does the next random shuffle use that information?',
+              options: ['No — each shuffle is an independent uniform permutation', 'Yes — it fixes the failed position first'],
+              correctIndex: 0,
+              explanation: 'Bogosort ignores all progress: every attempt is an independent sample of the N! permutations, which is why its expected cost is factorial.',
+            }
+          : undefined,
         callStack: [
           { name: `randomShuffle(attempt=${attempt})`, params: { attempt }, line: 10, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
@@ -244,6 +305,7 @@ public static void bogosort(int[] arr) {
           pointers: {},
         },
       });
+      checkpointAdded = true;
     }
 
     const total = frames.length;

@@ -106,6 +106,7 @@ export const dropSortModule: AlgorithmModule<number[], ArrayStageState> = {
     }));
 
     const frames: ExecutionFrame<ArrayStageState>[] = [];
+    let checkpointAdded = false;
 
     // Frame 0: Initialization
     elements[0].status = 'sorted';
@@ -115,6 +116,11 @@ export const dropSortModule: AlgorithmModule<number[], ArrayStageState> = {
       codeLine: 2,
       explanation: `Initialize Drop Sort. First element (${arr[0]}) is retained as baseline maximum.`,
       variables: { index: 0, retainedMax: arr[0], survivingCount: 1 },
+      pedagogy: {
+        what: `Drop sort keeps the first element, then retains only values ≥ the last kept value (a running maximum).`,
+        why: 'The kept subsequence is non-decreasing by construction — but it is NOT the sorted array: out-of-order elements are simply discarded, not moved.',
+        whatNext: `Inspect arr[1] and decide: keep it (≥ ${arr[0]}) or drop it.`,
+      },
       callStack: [{ name: 'dropSort()', params: { n }, line: 2, isCurrent: true }],
       state: {
         array: elements.map((e) => ({ ...e })),
@@ -136,12 +142,33 @@ export const dropSortModule: AlgorithmModule<number[], ArrayStageState> = {
         codeLine: 4,
         explanation: `Inspect element arr[${i}] = ${val}. Compare with retained maximum (${currentMax}).`,
         variables: { index: i, value: val, currentMax, satisfiesMonotonic: keeps ? 'YES' : 'NO' },
+        conditionEval: {
+          expr: `arr[${i}] >= retainedMax (${val} >= ${currentMax})`,
+          result: keeps,
+        },
         callStack: [{ name: `inspect(${i})`, params: { val, currentMax }, line: 4, isCurrent: true }],
+        pedagogy: {
+          what: `arr[${i}] = ${val} faces the running maximum ${currentMax}.`,
+          why: 'Only values that do not break the non-decreasing chain of kept elements can survive.',
+          whatNext: keeps ? `${val} stays in order — retain it.` : `${val} would break the chain — drop it entirely.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'dropsort-survival',
+              question: `Running maximum is ${currentMax}; the next value is ${val}. Does it survive?`,
+              options: ['Yes — it is ≥ the running maximum', 'No — it gets discarded'],
+              correctIndex: keeps ? 0 : 1,
+              explanation: keeps
+                ? `${val} ≥ ${currentMax}, so the non-decreasing chain continues.`
+                : `${val} < ${currentMax}: to keep the chain monotone, the element is thrown away — losing data, which is the joke of this "sort".`,
+            }
+          : undefined,
         state: {
           array: elements.map((e) => ({ ...e })),
           pointers: { current: i },
         },
       });
+      checkpointAdded = true;
 
       if (keeps) {
         currentMax = val;
@@ -153,6 +180,11 @@ export const dropSortModule: AlgorithmModule<number[], ArrayStageState> = {
           codeLine: 5,
           explanation: `arr[${i}] = ${val} >= ${currentMax} -> Retained! New maximum is ${val}. Total kept: ${surviving}.`,
           variables: { index: i, value: val, currentMax, totalSurviving: surviving },
+          pedagogy: {
+            what: `${val} is appended to the kept run; the running maximum becomes ${val}.`,
+            why: 'Keeping only non-decreasing values means the result is sorted without any movement.',
+            whatNext: `Continue with arr[${i + 1}] (if any).`,
+          },
           callStack: [{ name: `retain(${i})`, params: { val }, line: 5, isCurrent: true }],
           state: {
             array: elements.map((e) => ({ ...e })),
@@ -167,6 +199,11 @@ export const dropSortModule: AlgorithmModule<number[], ArrayStageState> = {
           codeLine: 7,
           explanation: `arr[${i}] = ${val} < ${currentMax} -> DROPPED (discarded)! Monotonic order preserved.`,
           variables: { index: i, droppedValue: val, currentMax },
+          pedagogy: {
+            what: `${val} is discarded — it existed in the input but will not exist in the output.`,
+            why: 'This is why drop sort is a parody: it never moves elements, it deletes the ones that are in the way.',
+            whatNext: `Continue scanning; the running maximum stays ${currentMax}.`,
+          },
           callStack: [{ name: `drop(${i})`, params: { val }, line: 7, isCurrent: true }],
           state: {
             array: elements.map((e) => ({ ...e })),
@@ -186,6 +223,11 @@ export const dropSortModule: AlgorithmModule<number[], ArrayStageState> = {
         originalCount: n,
         survivingCount: surviving,
         droppedCount: n - surviving,
+      },
+      pedagogy: {
+        what: `Output: [${elements.filter((e) => e.status !== 'discarded').map((e) => e.value).join(', ')}] — sorted, but ${n - surviving} of ${n} elements were deleted.`,
+        why: 'The survivors were never moved; they were merely the values that happened to be in non-decreasing order already.',
+        whatNext: 'Compare the output length with the input: a real sort must preserve every element.',
       },
       callStack: [{ name: 'complete()', params: { surviving }, line: 9, isCurrent: true }],
       state: {
