@@ -173,6 +173,40 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, [5, 1, 4, 2, 8, 0, 2]).errorCount).toBe(0);
   });
 
+  it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
+    const mod = moduleById('introsort');
+
+    // Default shuffle: quicksort partitions + insertion leaves, NO fallback.
+    const standard = mod.generateTimeline([24, 9, 29, 14, 19, 27, 4, 30]);
+    expect(standard.some((frame) => frame.variables?.engine === 'INSERTION_SORT')).toBe(true);
+    expect(standard.some((frame) => frame.variables?.engine === 'HEAPSORT_FALLBACK')).toBe(false);
+    expect(standard.some((frame) => frame.checkpoint?.id === 'introsort-engine-dispatch')).toBe(
+      true
+    );
+
+    // Adversarial sorted input: the scaled depth budget really exhausts,
+    // so the flagship fallback milestone must actually occur.
+    const adversarial = mod.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(
+      adversarial.some((frame) => frame.milestoneTitle === 'Heapsort Fallback Triggered')
+    ).toBe(true);
+    expect(adversarial.some((frame) => frame.variables?.engine === 'HEAPSORT_SIFT')).toBe(true);
+    expect(adversarial.some((frame) => frame.variables?.engine === 'HEAPSORT_EXTRACT')).toBe(true);
+
+    // Tiny array: pure insertion-sort path with an explicit completion frame.
+    const tiny = mod.generateTimeline([8, 3, 5, 1, 9]);
+    expect(tiny.some((frame) => frame.variables?.engine === 'INSERTION_SORT')).toBe(true);
+    expect(tiny.some((frame) => frame.variables?.engine === 'HEAPSORT_FALLBACK')).toBe(false);
+    expect(
+      tiny.some((frame) => frame.explanation.includes('Insertion Sort finished'))
+    ).toBe(true);
+
+    for (const timeline of [standard, adversarial, tiny]) {
+      expectSorted(arrayValues(timeline[timeline.length - 1]));
+    }
+    expect(auditTimeline(mod, [24, 9, 29, 14, 19, 27, 4, 30]).errorCount).toBe(0);
+  });
+
   it('timsort exposes natural-run scanning, extension, and per-step merging', () => {
     const mod = moduleById('timsort');
     const input = [1, 2, 8, 7, 6, 3, 4, 9];
