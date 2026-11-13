@@ -1134,6 +1134,92 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, { vertices: [1, 2, 3, 4], edges: [{ u: 1, v: 2, weight: 3 }] }).errorCount).toBe(0);
   });
 
+  it('DSU walks one parent hop per frame, compresses paths, and updates rank only on equal ranks', () => {
+    const mod = moduleById('disjoint-set-union');
+    const input = {
+      elements: ['A', 'B', 'C', 'D', 'E', 'F'],
+      operations: [
+        { type: 'UNION' as const, x: 'A', y: 'B' },
+        { type: 'UNION' as const, x: 'C', y: 'D' },
+        { type: 'UNION' as const, x: 'B', y: 'C' },
+        { type: 'FIND' as const, x: 'D' },
+        { type: 'UNION' as const, x: 'E', y: 'F' },
+        { type: 'FIND' as const, x: 'A' },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'dsu-union-by-rank').length).toBe(1);
+
+    // One climb frame per parent-pointer hop: B→A, D→C, C→A.
+    const climbs = timeline.filter((f) => f.codeLine === 5);
+    expect(climbs.length).toBe(3);
+    expect(climbs.map((f) => f.variables?.at)).toEqual(['B', 'D', 'C']);
+
+    // One root frame per find call (10 calls) and exactly one compression.
+    expect(timeline.filter((f) => f.codeLine === 7).length).toBe(10);
+    const compresses = timeline.filter((f) => f.codeLine === 6);
+    expect(compresses.length).toBe(1);
+    expect(compresses[0].milestoneTitle).toBe('Compress (D → A)');
+    expect(compresses[0].variables?.compressedNodes).toBe('D, C');
+
+    // After compression, D and C point straight at A.
+    const afterCompress = timeline[timeline.indexOf(compresses[0])];
+    expect(afterCompress.state.parents.D).toBe('A');
+    expect(afterCompress.state.parents.C).toBe('A');
+
+    // Four links and four rank updates; every default merge joins equal ranks.
+    const links = timeline.filter((f) => f.codeLine === 13);
+    const rankFrames = timeline.filter((f) => f.codeLine === 14);
+    expect(links.length).toBe(4);
+    expect(rankFrames.length).toBe(4);
+    expect(rankFrames.map((f) => f.variables?.newRank)).toEqual([1, 1, 2, 1]);
+
+    // Merging a smaller-rank root must leave the surviving rank untouched.
+    const skew = mod.generateTimeline({
+      elements: ['A', 'B', 'C'],
+      operations: [
+        { type: 'UNION' as const, x: 'A', y: 'B' },
+        { type: 'UNION' as const, x: 'B', y: 'C' },
+      ],
+    });
+    const skewRanks = skew.filter((f) => f.codeLine === 14);
+    expect(skewRanks.length).toBe(2);
+    expect(skewRanks[0].variables?.rankIncremented).toBe(true);
+    expect(skewRanks[1].variables?.rankIncremented).toBe(false);
+    expect(skewRanks[1].variables?.newRank).toBe(1);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.variables?.components).toBe(2); // {A,B,C,D} and {E,F}
+    expect(final.state.rootMap.A).toBe('A');
+    expect(final.state.rootMap.F).toBe('E');
+
+    // Redundant union of already-connected elements must surface as an explicit no-op.
+    const redundant = mod.generateTimeline({
+      elements: ['A', 'B'],
+      operations: [
+        { type: 'UNION' as const, x: 'A', y: 'B' },
+        { type: 'UNION' as const, x: 'A', y: 'B' },
+      ],
+    });
+    const noop = redundant.filter((f) => f.milestoneTitle?.startsWith('Redundant Union'));
+    expect(noop.length).toBe(1);
+    expect(noop[0].variables?.sharedRoot).toBe('A');
+    expect(noop[0].state.parents.B).toBe('A');
+
+    // Path-compression preset really compresses: 3 → 2 → 0 collapses to direct 3 → 0 and 2 → 0.
+    const preset = mod.presets.find((p) => p.id === 'path-compression')!;
+    const presetTimeline = mod.generateTimeline(preset.data as any);
+    const presetCompress = presetTimeline.filter((f) => f.codeLine === 6);
+    expect(presetCompress.length).toBe(1);
+    expect(presetCompress[0].milestoneTitle).toBe('Compress (3 → 0)');
+    expect(presetCompress[0].state.parents['2']).toBe('0');
+    expect(presetCompress[0].state.parents['3']).toBe('0');
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

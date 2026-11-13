@@ -67,15 +67,15 @@ export const dsuModule: AlgorithmModule<DSUInput, DSUState> = {
     {
       id: 'path-compression',
       label: 'Path Compression Demo',
-      description: 'Long chain flattened on single FIND call',
+      description: 'A height-2 tree flattened to height 1 by a single FIND call',
       data: {
         elements: ['0', '1', '2', '3', '4'],
         operations: [
           { type: 'UNION', x: '0', y: '1' },
-          { type: 'UNION', x: '1', y: '2' },
           { type: 'UNION', x: '2', y: '3' },
-          { type: 'UNION', x: '3', y: '4' },
-          { type: 'FIND', x: '4' },
+          { type: 'UNION', x: '1', y: '2' },
+          { type: 'FIND', x: '3' },
+          { type: 'FIND', x: '1' },
         ],
       },
     },
@@ -167,7 +167,10 @@ public:
         return true;
     }
 }`,
-    pseudocode: `function find(x):
+    pseudocode: `function makeSet(elements):
+    parent[x] = x and rank[x] = 0 for every x
+
+function find(x):
     if parent[x] != x:
         parent[x] = find(parent[x])
     return parent[x]
@@ -220,38 +223,79 @@ function union(x, y):
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
-      explanation: `Initialized DSU with ${elements.length} disjoint singletons: {${elements.map((e) => `[${e}]`).join(', ')}}. Each element is its own parent (rank = 0).`,
+      codeLine: 2,
+      explanation: `makeSet: ${elements.length} disjoint singletons {${elements.map((e) => `[${e}]`).join(', ')}}. Each element is its own parent with rank 0.`,
       isMilestone: true,
       milestoneTitle: 'DSU Initialized',
       soundCue: { type: 'start' },
       variables: { totalSets: elements.length, elements: elements.join(', ') },
-      callStack: [{ name: 'DSU.init', params: { size: elements.length }, line: 1, isCurrent: true }],
-      conditionEval: { expr: `elements.length > 0`, result: true },
+      callStack: [{ name: 'makeSet', params: { size: elements.length }, line: 2, isCurrent: true }],
+      pedagogy: {
+        what: `Every element starts as its own singleton set: parent[x] = x and rank[x] = 0.`,
+        why: 'A node is a set representative exactly when it points to itself, so this base case is what find() terminates on.',
+        whatNext: 'Run the operation sequence; find() walks parent pointers, union() links two roots.',
+      },
       scopeVariables: { totalSets: elements.length, elements: elements.join(', ') },
       state: makeState([], 'INIT', 'Initial State: All elements are independent singletons'),
     });
 
+    let checkpointAdded = false;
+
     const findWithLogging = (x: string): string => {
       const path: string[] = [];
       let curr = x;
+
+      // Climb one parent pointer per frame, so every hop of the walk is visible.
       while (parents[curr] !== curr) {
+        const next = parents[curr];
         path.push(curr);
-        curr = parents[curr];
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 5,
+          explanation: `find(${x}): at '${curr}', parent[${curr}] = ${next} ≠ ${curr}, so follow the pointer upward.`,
+          soundCue: { type: 'compare' },
+          variables: { at: curr, parent: next, hopsSoFar: path.length },
+          callStack: [{ name: 'find', params: { x: curr, parent: next }, line: 5, isCurrent: true }],
+          conditionEval: { expr: `parent[${curr}] != ${curr}`, result: true },
+          scopeVariables: { at: curr, parent: next },
+          pedagogy: {
+            what: `From '${curr}' the walk moves to '${next}'; ${path.length} hop(s) so far.`,
+            why: 'Only a self-pointing node is a root. Until then the representative is further up, so the walk must keep climbing.',
+            whatNext:
+              parents[next] === next
+                ? `parent[${next}] == ${next}, so '${next}' is the root.`
+                : `Continue climbing from '${next}'.`,
+          },
+          state: makeState([curr], `FIND(${x})`, `Climbing from ${curr} to ${next}`),
+        });
+
+        curr = next;
       }
+
       const root = curr;
+      const fullPath = [...path, root];
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 7,
-        explanation: `FIND(${x}): Traversed path [${[...path, root].join(' → ')}]. Canonical root is '${root}'.`,
+        explanation: `Root reached: parent[${root}] == ${root}. Traversed path [${fullPath.join(' → ')}], so find(${x}) = '${root}'.`,
         soundCue: { type: 'compare' },
-        variables: { target: x, root, pathLength: path.length },
+        variables: { target: x, root, pathLength: path.length, path: fullPath.join(' → ') },
         callStack: [{ name: 'find', params: { x }, line: 7, isCurrent: true }],
-        conditionEval: { expr: `parent[${curr}] == ${curr}`, result: true },
+        conditionEval: { expr: `parent[${root}] == ${root}`, result: true },
         scopeVariables: { target: x, root, pathLength: path.length },
-        state: makeState([x, root], `FIND(${x})`, `Traversing path from ${x} to root ${root}`),
+        pedagogy: {
+          what: `'${root}' points to itself, so it is the canonical representative of the set containing '${x}'.`,
+          why: 'All nodes on the path share this root; comparing find(a) == find(b) is exactly the same-component test.',
+          whatNext:
+            path.length > 1
+              ? `Compress: re-link the ${path.length} intermediate node(s) directly to '${root}'.`
+              : 'The path was already a direct child (or a root), so no compression is needed.',
+        },
+        state: makeState([x, root], `FIND(${x})`, `Traversed path ${fullPath.join(' → ')}`),
       });
 
       // Path compression
@@ -262,15 +306,20 @@ function union(x, y):
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 8,
-          explanation: `⚡ Path Compression: Re-linked intermediate nodes [${path.join(', ')}] directly to root '${root}' in O(1).`,
+          codeLine: 6,
+          explanation: `Path compression: re-linked ${path.length} intermediate node(s) [${path.join(', ')}] directly to root '${root}'.`,
           isMilestone: true,
           milestoneTitle: `Compress (${x} → ${root})`,
           soundCue: { type: 'swap' },
-          variables: { compressedNodes: path.join(', '), newDirectParent: root },
-          callStack: [{ name: 'compressPath', params: { root, path: path.join(',') }, line: 8, isCurrent: true }],
-          conditionEval: { expr: `path.length > 1 (${path.length} > 1)`, result: true },
+          variables: { compressedNodes: path.join(', '), newDirectParent: root, compressedCount: path.length },
+          callStack: [{ name: 'compressPath', params: { root, path: path.join(',') }, line: 6, isCurrent: true }],
+          conditionEval: { expr: `parent[${x}] != ${root}`, result: true },
           scopeVariables: { compressedNodes: path.join(', '), newDirectParent: root },
+          pedagogy: {
+            what: `Every node on the walked path now points directly at '${root}', so the next find() on these nodes costs one hop.`,
+            why: 'Reparenting inside a set never changes membership — only the path length — so compression is always safe.',
+            whatNext: 'Future finds on this path run in nearly constant time.',
+          },
           state: makeState(path, `COMPRESS(${x})`, `Flattened tree path directly under ${root}`),
         });
       }
@@ -285,13 +334,17 @@ function union(x, y):
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 12,
-          explanation: `UNION(${op.x}, ${op.y}): Initiating set merge. Finding representatives of both elements.`,
+          codeLine: 10,
+          explanation: `UNION(${op.x}, ${op.y}): locate the representatives with rootX = find(${op.x}) and rootY = find(${op.y}).`,
           soundCue: { type: 'step' },
           variables: { elementA: op.x, elementB: op.y },
-          callStack: [{ name: 'union', params: { x: op.x, y: op.y }, line: 12, isCurrent: true }],
-          conditionEval: { expr: `op.x !== op.y`, result: op.x !== op.y },
+          callStack: [{ name: 'union', params: { x: op.x, y: op.y }, line: 10, isCurrent: true }],
           scopeVariables: { elementA: op.x, elementB: op.y },
+          pedagogy: {
+            what: `UNION begins by finding both roots; the elements themselves are never linked.`,
+            why: 'Sets are trees, so a merge must connect two root nodes. Linking non-root nodes could break existing parent chains.',
+            whatNext: `Run find(${op.x}) and find(${op.y}) to obtain the two roots.`,
+          },
           state: makeState([op.x, op.y], `UNION(${op.x}, ${op.y})`, `Searching roots for ${op.x} and ${op.y}`),
         });
 
@@ -302,15 +355,20 @@ function union(x, y):
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 14,
-            explanation: `Notice: '${op.x}' and '${op.y}' already share identical root '${rootX}'. No union required (Cycle avoided).`,
+            codeLine: 11,
+            explanation: `find(${op.x}) = find(${op.y}) = '${rootX}': both elements already live in the same component, so union returns false.`,
             isMilestone: true,
             milestoneTitle: `Redundant Union (${op.x}, ${op.y})`,
             soundCue: { type: 'compare' },
             variables: { sharedRoot: rootX },
-            callStack: [{ name: 'union.redundant', params: { rootX, rootY }, line: 14, isCurrent: true }],
+            callStack: [{ name: 'union.redundant', params: { rootX, rootY }, line: 11, isCurrent: true }],
             conditionEval: { expr: `rootX == rootY (${rootX} == ${rootY})`, result: true },
             scopeVariables: { sharedRoot: rootX },
+            pedagogy: {
+              what: `Identical roots mean '${op.x}' and '${op.y}' are already connected; nothing merges.`,
+              why: 'This is exactly the cycle test Kruskal uses: an edge inside one set would close a cycle.',
+              whatNext: 'Skip the merge and continue with the next operation.',
+            },
             state: makeState([rootX], `UNION(${op.x}, ${op.y})`, `Already in same component (${rootX})`),
           });
         } else {
@@ -323,39 +381,96 @@ function union(x, y):
           }
 
           parents[subordinate] = leader;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 13,
+            explanation: `Link roots: parent['${subordinate}'] = '${leader}'. Component '${subordinate}' is attached beneath '${leader}' (union by rank).`,
+            isMilestone: true,
+            milestoneTitle: `United (${subordinate} → ${leader})`,
+            soundCue: { type: 'swap' },
+            variables: { leader, subordinate, leaderRank: ranks[leader], subordinateRank: ranks[subordinate] },
+            callStack: [{ name: 'linkRoots', params: { leader, subordinate }, line: 13, isCurrent: true }],
+            conditionEval: { expr: `rank[${leader}] >= rank[${subordinate}]`, result: true },
+            scopeVariables: { leader, subordinate, leaderRank: ranks[leader], subordinateRank: ranks[subordinate] },
+            pedagogy: {
+              what: `Root '${subordinate}' now points to root '${leader}', so both trees form one set with representative '${leader}'.`,
+              why: `Attaching the rank-${ranks[subordinate]} tree under the rank-${ranks[leader]} tree keeps the height bounded, which is what makes find() nearly constant later.`,
+              whatNext:
+                ranks[leader] === ranks[subordinate]
+                  ? 'The two ranks are equal, so the new root must grow one level taller.'
+                  : `Rank '${leader}' > rank '${subordinate}', so no rank change is needed.`,
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'dsu-union-by-rank',
+                  question: `Why attach '${subordinate}' under '${leader}' rather than the other way around?`,
+                  options: [
+                    'Union by rank puts the shorter tree below the taller, bounding the height so find() stays near O(1)',
+                    `Because '${leader}' appears earlier in the element list, so it must stay the representative`,
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Merging the taller tree under the shorter one can build a linear chain, degrading find() to O(N). Rank keeps the height ≤ log N before any compression, and O(α(N)) together with it.',
+                }
+              : undefined,
+            state: makeState([leader, subordinate], `UNION(${op.x}, ${op.y})`, `Component ${subordinate} merged into ${leader}`),
+          });
+          checkpointAdded = true;
+
           const rankIncremented = ranks[leader] === ranks[subordinate];
           if (rankIncremented) ranks[leader] += 1;
 
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 17,
-            explanation: `✅ UNION Successful: Linked component '${subordinate}' under '${leader}' (by rank). ${rankIncremented ? `Rank of '${leader}' increased to ${ranks[leader]}.` : `Rank preserved.`}`,
-            isMilestone: true,
-            milestoneTitle: `United (${subordinate} → ${leader})`,
-            soundCue: { type: 'swap' },
-            variables: { leader, subordinate, newRank: ranks[leader] },
-            callStack: [{ name: 'linkRoots', params: { leader, subordinate, rank: ranks[leader] }, line: 17, isCurrent: true }],
-            conditionEval: { expr: `rank[leader] >= rank[subordinate]`, result: true },
-            scopeVariables: { leader, subordinate, newRank: ranks[leader] },
-            state: makeState([leader, subordinate], `UNION(${op.x}, ${op.y})`, `Component ${subordinate} merged into ${leader}`),
+            codeLine: 14,
+            explanation: rankIncremented
+              ? `rank['${leader}'] == rank['${subordinate}'] before the merge, so rank['${leader}'] increases to ${ranks[leader]}.`
+              : `rank['${leader}'] (${ranks[leader]}) > rank['${subordinate}'] (${ranks[subordinate]}), so rank['${leader}'] stays ${ranks[leader]}.`,
+            soundCue: { type: 'step' },
+            variables: { leader, rankIncremented, newRank: ranks[leader] },
+            callStack: [{ name: 'updateRank', params: { leader, rank: ranks[leader] }, line: 14, isCurrent: true }],
+            conditionEval: { expr: `rank['${leader}'] == rank['${subordinate}']`, result: rankIncremented },
+            scopeVariables: { leader, rankIncremented, newRank: ranks[leader] },
+            pedagogy: {
+              what: rankIncremented
+                ? `The merged tree is one level taller than either input, so rank['${leader}'] becomes ${ranks[leader]}.`
+                : `The surviving root already had the larger rank, so its rank is unchanged at ${ranks[leader]}.`,
+              why: 'Rank only grows when two equal-rank trees merge — the only situation that increases the height of the result.',
+              whatNext: 'Continue with the next operation.',
+            },
+            state: makeState([leader], `UNION(${op.x}, ${op.y})`, `Rank of ${leader}: ${ranks[leader]}`),
           });
         }
       }
     }
 
+    const finalRootMap = getRootMap();
+    const finalComponentCount = new Set(Object.values(finalRootMap)).size;
+
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 21,
-      explanation: `🎉 All DSU operations executed. Disjoint partition components stabilized.`,
+      codeLine: 15,
+      explanation: `All ${input.operations.length} operation(s) executed. The ${elements.length} elements are partitioned into ${finalComponentCount} component(s): ${Object.entries(
+        finalRootMap
+      )
+        .map(([el, root]) => `${el}→${root}`)
+        .join(', ')}.`,
       isMilestone: true,
       milestoneTitle: 'DSU Sequence Done',
       soundCue: { type: 'complete' },
-      variables: { totalElements: elements.length, done: true },
-      callStack: [{ name: 'dsu.complete', params: { count: elements.length }, line: 21, isCurrent: true }],
+      variables: { totalElements: elements.length, components: finalComponentCount, done: true },
+      callStack: [{ name: 'dsu.complete', params: { components: finalComponentCount }, line: 15, isCurrent: true }],
       conditionEval: { expr: `operations.done == true`, result: true },
-      scopeVariables: { totalElements: elements.length },
+      scopeVariables: { totalElements: elements.length, components: finalComponentCount },
+      pedagogy: {
+        what: `Every union has returned true or false; the final parent map encodes ${finalComponentCount} component(s).`,
+        why: 'Two elements are in the same component iff their find() results match — the partition is fully determined by the parent pointers.',
+        whatNext: 'With path compression and union by rank, any sequence of M operations ran in O(M α(N)) total.',
+      },
       state: makeState([], 'DONE', 'Operations complete'),
     });
 
