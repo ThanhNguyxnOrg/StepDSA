@@ -203,6 +203,7 @@ def prim_mst(graph, start):
     const visited = new Set<string>([input.startNode]);
     let totalWeight = 0;
     let mstEdgeCount = 0;
+    let checkpointAdded = false;
 
     const makeState = (currentEdgeId?: string): PrimMSTState => ({
       nodes,
@@ -213,19 +214,49 @@ def prim_mst(graph, start):
       mstEdgesCount: mstEdgeCount,
     });
 
-    // Initial frame
+    // Frame 0: root enters the tree
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
-      explanation: `Initialized Prim's MST starting from root vertex '${input.startNode}'. Cut frontier established.`,
+      codeLine: 2,
+      explanation: `Prim starts from root '${input.startNode}': visited = {'${input.startNode}'}, MST is empty.`,
       isMilestone: true,
       milestoneTitle: `Root: ${input.startNode}`,
       soundCue: { type: 'start' },
       variables: { startNode: input.startNode, totalVertices: nodes.length, totalWeight: 0, mstEdgeCount: 0 },
-      callStack: [{ name: 'primMST', params: { root: input.startNode, V: nodes.length }, line: 1, isCurrent: true }],
-      conditionEval: { expr: `visited.size < nodes.length`, result: true },
-      scopeVariables: { startNode: input.startNode, totalVertices: nodes.length },
+      callStack: [{ name: 'primMST', params: { root: input.startNode, V: nodes.length }, line: 2, isCurrent: true }],
+      conditionEval: { expr: `visited.size < nodes.length`, result: nodes.length > 1 },
+      pedagogy: {
+        what: `The tree starts as the single vertex '${input.startNode}'; every other vertex lies outside the cut.`,
+        why: 'Prim grows one tree from one root. At each step only edges crossing from the tree to the outside may be chosen.',
+        whatNext: 'Insert every edge incident to the root into the frontier (priority queue).',
+      },
+      state: makeState(),
+    });
+
+    // Frame 1: frontier seeded with root-incident edges
+    const rootIncident = edges.filter((e) => e.from === input.startNode || e.to === input.startNode);
+    rootIncident.forEach((e) => {
+      if (e.status === 'unvisited') e.status = 'candidate';
+    });
+
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 4,
+      explanation: `Frontier seeded with ${rootIncident.length} edge(s) incident to '${input.startNode}': [${rootIncident
+        .map((e) => `${e.from}-${e.to}(${e.weight})`)
+        .join(', ')}].`,
+      variables: {
+        frontierSize: rootIncident.length,
+        frontier: rootIncident.map((e) => `${e.from}-${e.to}:${e.weight}`).join(', '),
+      },
+      callStack: [{ name: 'initFrontier', params: { root: input.startNode, edges: rootIncident.length }, line: 4, isCurrent: true }],
+      pedagogy: {
+        what: `The frontier contains the ${rootIncident.length} edge(s) crossing the cut between {'${input.startNode}'} and the rest of the graph.`,
+        why: 'Only a crossing edge can extend the tree without creating a cycle, so the priority queue needs nothing else.',
+        whatNext: 'Extract the lightest crossing edge.',
+      },
       state: makeState(),
     });
 
@@ -247,80 +278,178 @@ def prim_mst(graph, start):
       // Find minimum weight edge among candidates
       candidateEdges.sort((a, b) => a.weight - b.weight);
       const minEdge = candidateEdges[0];
+      const minEdgeLabel = `${minEdge.from}-${minEdge.to}`;
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 6,
+        explanation: `Inspect the cut frontier: ${candidateEdges.length} crossing edge(s); extract_min gives (${minEdgeLabel}, weight ${minEdge.weight}).`,
+        soundCue: { type: 'compare' },
+        variables: {
+          minEdge: minEdgeLabel,
+          minWeight: minEdge.weight,
+          candidateCount: candidateEdges.length,
+          frontier: candidateEdges.map((e) => `${e.from}-${e.to}:${e.weight}`).join(', '),
+        },
+        callStack: [{ name: 'extractMin', params: { candidateCount: candidateEdges.length, weight: minEdge.weight }, line: 6, isCurrent: true }],
+        conditionEval: { expr: `candidateEdges.length > 0`, result: true },
+        scopeVariables: {
+          minEdge: minEdgeLabel,
+          minWeight: minEdge.weight,
+          candidateCount: candidateEdges.length,
+        },
+        pedagogy: {
+          what: `Of the ${candidateEdges.length} edge(s) crossing the current cut, ${minEdgeLabel} (w=${minEdge.weight}) is the cheapest.`,
+          why: 'The cut property guarantees the lightest crossing edge belongs to some MST, so taking it now can never hurt optimality.',
+          whatNext: `Annex the unvisited endpoint of ${minEdgeLabel} into the tree.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'prim-min-cut-edge',
+              question: `Prim picks ${minEdgeLabel} (w=${minEdge.weight}), the lightest edge crossing the current cut. Why is that choice always safe?`,
+              options: [
+                'The cut property: the minimum-weight edge crossing any cut belongs to some MST, so this edge cannot be a mistake',
+                'Because it is the globally lightest edge in the whole graph, which is always in every MST',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Prim only needs optimality across the current cut, not globally. A globally light edge may be inside one component and useless; the cut property is what justifies each greedy annexation.',
+            }
+          : undefined,
+        state: makeState(minEdge.id),
+      });
+      checkpointAdded = true;
+
+      const newlyVisited = visited.has(minEdge.from) ? minEdge.to : minEdge.from;
+
+      // Annex the new vertex (line 8)
+      visited.add(newlyVisited);
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 8,
-        explanation: `Inspecting cut frontier: found ${candidateEdges.length} crossing edges. Minimum weight cut edge is (${minEdge.from} - ${minEdge.to}, weight ${minEdge.weight}).`,
-        soundCue: { type: 'compare' },
+        explanation: `visited.add('${newlyVisited}'): the tree now spans ${visited.size}/${nodes.length} vertices. The selected edge is not yet counted.`,
+        isMilestone: true,
+        milestoneTitle: `Annex ${newlyVisited} (wt: ${minEdge.weight})`,
+        soundCue: { type: 'swap' },
         variables: {
-          minEdge: `${minEdge.from}-${minEdge.to}`,
-          minWeight: minEdge.weight,
-          candidateCount: candidateEdges.length,
+          annexedVertex: newlyVisited,
+          visitedSize: visited.size,
+          totalVertices: nodes.length,
+          edge: minEdgeLabel,
         },
-        callStack: [{ name: 'findMinCutEdge', params: { candidateCount: candidateEdges.length }, line: 8, isCurrent: true }],
-        conditionEval: { expr: `candidateEdges.length > 0`, result: true },
-        scopeVariables: {
-          minEdge: `${minEdge.from}-${minEdge.to}`,
-          minWeight: minEdge.weight,
-          candidateCount: candidateEdges.length,
+        callStack: [{ name: 'annexVertex', params: { vertex: newlyVisited }, line: 8, isCurrent: true }],
+        conditionEval: { expr: `'${newlyVisited}' not in visited`, result: true },
+        pedagogy: {
+          what: `'${newlyVisited}' joins the visited set, so the cut moves: edges from it to unvisited vertices become crossing edges.`,
+          why: 'Annexing exactly one new endpoint per chosen edge is what keeps the selected edges a tree rather than a cycle-bearing subgraph.',
+          whatNext: `Add ${minEdgeLabel} to the MST and increase the total weight by ${minEdge.weight}.`,
         },
         state: makeState(minEdge.id),
       });
 
-      // Select this edge
+      // Add the edge to MST (line 9)
       minEdge.status = 'selected';
-      const newlyVisited = visited.has(minEdge.from) ? minEdge.to : minEdge.from;
-      visited.add(newlyVisited);
       totalWeight += minEdge.weight;
       mstEdgeCount += 1;
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 12,
-        explanation: `✅ Added edge (${minEdge.from} - ${minEdge.to}, weight ${minEdge.weight}) to MST. Vertex '${newlyVisited}' annexed into visited set. Total MST weight = ${totalWeight}.`,
-        isMilestone: true,
-        milestoneTitle: `Annex ${newlyVisited} (wt: ${minEdge.weight})`,
-        soundCue: { type: 'swap' },
+        codeLine: 9,
+        explanation: `MST.add((${minEdgeLabel}, ${minEdge.weight})): MST now has ${mstEdgeCount} edge(s), total weight ${totalWeight}.`,
+        soundCue: { type: 'step' },
         variables: {
-          annexedVertex: newlyVisited,
-          edge: `${minEdge.from}-${minEdge.to}`,
+          edge: minEdgeLabel,
+          weight: minEdge.weight,
           totalWeight,
           mstCount: mstEdgeCount,
         },
-        callStack: [{ name: 'annexVertex', params: { vertex: newlyVisited, weight: minEdge.weight }, line: 12, isCurrent: true }],
-        conditionEval: { expr: `mstEdgeCount < nodes.length - 1`, result: mstEdgeCount < nodes.length - 1 },
-        scopeVariables: {
-          annexedVertex: newlyVisited,
-          edge: `${minEdge.from}-${minEdge.to}`,
-          totalWeight,
-          mstCount: mstEdgeCount,
+        callStack: [{ name: 'addToMST', params: { edge: minEdgeLabel, weight: minEdge.weight }, line: 9, isCurrent: true }],
+        pedagogy: {
+          what: `${minEdgeLabel} is committed to the MST; the running weight becomes ${totalWeight}.`,
+          why: 'The edge was the cheapest way to reach the newly annexed vertex, so any cheaper spanning tree would have to contradict the cut property.',
+          whatNext: 'Update the frontier with edges leaving the newly annexed vertex.',
         },
         state: makeState(minEdge.id),
       });
 
-      // Mark internal edges between visited nodes as discarded
+      // Refresh the frontier: candidate edges with both endpoints visited are no longer crossing.
+      const discarded: PrimEdge[] = [];
       edges.forEach((e) => {
         if (e.status === 'candidate' && visited.has(e.from) && visited.has(e.to)) {
           e.status = 'discarded';
+          discarded.push(e);
         }
+      });
+
+      const frontierAfter = edges.filter((e) => {
+        const hasFrom = visited.has(e.from);
+        const hasTo = visited.has(e.to);
+        return hasFrom !== hasTo;
+      });
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 11,
+        explanation:
+          `Frontier updated: ${frontierAfter.length} crossing edge(s) remain` +
+          (discarded.length
+            ? `; discarded ${discarded.map((e) => `${e.from}-${e.to}`).join(', ')} because both endpoints are now visited.`
+            : '; no edge became internal.'),
+        variables: {
+          frontierSize: frontierAfter.length,
+          frontier: frontierAfter.map((e) => `${e.from}-${e.to}:${e.weight}`).join(', '),
+          discardedCount: discarded.length,
+          discarded: discarded.map((e) => `${e.from}-${e.to}`).join(', ') || '—',
+        },
+        callStack: [{ name: 'updateFrontier', params: { crossing: frontierAfter.length }, line: 11, isCurrent: true }],
+        pedagogy: {
+          what: discarded.length
+            ? `${discarded.map((e) => `${e.from}-${e.to}`).join(', ')} stop crossing the cut, so they leave the frontier; ${frontierAfter.length} edge(s) remain.`
+            : `No frontier edge became internal; ${frontierAfter.length} edge(s) still cross the cut.`,
+          why: 'An edge with both endpoints visited would close a cycle, so it must never be inserted into the priority queue again.',
+          whatNext: 'Extract the next lightest crossing edge.',
+        },
+        state: makeState(),
       });
     }
 
+    const isComplete = visited.size === nodes.length;
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 15,
-      explanation: `🎉 Prim's MST Complete! Selected ${mstEdgeCount} edges spanning all ${nodes.length} vertices with minimal total weight of ${totalWeight}.`,
+      codeLine: 12,
+      explanation: isComplete
+        ? `Prim's MST complete: ${mstEdgeCount} edge(s) span all ${nodes.length} vertices with total weight ${totalWeight}.`
+        : `Frontier exhausted after ${mstEdgeCount} edge(s): only ${visited.size}/${nodes.length} vertices are reachable from '${input.startNode}'. Prim returns a minimum spanning forest for that component, not a spanning tree.`,
       isMilestone: true,
-      milestoneTitle: 'MST Complete',
+      milestoneTitle: isComplete ? `MST Complete (weight ${totalWeight})` : 'Disconnected — Spanning Forest',
       soundCue: { type: 'complete' },
-      variables: { totalWeight, mstEdges: mstEdgeCount, isComplete: true },
-      callStack: [{ name: 'primMST.complete', params: { totalWeight, edges: mstEdgeCount }, line: 15, isCurrent: true }],
-      conditionEval: { expr: `visited.size == nodes.length`, result: visited.size === nodes.length },
-      scopeVariables: { totalWeight, mstEdges: mstEdgeCount },
+      variables: {
+        totalWeight,
+        mstEdges: mstEdgeCount,
+        isComplete,
+        reachedVertices: visited.size,
+        totalVertices: nodes.length,
+      },
+      callStack: [{ name: 'primMST.complete', params: { totalWeight, edges: mstEdgeCount }, line: 12, isCurrent: true }],
+      conditionEval: { expr: `visited.size == nodes.length`, result: isComplete },
+      scopeVariables: { totalWeight, mstEdges: mstEdgeCount, isComplete },
+      pedagogy: {
+        what: isComplete
+          ? `Return MST with ${mstEdgeCount} edges and total weight ${totalWeight}.`
+          : `Return a spanning forest: ${visited.size} of ${nodes.length} vertices are reachable, so no spanning tree exists.`,
+        why: isComplete
+          ? 'Every vertex was annexed through its cheapest crossing edge, so the final tree is minimum by repeated application of the cut property.'
+          : 'Prim can only cross edges; with an empty frontier there is no path to the remaining vertices, and pretending otherwise would be false.',
+        whatNext: isComplete
+          ? 'Compare with Kruskal: same MST weight, but Prim grows one tree while Kruskal merges many.'
+          : 'Run Prim again from an unreached vertex to obtain the other components of the forest.',
+      },
       state: makeState(),
     });
 
