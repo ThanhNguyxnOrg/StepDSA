@@ -903,6 +903,72 @@ describe('pedagogical timeline regressions', () => {
     }).errorCount).toBe(0);
   });
 
+  it("Kruskal accepts edges in weight order, rejects cycles, and stops at V-1 edges", () => {
+    const mod = moduleById('kruskal-mst');
+    const input = {
+      nodes: [
+        { id: 'A', label: 'A', x: 100, y: 80 },
+        { id: 'B', label: 'B', x: 260, y: 60 },
+        { id: 'C', label: 'C', x: 420, y: 80 },
+        { id: 'D', label: 'D', x: 100, y: 220 },
+        { id: 'E', label: 'E', x: 260, y: 240 },
+        { id: 'F', label: 'F', x: 420, y: 220 },
+      ],
+      edges: [
+        { from: 'A', to: 'B', weight: 4 },
+        { from: 'A', to: 'D', weight: 3 },
+        { from: 'B', to: 'D', weight: 2 },
+        { from: 'B', to: 'E', weight: 3 },
+        { from: 'B', to: 'C', weight: 5 },
+        { from: 'C', to: 'F', weight: 6 },
+        { from: 'D', to: 'E', weight: 7 },
+        { from: 'E', to: 'F', weight: 4 },
+        { from: 'C', to: 'E', weight: 1 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'kruskal-cycle-check').length).toBe(1);
+
+    // Sorted order is strict, so the first inspect frame is the lightest edge C-E (1).
+    const inspects = timeline.filter((f) => f.action?.startsWith('Inspect edge'));
+    expect(inspects.length).toBeGreaterThan(0);
+    const weights = inspects.map((f) => Number(f.scopeVariables?.weight));
+    expect(weights).toEqual([...weights].sort((a, b) => a - b));
+    expect(weights[0]).toBe(1);
+
+    // Every rejected edge truly closes a cycle: both endpoints share a root.
+    const rejects = timeline.filter((f) => f.action?.startsWith('Reject edge'));
+    expect(rejects.length).toBe(1);
+    expect(rejects[0].scopeVariables?.cycle).toBe('yes');
+    expect(rejects[0].scopeVariables?.sharedRoot).toBeTruthy();
+
+    // Accept → union ordering: each acceptance is followed by its union frame.
+    const accepts = timeline.filter((f) => f.action?.startsWith('Accept edge'));
+    const unions = timeline.filter((f) => f.action?.startsWith('Union components'));
+    expect(accepts.length).toBe(5);
+    expect(unions.length).toBe(5);
+    for (let i = 0; i < accepts.length; i++) {
+      const acceptIdx = timeline.indexOf(accepts[i]);
+      expect(timeline[acceptIdx + 1].action).toBe(unions[i].action);
+    }
+
+    // Early exit fires exactly once, right when |A| hits V-1.
+    const earlyExits = timeline.filter((f) => f.action === 'Early exit: V-1 edges');
+    expect(earlyExits.length).toBe(1);
+    expect(earlyExits[0].scopeVariables?.mstEdgeCount).toBe(5);
+    expect(earlyExits[0].scopeVariables?.neededEdges).toBe(5);
+
+    // Known MST for this graph: C-E(1), B-D(2), A-D(3), B-E(3), E-F(4).
+    const final = timeline[timeline.length - 1];
+    expect(final.state.mstEdgeCount).toBe(5);
+    expect(final.state.mstWeight).toBe(13);
+    expect(final.milestoneTitle).toBe('MST Complete (weight 13)');
+    expect(final.state.edges.filter((e: any) => e.status === 'accepted').length).toBe(5);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

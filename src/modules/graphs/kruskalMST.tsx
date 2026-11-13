@@ -262,7 +262,8 @@ struct DSU {
       action: string,
       isMilestone: boolean,
       scope: Record<string, string | number>,
-      soundCue?: ExecutionFrame<KruskalMSTState>['soundCue']
+      soundCue?: ExecutionFrame<KruskalMSTState>['soundCue'],
+      extra?: Partial<ExecutionFrame<KruskalMSTState>>
     ): ExecutionFrame<KruskalMSTState> => ({
       stepIndex: stepIdx,
       totalSteps: 0,
@@ -303,6 +304,7 @@ struct DSU {
         state.mstEdgeCount === nodes.length - 1
           ? 'MST complete: spanning all vertices with minimal total edge weight.'
           : 'Accepted edges maintain an acyclic forest property at every step.',
+      ...extra,
     });
 
     const currentState: KruskalMSTState = {
@@ -319,21 +321,54 @@ struct DSU {
 
     let step = 0;
 
-    // Step 0: Initialize
+    // Step 0a: Sort edges
     timeline.push(
       baseFrame(
         step++,
         currentState,
         3,
-        `Initialized Kruskal's Algorithm. Sorted ${edges.length} edges ascending by weight. Initialized DSU with ${nodes.length} singleton disjoint sets.`,
+        `Sort all ${edges.length} edges into nondecreasing order by weight: [${sortedEdges.map((e) => `${e.from}-${e.to}(${e.weight})`).join(', ')}].`,
+        'Sort edges by weight',
+        false,
+        {
+          vertices: nodes.length,
+          edges: edges.length,
+          sortedOrder: sortedEdges.map((e) => `${e.from}-${e.to}:${e.weight}`).join(', '),
+        },
+        'start',
+        {
+          pedagogy: {
+            what: `Kruskal's algorithm processes edges cheapest-first; sorting is what makes the greedy choice safe.`,
+            why: 'The cut property: the cheapest edge crossing any cut belongs to some MST. Processing in weight order means each accepted edge is the cheapest available bridge between two components.',
+            whatNext: 'Initialize one DSU component per vertex.',
+          },
+        }
+      )
+    );
+
+    // Step 0b: Make-set
+    timeline.push(
+      baseFrame(
+        step++,
+        currentState,
+        5,
+        `MAKE-SET for all ${nodes.length} vertices: each starts as its own singleton component.`,
         'Initialize DSU',
         true,
-        { vertices: nodes.length, edges: edges.length, mstWeight: 0 },
-        'start'
+        { vertices: nodes.length, components: nodes.length },
+        'start',
+        {
+          pedagogy: {
+            what: `Every vertex is its own component; no edges have been accepted yet.`,
+            why: 'DSU tracks which vertices are already connected by accepted MST edges, so a single find() answers "would this edge create a cycle?".',
+            whatNext: 'Inspect the lightest remaining edge.',
+          },
+        }
       )
     );
 
     const neededEdges = nodes.length - 1;
+    let checkpointAdded = false;
 
     for (let i = 0; i < sortedEdges.length; i++) {
       if (currentState.mstEdgeCount >= neededEdges) {
@@ -355,14 +390,35 @@ struct DSU {
         baseFrame(
           step++,
           currentState,
-          23,
+          7,
           `Evaluating cheapest available edge (${edge.from} - ${edge.to}, weight: ${edge.weight}). Finding roots: find(${edge.from}) = ${rootU}, find(${edge.to}) = ${rootV}.`,
           `Inspect edge (${edge.from}-${edge.to}, ${edge.weight})`,
           false,
           { u: edge.from, v: edge.to, weight: edge.weight, rootU, rootV },
-          'compare'
+          'compare',
+          {
+            pedagogy: {
+              what: `Take the lightest unprocessed edge ${edge.from} — ${edge.to} (w=${edge.weight}) and ask whether its endpoints are already connected.`,
+              why: 'find() returns each endpoint\'s component root. Different roots mean the edge bridges two components and is safe; equal roots mean it would close a cycle.',
+              whatNext: rootU === rootV ? 'Same root: reject this edge.' : 'Different roots: accept it and union the components.',
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'kruskal-cycle-check',
+                  question: `Kruskal inspects ${edge.from} — ${edge.to}. Under what condition must this edge be rejected?`,
+                  options: [
+                    'When find(u) == find(v): both endpoints already lie in the same accepted component, so adding it closes a cycle',
+                    'When its weight is larger than the current total MST weight',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Kruskal builds a forest. An edge inside one component adds no new vertex and creates a cycle; an edge between two components always merges them and is safe.',
+                }
+              : undefined,
+          }
         )
       );
+      checkpointAdded = true;
 
       if (rootU === rootV) {
         // Cycle!
@@ -373,12 +429,19 @@ struct DSU {
           baseFrame(
             step++,
             currentState,
-            16,
+            7,
             `Cycle detected! Both vertices ${edge.from} and ${edge.to} already share root '${rootU}'. Rejecting edge (${edge.from} - ${edge.to}) to prevent a cycle.`,
             `Reject edge (${edge.from}-${edge.to})`,
             true,
             { u: edge.from, v: edge.to, weight: edge.weight, cycle: 'yes', sharedRoot: rootU },
-            'step'
+            'step',
+            {
+              pedagogy: {
+                what: `find(${edge.from}) = find(${edge.to}) = ${rootU}, so the endpoints are already connected inside the accepted forest.`,
+                why: 'Adding this edge would create exactly one cycle and would not help span a new vertex; Kruskal rejects it and moves on.',
+                whatNext: 'Try the next-lightest edge.',
+              },
+            }
           )
         );
       } else {
@@ -386,6 +449,32 @@ struct DSU {
         if (edgeInGraph) edgeInGraph.status = 'accepted';
         currentState.mstWeight += edge.weight;
         currentState.mstEdgeCount += 1;
+
+        timeline.push(
+          baseFrame(
+            step++,
+            currentState,
+            8,
+            `Accept edge (${edge.from} - ${edge.to}, weight ${edge.weight}) into A: it joins two different components. Total weight = ${currentState.mstWeight} (${currentState.mstEdgeCount}/${neededEdges} edges).`,
+            `Accept edge (${edge.from}-${edge.to})`,
+            true,
+            {
+              u: edge.from,
+              v: edge.to,
+              weight: edge.weight,
+              totalWeight: currentState.mstWeight,
+              edgesCount: currentState.mstEdgeCount,
+            },
+            'success',
+            {
+              pedagogy: {
+                what: `The edge is safe, so it enters the MST edge set A; the running weight becomes ${currentState.mstWeight}.`,
+                why: 'It is the lightest edge connecting two distinct components — the cut property guarantees some MST contains it.',
+                whatNext: `Union the components rooted at ${rootU} and ${rootV}.`,
+              },
+            }
+          )
+        );
 
         // Perform union by rank
         const rankU = currentState.dsuRank[rootU];
@@ -403,20 +492,52 @@ struct DSU {
           baseFrame(
             step++,
             currentState,
-            24,
-            `Accepted edge (${edge.from} - ${edge.to}, weight: ${edge.weight}) into MST! United component '${rootU}' with '${rootV}'. Total MST weight = ${currentState.mstWeight} (${currentState.mstEdgeCount}/${neededEdges} edges).`,
-            `Accept edge (${edge.from}-${edge.to})`,
-            true,
+            9,
+            `UNION(${rootU}, ${rootV}): components merge under root '${find(edge.from, currentState.dsuParent)}'. Future edges inside this component will be rejected.`,
+            `Union components (${rootU}, ${rootV})`,
+            false,
             {
-              u: edge.from,
-              v: edge.to,
-              weight: edge.weight,
-              totalWeight: currentState.mstWeight,
-              edgesCount: currentState.mstEdgeCount,
+              rootU,
+              rootV,
+              mergedRoot: find(edge.from, currentState.dsuParent),
+              mstEdgeCount: currentState.mstEdgeCount,
             },
-            'success'
+            'step',
+            {
+              pedagogy: {
+                what: `The two components are now one; find() on any vertex in either returns the same root.`,
+                why: 'Union by rank keeps the DSU tree shallow, so future find() calls stay near-constant time.',
+                whatNext:
+                  currentState.mstEdgeCount >= neededEdges
+                    ? 'V − 1 edges reached: stop.'
+                    : 'Continue with the next edge.',
+              },
+            }
           )
         );
+
+        if (currentState.mstEdgeCount >= neededEdges) {
+          timeline.push(
+            baseFrame(
+              step++,
+              currentState,
+              11,
+              `|A| = ${currentState.mstEdgeCount} = V - 1 = ${neededEdges}. A spanning tree is complete, so break out of the edge loop.`,
+              'Early exit: V-1 edges',
+              true,
+              { mstEdgeCount: currentState.mstEdgeCount, neededEdges, finalWeight: currentState.mstWeight },
+              'complete',
+              {
+                pedagogy: {
+                  what: `The MST already has V − 1 edges and spans every vertex.`,
+                  why: 'Any spanning tree on V vertices has exactly V − 1 edges; one more would necessarily create a cycle.',
+                  whatNext: 'Stop early and return A.',
+                },
+              }
+            )
+          );
+          break;
+        }
       }
     }
 
@@ -425,12 +546,20 @@ struct DSU {
       baseFrame(
         step++,
         currentState,
-        28,
+        12,
         `Kruskal's MST complete! Selected ${currentState.mstEdgeCount} edges spanning all ${nodes.length} vertices with minimal total weight of ${currentState.mstWeight}.`,
         'MST Construction Complete',
         true,
         { finalWeight: currentState.mstWeight, edgesInMST: currentState.mstEdgeCount },
-        'complete'
+        'complete',
+        {
+          milestoneTitle: `MST Complete (weight ${currentState.mstWeight})`,
+          pedagogy: {
+            what: `Return A with ${currentState.mstEdgeCount} edges and total weight ${currentState.mstWeight}.`,
+            why: 'Each accepted edge was the lightest edge joining two components, so by the cut property the resulting spanning tree is minimum.',
+            whatNext: 'Compare with Prim: same MST weight, different exploration order (Kruskal is edge-centric, Prim is vertex-centric).',
+          },
+        }
       )
     );
 
