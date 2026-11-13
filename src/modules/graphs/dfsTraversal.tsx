@@ -306,8 +306,7 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 8,
-            explanation: `Tree-edge (${u} → ${v}): Node ${v} is unvisited. Recursively invoking dfs(${v})...`,
+            codeLine: 8,            explanation: `Tree-edge (${u} → ${v}): Node ${v} is unvisited. Recursively invoking dfs(${v})...`,
             variables: { u, v, edgeType: 'TREE-EDGE' },
             callStack: [...callStack],
             conditionEval: {
@@ -335,8 +334,8 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
             state: buildState(u),
           });
 
-          dfsVisit(v);
           checkpointAdded = true;
+          dfsVisit(v);
         } else {
           // Already visited
           edgeTypes[eKey] = 'forward';
@@ -367,7 +366,7 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 13,
+        codeLine: 11,
         explanation: `Finished exploring all branches of node ${u}. Marked VISITED (black). Finish time f[${u}] = ${timer}. Popped dfs(${u}) from Call Stack. Backtracking!`,
         variables: { u, state: 'VISITED', finishTime: timer, stackDepth: callStack.length },
         callStack: [...callStack],
@@ -376,6 +375,11 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
         invariantStatus: {
           label: `Interval [${discoveryTime[u]}, ${timer}] closed for node ${u}`,
           isValid: true,
+        },
+        pedagogy: {
+          what: `Node ${u} is fully explored: it turns black with finish time f = ${timer}, and its stack frame pops.`,
+          why: `The interval [d=${discoveryTime[u]}, f=${timer}] is closed; nested intervals reveal ancestor/descendant relationships in DFS.`,
+          whatNext: callStack.length > 0 ? `Backtrack to the caller and continue its next edge.` : 'The stack is empty — traversal is complete.',
         },
         state: buildState(u),
       });
@@ -387,7 +391,7 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 15,
+      codeLine: 12,
       isMilestone: true,
       milestoneTitle: 'DFS Traversal Complete',
       explanation: `DFS completed! Call stack is empty. Cycle status: ${
@@ -398,6 +402,13 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
       invariantStatus: {
         label: 'All visited nodes finalized',
         isValid: true,
+      },
+      pedagogy: {
+        what: `Every reachable node from ${startNode} is black; the call stack is empty.`,
+        why: cycleFound
+          ? 'A gray target was reached again, so at least one directed cycle exists.'
+          : 'No edge ever pointed to a gray node, so the reachable component is a DAG.',
+        whatNext: 'Compare discovery/finish intervals to derive topological order or SCCs.',
       },
       state: buildState(),
     });

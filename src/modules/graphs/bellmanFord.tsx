@@ -189,9 +189,12 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
     for each v in G.V: dist[v] = INF
     dist[s] = 0
     repeat |G.V| - 1 times:
+        relaxed = false
         for each (u, v, w) in G.E:
             if dist[u] + w < dist[v]:
                 dist[v] = dist[u] + w
+                relaxed = true
+        if not relaxed: break
     for each (u, v, w) in G.E:
         if dist[u] + w < dist[v]: return NEGATIVE_CYCLE
     return dist`,
@@ -209,6 +212,7 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
       pred[n.id] = null;
     });
     dist[startNode] = 0;
+    let checkpointAdded = false;
 
     const makeState = (
       pass: number,
@@ -239,6 +243,11 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
       callStack: [{ name: 'bellmanFord', params: { source: startNode, V }, line: 1, isCurrent: true }],
       conditionEval: { expr: `V > 1`, result: V > 1 },
       scopeVariables: { source: startNode, numVertices: V, numEdges: edges.length },
+      pedagogy: {
+        what: `Bellman-Ford computes shortest paths from ${startNode} by relaxing every edge, repeatedly, up to V − 1 = ${V - 1} times.`,
+        why: 'A shortest simple path visits at most V − 1 edges; each full pass extends correct distances by at least one edge, so V − 1 passes suffice.',
+        whatNext: `Pass 1: scan all ${edges.length} edges and relax any that shorten a distance.`,
+      },
       state: makeState(0),
     });
 
@@ -249,17 +258,36 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 5,
+        codeLine: 4,
         explanation: `Beginning Pass #${pass} of ${V - 1}. Scanning all ${edges.length} edges for relaxation opportunities.`,
         isMilestone: true,
         milestoneTitle: `Pass #${pass} Start`,
         soundCue: { type: 'step' },
         variables: { pass, totalPasses: V - 1, edgesToScan: edges.length },
-        callStack: [{ name: 'bellmanFord.pass', params: { pass, maxPasses: V - 1 }, line: 5, isCurrent: true }],
+        callStack: [{ name: 'bellmanFord.pass', params: { pass, maxPasses: V - 1 }, line: 4, isCurrent: true }],
         conditionEval: { expr: `pass <= V - 1 (${pass} <= ${V - 1})`, result: true },
         scopeVariables: { pass, totalPasses: V - 1 },
+        pedagogy: {
+          what: `Pass ${pass} begins; distances correct for paths using up to ${pass} edge(s) will be finalized by its end.`,
+          why: 'Each pass relaxes edges in arbitrary order, but no shortest path can need more than V − 1 edges.',
+          whatNext: 'Scan every edge in order.',
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'bellman-ford-v-minus-1',
+              question: `Why does Bellman-Ford stop after V − 1 = ${V - 1} passes instead of running forever?`,
+              options: [
+                'Any shortest simple path has at most V − 1 edges, so one more pass cannot improve anything',
+                'More passes would overflow the distance values',
+              ],
+              correctIndex: 0,
+              explanation:
+                'A path that repeats a vertex contains a cycle; with non-negative cycles it is never better, so the shortest useful path is simple and uses ≤ V − 1 edges.',
+            }
+          : undefined,
         state: makeState(pass),
       });
+      checkpointAdded = true;
 
       for (const edge of edges) {
         const u = edge.from;
@@ -288,6 +316,11 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
             callStack: [{ name: 'relaxEdge', params: { from: u, to: v, weight: w }, line: 8, isCurrent: true }],
             conditionEval: { expr: `dist[${u}] + ${w} < dist[${v}] (${uDist + w} < ${vDist === INF ? '∞' : vDist})`, result: true },
             scopeVariables: { edge: `${u}→${v}`, weight: w, newDist: dist[v], oldDist: oldDist === INF ? '∞' : oldDist },
+            pedagogy: {
+              what: `Relax (${u} → ${v}, w=${w}): dist[${v}] drops from ${oldDist === INF ? '∞' : oldDist} to ${dist[v]}.`,
+              why: `The path through ${u} is cheaper than the best known route to ${v}; updating now lets later edges build on it.`,
+              whatNext: 'Continue scanning the remaining edges of this pass.',
+            },
             state: makeState(pass, edge.id, false, true),
           });
         }
@@ -297,15 +330,20 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 11,
+          codeLine: 10,
           explanation: `Pass #${pass} completed with 0 relaxations. Shortest paths have converged early!`,
           isMilestone: true,
           milestoneTitle: 'Early Convergence',
           soundCue: { type: 'step' },
           variables: { pass, convergedEarly: true, totalRelaxations: 0 },
-          callStack: [{ name: 'bellmanFord.earlyExit', params: { pass }, line: 11, isCurrent: true }],
+          callStack: [{ name: 'bellmanFord.earlyExit', params: { pass }, line: 10, isCurrent: true }],
           conditionEval: { expr: `!passRelaxed`, result: true },
           scopeVariables: { pass, converged: true },
+          pedagogy: {
+            what: `A full pass relaxed nothing: every edge already satisfies dist[v] ≤ dist[u] + w.`,
+            why: 'That is a fixed point of the relaxation operator — no future pass can change any distance.',
+            whatNext: 'Break out early and skip the remaining passes.',
+          },
           state: makeState(pass, undefined, false, false),
         });
         break;
@@ -323,15 +361,20 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 15,
+          codeLine: 12,
           explanation: `🚨 NEGATIVE-WEIGHT CYCLE DETECTED! Edge (${u} → ${v}, weight ${w}) can still be relaxed: dist[${u}] (${dist[u]}) + ${w} < dist[${v}] (${dist[v]}). Shortest paths are undefined!`,
           isMilestone: true,
           milestoneTitle: 'Negative Cycle!',
           soundCue: { type: 'compare' },
           variables: { cycleEdge: `${u}→${v}`, weight: w, negativeCycle: true },
-          callStack: [{ name: 'detectNegativeCycle', params: { from: u, to: v }, line: 15, isCurrent: true }],
+          callStack: [{ name: 'detectNegativeCycle', params: { from: u, to: v }, line: 12, isCurrent: true }],
           conditionEval: { expr: `dist[${u}] + ${w} < dist[${v}]`, result: true },
           scopeVariables: { cycleEdge: `${u}→${v}`, weight: w, negativeCycle: true },
+          pedagogy: {
+            what: `After V − 1 passes, edge ${u} → ${v} can still be relaxed — impossible for a true shortest path.`,
+            why: 'If no negative cycle existed, V − 1 passes would already satisfy every edge; the persistent improvement means a cycle keeps decreasing the total.',
+            whatNext: 'Report NEGATIVE_CYCLE — distances are not well-defined.',
+          },
           state: makeState(V, edge.id, true, true),
         });
         break;
@@ -342,7 +385,7 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 18,
+        codeLine: 13,
         explanation: `🎉 Bellman-Ford execution complete! Verified 0 negative-weight cycles. All shortest paths proven optimal.`,
         isMilestone: true,
         milestoneTitle: 'Shortest Paths Confirmed',
@@ -354,8 +397,15 @@ export const bellmanFordModule: AlgorithmModule<BellmanFordInput, BellmanFordSta
             .map(([k, v]) => `${k}:${v === INF ? '∞' : v}`)
             .join(', '),
         },
-        callStack: [{ name: 'bellmanFord.complete', params: { optimal: true }, line: 18, isCurrent: true }],
+        callStack: [{ name: 'bellmanFord.complete', params: { optimal: true }, line: 13, isCurrent: true }],
         conditionEval: { expr: `!negativeCycleDetected`, result: true },
+        pedagogy: {
+          what: `Final distances: ${Object.entries(dist)
+            .map(([k, v]) => `${k}=${v === INF ? '∞' : v}`)
+            .join(', ')}.`,
+          why: 'After V − 1 passes every shortest simple path is accounted for, and the verification pass found no residual negative cycle.',
+          whatNext: 'Read predecessors to reconstruct the actual shortest paths.',
+        },
         scopeVariables: {
           distances: Object.entries(dist)
             .map(([k, v]) => `${k}:${v === INF ? '∞' : v}`)

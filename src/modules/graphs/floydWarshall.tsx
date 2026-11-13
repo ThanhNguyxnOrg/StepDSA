@@ -140,6 +140,7 @@ export const floydWarshallModule: AlgorithmModule<FloydWarshallInput, FloydWarsh
     const dist = initialMatrix.map((row) => [...row]);
 
     const cloneMatrix = () => dist.map((row) => [...row]);
+    let checkpointAdded = false;
 
     // Initial frame
     frames.push({
@@ -154,6 +155,11 @@ export const floydWarshallModule: AlgorithmModule<FloydWarshallInput, FloydWarsh
       callStack: [{ name: 'floydWarshall', params: { V }, line: 1, isCurrent: true }],
       conditionEval: { expr: `V > 0`, result: true },
       scopeVariables: { totalVertices: V, intermediateLimit: V },
+      pedagogy: {
+        what: `Floyd-Warshall is a DP over allowed intermediate vertices: D[i][j] starts as the direct edge weight (∞ if none).`,
+        why: 'After processing intermediate set {1..k}, D[i][j] is the shortest path using only those vertices in between — the invariant that makes the triple loop correct.',
+        whatNext: 'Allow the first vertex as an intermediate and test every pair through it.',
+      },
       state: {
         vertices,
         matrix: cloneMatrix(),
@@ -169,15 +175,33 @@ export const floydWarshallModule: AlgorithmModule<FloydWarshallInput, FloydWarsh
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 5,
+        codeLine: 3,
         explanation: `Allowing intermediate vertex k = ${vertices[k]} (index ${k}). Evaluating paths through ${vertices[k]}.`,
         isMilestone: true,
         milestoneTitle: `Intermediate k = ${vertices[k]}`,
         soundCue: { type: 'step' },
         variables: { k: vertices[k], kIndex: k, V },
-        callStack: [{ name: 'floydWarshall.loopK', params: { k: vertices[k] }, line: 5, isCurrent: true }],
+        callStack: [{ name: 'floydWarshall.loopK', params: { k: vertices[k] }, line: 3, isCurrent: true }],
         conditionEval: { expr: `k < V (${k} < ${V})`, result: true },
         scopeVariables: { k: vertices[k] },
+        pedagogy: {
+          what: `Vertex ${vertices[k]} becomes an allowed intermediate: every pair (i, j) may now route through it.`,
+          why: 'Any path using intermediates from {1..k} either avoids k (old value) or splits at k into i→k plus k→j — exactly the min being taken.',
+          whatNext: `For each pair, compare D[i][j] with D[i][${vertices[k]}] + D[${vertices[k]}][j].`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'floyd-warshall-intermediate',
+              question: `What does "allowing intermediate k = ${vertices[k]}" change?`,
+              options: [
+                'Each D[i][j] becomes min(old value, D[i][k] + D[k][j]) — paths may now pass through k',
+                'Vertex k is removed from the graph, so paths through it are forbidden',
+              ],
+              correctIndex: 0,
+              explanation:
+                'The DP adds one intermediate per outer iteration. A path through k splits into two shorter paths, so the min over both options is optimal.',
+            }
+          : undefined,
         state: {
           vertices,
           matrix: cloneMatrix(),
@@ -188,6 +212,7 @@ export const floydWarshallModule: AlgorithmModule<FloydWarshallInput, FloydWarsh
           explanationText: `Intermediate vertex k = ${vertices[k]}`,
         },
       });
+      checkpointAdded = true;
 
       for (let i = 0; i < V; i++) {
         for (let j = 0; j < V; j++) {
@@ -203,7 +228,7 @@ export const floydWarshallModule: AlgorithmModule<FloydWarshallInput, FloydWarsh
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
-              codeLine: 8,
+              codeLine: 6,
               explanation: `✨ Improved dist[${vertices[i]}][${vertices[j]}]: ${direct === INF ? '∞' : direct} → ${throughK} (via intermediate ${vertices[k]}: ${dist[i][k]} + ${dist[k][j]}).`,
               isMilestone: true,
               milestoneTitle: `Update (${vertices[i]}→${vertices[j]})`,
@@ -215,8 +240,13 @@ export const floydWarshallModule: AlgorithmModule<FloydWarshallInput, FloydWarsh
                 newDistance: throughK,
                 oldDistance: direct === INF ? '∞' : direct,
               },
-              callStack: [{ name: 'relaxViaK', params: { i: vertices[i], j: vertices[j], k: vertices[k] }, line: 8, isCurrent: true }],
+              callStack: [{ name: 'relaxViaK', params: { i: vertices[i], j: vertices[j], k: vertices[k] }, line: 6, isCurrent: true }],
               conditionEval: { expr: `dist[i][k] + dist[k][j] < dist[i][j] (${throughK} < ${direct === INF ? '∞' : direct})`, result: true },
+              pedagogy: {
+                what: `Pair (${vertices[i]}, ${vertices[j]}): route via ${vertices[k]} costs ${throughK}, beating ${direct === INF ? '∞' : direct}.`,
+                why: 'The DP takes the minimum over "not using k" and "using k as the last intermediate" — this update records the better option.',
+                whatNext: `Continue checking other pairs through ${vertices[k]}.`,
+              },
               scopeVariables: {
                 i: vertices[i],
                 j: vertices[j],
@@ -242,15 +272,20 @@ export const floydWarshallModule: AlgorithmModule<FloydWarshallInput, FloydWarsh
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 10,
+      codeLine: 7,
       explanation: `🎉 Floyd-Warshall complete! All-pairs shortest path matrix D^(${V}) finalized across all vertex pairs.`,
       isMilestone: true,
       milestoneTitle: 'All-Pairs Complete',
       soundCue: { type: 'complete' },
       variables: { status: 'Optimal Matrix Complete', totalVertices: V },
-      callStack: [{ name: 'floydWarshall.done', params: { V }, line: 10, isCurrent: true }],
+      callStack: [{ name: 'floydWarshall.done', params: { V }, line: 7, isCurrent: true }],
       conditionEval: { expr: `k == V (${V} == ${V})`, result: true },
       scopeVariables: { status: 'Optimal Matrix Complete' },
+      pedagogy: {
+        what: `Every entry D[i][j] is now the shortest distance from ${vertices[0]}…${vertices[V - 1]} using any intermediate.`,
+        why: 'All V intermediates were allowed in turn; by induction each matrix update preserved optimal substructure.',
+        whatNext: 'Check the diagonal: a negative D[i][i] would reveal a negative cycle.',
+      },
       state: {
         vertices,
         matrix: cloneMatrix(),

@@ -205,6 +205,7 @@ export const topologicalSortModule: AlgorithmModule<TopoGraphInput, TopoState> =
         inDegree[e.to]++;
       }
     }
+    let checkpointAdded = false;
 
     // Step 0: Calculate In-Degrees
     frames.push({
@@ -231,6 +232,11 @@ export const topologicalSortModule: AlgorithmModule<TopoGraphInput, TopoState> =
         isValid: true,
         label: 'In-degrees initialized',
       },
+      pedagogy: {
+        what: `Each vertex starts with in-degree = number of incoming dependency edges, i.e. how many prerequisites are still unmet.`,
+        why: "Kahn's algorithm only emits a vertex once that count reaches zero, which is exactly when every prerequisite has already been emitted.",
+        whatNext: 'Collect all vertices whose in-degree is already 0 — they have no prerequisites.',
+      },
     });
 
     // Enqueue initial zero in-degree nodes
@@ -244,14 +250,19 @@ export const topologicalSortModule: AlgorithmModule<TopoGraphInput, TopoState> =
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 7,
+      codeLine: 3,
       explanation: `Enqueued initial nodes with in-degree 0 (no prerequisites): [${queue.map((id) => input.nodes[id]?.label || id).join(', ')}].`,
       callStack: [
-        { name: 'topologicalSort(V, adj)', params: { queueSize: queue.length }, line: 7, isCurrent: true },
+        { name: 'topologicalSort(V, adj)', params: { queueSize: queue.length }, line: 3, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
       variables: { queue: queue.join(', ') },
       conditionEval: { expr: 'inDegree[u] == 0', result: true },
+      pedagogy: {
+        what: `The queue starts with every in-degree-0 vertex: [${queue.map((id) => input.nodes[id]?.label || id).join(', ')}].`,
+        why: 'A vertex with no unmet prerequisites can legally appear first in the ordering; the queue holds all currently legal choices.',
+        whatNext: 'Repeatedly dequeue a ready vertex and remove its outgoing edges.',
+      },
       state: {
         nodes: input.nodes.map((n) => ({
           ...n,
@@ -269,19 +280,68 @@ export const topologicalSortModule: AlgorithmModule<TopoGraphInput, TopoState> =
 
     while (queue.length > 0) {
       const u = queue.shift()!;
-      topoOrder.push(u);
       const uLabel = input.nodes[u]?.label || `Node ${u}`;
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 11,
-        explanation: `Dequeued ${uLabel}. Added to Topological Ordering output.`,
+        codeLine: 6,
+        explanation: `Dequeued ${uLabel}: its in-degree is 0, so all prerequisites have been emitted.`,
         callStack: [
-          { name: 'topologicalSort(V, adj)', params: { activeNode: uLabel, emitted: topoOrder.length }, line: 11, isCurrent: true },
+          { name: 'topologicalSort(V, adj)', params: { activeNode: uLabel, queueRemaining: queue.length }, line: 6, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
         ],
-        variables: { u: uLabel, orderLen: topoOrder.length },
+        variables: { u: uLabel, inDegree: 0, queueRemaining: queue.length },
+        conditionEval: { expr: `inDegree[${u}] == 0`, result: true },
+        pedagogy: {
+          what: `Pop ${uLabel} from the ready queue; its in-degree is exactly 0.`,
+          why: 'Zero in-degree means every edge into it came from a vertex already emitted, so placing it now cannot violate any dependency.',
+          whatNext: `Append ${uLabel} to the topological order.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'topological-sort-zero-indegree',
+              question: `Why is it safe to emit ${uLabel} at this exact moment?`,
+              options: [
+                'Its in-degree is 0, so every prerequisite has already been emitted and removed',
+                'It has the smallest node ID among the remaining vertices',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Kahn\'s algorithm removes outgoing edges as vertices are emitted. In-degree counts the still-unmet prerequisites, so 0 means none are left — node IDs are irrelevant.',
+            }
+          : undefined,
+        state: {
+          nodes: input.nodes.map((n) => ({
+            ...n,
+            inDegree: inDegree[n.id],
+            status: n.id === u ? 'processing' : topoOrder.includes(n.id) ? 'processed' : queue.includes(n.id) ? 'in-queue' : 'unvisited',
+          })),
+          edges: [...activeEdges],
+          queue: [...queue],
+          topoOrder: [...topoOrder],
+          currentNode: u,
+        },
+      });
+      checkpointAdded = true;
+
+      topoOrder.push(u);
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 7,
+        explanation: `Append ${uLabel} to the topological order at position ${topoOrder.length}: [${topoOrder.map((id) => input.nodes[id]?.label || id).join(' → ')}].`,
+        callStack: [
+          { name: 'topologicalSort(V, adj)', params: { emitted: topoOrder.length }, line: 7, isCurrent: true },
+          { name: 'main()', params: {}, line: 1 },
+        ],
+        variables: { u: uLabel, orderLen: topoOrder.length, order: topoOrder.map((id) => input.nodes[id]?.label || id).join(' → ') },
+        pedagogy: {
+          what: `${uLabel} now occupies position ${topoOrder.length} of the output.`,
+          why: 'Every incoming edge to it was already processed, so this position respects all dependencies into it.',
+          whatNext: `Remove ${uLabel}'s outgoing edges, decrementing each target's in-degree.`,
+        },
         state: {
           nodes: input.nodes.map((n) => ({
             ...n,
@@ -295,7 +355,7 @@ export const topologicalSortModule: AlgorithmModule<TopoGraphInput, TopoState> =
         },
         invariantStatus: {
           isValid: true,
-          label: `${uLabel} emitted`,
+          label: `${uLabel} emitted at position ${topoOrder.length}`,
         },
       });
 
@@ -311,21 +371,23 @@ export const topologicalSortModule: AlgorithmModule<TopoGraphInput, TopoState> =
         }
 
         const isNewlyZero = inDegree[v] === 0;
-        if (isNewlyZero) {
-          queue.push(v);
-        }
 
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 14,
-          explanation: `Decremented in-degree of ${vLabel} to ${inDegree[v]}.${isNewlyZero ? ` In-degree is now 0! Enqueued ${vLabel}.` : ''}`,
+          codeLine: 9,
+          explanation: `Remove edge ${uLabel} → ${vLabel}: in-degree of ${vLabel} drops to ${inDegree[v]}.`,
           callStack: [
-            { name: 'topologicalSort(V, adj)', params: { from: uLabel, to: vLabel, 'inDegree[to]': inDegree[v] }, line: 14, isCurrent: true },
+            { name: 'topologicalSort(V, adj)', params: { from: uLabel, to: vLabel, 'inDegree[to]': inDegree[v] }, line: 9, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
           ],
           variables: { from: uLabel, to: vLabel, newInDegree: inDegree[v] },
-          conditionEval: { expr: `inDegree[${v}] == 0`, result: isNewlyZero },
+          conditionEval: { expr: `inDegree[${vLabel}] == 0`, result: isNewlyZero },
+          pedagogy: {
+            what: `The dependency ${uLabel} → ${vLabel} is satisfied, so ${vLabel}'s remaining prerequisite count becomes ${inDegree[v]}.`,
+            why: 'One emitted prerequisite removes exactly one unmet requirement; this is why in-degree is decremented once per incoming edge.',
+            whatNext: isNewlyZero ? `In-degree reached 0 — ${vLabel} is now ready.` : `${vLabel} still has ${inDegree[v]} unmet prerequisite(s).`,
+          },
           state: {
             nodes: input.nodes.map((n) => ({
               ...n,
@@ -338,6 +400,39 @@ export const topologicalSortModule: AlgorithmModule<TopoGraphInput, TopoState> =
             currentNode: u,
           },
         });
+
+        if (isNewlyZero) {
+          queue.push(v);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 11,
+            explanation: `In-degree of ${vLabel} is now 0 — all prerequisites emitted. Enqueue ${vLabel}; queue = [${queue.map((id) => input.nodes[id]?.label || id).join(', ')}].`,
+            callStack: [
+              { name: 'topologicalSort(V, adj)', params: { enqueued: vLabel, queueSize: queue.length }, line: 11, isCurrent: true },
+              { name: 'main()', params: {}, line: 1 },
+            ],
+            variables: { enqueued: vLabel, inDegree: 0, queue: queue.map((id) => input.nodes[id]?.label || id).join(', ') },
+            conditionEval: { expr: `inDegree[${v}] == 0`, result: true },
+            pedagogy: {
+              what: `${vLabel} becomes a new ready vertex and joins the queue.`,
+              why: 'Zero remaining prerequisites is precisely the condition under which Kahn\'s algorithm may emit a vertex.',
+              whatNext: 'Continue removing edges, then dequeue the next ready vertex.',
+            },
+            state: {
+              nodes: input.nodes.map((n) => ({
+                ...n,
+                inDegree: inDegree[n.id],
+                status: n.id === u ? 'processing' : topoOrder.includes(n.id) ? 'processed' : queue.includes(n.id) ? 'in-queue' : 'unvisited',
+              })),
+              edges: [...activeEdges],
+              queue: [...queue],
+              topoOrder: [...topoOrder],
+              currentNode: u,
+            },
+          });
+        }
       }
     }
 
@@ -346,16 +441,27 @@ export const topologicalSortModule: AlgorithmModule<TopoGraphInput, TopoState> =
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 17,
+      codeLine: 12,
+      isMilestone: true,
+      milestoneTitle: hasCycle ? 'Directed Cycle Detected' : 'Topological Order Complete',
       explanation: hasCycle
         ? `Queue became empty but only ${topoOrder.length}/${V} vertices were emitted! DIRECTED CYCLE DETECTED.`
         : `Topological ordering successfully found for all ${V} vertices!`,
       callStack: [
-        { name: 'topologicalSort(V, adj)', params: { completed: !hasCycle ? 1 : 0 }, line: 17, isCurrent: true },
+        { name: 'topologicalSort(V, adj)', params: { completed: !hasCycle ? 1 : 0 }, line: 12, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
       variables: { result: hasCycle ? 'CYCLE_DETECTED' : 'VALID_DAG', emittedCount: topoOrder.length },
       conditionEval: { expr: `order.size() == ${V}`, result: !hasCycle },
+      pedagogy: {
+        what: hasCycle
+          ? `Only ${topoOrder.length} of ${V} vertices were emitted; the rest still have unmet prerequisites.`
+          : `All ${V} vertices emitted: [${topoOrder.map((id) => input.nodes[id]?.label || id).join(' → ')}].`,
+        why: hasCycle
+          ? 'If a cycle exists, every vertex on it waits for another vertex on the same cycle, so none ever reaches in-degree 0 — the queue starves.'
+          : 'Each emitted vertex had in-degree 0 at emission time, so every edge points forward in the order.',
+        whatNext: hasCycle ? 'Report the cycle; no topological order exists.' : 'Use the order for scheduling or DP over the DAG.',
+      },
       state: {
         nodes: input.nodes.map((n) => ({
           ...n,

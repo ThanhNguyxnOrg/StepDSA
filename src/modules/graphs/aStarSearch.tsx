@@ -276,6 +276,11 @@ def a_star(start, goal, grid):
       callStack: [{ name: 'aStarSearch', params: { start: `(${start.r},${start.c})`, goal: `(${goal.r},${goal.c})` }, line: 1, isCurrent: true }],
       conditionEval: { expr: `openSet.length > 0`, result: true },
       scopeVariables: { start: `(${start.r},${start.c})`, goal: `(${goal.r},${goal.c})`, initialH: manhattan(start.r, start.c, goal.r, goal.c) },
+      pedagogy: {
+        what: `A* explores the ${rows}×${cols} grid using f = g + h: g is the exact cost from the start, h is the Manhattan estimate to the goal.`,
+        why: 'On a 4-neighbor unit-cost grid, Manhattan distance never overestimates the remaining steps, so it is admissible and A* stays optimal.',
+        whatNext: 'Extract the frontier node with the smallest f.',
+      },
       state: {
         grid: makeGridState(),
         current: start,
@@ -286,19 +291,20 @@ def a_star(start, goal, grid):
     });
 
     let pathFound = false;
+    let checkpointAdded = false;
     const finalPath: { r: number; c: number }[] = [];
 
     while (openSet.length > 0) {
-      // Extract node with lowest fScore
+      // Peek node with lowest fScore (do not mutate yet: the frame must show it in the frontier)
       openSet.sort((a, b) => a.f - b.f);
-      const cur = openSet.shift()!;
-      closedSet.add(key(cur.r, cur.c));
+      const cur = openSet[0];
+      const isGoal = cur.r === goal.r && cur.c === goal.c;
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 9,
-        explanation: `Extract min f(n) from Open Set: (${cur.r}, ${cur.c}) with f = ${cur.f} (g=${gScore[cur.r][cur.c]}, h=${manhattan(cur.r, cur.c, goal.r, goal.c)}). Moving to Closed set.`,
+        codeLine: 6,
+        explanation: `Select min f from Open Set: (${cur.r}, ${cur.c}) with f = ${cur.f} (g=${gScore[cur.r][cur.c]}, h=${manhattan(cur.r, cur.c, goal.r, goal.c)}). This is the most promising frontier node.`,
         soundCue: { type: 'compare' },
         variables: {
           current: `(${cur.r},${cur.c})`,
@@ -307,8 +313,8 @@ def a_star(start, goal, grid):
           f: cur.f,
           openSize: openSet.length,
         },
-        callStack: [{ name: 'exploreMinNode', params: { r: cur.r, c: cur.c, f: cur.f }, line: 9, isCurrent: true }],
-        conditionEval: { expr: `cur == goal (${cur.r === goal.r && cur.c === goal.c})`, result: cur.r === goal.r && cur.c === goal.c },
+        callStack: [{ name: 'exploreMinNode', params: { r: cur.r, c: cur.c, f: cur.f }, line: 6, isCurrent: true }],
+        conditionEval: { expr: `current == goal (${isGoal})`, result: isGoal },
         scopeVariables: {
           current: `(${cur.r},${cur.c})`,
           g: gScore[cur.r][cur.c],
@@ -316,6 +322,24 @@ def a_star(start, goal, grid):
           f: cur.f,
           openSize: openSet.length,
         },
+        pedagogy: {
+          what: `The frontier holds ${openSet.length} node(s); the one with the smallest f = g + h is (${cur.r}, ${cur.c}) with f = ${cur.f}.`,
+          why: 'With an admissible h (never overestimating), no other frontier node can lead to a cheaper path than this f, so expanding it is safe.',
+          whatNext: isGoal ? 'It is the goal — reconstruct the path.' : 'It is not the goal; move it to the closed set and relax its neighbors.',
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'a-star-lowest-f',
+              question: `A* expands (${cur.r}, ${cur.c}) because it has the lowest f = ${cur.f}. Why is that guaranteed optimal when h never overestimates?`,
+              options: [
+                'Any path through a node with larger f already costs more than the best possible route through this node',
+                'Because h is the exact remaining distance, so f equals the final path length',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Admissibility gives f(n) ≤ true cost through n. A larger-f node cannot hide a cheaper route, so the minimum-f node can be finalized. An exact h would make A* greedy but is not required.',
+            }
+          : undefined,
         state: {
           grid: makeGridState(cur),
           current: cur,
@@ -324,8 +348,9 @@ def a_star(start, goal, grid):
           pathFound: false,
         },
       });
+      checkpointAdded = true;
 
-      if (cur.r === goal.r && cur.c === goal.c) {
+      if (isGoal) {
         pathFound = true;
         // Reconstruct path
         let currPath: { r: number; c: number } | undefined = cur;
@@ -335,6 +360,39 @@ def a_star(start, goal, grid):
         }
         break;
       }
+
+      // Close the current node only after it is proven not to be the goal.
+      openSet.shift();
+      closedSet.add(key(cur.r, cur.c));
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 9,
+        explanation: `Move (${cur.r}, ${cur.c}) from Open to Closed Set. Its g = ${gScore[cur.r][cur.c]} is now finalized and will never be improved.`,
+        soundCue: { type: 'step' },
+        variables: {
+          closed: `(${cur.r},${cur.c})`,
+          finalizedG: gScore[cur.r][cur.c],
+          openSize: openSet.length,
+          closedSize: closedSet.size,
+        },
+        callStack: [{ name: 'closeNode', params: { r: cur.r, c: cur.c }, line: 9, isCurrent: true }],
+        conditionEval: { expr: `current != goal`, result: true },
+        scopeVariables: { closed: `(${cur.r},${cur.c})`, finalizedG: gScore[cur.r][cur.c] },
+        pedagogy: {
+          what: `(${cur.r}, ${cur.c}) joins the closed set with final g = ${gScore[cur.r][cur.c]}.`,
+          why: 'Its f was minimal and h is admissible, so no later route can improve this g; closing it prevents redundant re-expansion.',
+          whatNext: `Relax the four neighbors of (${cur.r}, ${cur.c}).`,
+        },
+        state: {
+          grid: makeGridState(cur),
+          current: cur,
+          openCount: openSet.length,
+          closedCount: closedSet.size,
+          pathFound: false,
+        },
+      });
 
       // Explore 4 orthogonal neighbors
       const neighbors = [
@@ -349,11 +407,42 @@ def a_star(start, goal, grid):
         if (isObstacle(n.r, n.c) || closedSet.has(key(n.r, n.c))) continue;
 
         const tentativeG = gScore[cur.r][cur.c] + 1;
-        if (tentativeG < gScore[n.r][n.c]) {
+        const oldG = gScore[n.r][n.c];
+        if (tentativeG < oldG) {
           cameFrom[key(n.r, n.c)] = cur;
           gScore[n.r][n.c] = tentativeG;
           const hVal = manhattan(n.r, n.c, goal.r, goal.c);
           fScore[n.r][n.c] = tentativeG + hVal;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 15,
+            explanation: `Relax (${n.r}, ${n.c}): tentative g = ${tentativeG} < old g = ${oldG === Infinity ? '∞' : oldG}. Update g = ${tentativeG}, h = ${hVal}, f = ${fScore[n.r][n.c]}.`,
+            soundCue: { type: 'step' },
+            variables: {
+              neighbor: `(${n.r},${n.c})`,
+              oldG: oldG === Infinity ? '∞' : oldG,
+              g: tentativeG,
+              h: hVal,
+              f: fScore[n.r][n.c],
+            },
+            callStack: [{ name: 'relaxNeighbor', params: { r: n.r, c: n.c, g: tentativeG, f: fScore[n.r][n.c] }, line: 15, isCurrent: true }],
+            conditionEval: { expr: `tentative_g (${tentativeG}) < gScore[neighbor] (${oldG === Infinity ? '∞' : oldG})`, result: true },
+            scopeVariables: { neighbor: `(${n.r},${n.c})`, g: tentativeG, h: hVal, f: fScore[n.r][n.c] },
+            pedagogy: {
+              what: `Reaching (${n.r}, ${n.c}) through (${cur.r}, ${cur.c}) costs ${tentativeG}, cheaper than the previous best ${oldG === Infinity ? '∞' : oldG}.`,
+              why: 'g is the exact cost from the start, so a cheaper tentative g always replaces the old one; f is then recomputed as g + h.',
+              whatNext: 'Insert or decrease this neighbor in the Open Set.',
+            },
+            state: {
+              grid: makeGridState(cur),
+              current: n,
+              openCount: openSet.length,
+              closedCount: closedSet.size,
+              pathFound: false,
+            },
+          });
 
           const existingOpen = openSet.find((p) => p.r === n.r && p.c === n.c);
           if (!existingOpen) {
@@ -366,12 +455,25 @@ def a_star(start, goal, grid):
             stepIndex: frames.length,
             totalSteps: 1,
             codeLine: 16,
-            explanation: `Inspected neighbor (${n.r}, ${n.c}): g=${tentativeG}, h=${hVal}, f=${fScore[n.r][n.c]}. Added to Open Set frontier.`,
+            explanation: existingOpen
+              ? `Update priority of (${n.r}, ${n.c}) in Open Set to f = ${fScore[n.r][n.c]} (decreased). Frontier size stays ${openSet.length}.`
+              : `Insert (${n.r}, ${n.c}) into Open Set with priority f = ${fScore[n.r][n.c]}. Frontier size is now ${openSet.length}.`,
             soundCue: { type: 'step' },
-            variables: { neighbor: `(${n.r},${n.c})`, g: tentativeG, h: hVal, f: fScore[n.r][n.c] },
-            callStack: [{ name: 'updateNeighbor', params: { r: n.r, c: n.c, g: tentativeG, f: fScore[n.r][n.c] }, line: 16, isCurrent: true }],
-            conditionEval: { expr: `tentativeG < gScore[n.r][n.c]`, result: true },
-            scopeVariables: { neighbor: `(${n.r},${n.c})`, g: tentativeG, h: hVal, f: fScore[n.r][n.c] },
+            variables: {
+              neighbor: `(${n.r},${n.c})`,
+              f: fScore[n.r][n.c],
+              openSize: openSet.length,
+              action: existingOpen ? 'DECREASE_KEY' : 'INSERT',
+            },
+            callStack: [{ name: 'openSetUpdate', params: { r: n.r, c: n.c, f: fScore[n.r][n.c] }, line: 16, isCurrent: true }],
+            scopeVariables: { neighbor: `(${n.r},${n.c})`, f: fScore[n.r][n.c], openSize: openSet.length },
+            pedagogy: {
+              what: existingOpen
+                ? `(${n.r}, ${n.c}) was already in the frontier; its key drops to f = ${fScore[n.r][n.c]}.`
+                : `(${n.r}, ${n.c}) enters the frontier with f = ${fScore[n.r][n.c]}.`,
+              why: 'The Open Set is a min-priority queue on f; keeping keys exact is what makes the next extract-min correct.',
+              whatNext: 'Continue with the remaining neighbors of the current node.',
+            },
             state: {
               grid: makeGridState(cur),
               current: n,
@@ -388,21 +490,52 @@ def a_star(start, goal, grid):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 20,
+        codeLine: 7,
         explanation: `🎉 Goal reached! A* reconstructed optimal path of length ${finalPath.length - 1} steps from Start to Goal.`,
         isMilestone: true,
         milestoneTitle: `Goal Reached (${finalPath.length - 1} steps)`,
         soundCue: { type: 'complete' },
         variables: { pathLength: finalPath.length - 1, totalNodesExpanded: closedSet.size },
-        callStack: [{ name: 'aStarSearch.reconstructPath', params: { steps: finalPath.length - 1 }, line: 20, isCurrent: true }],
+        callStack: [{ name: 'aStarSearch.reconstructPath', params: { steps: finalPath.length - 1 }, line: 7, isCurrent: true }],
         conditionEval: { expr: `pathFound == true`, result: true },
         scopeVariables: { pathLength: finalPath.length - 1, totalNodesExpanded: closedSet.size },
+        pedagogy: {
+          what: `The goal was extracted with minimal f, so the reconstructed path has ${finalPath.length - 1} steps.`,
+          why: `Every closed node's g was final; following cameFrom pointers yields an optimal route. Only ${closedSet.size} node(s) were expanded.`,
+          whatNext: 'Compare with Dijkstra: same optimal path, usually far fewer expanded nodes thanks to h.',
+        },
         state: {
           grid: makeGridState(goal, finalPath),
           current: goal,
           openCount: openSet.length,
           closedCount: closedSet.size,
           pathFound: true,
+        },
+      });
+    } else {
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        explanation: `Open Set exhausted without reaching the goal: no path exists between Start and Goal.`,
+        isMilestone: true,
+        milestoneTitle: 'No Path Exists',
+        soundCue: { type: 'complete' },
+        variables: { pathFound: false, totalNodesExpanded: closedSet.size },
+        callStack: [{ name: 'aStarSearch.noPath', params: { expanded: closedSet.size }, line: 5, isCurrent: true }],
+        conditionEval: { expr: `OpenSet is not empty`, result: false },
+        scopeVariables: { pathFound: false, totalNodesExpanded: closedSet.size },
+        pedagogy: {
+          what: `The while loop ended because the Open Set became empty; the goal was never extracted.`,
+          why: 'A* only discovers reachable cells. An empty frontier means every cell reachable from the start was expanded and none was the goal.',
+          whatNext: 'Report failure; do not fabricate a path.',
+        },
+        state: {
+          grid: makeGridState(),
+          current: undefined,
+          openCount: 0,
+          closedCount: closedSet.size,
+          pathFound: false,
         },
       });
     }

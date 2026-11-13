@@ -471,6 +471,438 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, input).errorCount).toBe(0);
   });
 
+  it('DFS colors nodes, detects the back-edge cycle, and exposes depth-first recursion', () => {
+    const mod = moduleById('graph-dfs');
+    const nodes = [0, 1, 2, 3, 4, 5].map((id) => ({ id, label: `${id}`, x: id * 60, y: 0 }));
+    const input = {
+      startNode: 0,
+      nodes,
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 3, to: 0 },
+        { from: 2, to: 4 },
+        { from: 4, to: 5 },
+        { from: 3, to: 5 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'dfs-depth-first').length).toBe(1);
+    expect(timeline.some((f) => f.milestoneTitle === 'Cycle Detected (3→0)')).toBe(true);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.state.cycleDetected).toBe(true);
+    expect(final.callStack?.length).toBe(0);
+    for (const node of final.state.nodes) {
+      expect(node.status).toBe('visited');
+      expect(node.finishTime!).toBeGreaterThan(node.discoveryTime!);
+    }
+
+    // Acyclic tree: same coloring, no back-edge, DAG verdict.
+    const tree = mod.generateTimeline({
+      startNode: 0,
+      nodes: [0, 1, 2, 3, 4].map((id) => ({ id, label: `${id}`, x: id * 60, y: 0 })),
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 2, to: 4 },
+      ],
+    });
+    expect(tree[tree.length - 1].state.cycleDetected).toBe(false);
+    expect(tree.some((f) => f.milestoneTitle?.startsWith('Cycle Detected'))).toBe(false);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('Bellman-Ford relaxes across passes and proves negative cycles only after V-1 passes', () => {
+    const mod = moduleById('bellman-ford');
+    const nodes = ['S', 'A', 'B', 'C', 'D'].map((id, i) => ({ id, label: id, x: i * 60, y: 0 }));
+    const input = {
+      startNode: 'S',
+      nodes,
+      edges: [
+        { id: 'e1', from: 'S', to: 'A', weight: 4 },
+        { id: 'e2', from: 'S', to: 'B', weight: 5 },
+        { id: 'e3', from: 'A', to: 'B', weight: -2 },
+        { id: 'e4', from: 'A', to: 'C', weight: 3 },
+        { id: 'e5', from: 'B', to: 'D', weight: 6 },
+        { id: 'e6', from: 'C', to: 'D', weight: 2 },
+        { id: 'e7', from: 'D', to: 'A', weight: 1 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'bellman-ford-v-minus-1').length).toBe(1);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.state.hasNegativeCycle).toBe(false);
+    expect(final.state.distances).toMatchObject({ S: 0, A: 4, B: 2, C: 7, D: 8 });
+
+    // Negative edges force real relaxations, and convergence is detected.
+    expect(timeline.some((f) => f.milestoneTitle?.startsWith('Relax'))).toBe(true);
+    expect(timeline.some((f) => f.milestoneTitle === 'Early Convergence')).toBe(true);
+
+    // Negative cycle preset: verification pass must flag it.
+    const cycle = mod.generateTimeline({
+      startNode: 'S',
+      nodes: ['S', 'A', 'B', 'C'].map((id, i) => ({ id, label: id, x: i * 60, y: 0 })),
+      edges: [
+        { id: 'c1', from: 'S', to: 'A', weight: 3 },
+        { id: 'c2', from: 'A', to: 'B', weight: 1 },
+        { id: 'c3', from: 'B', to: 'C', weight: -3 },
+        { id: 'c4', from: 'C', to: 'A', weight: 1 },
+      ],
+    });
+    expect(cycle.some((f) => f.milestoneTitle === 'Negative Cycle!')).toBe(true);
+    expect(cycle[cycle.length - 1].state.hasNegativeCycle).toBe(true);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('Floyd-Warshall only improves entries through the current intermediate k', () => {
+    const mod = moduleById('floyd-warshall');
+    const INF = 999;
+    const input = {
+      vertices: ['1', '2', '3', '4'],
+      matrix: [
+        [0, 3, INF, 7],
+        [8, 0, 2, INF],
+        [5, INF, 0, 1],
+        [2, INF, INF, 0],
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'floyd-warshall-intermediate').length).toBe(1);
+
+    // Exactly one k-milestone per vertex, in increasing order.
+    const kFrames = timeline.filter((f) => f.milestoneTitle?.startsWith('Intermediate k ='));
+    expect(kFrames.length).toBe(4);
+    expect(kFrames.map((f) => f.variables?.kIndex)).toEqual([0, 1, 2, 3]);
+
+    // Every update frame must strictly improve a cell via the active k.
+    for (const frame of timeline.filter((f) => f.milestoneTitle?.startsWith('Update ('))) {
+      expect(Number(frame.variables?.newDistance)).toBeLessThan(
+        frame.variables?.oldDistance === '∞' ? Infinity : Number(frame.variables?.oldDistance)
+      );
+      const i = frame.state.i;
+      const j = frame.state.j;
+      expect(frame.state.matrix[i][j]).toBe(frame.variables?.newDistance);
+      expect(frame.state.k).toBeGreaterThanOrEqual(0);
+      expect(frame.state.k).toBeLessThan(4);
+    }
+
+    // Final matrix is the known all-pairs optimum.
+    const final = timeline[timeline.length - 1];
+    expect(final.state.matrix).toEqual([
+      [0, 3, 5, 6],
+      [5, 0, 2, 3],
+      [3, 6, 0, 1],
+      [2, 5, 7, 0],
+    ]);
+    expect(final.milestoneTitle).toBe('All-Pairs Complete');
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('A* expands in non-decreasing f order and reports failure honestly when boxed in', () => {
+    const mod = moduleById('a-star-search');
+    const input = {
+      rows: 6,
+      cols: 8,
+      start: { r: 1, c: 1 },
+      goal: { r: 4, c: 6 },
+      obstacles: [
+        { r: 1, c: 3 },
+        { r: 2, c: 3 },
+        { r: 3, c: 3 },
+        { r: 4, c: 3 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'a-star-lowest-f').length).toBe(1);
+
+    // Extract-min frames: f = g + h and f never decreases (consistent heuristic).
+    const extracts = timeline.filter((f) => (f.callStack?.[0] as any)?.name === 'exploreMinNode');
+    expect(extracts.length).toBeGreaterThan(0);
+    let lastF = -Infinity;
+    for (const frame of extracts) {
+      expect(Number(frame.variables?.f)).toBe(
+        Number(frame.variables?.g) + Number(frame.variables?.h)
+      );
+      expect(Number(frame.variables?.f)).toBeGreaterThanOrEqual(lastF);
+      lastF = Number(frame.variables?.f);
+    }
+
+    // Every closed node was first extracted; the goal is never closed.
+    const closes = timeline.filter((f) => (f.callStack?.[0] as any)?.name === 'closeNode');
+    expect(closes.length).toBe(extracts.length - 1);
+
+    // Relaxations always strictly improve g and are followed by an Open Set insert/decrease.
+    const relaxes = timeline.filter((f) => (f.callStack?.[0] as any)?.name === 'relaxNeighbor');
+    expect(relaxes.length).toBeGreaterThan(0);
+    for (const frame of relaxes) {
+      expect(Number(frame.variables?.g)).toBeLessThan(
+        frame.variables?.oldG === '∞' ? Infinity : Number(frame.variables?.oldG)
+      );
+    }
+    const openUpdates = timeline.filter((f) => (f.callStack?.[0] as any)?.name === 'openSetUpdate');
+    expect(openUpdates.length).toBe(relaxes.length);
+    expect(openUpdates.every((f) => f.variables?.action === 'INSERT' || f.variables?.action === 'DECREASE_KEY')).toBe(true);
+
+    // Known optimum: detour around the wall costs 10 steps (Manhattan alone is 8).
+    const final = timeline[timeline.length - 1];
+    expect(final.state.pathFound).toBe(true);
+    expect(final.variables?.pathLength).toBe(10);
+    const pathCells = final.state.grid.flat().filter((cell: any) => cell.status === 'path');
+    expect(pathCells.length).toBe(11);
+
+    // Fully walled-off goal: A* must exhaust the frontier, not invent a path.
+    const boxed = mod.generateTimeline({
+      rows: 3,
+      cols: 3,
+      start: { r: 0, c: 0 },
+      goal: { r: 2, c: 2 },
+      obstacles: [
+        { r: 0, c: 1 },
+        { r: 1, c: 1 },
+        { r: 2, c: 1 },
+      ],
+    });
+    const last = boxed[boxed.length - 1];
+    expect(last.milestoneTitle).toBe('No Path Exists');
+    expect(last.state.pathFound).toBe(false);
+    expect(last.state.openCount).toBe(0);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      rows: 3,
+      cols: 3,
+      start: { r: 0, c: 0 },
+      goal: { r: 2, c: 2 },
+      obstacles: [{ r: 0, c: 1 }, { r: 1, c: 1 }, { r: 2, c: 1 }],
+    }).errorCount).toBe(0);
+  });
+
+  it('0-1 BFS keeps the deque distance-sorted and pushes 0-weight targets to the front', () => {
+    const mod = moduleById('zero-one-bfs');
+    const input = {
+      numNodes: 6,
+      edges: [
+        { u: 0, v: 1, weight: 1 },
+        { u: 0, v: 2, weight: 0 },
+        { u: 1, v: 3, weight: 1 },
+        { u: 2, v: 3, weight: 0 },
+        { u: 3, v: 4, weight: 1 },
+        { u: 2, v: 5, weight: 1 },
+        { u: 5, v: 4, weight: 0 },
+      ],
+      source: 0,
+    };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'zero-one-bfs-front-back').length).toBe(1);
+
+    // The deque must stay sorted by distance on every single frame.
+    for (const frame of timeline) {
+      const deque: number[] = (frame.state as any).deque ?? [];
+      const ds = deque.map((v) => {
+        const d = (frame.state as any).distances[v];
+        return d === null ? Infinity : d;
+      });
+      for (let i = 1; i < ds.length; i++) {
+        expect(ds[i]).toBeGreaterThanOrEqual(ds[i - 1]);
+      }
+    }
+
+    // Every relaxation is immediately followed by its deque insertion frame.
+    const relaxIdx = timeline
+      .map((f, i) => ({ f, i }))
+      .filter(({ f }) => f.milestoneTitle?.startsWith('Relax Edge'));
+    expect(relaxIdx.length).toBeGreaterThan(0);
+    for (const { f, i } of relaxIdx) {
+      const push = timeline[i + 1];
+      expect(push.variables?.v).toBe(f.variables?.v);
+      expect(push.variables?.dequeAction).toBe(
+        f.variables?.weight === 0 ? 'push_front' : 'push_back'
+      );
+    }
+
+    // Non-improving edges are shown as explicit rejections.
+    expect(timeline.some((f) => f.variables?.rejected === true)).toBe(true);
+
+    // Known optimum for the teleport graph.
+    const final = timeline[timeline.length - 1];
+    expect(final.state.distances).toEqual([0, 1, 0, 0, 1, 1]);
+    expect(final.state.phase).toBe('done');
+
+    // Alternating chain: 0 ->1-> 1 ->0-> 2 ->1-> 3.
+    const chain = mod.generateTimeline({
+      numNodes: 4,
+      edges: [
+        { u: 0, v: 1, weight: 1 },
+        { u: 1, v: 2, weight: 0 },
+        { u: 2, v: 3, weight: 1 },
+      ],
+      source: 0,
+    } as any);
+    expect(chain[chain.length - 1].state.distances).toEqual([0, 1, 1, 2]);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+  });
+
+  it("Kahn's algorithm emits only zero in-degree vertices and detects a starving queue", () => {
+    const mod = moduleById('topological-sort');
+    const input = {
+      nodes: [
+        { id: 0, label: 'CS101', x: 80, y: 100 },
+        { id: 1, label: 'DataStruct', x: 230, y: 60 },
+        { id: 2, label: 'MathDiscrete', x: 230, y: 180 },
+        { id: 3, label: 'Algorithms', x: 400, y: 60 },
+        { id: 4, label: 'Compilers', x: 400, y: 180 },
+        { id: 5, label: 'Capstone', x: 550, y: 120 },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 2, to: 4 },
+        { from: 3, to: 4 },
+        { from: 3, to: 5 },
+        { from: 4, to: 5 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'topological-sort-zero-indegree').length).toBe(1);
+
+    // One pop, one append, one decrement per edge, and only then possible enqueues.
+    const pops = timeline.filter((f) => (f.callStack?.[0] as any)?.name === 'topologicalSort(V, adj)' && f.codeLine === 6);
+    const appends = timeline.filter((f) => f.codeLine === 7);
+    const decrements = timeline.filter((f) => f.codeLine === 9);
+    const enqueues = timeline.filter((f) => f.codeLine === 11);
+    expect(pops.length).toBe(6);
+    expect(appends.length).toBe(6);
+    expect(decrements.length).toBe(input.edges.length);
+    expect(enqueues.length).toBe(5); // every vertex except the single source
+
+    // Order lengths grow by exactly one per append frame.
+    appends.forEach((frame, i) => expect(frame.variables?.orderLen).toBe(i + 1));
+
+    // Final order is valid: every edge points forward.
+    const final = timeline[timeline.length - 1];
+    const order: number[] = final.state.topoOrder;
+    expect(order.length).toBe(6);
+    expect(final.state.cycleDetected).toBe(false);
+    for (const e of input.edges) {
+      expect(order.indexOf(e.from)).toBeLessThan(order.indexOf(e.to));
+    }
+
+    // Cyclic preset: A emits, then the queue starves before B/C/D.
+    const cycle = mod.generateTimeline({
+      nodes: [
+        { id: 0, label: 'A', x: 0, y: 0 },
+        { id: 1, label: 'B', x: 60, y: 0 },
+        { id: 2, label: 'C', x: 120, y: 0 },
+        { id: 3, label: 'D', x: 180, y: 0 },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 1, to: 2 },
+        { from: 2, to: 3 },
+        { from: 3, to: 1 },
+      ],
+    });
+    const cycleFinal = cycle[cycle.length - 1];
+    expect(cycleFinal.state.cycleDetected).toBe(true);
+    expect(cycleFinal.milestoneTitle).toBe('Directed Cycle Detected');
+    expect(cycleFinal.variables?.emittedCount).toBe(1);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      nodes: [
+        { id: 0, label: 'A', x: 0, y: 0 },
+        { id: 1, label: 'B', x: 60, y: 0 },
+        { id: 2, label: 'C', x: 120, y: 0 },
+        { id: 3, label: 'D', x: 180, y: 0 },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 1, to: 2 },
+        { from: 2, to: 3 },
+        { from: 3, to: 1 },
+      ],
+    }).errorCount).toBe(0);
+  });
+
+  it('DFS topological sort prepends on finish, skips BLACK edges, and aborts on a back-edge', () => {
+    const mod = moduleById('topological-sort-dfs');
+    const input = {
+      nodes: ['A', 'B', 'C', 'D', 'E'],
+      edges: [
+        { from: 'A', to: 'B' },
+        { from: 'A', to: 'C' },
+        { from: 'B', to: 'D' },
+        { from: 'C', to: 'D' },
+        { from: 'D', to: 'E' },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'topological-sort-dfs-postorder').length).toBe(1);
+
+    // Every vertex is visited once, marked BLACK once, and prepended once.
+    expect(timeline.filter((f) => f.codeLine === 4).length).toBe(5);
+    expect(timeline.filter((f) => f.codeLine === 8).length).toBe(5);
+    const prepends = timeline.filter((f) => f.codeLine === 9);
+    expect(prepends.length).toBe(5);
+    prepends.forEach((frame, i) => {
+      expect((frame.state.topoOrder as string[]).length).toBe(i + 1);
+    });
+
+    // C → D targets a BLACK vertex, so it must be shown as an explicit skip.
+    const skips = timeline.filter((f) => f.variables?.action === 'SKIP');
+    expect(skips.length).toBe(1);
+    expect(skips[0].variables?.from).toBe('C');
+    expect(skips[0].variables?.to).toBe('D');
+
+    // Known DFS post-order for this graph.
+    const final = timeline[timeline.length - 1];
+    expect(final.state.hasCycle).toBe(false);
+    expect(final.state.topoOrder).toEqual(['A', 'C', 'B', 'D', 'E']);
+    for (const e of input.edges) {
+      expect(final.state.topoOrder.indexOf(e.from)).toBeLessThan(
+        final.state.topoOrder.indexOf(e.to)
+      );
+    }
+
+    // A → B → A: the back-edge aborts before any vertex is emitted.
+    const cycle = mod.generateTimeline({
+      nodes: ['A', 'B'],
+      edges: [
+        { from: 'A', to: 'B' },
+        { from: 'B', to: 'A' },
+      ],
+    });
+    const cycleFinal = cycle[cycle.length - 1];
+    expect(cycleFinal.state.hasCycle).toBe(true);
+    expect(cycleFinal.milestoneTitle).toBe('Directed Cycle Detected');
+    expect(cycleFinal.state.topoOrder).toEqual([]);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      nodes: ['A', 'B'],
+      edges: [
+        { from: 'A', to: 'B' },
+        { from: 'B', to: 'A' },
+      ],
+    }).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

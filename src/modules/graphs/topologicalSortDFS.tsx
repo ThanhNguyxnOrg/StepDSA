@@ -183,6 +183,7 @@ export const topologicalSortDFSModule: AlgorithmModule<
 
     const topoOrder: string[] = [];
     let hasCycle = false;
+    let checkpointAdded = false;
 
     const frames: ExecutionFrame<TopoSortDFSState>[] = [];
 
@@ -194,6 +195,11 @@ export const topologicalSortDFSModule: AlgorithmModule<
       explanation: `Initialize DFS Topological Sort for ${nodes.length} vertices and ${edges.length} directed edges. All nodes initialized to WHITE (unvisited).`,
       variables: { totalNodes: nodes.length, totalEdges: edges.length },
       callStack: [{ name: 'topologicalSortDFS()', params: { vertices: nodes.length }, line: 2, isCurrent: true }],
+      pedagogy: {
+        what: `DFS topological sort runs depth-first and records each vertex when it finishes, prepending it to the output.`,
+        why: 'When u finishes, every vertex reachable from u has already finished and sits in the order. Prepending u therefore places it before all its descendants — exactly the edge direction u → v.',
+        whatNext: 'Start a DFS from each still-WHITE vertex to cover every component.',
+      },
       state: {
         nodes,
         edges,
@@ -214,6 +220,15 @@ export const topologicalSortDFSModule: AlgorithmModule<
         explanation: `Visit node "${u}". Marked GRAY (active on recursion call stack). Exploring outgoing edges.`,
         variables: { visiting: u, color: 'GRAY' },
         callStack: [{ name: `dfs(u="${u}")`, params: { u }, line: 4, isCurrent: true }],
+        invariantStatus: {
+          label: `"${u}" is GRAY (active on recursion stack)`,
+          isValid: true,
+        },
+        pedagogy: {
+          what: `Enter dfs("${u}"): mark it GRAY, meaning its subtree is currently being explored.`,
+          why: 'GRAY is the "in progress" state. An edge to a GRAY vertex closes a cycle; an edge to BLACK is a harmless forward/cross edge.',
+          whatNext: `Scan the outgoing edges of "${u}".`,
+        },
         state: {
           nodes,
           edges,
@@ -234,6 +249,15 @@ export const topologicalSortDFSModule: AlgorithmModule<
             explanation: `Back-edge detected: ${u} -> ${v} points to active ancestor in call stack (GRAY)! Cycle detected -> No valid topological order.`,
             variables: { cycleEdge: `${u} -> ${v}` },
             callStack: [{ name: `cycleDetected(${u}, ${v})`, params: { u, v }, line: 6, isCurrent: true }],
+            invariantStatus: {
+              label: `Back-edge ${u} → ${v} reaches a GRAY ancestor`,
+              isValid: false,
+            },
+            pedagogy: {
+              what: `Edge ${u} → ${v} points to a GRAY vertex — an ancestor still on the recursion stack.`,
+              why: 'A path from v down to u plus the edge u → v forms a directed cycle, so no topological order can exist.',
+              whatNext: 'Abort and report the cycle; do not emit a partial order as if it were valid.',
+            },
             state: {
               nodes,
               edges,
@@ -247,20 +271,107 @@ export const topologicalSortDFSModule: AlgorithmModule<
         }
 
         if (nodeColors[v] === 'WHITE') {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 7,
+            explanation: `Edge ${u} → ${v}: "${v}" is WHITE, so recurse into it before finishing "${u}".`,
+            variables: { from: u, to: v, color: 'WHITE', action: 'RECURSE' },
+            callStack: [{ name: `dfs(u="${v}")`, params: { from: u, v }, line: 7, isCurrent: true }],
+            conditionEval: { expr: `color["${v}"] == WHITE`, result: true },
+            pedagogy: {
+              what: `"${v}" is unvisited, so DFS descends into it immediately.`,
+              why: "Depth-first means finishing the entire subtree of v before touching u's next edge. That is why v will be prepended before u later.",
+              whatNext: `Explore "${v}" and all its descendants; only then return to "${u}".`,
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'topological-sort-dfs-postorder',
+                  question: `DFS recurses into "${v}" before finishing "${u}". Why does prepending each vertex at finish time yield a valid topological order?`,
+                  options: [
+                    'When u finishes, all its descendants are already in the order, so prepending u puts it before them',
+                    'Because recursion happens to visit vertices in alphabetical order',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'For every edge u → v, v finishes before u (or the edge is a back-edge, which means a cycle). Prepending on finish therefore places u before every vertex it points to.',
+                }
+              : undefined,
+            state: {
+              nodes,
+              edges,
+              nodeColors: { ...nodeColors },
+              activeNode: u,
+              topoOrder: [...topoOrder],
+              hasCycle: false,
+            },
+          });
+          checkpointAdded = true;
           if (!dfs(v)) return false;
+        } else if (nodeColors[v] === 'BLACK') {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 7,
+            explanation: `Edge ${u} → ${v}: "${v}" is already BLACK (finished). This is a forward/cross edge — skip it.`,
+            variables: { from: u, to: v, color: 'BLACK', action: 'SKIP' },
+            callStack: [{ name: `dfs(u="${u}")`, params: { u, v }, line: 7, isCurrent: true }],
+            conditionEval: { expr: `color["${v}"] == WHITE`, result: false },
+            pedagogy: {
+              what: `"${v}" is already finished, so the edge ${u} → ${v} needs no action.`,
+              why: 'A BLACK target is not an ancestor (that would be GRAY), so this edge cannot close a cycle; v is already correctly placed after u.',
+              whatNext: `Continue with "${u}"'s next edge.`,
+            },
+            state: {
+              nodes,
+              edges,
+              nodeColors: { ...nodeColors },
+              activeNode: u,
+              topoOrder: [...topoOrder],
+              hasCycle: false,
+            },
+          });
         }
       }
 
       nodeColors[u] = 'BLACK';
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `All outgoing edges of "${u}" are processed. Mark "${u}" BLACK: its subtree is complete.`,
+        variables: { finished: u, color: 'BLACK' },
+        callStack: [{ name: `finishNode(u="${u}")`, params: { u }, line: 8, isCurrent: true }],
+        pedagogy: {
+          what: `"${u}" turns BLACK — fully explored.`,
+          why: 'BLACK means no GRAY descendant remains, so no future edge can form a cycle through u.',
+          whatNext: `Prepend "${u}" to the topological order.`,
+        },
+        state: {
+          nodes,
+          edges,
+          nodeColors: { ...nodeColors },
+          activeNode: u,
+          topoOrder: [...topoOrder],
+          hasCycle: false,
+        },
+      });
+
       topoOrder.unshift(u);
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 9,
-        explanation: `Finish node "${u}". All descendants explored! Marked BLACK and prepended to topological order. Current order: [${topoOrder.join(' -> ')}].`,
-        variables: { finished: u, color: 'BLACK', currentTopoOrder: topoOrder.join(' -> ') },
-        callStack: [{ name: `finishNode(u="${u}")`, params: { u }, line: 9, isCurrent: true }],
+        explanation: `Prepend "${u}" to the order: [${topoOrder.join(' -> ')}].`,
+        variables: { prepended: u, currentTopoOrder: topoOrder.join(' -> ') },
+        callStack: [{ name: `prependOrder(u="${u}")`, params: { u }, line: 9, isCurrent: true }],
+        pedagogy: {
+          what: `"${u}" becomes the new first element: [${topoOrder.join(' -> ')}].`,
+          why: 'Every vertex after u in this list is a descendant or an unrelated finished vertex; for descendants, u must come first.',
+          whatNext: "Return from dfs and continue the caller's remaining edges.",
+        },
         state: {
           nodes,
           edges,
@@ -276,6 +387,28 @@ export const topologicalSortDFSModule: AlgorithmModule<
 
     for (const node of nodes) {
       if (nodeColors[node] === 'WHITE') {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 10,
+          explanation: `Outer scan: "${node}" is still WHITE (not reached by any earlier DFS). Start a new DFS root at "${node}".`,
+          variables: { root: node, coveredComponents: topoOrder.length, action: 'NEW_ROOT' },
+          callStack: [{ name: `dfs(u="${node}")`, params: { root: node }, line: 10, isCurrent: true }],
+          conditionEval: { expr: `color["${node}"] == WHITE`, result: true },
+          pedagogy: {
+            what: `"${node}" was never reached, so it belongs to a separate component; DFS restarts here.`,
+            why: 'A DAG can be disconnected. Visiting every WHITE root is what makes the final order cover all vertices.',
+            whatNext: `Explore the component rooted at "${node}".`,
+          },
+          state: {
+            nodes,
+            edges,
+            nodeColors: { ...nodeColors },
+            activeNode: null,
+            topoOrder: [...topoOrder],
+            hasCycle: false,
+          },
+        });
         if (!dfs(node)) break;
       }
     }
@@ -284,12 +417,23 @@ export const topologicalSortDFSModule: AlgorithmModule<
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 12,
+      codeLine: 11,
+      isMilestone: true,
+      milestoneTitle: hasCycle ? 'Directed Cycle Detected' : 'Topological Order Complete',
       explanation: hasCycle
         ? 'Cycle found in graph! Topological ordering does not exist.'
         : `DFS Topological Sort complete! Valid dependency ordering: ${topoOrder.join(' -> ')}.`,
       variables: { validOrdering: !hasCycle, finalOrder: topoOrder.join(' -> ') },
-      callStack: [{ name: 'complete()', params: { count: topoOrder.length }, line: 12, isCurrent: true }],
+      callStack: [{ name: 'complete()', params: { count: topoOrder.length }, line: 11, isCurrent: true }],
+      pedagogy: {
+        what: hasCycle
+          ? 'A GRAY back-edge was found, so the graph contains a directed cycle.'
+          : `Final order: ${topoOrder.join(' → ')}.`,
+        why: hasCycle
+          ? 'A cycle makes a topological order impossible: each vertex on it would have to precede itself.'
+          : 'Each vertex was prepended only after its descendants finished, so every edge points forward in the list.',
+        whatNext: hasCycle ? 'Report the cycle; no valid schedule exists.' : 'Use the order for dependency scheduling or DAG dynamic programming.',
+      },
       state: {
         nodes,
         edges,

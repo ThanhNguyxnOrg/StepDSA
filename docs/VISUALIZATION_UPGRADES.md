@@ -57,7 +57,7 @@ b-tree / two-three-tree / two-three-four-tree / skip-list / tree-map / kd-tree /
 interval-tree / radix-tree / tst / ternary-search-tree / octree-3d / suffix-tree / recursion-trees → ⬜
 
 ### Graphs (27)
-bfs ✅ · dijkstra ✅ · dfs / topological-sort / topological-sort-dfs / bellman-ford /
+bfs ✅ · dijkstra ✅ · dfs ✅ · bellman-ford ✅ · floyd-warshall ✅ · a-star ✅ · zero-one-bfs ✅ · topological-sort ✅ · topological-sort-dfs ✅ /
 floyd-warshall / a-star / kruskal / prim / boruvka / dsu / tarjan-scc / kosaraju /
 articulation-points / bridge-finding / bipartite-check / zero-one-bfs / edmonds-karp /
 dinic / hopcroft-karp / hierholzer / hamiltonian-path / transitive-closure /

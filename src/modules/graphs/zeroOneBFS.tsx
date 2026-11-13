@@ -201,18 +201,24 @@ def zero_one_bfs(graph, source, n):
     const deque: number[] = [source];
 
     const frames: ExecutionFrame<ZeroOneBFSState>[] = [];
+    let checkpointAdded = false;
 
     // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 4,
+      codeLine: 2,
       explanation: `Initialize 0-1 BFS. Source node ${source} set to distance 0. Deque initialized with [${source}]. All other distances initialized to ∞.`,
       variables: { source, dequeSize: 1, totalNodes: numNodes },
       callStack: [
-        { name: `zeroOneBFS(src=${source})`, params: { src: source, nodes: numNodes }, line: 4, isCurrent: true },
+        { name: `zeroOneBFS(src=${source})`, params: { src: source, nodes: numNodes }, line: 2, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
+      pedagogy: {
+        what: `0-1 BFS computes single-source shortest paths when every edge weighs exactly 0 or 1, using a deque instead of a heap.`,
+        why: 'A 0-weight edge keeps the same distance, so its target belongs at the front; a 1-weight edge adds one, so its target belongs at the back. The deque therefore stays sorted by distance.',
+        whatNext: `Pop the front node (${source}) and relax its outgoing edges.`,
+      },
       state: {
         numNodes,
         edges,
@@ -234,13 +240,22 @@ def zero_one_bfs(graph, source, n):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 8,
+        codeLine: 5,
         explanation: `Popped node ${u} from FRONT of deque. Current finalized distance: ${uDist}. Inspecting outgoing {0, 1} edges.`,
         variables: { currentNode: u, finalizedDist: uDist, dequeRemaining: deque.length },
         callStack: [
-          { name: `popFront(${u})`, params: { u, dist: uDist }, line: 8, isCurrent: true },
+          { name: `popFront(${u})`, params: { u, dist: uDist }, line: 5, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
         ],
+        invariantStatus: {
+          label: `Deque ordered by non-decreasing distance; front #${u} has dist ${uDist}`,
+          isValid: true,
+        },
+        pedagogy: {
+          what: `Pop the front node #${u}: its distance ${uDist} is final.`,
+          why: 'The deque is kept sorted by distance, so the front is always the closest unsettled node — the same role Dijkstra\'s heap plays, but in O(1).',
+          whatNext: `Scan every outgoing edge of #${u}.`,
+        },
         state: {
           numNodes,
           edges,
@@ -264,33 +279,49 @@ def zero_one_bfs(graph, source, n):
 
         if (canRelax) {
           dist[v] = newDist;
-          if (w === 0) {
-            deque.unshift(v);
-          } else {
-            deque.push(v);
-          }
 
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: w === 0 ? 13 : 15,
+            codeLine: 8,
             isMilestone: true,
             milestoneTitle: `Relax Edge (${u} → ${v}, w=${w})`,
-            explanation: `Relaxed edge ${u} → ${v} with weight ${w}. Updated dist[${v}] = ${newDist}. Weight is ${w} → Pushed to ${
-              w === 0 ? 'FRONT (unshift)' : 'BACK (push)'
-            } of deque.`,
+            explanation: `Relax edge ${u} → ${v} (weight ${w}): dist[${v}] improves from ${currentVDist ?? '∞'} to ${newDist}.`,
             variables: {
               u,
               v,
               weight: w,
               oldDist: currentVDist ?? '∞',
               newDist,
-              dequeAction: w === 0 ? 'push_front' : 'push_back',
             },
             callStack: [
-              { name: `relaxEdge(${u}→${v})`, params: { u, v, weight: w, newDist }, line: w === 0 ? 13 : 15, isCurrent: true },
+              { name: `relaxEdge(${u}→${v})`, params: { u, v, weight: w, newDist }, line: 8, isCurrent: true },
               { name: 'main()', params: {}, line: 1 },
             ],
+            conditionEval: {
+              expr: `dist[${u}] + ${w} (${newDist}) < dist[${v}] (${currentVDist ?? '∞'})`,
+              result: true,
+            },
+            pedagogy: {
+              what: `The route ${u} → ${v} costs ${newDist}, strictly less than the previous best ${currentVDist ?? '∞'}, so dist[${v}] is updated.`,
+              why: 'Relaxation only fires on strict improvement; equal distances are ignored, which is what keeps each vertex from being enqueued needlessly.',
+              whatNext: w === 0
+                ? `Weight 0 means the same distance — push #${v} to the FRONT so it is processed next.`
+                : `Weight 1 adds one — push #${v} to the BACK to preserve distance order.`,
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'zero-one-bfs-front-back',
+                  question: `The edge ${u} → ${v} has weight ${w}. Why does 0-1 BFS push a 0-weight target to the front but a 1-weight target to the back?`,
+                  options: [
+                    'A 0-weight edge keeps the same distance (front), a 1-weight edge adds one (back), so the deque stays sorted by distance',
+                    'It is an arbitrary convention; both ends give the same result',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Monotone order is the whole trick: the front always holds the minimum distance. Pushing a same-distance node to the back would break that order and require a heap like Dijkstra.',
+                }
+              : undefined,
             state: {
               numNodes,
               edges,
@@ -302,6 +333,86 @@ def zero_one_bfs(graph, source, n):
               phase: 'relax',
             },
           });
+          checkpointAdded = true;
+
+          if (w === 0) {
+            deque.unshift(v);
+          } else {
+            deque.push(v);
+          }
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: w === 0 ? 9 : 10,
+            explanation: `Push #${v} to the ${w === 0 ? 'FRONT (unshift)' : 'BACK (push)'} of the deque because its edge weight is ${w}. Deque is now [${deque.join(', ')}].`,
+            variables: {
+              v,
+              weight: w,
+              dequeAction: w === 0 ? 'push_front' : 'push_back',
+              deque: deque.join(', '),
+              dequeSize: deque.length,
+            },
+            callStack: [
+              { name: `push${w === 0 ? 'Front' : 'Back'}(${v})`, params: { v, weight: w }, line: w === 0 ? 9 : 10, isCurrent: true },
+              { name: 'main()', params: {}, line: 1 },
+            ],
+            pedagogy: {
+              what: `#${v} enters the deque at the ${w === 0 ? 'front' : 'back'}; deque = [${deque.join(', ')}].`,
+              why: w === 0
+                ? 'Its distance equals the current node\'s distance, so it must be settled before any larger-distance node — the front guarantees that.'
+                : 'Its distance is one more than the current node\'s, so it goes behind all equal-or-smaller distances — the back guarantees that.',
+              whatNext: 'Pop the next front node and continue.',
+            },
+            state: {
+              numNodes,
+              edges,
+              source,
+              currentNode: u,
+              deque: [...deque],
+              distances: [...dist],
+              visitedEdges: [...visitedEdgesRecord],
+              phase: 'relax',
+            },
+          });
+        } else {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 7,
+            explanation: `Edge ${u} → ${v} (weight ${w}) gives ${newDist}, which is not better than dist[${v}] = ${currentVDist ?? '∞'}. No relaxation; deque unchanged.`,
+            variables: {
+              u,
+              v,
+              weight: w,
+              candidate: newDist,
+              currentDist: currentVDist ?? '∞',
+              rejected: true,
+            },
+            callStack: [
+              { name: `checkEdge(${u}→${v})`, params: { u, v, candidate: newDist }, line: 7, isCurrent: true },
+              { name: 'main()', params: {}, line: 1 },
+            ],
+            conditionEval: {
+              expr: `dist[${u}] + ${w} (${newDist}) < dist[${v}] (${currentVDist ?? '∞'})`,
+              result: false,
+            },
+            pedagogy: {
+              what: `The candidate distance ${newDist} does not beat the recorded ${currentVDist ?? '∞'}, so nothing changes.`,
+              why: 'Skipping non-improving edges is what prevents infinite enqueueing; only strict improvements may push a vertex.',
+              whatNext: `Inspect the next outgoing edge of #${u}.`,
+            },
+            state: {
+              numNodes,
+              edges,
+              source,
+              currentNode: u,
+              deque: [...deque],
+              distances: [...dist],
+              visitedEdges: [...visitedEdgesRecord],
+              phase: 'exploring',
+            },
+          });
         }
       }
     }
@@ -310,7 +421,7 @@ def zero_one_bfs(graph, source, n):
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 17,
+      codeLine: 11,
       isMilestone: true,
       milestoneTitle: '0-1 BFS Traversal Complete',
       explanation: `Deque empty. All reachable nodes relaxed with optimal shortest paths in O(V + E) linear time: [${dist
@@ -318,9 +429,14 @@ def zero_one_bfs(graph, source, n):
         .join(', ')}].`,
       variables: { completedNodes: numNodes, summaryDistances: dist.map((d) => d ?? '∞').join(', ') },
       callStack: [
-        { name: 'complete()', params: {}, line: 17, isCurrent: true },
+        { name: 'complete()', params: {}, line: 11, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
+      pedagogy: {
+        what: `Final distances: ${dist.map((d, i) => `#${i}=${d ?? '∞'}`).join(', ')}.`,
+        why: 'Each vertex was pushed only when its distance improved; the deque order guaranteed every pop was already minimal, so no vertex needs reprocessing after it settles.',
+        whatNext: 'Total cost is O(V + E) — every edge is inspected at most once per relaxation, and each vertex is pushed a bounded number of times.',
+      },
       state: {
         numNodes,
         edges,
