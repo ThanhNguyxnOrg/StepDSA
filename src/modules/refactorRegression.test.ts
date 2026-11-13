@@ -1220,6 +1220,69 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
   });
 
+  it('Tarjan discovers, pushes and marks one node per frame, then pops SCCs node by node', () => {
+    const mod = moduleById('tarjan-scc');
+    const input = {
+      nodes: ['A', 'B', 'C', 'D', 'E'],
+      edges: [
+        { from: 'A', to: 'B' },
+        { from: 'B', to: 'C' },
+        { from: 'C', to: 'A' },
+        { from: 'B', to: 'D' },
+        { from: 'D', to: 'E' },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'tarjan-scc-root-condition').length).toBe(1);
+
+    // Every visit is exactly three frames: discover (8), push (9), mark inStack (10).
+    expect(timeline.filter((f) => f.codeLine === 8).length).toBe(5);
+    expect(timeline.filter((f) => f.codeLine === 9).length).toBe(5);
+    expect(timeline.filter((f) => f.codeLine === 10).length).toBe(5);
+
+    // Edge classification: 4 tree edges, 1 back edge (C → A), 4 low-link backtracks.
+    const treeEdges = timeline.filter((f) => f.variables?.edgeType === 'TREE_EDGE');
+    const backEdges = timeline.filter((f) => f.variables?.edgeType === 'BACK_EDGE');
+    expect(treeEdges.length).toBe(4);
+    expect(backEdges.length).toBe(1);
+    expect(backEdges[0].variables?.from).toBe('C');
+    expect(backEdges[0].variables?.discV).toBe(1); // disc[A] == 1
+    expect(timeline.filter((f) => f.codeLine === 14).length).toBe(4);
+
+    // Root checks (17) happen only when equality holds; pops (18) mirror the stack contents.
+    expect(timeline.filter((f) => f.codeLine === 17).length).toBe(3);
+    const pops = timeline.filter((f) => (f.callStack?.[0] as any)?.name?.startsWith('popNode'));
+    expect(pops.map((f) => f.variables?.popped)).toEqual(['E', 'D', 'C', 'B', 'A']);
+
+    const seals = timeline.filter((f) => (f.callStack?.[0] as any)?.name?.startsWith('sealSCC'));
+    expect(seals.map((f) => f.milestoneTitle)).toEqual([
+      'SCC #1: {E}',
+      'SCC #2: {D}',
+      'SCC #3: {C, B, A}',
+    ]);
+
+    // Once an SCC is sealed, its members leave the stack and are colored.
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Tarjan Complete (3 SCCs)');
+    expect(final.state.sccList).toEqual([['E'], ['D'], ['C', 'B', 'A']]);
+    expect(final.state.stack).toEqual([]);
+    expect(Object.keys(final.state.completedSCCNodeColor).sort()).toEqual(['A', 'B', 'C', 'D', 'E']);
+
+    // Two interlocked cycles preset: both components found, each with 3 members.
+    const preset = mod.presets.find((p) => p.id === 'two-sccs')!;
+    const presetTimeline = mod.generateTimeline(preset.data as any);
+    const presetFinal = presetTimeline[presetTimeline.length - 1];
+    expect(presetFinal.state.sccList.length).toBe(2);
+    const sizes = presetFinal.state.sccList.map((c: string[]) => c.length);
+    expect(sizes).toEqual([3, 3]);
+    const sets = presetFinal.state.sccList.map((c: string[]) => [...c].sort().join(''));
+    expect(sets.sort()).toEqual(['012', '345']);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

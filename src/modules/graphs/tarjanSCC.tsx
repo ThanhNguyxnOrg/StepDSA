@@ -226,7 +226,8 @@ export const tarjanSCCModule: AlgorithmModule<
                 low[u] = min(low[u], disc[v])
         if low[u] == disc[u]:
             pop all nodes down to u from stack into new SCC
-    for each u in graph: if u unvisited dfs(u)`,
+    for each u in graph: if u unvisited dfs(u)
+    return sccs`,
   },
 
   generateTimeline: (input: {
@@ -269,10 +270,15 @@ export const tarjanSCCModule: AlgorithmModule<
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
-      explanation: `Initialize Tarjan's SCC algorithm with ${nodes.length} vertices and ${edges.length} directed edges.`,
-      variables: { totalNodes: nodes.length, totalEdges: edges.length },
-      callStack: [{ name: 'tarjanSCC()', params: { vertices: nodes.length }, line: 1, isCurrent: true }],
+      codeLine: 2,
+      explanation: `Initialize Tarjan's SCC algorithm with ${nodes.length} vertices and ${edges.length} directed edges. The discovery timer starts at 0; the DFS stack and both timestamp tables are empty.`,
+      variables: { totalNodes: nodes.length, totalEdges: edges.length, timer: 0 },
+      callStack: [{ name: 'tarjanSCC()', params: { vertices: nodes.length }, line: 2, isCurrent: true }],
+      pedagogy: {
+        what: `Tarjan finds every strongly connected component with a single DFS pass, timestamping each vertex twice: disc (first visit) and low (smallest discovery reachable).`,
+        why: 'A cycle in a directed graph shows up inside one DFS subtree; low-link values capture exactly that, without a second DFS like Kosaraju needs.',
+        whatNext: 'Start DFS from the first unvisited vertex.',
+      },
       state: {
         nodes,
         edges,
@@ -287,28 +293,95 @@ export const tarjanSCCModule: AlgorithmModule<
       },
     });
 
+    let checkpointAdded = false;
+
     function dfs(u: string) {
       timer++;
       disc[u] = timer;
       low[u] = timer;
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `Discover node "${u}": disc[${u}] = low[${u}] = ${disc[u]} as the DFS timer advances.`,
+        variables: {
+          node: u,
+          disc: disc[u],
+          low: low[u],
+          timer,
+        },
+        callStack: [
+          { name: `dfs(u="${u}")`, params: { disc: disc[u], low: low[u] }, line: 8, isCurrent: true },
+          { name: 'tarjanSCC()', params: {}, line: 1 },
+        ],
+        pedagogy: {
+          what: `"${u}" gets the next discovery time ${disc[u]}; low[${u}] starts equal to it.`,
+          why: 'low[u] is the smallest disc reachable from u\'s subtree using tree edges plus one back-edge into the active stack. Starting at disc[u] means "nothing better found yet".',
+          whatNext: 'Push the node onto the active stack.',
+        },
+        state: {
+          nodes,
+          edges,
+          activeNode: u,
+          activeNeighbor: null,
+          disc: { ...disc },
+          low: { ...low },
+          stack: [...stack],
+          inStack: { ...inStack },
+          sccList: sccList.map((c) => [...c]),
+          completedSCCNodeColor: { ...completedSCCNodeColor },
+        },
+      });
+
       stack.push(u);
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 9,
+        explanation: `stack.push("${u}"): the active stack now holds [${stack.join(', ')}].`,
+        variables: { node: u, stack: `[${stack.join(', ')}]`, stackSize: stack.length },
+        callStack: [
+          { name: `dfs(u="${u}")`, params: { push: u }, line: 9, isCurrent: true },
+          { name: 'tarjanSCC()', params: {}, line: 1 },
+        ],
+        pedagogy: {
+          what: `"${u}" joins the auxiliary stack, which holds exactly the vertices whose SCC is not yet finalized.`,
+          why: 'When a root is found, the stack top down to the root is precisely one SCC — the order DFS produced it in.',
+          whatNext: 'Mark the node as in-stack so back-edges can be filtered correctly.',
+        },
+        state: {
+          nodes,
+          edges,
+          activeNode: u,
+          activeNeighbor: null,
+          disc: { ...disc },
+          low: { ...low },
+          stack: [...stack],
+          inStack: { ...inStack },
+          sccList: sccList.map((c) => [...c]),
+          completedSCCNodeColor: { ...completedSCCNodeColor },
+        },
+      });
+
       inStack[u] = true;
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 4,
-        explanation: `Visit node "${u}". Assign disc[${u}]=${disc[u]}, low[${u}]=${low[u]}. Push onto active DFS stack.`,
-        variables: {
-          node: u,
-          disc: disc[u],
-          low: low[u],
-          stack: `[${stack.join(', ')}]`,
-        },
+        codeLine: 10,
+        explanation: `inStack["${u}"] = true. Edge updates may only use neighbors still on the stack.`,
+        variables: { node: u, inStack: true },
         callStack: [
-          { name: `dfs(u="${u}")`, params: { disc: disc[u], low: low[u] }, line: 4, isCurrent: true },
+          { name: `dfs(u="${u}")`, params: { inStack: true }, line: 10, isCurrent: true },
           { name: 'tarjanSCC()', params: {}, line: 1 },
         ],
+        pedagogy: {
+          what: `"${u}" is now flagged in-stack.`,
+          why: 'An edge to a vertex of an already-finished SCC must not lower low[u] — that vertex is no longer on the stack, and following it would merge unrelated components.',
+          whatNext: `Scan the outgoing edges of "${u}".`,
+        },
         state: {
           nodes,
           edges,
@@ -330,12 +403,17 @@ export const tarjanSCCModule: AlgorithmModule<
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 9,
-            explanation: `Explore tree edge (${u} -> ${v}): neighbor "${v}" is unvisited. Recurse DFS.`,
+            codeLine: 13,
+            explanation: `Edge (${u} → ${v}): neighbor "${v}" is unvisited (disc[${v}] undefined), so recurse into it.`,
             variables: { from: u, to: v, edgeType: 'TREE_EDGE' },
             callStack: [
-              { name: `dfs(u="${u}") -> visit "${v}"`, params: { u, v }, line: 9, isCurrent: true },
+              { name: `dfs(u="${u}") -> visit "${v}"`, params: { u, v }, line: 13, isCurrent: true },
             ],
+            pedagogy: {
+              what: `"${v}" has no discovery time yet, so (${u} → ${v}) becomes a DFS tree edge and dfs("${v}") starts.`,
+              why: 'Tree edges build the DFS forest; only within one tree can a cycle (and therefore an SCC) hide.',
+              whatNext: `Explore "${v}" and its subtree; when it returns, fold low[${v}] into low[${u}].`,
+            },
             state: {
               nodes,
               edges,
@@ -358,12 +436,20 @@ export const tarjanSCCModule: AlgorithmModule<
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 11,
-            explanation: `Backtrack to "${u}" from child "${v}". Update low[${u}] = min(${oldLow}, low[${v}]=${low[v]}) -> ${low[u]}.`,
+            codeLine: 14,
+            explanation: `Backtrack to "${u}" from child "${v}": low[${u}] = min(${oldLow}, low[${v}] = ${low[v]}) = ${low[u]}.`,
             variables: { u, child: v, lowChild: low[v], updatedLowU: low[u] },
             callStack: [
-              { name: `backtrack(u="${u}")`, params: { u, low: low[u] }, line: 11, isCurrent: true },
+              { name: `backtrack(u="${u}")`, params: { u, low: low[u] }, line: 14, isCurrent: true },
             ],
+            pedagogy: {
+              what: `The subtree of "${v}" reaches down to disc ${low[v]}; "${u}" inherits that reach, so low[${u}] becomes ${low[u]}.`,
+              why: 'Low-link propagation along tree edges is how a cycle discovered deep inside the subtree marks every ancestor inside the same SCC.',
+              whatNext:
+                low[u] === disc[u]
+                  ? `low[${u}] == disc[${u}]: "${u}" cannot reach any ancestor and roots an SCC.`
+                  : `low[${u}] < disc[${u}]: an ancestor is reachable, so "${u}" still belongs to the parent's SCC.`,
+            },
             state: {
               nodes,
               edges,
@@ -384,12 +470,17 @@ export const tarjanSCCModule: AlgorithmModule<
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 13,
-            explanation: `Found back-edge (${u} -> ${v}): "${v}" is currently in the active stack! Update low[${u}] = min(${oldLow}, disc[${v}]=${disc[v]}) -> ${low[u]}.`,
+            codeLine: 16,
+            explanation: `Back-edge (${u} → ${v}): "${v}" is still on the active stack (disc ${disc[v]}), so low[${u}] = min(${oldLow}, disc[${v}]) = ${low[u]}.`,
             variables: { from: u, to: v, discV: disc[v], lowU: low[u], edgeType: 'BACK_EDGE' },
             callStack: [
-              { name: `backEdge(u="${u}", v="${v}")`, params: { u, v, lowU: low[u] }, line: 13, isCurrent: true },
+              { name: `backEdge(u="${u}", v="${v}")`, params: { u, v, lowU: low[u] }, line: 16, isCurrent: true },
             ],
+            pedagogy: {
+              what: `(${u} → ${v}) points back to an ancestor-like vertex on the stack; low[${u}] drops to disc[${v}] = ${disc[v]}.`,
+              why: 'This is the cycle signal: the subtree of u can reach a vertex discovered earlier that has not been sealed into an SCC yet.',
+              whatNext: `If low[${u}] ends up equal to disc[${u}], "${u}" will root an SCC; otherwise the reachable ancestor stays in the same component.`,
+            },
             state: {
               nodes,
               edges,
@@ -408,6 +499,48 @@ export const tarjanSCCModule: AlgorithmModule<
 
       // Check if u is root of an SCC
       if (low[u] === disc[u]) {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 17,
+          explanation: `low["${u}"] == disc["${u}"] == ${low[u]}: "${u}" cannot reach any vertex discovered before it, so it roots an SCC.`,
+          variables: { sccRoot: u, low: low[u], disc: disc[u] },
+          callStack: [
+            { name: `sccRoot(u="${u}")`, params: { low: low[u], disc: disc[u] }, line: 17, isCurrent: true },
+          ],
+          pedagogy: {
+            what: `The equality low[${u}] == disc[${u}] proves that nothing above "${u}" on the stack is reachable from its subtree.`,
+            why: 'If a path escaped to an ancestor, low[u] would be smaller than disc[u]. Equality therefore cuts the stack exactly at the SCC boundary.',
+            whatNext: `Pop every node from the stack top down to "${u}" as one component.`,
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'tarjan-scc-root-condition',
+                question: `Why does low["${u}"] == disc["${u}"] mean "${u}" is the root of an SCC?`,
+                options: [
+                  'No vertex above it on the stack is reachable from its subtree, so the stack top down to u is exactly one component',
+                  'Because u has the smallest discovery time among all remaining vertices',
+                ],
+                correctIndex: 0,
+                explanation:
+                  'low[u] tracks the earliest reachable active vertex. Equality means the reach never escapes u itself, so every stack node above u belongs to u\'s component and nothing else does.',
+              }
+            : undefined,
+          state: {
+            nodes,
+            edges,
+            activeNode: u,
+            activeNeighbor: null,
+            disc: { ...disc },
+            low: { ...low },
+            stack: [...stack],
+            inStack: { ...inStack },
+            sccList: sccList.map((c) => [...c]),
+            completedSCCNodeColor: { ...completedSCCNodeColor },
+          },
+        });
+        checkpointAdded = true;
+
         const scc: string[] = [];
         const color = sccPalette[sccList.length % sccPalette.length];
         while (stack.length > 0) {
@@ -415,6 +548,42 @@ export const tarjanSCCModule: AlgorithmModule<
           inStack[w] = false;
           scc.push(w);
           completedSCCNodeColor[w] = color;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 18,
+            explanation: `Pop "${w}" from the stack into SCC #${sccList.length + 1} (inStack["${w}"] = false). Component so far: [${scc.join(', ')}].`,
+            variables: {
+              popped: w,
+              componentSoFar: `[${scc.join(', ')}]`,
+              stack: `[${stack.join(', ')}]`,
+            },
+            callStack: [
+              { name: `popNode("${w}")`, params: { root: u, size: scc.length }, line: 18, isCurrent: true },
+            ],
+            pedagogy: {
+              what: `"${w}" leaves the stack and is colored as part of the component rooted at "${u}".`,
+              why:
+                w === u
+                  ? `"${w}" is the root itself, so the component is complete — nothing below it on the stack belongs to it.`
+                  : `"${w}" was pushed after "${u}" and cannot reach below it, so it must be in "${u}"'s SCC.`,
+              whatNext: w === u ? 'Seal the component in the SCC list.' : 'Keep popping until the root is reached.',
+            },
+            state: {
+              nodes,
+              edges,
+              activeNode: u,
+              activeNeighbor: null,
+              disc: { ...disc },
+              low: { ...low },
+              stack: [...stack],
+              inStack: { ...inStack },
+              sccList: sccList.map((c) => [...c]),
+              completedSCCNodeColor: { ...completedSCCNodeColor },
+            },
+          });
+
           if (w === u) break;
         }
         sccList.push(scc);
@@ -423,15 +592,22 @@ export const tarjanSCCModule: AlgorithmModule<
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 18,
-          explanation: `Root of SCC reached at "${u}" (low[${u}] == disc[${u}] == ${low[u]})! Popped component [${scc.join(', ')}] from stack. Identified SCC #${sccList.length}!`,
+          isMilestone: true,
+          milestoneTitle: `SCC #${sccList.length}: {${scc.join(', ')}}`,
+          explanation: `SCC #${sccList.length} sealed: {${scc.join(', ')}} rooted at "${u}".`,
           variables: {
             sccRoot: u,
             component: `[${scc.join(', ')}]`,
             totalSCCsFound: sccList.length,
           },
           callStack: [
-            { name: `popSCC(root="${u}")`, params: { size: scc.length }, line: 18, isCurrent: true },
+            { name: `sealSCC(root="${u}")`, params: { size: scc.length }, line: 18, isCurrent: true },
           ],
+          pedagogy: {
+            what: `The component {${scc.join(', ')}} is final and will never be touched again.`,
+            why: 'Popping clears inStack, so later cross-edges pointing here are automatically ignored — exactly the pitfall Tarjan warns about.',
+            whatNext: 'Return from dfs and continue with the remaining edges or start nodes.',
+          },
           state: {
             nodes,
             edges,
@@ -458,14 +634,23 @@ export const tarjanSCCModule: AlgorithmModule<
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 25,
+      codeLine: 20,
       explanation: `Tarjan's SCC search complete! Found ${sccList.length} strongly connected components: ${sccList
         .map((scc, idx) => `SCC #${idx + 1}: {${scc.join(', ')}}`)
         .join(' | ')}.`,
+      isMilestone: true,
+      milestoneTitle: `Tarjan Complete (${sccList.length} SCCs)`,
       variables: {
         totalSCCs: sccList.length,
       },
-      callStack: [{ name: 'complete()', params: { totalSCCs: sccList.length }, line: 25, isCurrent: true }],
+      callStack: [{ name: 'complete()', params: { totalSCCs: sccList.length }, line: 20, isCurrent: true }],
+      pedagogy: {
+        what: `DFS has visited every vertex exactly once and produced ${sccList.length} component(s): ${sccList
+          .map((scc) => `{${scc.join(', ')}}`)
+          .join(', ')}.`,
+        why: 'Each component was emitted the moment its root finished, and popping cleared those vertices so no later edge could merge components.',
+        whatNext: 'The SCC condensation is a DAG — it can be topologically ordered for scheduling or 2-SAT problems.',
+      },
       state: {
         nodes,
         edges,
