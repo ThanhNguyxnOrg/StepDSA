@@ -121,6 +121,7 @@ export const interpolationSearchModule: AlgorithmModule<
     let low = 0;
     let high = arr.length - 1;
     const frames: ExecutionFrame<ArrayStageState>[] = [];
+    let checkpointAdded = false;
 
     const callStack = [{ name: 'interpolationSearch', params: { n: arr.length, target }, line: 2, isCurrent: true }];
 
@@ -132,6 +133,11 @@ export const interpolationSearchModule: AlgorithmModule<
       callStack,
       variables: { low, high, target, 'arr[low]': arr[low], 'arr[high]': arr[high] },
       explanation: `Initialized Interpolation Search for target ${target}. Initial bounds [low=${low}, high=${high}], candidate span [${arr[low]}..${arr[high]}].`,
+      pedagogy: {
+        what: `Interpolation search estimates the target's position from its value, instead of always probing the midpoint.`,
+        why: 'For roughly uniformly distributed sorted data, the value ratio predicts the index well, giving O(log log N) expected probes — faster than binary search.',
+        whatNext: `Estimate pos for target ${target} inside span [${arr[low]}..${arr[high]}].`,
+      },
       state: {
         array: arr.map((v, i) => ({ id: i, value: v, status: 'default' })),
         pointers: { low, high },
@@ -143,7 +149,7 @@ export const interpolationSearchModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 4,
+        codeLine: 3,
         action: 'CHECK_INVARIANT',
         callStack,
         conditionEval: {
@@ -156,6 +162,11 @@ export const interpolationSearchModule: AlgorithmModule<
           isValid: true,
         },
         explanation: `Checking probe invariant: target ${target} lies within [arr[${low}]=${arr[low]}, arr[${high}]=${arr[high]}]. Continuing search.`,
+        pedagogy: {
+          what: `The target lies inside the current value span [${arr[low]}..${arr[high]}] and low ≤ high.`,
+          why: 'Outside this span the target cannot exist; the guard lets the algorithm stop early without scanning.',
+          whatNext: 'Estimate the probe index proportionally.',
+        },
         state: {
           array: arr.map((v, i) => ({
             id: i,
@@ -175,7 +186,7 @@ export const interpolationSearchModule: AlgorithmModule<
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 5,
+            codeLine: 4,
             action: 'MATCH_SINGLETON',
             isMilestone: true,
             milestoneTitle: `Target Found at [${low}]`,
@@ -186,6 +197,13 @@ export const interpolationSearchModule: AlgorithmModule<
               low === high
                 ? `Search space narrowed to single index ${low}. Value matches target ${target}!`
                 : `Active window [${low}..${high}] contains only equal values; target ${target} matches arr[${low}] directly (no interpolation needed).`,
+            pedagogy: {
+              what: low === high
+                ? `The window collapsed to the single index ${low}, and it holds the target.`
+                : `All values in [${low}..${high}] are equal; the span check already proved the target equals them.`,
+              why: 'Interpolation would divide by zero here (arr[high] − arr[low] = 0), so this branch resolves the degenerate case directly.',
+              whatNext: 'Return low.',
+            },
             state: {
               array: arr.map((v, i) => ({
                 id: i,
@@ -206,7 +224,7 @@ export const interpolationSearchModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 7,
+        codeLine: 5,
         action: 'COMPUTE_PROBE',
         isMilestone: true,
         milestoneTitle: `Probe Formula -> Index ${pos}`,
@@ -222,6 +240,24 @@ export const interpolationSearchModule: AlgorithmModule<
           'arr[pos]': arr[pos],
         },
         explanation: `Proportional probe formula: fraction = (${target} - ${arr[low]}) / (${arr[high]} - ${arr[low]}) = ${fraction.toFixed(3)}. Estimated index pos = ${low} + floor(${fraction.toFixed(3)} * ${high - low}) = ${pos}.`,
+        pedagogy: {
+          what: `Value ratio (${target} − ${arr[low]}) / (${arr[high]} − ${arr[low]}) = ${fraction.toFixed(3)} places the probe at index ${pos}.`,
+          why: 'If values grow roughly linearly with index, the value ratio predicts the index ratio — this is the interpolation assumption.',
+          whatNext: `Compare arr[${pos}] = ${arr[pos]} with target ${target}.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'interpolation-probe-ratio',
+              question: `Why estimate pos = ${pos} from the value span instead of always probing the midpoint?`,
+              options: [
+                `Because ${target} sits ${(fraction * 100).toFixed(0)}% of the way through the value span [${arr[low]}..${arr[high]}], so it is expected at the same fraction of the index span`,
+                'Because the formula is just a slower way to compute the midpoint',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Interpolation trusts the data distribution: uniformly spread values give O(log log N) expected probes. On skewed data the estimate can be poor, degrading to O(N).',
+            }
+          : undefined,
         state: {
           array: arr.map((v, i) => ({
             id: i,
@@ -232,13 +268,14 @@ export const interpolationSearchModule: AlgorithmModule<
           target,
         },
       });
+      checkpointAdded = true;
 
       // Comparison frame
       const isEqual = arr[pos] === target;
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 9,
+        codeLine: 6,
         action: 'COMPARE_PROBE',
         callStack,
         conditionEval: {
@@ -249,6 +286,11 @@ export const interpolationSearchModule: AlgorithmModule<
         explanation: `Evaluating probe value: arr[${pos}] = ${arr[pos]} vs target ${target}. ${
           isEqual ? 'Exact match found!' : arr[pos] < target ? 'Probe value is less than target.' : 'Probe value is greater than target.'
         }`,
+        pedagogy: {
+          what: `Probe arr[${pos}] = ${arr[pos]} is compared with target ${target}.`,
+          why: 'The comparison confirms whether the estimate was exact or tells us which side to keep.',
+          whatNext: isEqual ? 'Match — return pos.' : arr[pos] < target ? 'Target is larger: keep (pos, high].' : 'Target is smaller: keep [low, pos).',
+        },
         state: {
           array: arr.map((v, i) => ({
             id: i,
@@ -264,13 +306,18 @@ export const interpolationSearchModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 10,
+          codeLine: 6,
           action: 'MATCH_FOUND',
           isMilestone: true,
           milestoneTitle: `Target Found at [${pos}]`,
           callStack,
           variables: { foundAt: pos, target, 'arr[pos]': arr[pos] },
           explanation: `🎯 Target ${target} successfully located at index [${pos}]! Interpolation search complete.`,
+          pedagogy: {
+            what: `The estimated probe landed exactly on the target at index ${pos}.`,
+            why: 'On well-spread data the first or second estimate often hits; this is the O(log log N) best case.',
+            whatNext: 'Return pos.',
+          },
           state: {
             array: arr.map((v, i) => ({
               id: i,
@@ -290,11 +337,16 @@ export const interpolationSearchModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 12,
+          codeLine: 7,
           action: 'DISCARD_LEFT',
           callStack,
           variables: { low, high, target, discardedUpTo: pos },
           explanation: `Since arr[${pos}] (${arr[pos]}) < ${target}, target must lie above pos. Discarding left range [${prevLow}..${pos}]. Setting low = ${low}.`,
+          pedagogy: {
+            what: `Discard [${prevLow}..${pos}]; the new window is [${low}..${high}].`,
+            why: `Every value there is ≤ ${arr[pos]} < ${target}, so none can match.`,
+            whatNext: 'Re-estimate the probe inside the smaller value span.',
+          },
           state: {
             array: arr.map((v, i) => ({
               id: i,
@@ -311,11 +363,16 @@ export const interpolationSearchModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 14,
+          codeLine: 8,
           action: 'DISCARD_RIGHT',
           callStack,
           variables: { low, high, target, discardedFrom: pos },
           explanation: `Since arr[${pos}] (${arr[pos]}) > ${target}, target must lie below pos. Discarding right range [${pos}..${prevHigh}]. Setting high = ${high}.`,
+          pedagogy: {
+            what: `Discard [${pos}..${prevHigh}]; the new window is [${low}..${high}].`,
+            why: `Every value there is ≥ ${arr[pos]} > ${target}, so none can match.`,
+            whatNext: 'Re-estimate the probe inside the smaller value span.',
+          },
           state: {
             array: arr.map((v, i) => ({
               id: i,
@@ -333,7 +390,7 @@ export const interpolationSearchModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 16,
+        codeLine: 9,
         action: 'TARGET_NOT_FOUND',
         isMilestone: true,
         milestoneTitle: 'Target Not Found',
@@ -344,6 +401,11 @@ export const interpolationSearchModule: AlgorithmModule<
         },
         variables: { low, high, target, result: -1 },
         explanation: `Search terminated: target ${target} falls outside current active bounds or low > high. Target absent from array. Returning -1.`,
+        pedagogy: {
+          what: `The guard failed: either low > high or ${target} lies outside [${arr[low] ?? '?'}..${arr[high] ?? '?'}].`,
+          why: 'A value outside the current span cannot exist in a sorted array; an empty window means everything was eliminated.',
+          whatNext: 'Return −1. Skewed distributions can make this phase much slower than binary search.',
+        },
         state: {
           array: arr.map((v, i) => ({ id: i, value: v, status: 'discarded' })),
           pointers: { low, high },

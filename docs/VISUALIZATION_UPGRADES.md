@@ -37,10 +37,18 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | drop-sort | ✅ | guard conditionEval, survival checkpoint, "data loss" honesty notes |
 | sleep-sort | ✅ | wake-order checkpoint, tick/append pedagogy, tie-race caveat |
 
-### Searching (8) — all currently generic ArrayStage
-binary-search, linear-search, jump-search, interpolation-search, exponential-search,
-ternary-search, rotated-sorted-array, binary-search-answer → ⬜
-(plan: mid/lo/hi frontier + eliminated-range shading; mostly ArrayStage-compatible)
+### Searching (8)
+
+| Module | Status | Notes |
+| --- | --- | --- |
+| binary-search | ✅ | invariant + eliminated-range pedagogy, halving checkpoint, NOT_FOUND code-line fix |
+| linear-search | ✅ | growing verified-prefix invariant, prefix checkpoint, match/not-found pedagogy |
+| jump-search | ✅ | √N rationale, block-skip checkpoint, all code lines remapped (was 16 > 13 lines) |
+| interpolation-search | ✅ | value-ratio probe rationale, probe-ratio checkpoint, degenerate equal-span branch, all code lines remapped (was 16 > 9 lines) |
+| exponential-search | ✅ | doubling rationale, O(log p) checkpoint, bracketed-window pedagogy, helper pseudocode expanded (was 16 > 6 lines) |
+| ternary-search | ✅ | two-probe tri-section pedagogy, 2/3-elimination checkpoint, honest "binary is faster" note, code lines remapped (was 15 > 11 lines) |
+| rotated-sorted-array | ✅ | sorted-half reasoning, half-choice checkpoint, invalid-input guard pedagogy, code lines remapped (was 16 > 12 lines) |
+| binary-search-answer | ✅ | answer-space explanation, monotone-predicate checkpoint, pile-hour breakdown pedagogy, code lines remapped (was 15 > 12 lines) |
 
 ### Trees (26)
 avl-tree ✅ · bst / bst-delete / tree-traversals / level-order-traversal / binary-heap /
@@ -90,7 +98,9 @@ sweep-line-intersections / recursion-trees / lps → ⬜
 1. **S1 — sorting mechanics ✅ COMPLETE (18/18):** insertion, mergesort, quicksort,
    heapsort, selection, bubble, cocktail, counting, radix, bucket, shellsort,
    quickselect, timsort, introsort, bogosort, stooge-sort, drop-sort, sleep-sort.
-2. **S2 — searching:** mid/lo/hi frontier stage for all 8 search modules.
+2. **S2 — searching ✅ COMPLETE (8/8):** binary, linear, jump, interpolation,
+   exponential, ternary, rotated-sorted-array, binary-search-answer (eliminated-range
+   shading where applicable; code-line remaps fixed 6 modules).
 3. **G1 — graph traversals & shortest paths:** DFS, bellman-ford, floyd-warshall, a-star,
    zero-one-bfs.
 4. **G2 — MST & advanced graphs:** kruskal, prim, dsu, tarjan, kosaraju, bridges,

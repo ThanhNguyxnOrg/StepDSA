@@ -93,6 +93,11 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
         { name: 'main()', params: {}, line: 1 },
       ],
       variables: { target, n, i: 0 },
+      pedagogy: {
+        what: `Linear search checks positions one by one from index 0 until it finds the target or runs out of elements.`,
+        why: 'It makes no assumption about order — that is its strength (works on any array) and its weakness (no halving).',
+        whatNext: `Compare arr[0] = ${arr[0]} with target ${target}.`,
+      },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: {},
@@ -101,6 +106,7 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
     });
 
     let foundIndex = -1;
+    let checkpointAdded = false;
 
     for (let i = 0; i < n; i++) {
       const isMatch = arr[i] === target;
@@ -134,7 +140,26 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
           isValid: true,
           label: `arr[0..${i - 1}] != ${target}`,
         },
+        pedagogy: {
+          what: `Probe ${i}: arr[${i}] = ${arr[i]} vs target ${target}.`,
+          why: 'Each mismatch permanently removes exactly one candidate — linear search never revisits an index.',
+          whatNext: isMatch ? 'They are equal: return this index.' : `Not equal: skip index ${i} and probe ${i + 1}.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'linear-search-prefix',
+              question: `arr[${i}] = ${arr[i]} is not the target. What is now guaranteed?`,
+              options: [
+                `The target is not at any index in [0..${i}]`,
+                `The target is not at any index in [${i + 1}..${n - 1}]`,
+              ],
+              correctIndex: 0,
+              explanation:
+                'All earlier probes also mismatched, so the whole prefix including i is ruled out; the unseen suffix is still unknown.',
+            }
+          : undefined,
       });
+      checkpointAdded = true;
 
       if (isMatch) {
         foundIndex = i;
@@ -166,6 +191,11 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
             isValid: true,
             label: `Target found at [${i}]`,
           },
+          pedagogy: {
+            what: `arr[${i}] = ${target} — the first occurrence is at index ${i}.`,
+            why: `Scanning left to right means no earlier index could have matched, so this is also the earliest occurrence.`,
+            whatNext: 'Return i and stop; the suffix is never inspected.',
+          },
         });
         break;
       } else {
@@ -195,6 +225,11 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
             isValid: true,
             label: `Verified prefix arr[0..${i}] != ${target}`,
           },
+          pedagogy: {
+            what: `Mismatch at ${i}: index ${i} is eliminated; the verified prefix is now [0..${i}].`,
+            why: 'The invariant grows by one position per probe, which is exactly why the worst case is O(N).',
+            whatNext: i + 1 < n ? `Probe index ${i + 1}.` : 'No candidates remain — report not found.',
+          },
         });
       }
     }
@@ -222,6 +257,11 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
         invariantStatus: {
           isValid: false,
           label: `Target ${target} not found`,
+        },
+        pedagogy: {
+          what: `All ${n} positions were probed and none matched — the target is absent.`,
+          why: 'Absence is only provable after exhausting the array; unlike binary search, there is no sorted structure to exploit.',
+          whatNext: 'Return −1. This is the O(N) worst case.',
         },
       });
     }

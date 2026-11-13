@@ -222,6 +222,255 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(sleep, [3, 1, 4, 2, 5]).errorCount).toBe(0);
   });
 
+  it('binary search narrows one half per probe and exposes the elimination checkpoint', () => {
+    const mod = moduleById('binary-search');
+    const input = { array: [3, 8, 15, 23, 31, 42, 56, 68, 77, 89, 94], target: 89 };
+    const timeline = mod.generateTimeline(input);
+
+    // Prediction checkpoint appears exactly once, before the first halving.
+    const checkpoints = timeline.filter((f) => f.checkpoint?.id === 'binary-search-halving');
+    expect(checkpoints.length).toBe(1);
+
+    // Each discard frame carries the exact eliminated range.
+    const discards = timeline.filter(
+      (f) => f.action === 'DISCARD_LEFT' || f.action === 'DISCARD_RIGHT'
+    );
+    expect(discards.length).toBeGreaterThan(0);
+    expect(discards.every((f) => Array.isArray((f.state as any).discardedRange))).toBe(true);
+
+    // The candidate window strictly halves every iteration.
+    const windowSizes = timeline
+      .filter((f) => f.variables?.windowSize !== undefined)
+      .map((f) => Number(f.variables!.windowSize));
+    for (let i = 1; i < windowSizes.length; i++) {
+      expect(windowSizes[i]).toBeLessThan(windowSizes[i - 1]);
+    }
+
+    const found = timeline.find((f) => f.action === 'MATCH_FOUND');
+    expect(found).toBeDefined();
+    expect(found!.variables?.foundAt).toBe(9);
+
+    const missing = mod.generateTimeline({ ...input, target: 50 });
+    expect(missing.some((f) => f.action === 'NOT_FOUND')).toBe(true);
+    expect(missing[missing.length - 1].variables?.result).toBe(-1);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('linear search grows its verified prefix and exposes the prefix checkpoint', () => {
+    const mod = moduleById('linear-search');
+    const input = { array: [14, 33, 27, 10, 35, 19, 42, 44], target: 35 };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'linear-search-prefix').length).toBe(1);
+
+    // Every inspected index before the match carries a progressively longer
+    // verified prefix: arr[0..i] != target.
+    const prefixFrames = timeline.filter((f) =>
+      (f.invariantStatus as any)?.label?.startsWith('Verified prefix')
+    );
+    expect(prefixFrames.length).toBe(4); // indices 0..3 mismatch, 4 matches
+    expect((prefixFrames[prefixFrames.length - 1].invariantStatus as any).label).toContain('[0..3]');
+
+    const found = timeline.find((f) => f.variables?.result === 4);
+    expect(found?.milestoneTitle).toBe('Found at index 4');
+
+    const missing = mod.generateTimeline({ array: [5, 12, 18, 24, 31, 40], target: 100 });
+    const exhausted = missing.find((f) => f.variables?.result === -1);
+    expect(exhausted?.milestoneTitle).toBe('Search Exhausted (-1)');
+    expect((exhausted?.invariantStatus as any)?.isValid).toBe(false);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('jump search hops whole blocks and only scans the surviving block', () => {
+    const mod = moduleById('jump-search');
+    const input = { array: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610], target: 55 };
+    const timeline = mod.generateTimeline(input);
+
+    // One block-skip prediction checkpoint, before any hop.
+    expect(timeline.filter((f) => f.checkpoint?.id === 'jump-search-block-skip').length).toBe(1);
+
+    // The hop phase really fires and always discards a full block.
+    const hops = timeline.filter((f) => f.variables?.hop !== undefined);
+    expect(hops.length).toBeGreaterThan(0);
+    expect(timeline.some((f) => f.milestoneTitle === 'Target Block Located')).toBe(true);
+
+    // The final linear scan stays inside one block (≤ ceil(sqrt(n)) probes).
+    const scanFrames = timeline.filter((f) => f.variables?.prev !== undefined && f.codeLine === 10);
+    expect(scanFrames.length).toBeLessThanOrEqual(Math.ceil(Math.sqrt(input.array.length)));
+
+    const found = timeline.find((f) => f.milestoneTitle?.startsWith('Target Found'));
+    expect(found?.variables?.resultIndex).toBe(10);
+
+    // Absent target: terminates with -1 either by overshooting bounds or by
+    // exhausting the candidate block.
+    const missing = mod.generateTimeline({ ...input, target: 56 });
+    const last = missing[missing.length - 1];
+    expect(last.variables?.notFound === true || last.variables?.result === -1).toBe(true);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('interpolation search estimates probes from value ratios and handles degenerate spans', () => {
+    const mod = moduleById('interpolation-search');
+    const input = { array: [2, 5, 8, 12, 16, 23, 38, 56, 72, 91], target: 23 };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'interpolation-probe-ratio').length).toBe(1);
+    expect(timeline.some((f) => f.action === 'COMPUTE_PROBE')).toBe(true);
+
+    // The probe index must always lie inside the active window.
+    for (const frame of timeline.filter((f) => f.action === 'COMPUTE_PROBE')) {
+      const pos = Number(frame.variables?.pos);
+      expect(pos).toBeGreaterThanOrEqual(Number(frame.variables?.low));
+      expect(pos).toBeLessThanOrEqual(Number(frame.variables?.high));
+    }
+
+    const found = timeline.find((f) => f.action === 'MATCH_FOUND');
+    expect(found?.variables?.foundAt).toBe(5);
+
+    const missing = mod.generateTimeline({ ...input, target: 24 });
+    expect(missing.some((f) => f.action === 'TARGET_NOT_FOUND')).toBe(true);
+
+    // Duplicate-heavy input exercises the arr[low] === arr[high] degenerate branch.
+    const duplicates = mod.generateTimeline({ array: [5, 5, 5, 5, 5], target: 5 });
+    expect(duplicates.some((f) => f.action === 'MATCH_SINGLETON')).toBe(true);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, { array: [5, 5, 5, 5, 5], target: 5 }).errorCount).toBe(0);
+  });
+
+  it('exponential search doubles to bracket the target then binary-searches only that window', () => {
+    const mod = moduleById('exponential-search');
+    const input = { array: [2, 5, 8, 12, 17, 23, 38, 45, 56, 72, 85, 91, 104, 118, 130], target: 17 };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'exponential-doubling-purpose').length).toBe(1);
+
+    // Doubling probes must visit powers of two: 1, 2, 4, ...
+    const probeIdx = timeline
+      .filter((f) => f.variables?.nextCandidate !== undefined)
+      .map((f) => Number(f.variables!.i));
+    for (const i of probeIdx) {
+      expect(Number.isInteger(Math.log2(i))).toBe(true);
+    }
+
+    const bounded = timeline.find((f) => f.milestoneTitle === 'Subarray Bounded');
+    expect(bounded).toBeDefined();
+    const low = Number(bounded!.variables?.low);
+    const high = Number(bounded!.variables?.high);
+    expect(low).toBeLessThanOrEqual(4);
+    expect(high).toBeGreaterThanOrEqual(4);
+
+    // The binary-search phase never touches indices outside the bracketed window.
+    for (const frame of timeline.filter((f) => f.variables?.mid !== undefined)) {
+      const mid = Number(frame.variables!.mid);
+      expect(mid).toBeGreaterThanOrEqual(low);
+      expect(mid).toBeLessThanOrEqual(high);
+    }
+
+    const found = timeline.find((f) => f.milestoneTitle?.startsWith('Target Found'));
+    expect(found?.variables?.foundIndex).toBe(4);
+
+    // Target before index 0's next power still resolves via the inner window.
+    const missing = mod.generateTimeline({ ...input, target: 200 });
+    expect(missing.some((f) => f.milestoneTitle === 'Target Not Found')).toBe(true);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('ternary search eliminates two thirds per iteration and documents its comparison cost', () => {
+    const mod = moduleById('ternary-search');
+    const input = { array: [5, 12, 23, 34, 45, 56, 67, 78, 89, 99], target: 78 };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'ternary-elimination').length).toBe(1);
+
+    const sections = timeline.filter((f) => f.action === 'TRI_SECTION');
+    expect(sections.length).toBeGreaterThan(0);
+    for (const frame of sections) {
+      const low = Number(frame.variables?.low);
+      const high = Number(frame.variables?.high);
+      const mid1 = Number(frame.variables?.mid1);
+      const mid2 = Number(frame.variables?.mid2);
+      expect(mid1).toBeGreaterThanOrEqual(low);
+      expect(mid2).toBeLessThanOrEqual(high);
+      expect(mid1).toBeLessThanOrEqual(mid2);
+    }
+
+    // Every discard frame keeps only one third of the previous window.
+    const discards = timeline.filter((f) => f.action === 'DISCARD_PARTITIONS');
+    expect(discards.length).toBeGreaterThan(0);
+    for (const frame of discards) {
+      const low = Number(frame.variables?.low);
+      const high = Number(frame.variables?.high);
+      expect(high - low + 1).toBeLessThanOrEqual(Math.ceil(10 / 3));
+    }
+
+    const found = timeline.find((f) => f.action === 'MATCH_FOUND');
+    expect(found?.variables?.foundIndex).toBe(7);
+
+    const missing = mod.generateTimeline({ ...input, target: 80 });
+    expect(missing.some((f) => f.action === 'NOT_FOUND')).toBe(true);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('rotated search identifies the sorted half and rejects non-rotated input', () => {
+    const mod = moduleById('rotated-sorted-array');
+    const input = { array: [4, 5, 6, 7, 0, 1, 2], target: 0 };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'rotated-sorted-half').length).toBe(1);
+
+    const found = timeline.find((f) => f.state.phase === 'found');
+    expect(found?.state.foundIndex).toBe(4);
+
+    // Target in the left (non-rotated) run still resolves.
+    const left = mod.generateTimeline({ array: [6, 7, 1, 2, 3, 4, 5], target: 7 });
+    expect(left.find((f) => f.state.phase === 'found')?.state.foundIndex).toBe(1);
+
+    // Absent target exhausts the window.
+    const missing = mod.generateTimeline({ array: [4, 5, 6, 7, 0, 1, 2], target: 3 });
+    expect(missing[missing.length - 1].state.phase).toBe('not_found');
+
+    // Two descents: the module must refuse rather than return a wrong -1.
+    const invalid = mod.generateTimeline({ array: [3, 1, 2, 0], target: 2 });
+    expect(invalid[invalid.length - 1].state.phase).toBe('invalid');
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
+  it('binary search on the answer finds the minimum feasible speed via a monotone predicate', () => {
+    const mod = moduleById('binary-search-answer');
+    const input = { piles: [3, 6, 7, 11], h: 8 };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'binary-search-answer-monotone').length).toBe(1);
+
+    // Classic Koko result: k = 4.
+    const final = timeline[timeline.length - 1];
+    expect(final.variables?.optimalSpeed).toBe(4);
+    expect(final.state.phase).toBe('found');
+
+    // The predicate must actually be monotone around the reported answer.
+    const hoursAt = (speed: number) =>
+      input.piles.reduce((acc, p) => acc + Math.ceil(p / speed), 0);
+    for (let k = 1; k < 4; k++) expect(hoursAt(k)).toBeGreaterThan(8);
+    for (let k = 4; k <= 11; k++) expect(hoursAt(k)).toBeLessThanOrEqual(8);
+
+    // Both branches of the predicate appear across a non-trivial timeline.
+    expect(timeline.some((f) => f.variables?.verified === true)).toBe(true);
+    expect(timeline.some((f) => f.variables?.tooSlow === true)).toBe(true);
+
+    // The module clamps h to at least one hour per pile (a pile cannot be split).
+    const tight = mod.generateTimeline({ piles: [30, 11, 23, 4, 20], h: 1 });
+    expect(tight[tight.length - 1].variables?.optimalSpeed).toBe(30);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

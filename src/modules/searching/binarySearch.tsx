@@ -124,6 +124,7 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
     let low = 0;
     let high = arr.length - 1;
     let foundIndex = -1;
+    let checkpointAdded = false;
 
     const baseCallStack = [
       { name: 'binarySearch', params: { n: arr.length, target }, line: 2, isCurrent: true },
@@ -137,6 +138,11 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
       action: 'INIT',
       callStack: baseCallStack,
       variables: { low, high, target, 'arr.length': arr.length, 'searchRange': `[${arr[low]} .. ${arr[high]}]` },
+      pedagogy: {
+        what: `Binary search keeps an inclusive window [low..high] that provably contains the target if it exists at all.`,
+        why: 'Sorting is a precondition: only monotonic order lets a single comparison discard an entire half without looking at its elements.',
+        whatNext: `Window [0..${high}] has ${arr.length} candidates; probe its middle element next.`,
+      },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: { low, high },
@@ -160,6 +166,11 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
           label: `Target ${target} must be in [${arr[low]}..${arr[high]}] if present`,
           isValid: true,
         },
+        pedagogy: {
+          what: `Loop guard passes: low ${low} ≤ high ${high}, so ${high - low + 1} candidate(s) remain.`,
+          why: 'The loop stops exactly when the window is empty (low > high) — at that point no candidate can equal the target.',
+          whatNext: 'Probe the midpoint of the window.',
+        },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -182,6 +193,23 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
         milestoneTitle: `Inspect Mid [${mid}] = ${arr[mid]}`,
         callStack: baseCallStack,
         variables: { low, high, mid, 'arr[mid]': arr[mid], target },
+        pedagogy: {
+          what: `mid = low + ⌊(high − low)/2⌋ = ${mid}: the window's middle candidate is ${arr[mid]}.`,
+          why: 'Writing mid this way avoids integer overflow that (low + high)/2 can cause on huge indices.',
+          whatNext: `Compare ${arr[mid]} with target ${target} to choose which half survives.`,
+        },
+        checkpoint: !checkpointAdded && arr[mid] !== target
+          ? {
+              id: 'binary-search-halving',
+              question: `mid [${mid}] holds ${arr[mid]} and the target is ${target}. Which segment is guaranteed useless?`,
+              options: [`[${low}..${mid}]`, `[${mid}..${high}]`],
+              correctIndex: arr[mid] < target ? 0 : 1,
+              explanation:
+                arr[mid] < target
+                  ? `Sorted order means every index ≤ ${mid} holds a value ≤ ${arr[mid]} < ${target}; the answer can only be right of mid.`
+                  : `Sorted order means every index ≥ ${mid} holds a value ≥ ${arr[mid]} > ${target}; the answer can only be left of mid.`,
+            }
+          : undefined,
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -191,6 +219,7 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
           pointers: { low, mid, high },
         },
       });
+      checkpointAdded = true;
 
       // Comparison check
       const cmpResult = arr[mid] === target ? 'EQUAL' : arr[mid] < target ? 'LESS_THAN' : 'GREATER_THAN';
@@ -208,6 +237,16 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
           result: arr[mid] === target,
         },
         variables: { low, high, mid, 'arr[mid]': arr[mid], target, comparison: cmpResult },
+        pedagogy: {
+          what: `Compare probe ${arr[mid]} with target ${target}: ${cmpResult === 'EQUAL' ? 'equal' : cmpResult === 'LESS_THAN' ? 'probe is smaller' : 'probe is larger'}.`,
+          why: 'This single comparison decides the next window; no other element needs to be inspected.',
+          whatNext:
+            cmpResult === 'EQUAL'
+              ? 'Match — the search ends immediately.'
+              : cmpResult === 'LESS_THAN'
+                ? 'Target is larger: keep the right half only.'
+                : 'Target is smaller: keep the left half only.',
+        },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -234,6 +273,11 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
             result: true,
           },
           variables: { low, high, mid, 'arr[mid]': arr[mid], target, foundAt: mid },
+          pedagogy: {
+            what: `arr[${mid}] = ${arr[mid]} equals the target — found at index ${mid}.`,
+            why: `Only ${frames.length} probe(s) were needed instead of up to ${arr.length} in linear search.`,
+            whatNext: 'Return mid. No further narrowing is necessary.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -259,6 +303,11 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
             result: true,
           },
           variables: { low, high, mid, 'arr[mid]': arr[mid], target, eliminatedCount: mid - prevLow + 1 },
+          pedagogy: {
+            what: `Discard [${prevLow}..${mid}] — ${mid - prevLow + 1} candidate(s) gone; new window is [${low}..${high}] (${high - low + 1} left).`,
+            why: `Every discarded value is ≤ ${arr[mid]} < ${target}, so none of them can be the answer.`,
+            whatNext: 'Recompute mid inside the halved window.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -284,6 +333,11 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
             result: true,
           },
           variables: { low, high, mid, 'arr[mid]': arr[mid], target, eliminatedCount: prevHigh - mid + 1 },
+          pedagogy: {
+            what: `Discard [${mid}..${prevHigh}] — ${prevHigh - mid + 1} candidate(s) gone; new window is [${low}..${high}] (${high - low + 1} left).`,
+            why: `Every discarded value is ≥ ${arr[mid]} > ${target}, so none of them can be the answer.`,
+            whatNext: 'Recompute mid inside the halved window.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -301,7 +355,7 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 13,
+        codeLine: 12,
         explanation: `Search space exhausted: low (${low}) > high (${high}). Target ${target} does not exist in the array. Returning -1.`,
         action: 'NOT_FOUND',
         isMilestone: true,
@@ -312,6 +366,11 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
           result: false,
         },
         variables: { low, high, target, result: -1 },
+        pedagogy: {
+          what: `low ${low} > high ${high}: the window is empty, so the target cannot be anywhere.`,
+          why: 'Every previous comparison discarded only values that were provably on the wrong side of the target — nothing valid was skipped.',
+          whatNext: 'Return −1; the search is complete with O(log N) comparisons.',
+        },
         state: {
           array: arr.map((v, idx) => ({ id: idx, value: v, status: 'discarded' })),
           pointers: { low, high },

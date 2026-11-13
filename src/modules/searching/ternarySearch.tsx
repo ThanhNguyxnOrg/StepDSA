@@ -124,6 +124,7 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
     let low = 0;
     let high = arr.length - 1;
     const frames: ExecutionFrame<ArrayStageState>[] = [];
+    let checkpointAdded = false;
 
     const callStack = [{ name: 'ternarySearch', params: { target, low: 0, high }, line: 2, isCurrent: true }];
 
@@ -135,6 +136,11 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
       explanation: `Initialized Ternary Search on sorted array of size ${arr.length}. Boundaries set to [low=0, high=${high}]. Target: ${target}.`,
       variables: { low, high, target, totalElements: arr.length },
       callStack,
+      pedagogy: {
+        what: `Ternary search splits the sorted window into three parts using two probes at 1/3 and 2/3, then keeps one part.`,
+        why: 'Each iteration eliminates 2/3 of the candidates, but it costs two comparisons — so despite the smaller fraction, binary search (one comparison, half) is usually faster in practice.',
+        whatNext: `Place probes inside [0..${high}] and compare them with target ${target}.`,
+      },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'default' })),
         pointers: { low, high },
@@ -146,7 +152,7 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 4,
+        codeLine: 3,
         action: 'CHECK_BOUNDS',
         callStack,
         conditionEval: {
@@ -155,6 +161,11 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         },
         variables: { low, high, target, candidateSpan: high - low + 1 },
         explanation: `Checking search condition: low (${low}) <= high (${high}). Search interval contains ${high - low + 1} candidates.`,
+        pedagogy: {
+          what: `Loop guard: ${high - low + 1} candidate(s) remain in [${low}..${high}].`,
+          why: 'When low passes high the window is empty and the target is provably absent.',
+          whatNext: 'Compute the two ternary probes.',
+        },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -172,13 +183,31 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 5,
+        codeLine: 4,
         action: 'TRI_SECTION',
         isMilestone: true,
         milestoneTitle: `Tri-section: [${mid1}] & [${mid2}]`,
         explanation: `Dividing search space into 3 equal partitions using probe indices: mid1 = ${low} + floor(${high - low}/3) = ${mid1} (val ${arr[mid1]}), mid2 = ${high} - floor(${high - low}/3) = ${mid2} (val ${arr[mid2]}).`,
         variables: { low, mid1, mid2, high, 'arr[mid1]': arr[mid1], 'arr[mid2]': arr[mid2], target },
         callStack,
+        pedagogy: {
+          what: `Two probes split [${low}..${high}] into thirds: mid1 = ${mid1} (${arr[mid1]}) and mid2 = ${mid2} (${arr[mid2]}).`,
+          why: 'One comparison against each probe tells us which third can contain the target, so up to 2/3 of the window is discarded at once.',
+          whatNext: `First check whether arr[${mid1}] is already the target.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'ternary-elimination',
+              question: 'How much of the window can one ternary iteration eliminate?',
+              options: [
+                'Up to 2/3 — one comparison per probe decides which third survives',
+                'Exactly 1/2 — same as binary search',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Ternary removes 2/3 per iteration (log base 3/2), but with two comparisons per level. Binary removes 1/2 with one comparison, so binary is typically faster despite eliminating less.',
+            }
+          : undefined,
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -194,6 +223,7 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
           target,
         },
       });
+      checkpointAdded = true;
 
       // Comparison with mid1
       const isMid1 = arr[mid1] === target;
@@ -209,6 +239,11 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         },
         variables: { mid1, 'arr[mid1]': arr[mid1], target, matchMid1: isMid1 },
         explanation: `Evaluating 1st probe: arr[${mid1}] (${arr[mid1]}) vs target (${target}) -> ${isMid1 ? 'MATCH' : 'NO MATCH'}.`,
+        pedagogy: {
+          what: `First probe: arr[${mid1}] = ${arr[mid1]} compared with target ${target}.`,
+          why: 'This comparison either ends the search or tells us the target lies entirely to the left of mid1.',
+          whatNext: isMid1 ? 'Match — return mid1.' : 'Check the second probe before discarding anything.',
+        },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -231,6 +266,11 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
           milestoneTitle: `Target Found at [${mid1}]`,
           callStack,
           variables: { foundIndex: mid1, target },
+          pedagogy: {
+            what: `The first probe equals the target at index ${mid1}.`,
+            why: 'No elimination is needed — the match is exact.',
+            whatNext: 'Return mid1.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -259,6 +299,11 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         },
         variables: { mid2, 'arr[mid2]': arr[mid2], target, matchMid2: isMid2 },
         explanation: `Evaluating 2nd probe: arr[${mid2}] (${arr[mid2]}) vs target (${target}) -> ${isMid2 ? 'MATCH' : 'NO MATCH'}.`,
+        pedagogy: {
+          what: `Second probe: arr[${mid2}] = ${arr[mid2]} compared with target ${target}.`,
+          why: 'Combined with the first probe, this locates the target in the left third, middle third, or right third.',
+          whatNext: isMid2 ? 'Match — return mid2.' : 'Choose which third survives.',
+        },
         state: {
           array: arr.map((v, idx) => ({
             id: idx,
@@ -281,6 +326,11 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
           milestoneTitle: `Target Found at [${mid2}]`,
           callStack,
           variables: { foundIndex: mid2, target },
+          pedagogy: {
+            what: `The second probe equals the target at index ${mid2}.`,
+            why: 'The middle third needed checking; the match is exact.',
+            whatNext: 'Return mid2.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -300,11 +350,16 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 9,
+          codeLine: 8,
           action: 'DISCARD_PARTITIONS',
           explanation: `Target ${target} < arr[mid1] (${arr[mid1]}): target must reside in 1st partition [${low}..${high}]. Discarding remaining 2/3!`,
           callStack,
           variables: { low, high, target, eliminatedFraction: '2/3' },
+          pedagogy: {
+            what: `Target < ${arr[mid1]}, so only the first third [${low}..${high}] remains.`,
+            why: `Every index ≥ mid1 holds a value ≥ ${arr[mid1]} > target — two-thirds vanish from one comparison.`,
+            whatNext: 'Repeat on the first third.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -320,11 +375,16 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 11,
+          codeLine: 9,
           action: 'DISCARD_PARTITIONS',
           explanation: `Target ${target} > arr[mid2] (${arr[mid2]}): target must reside in 3rd partition [${low}..${high}]. Discarding remaining 2/3!`,
           callStack,
           variables: { low, high, target, eliminatedFraction: '2/3' },
+          pedagogy: {
+            what: `Target > ${arr[mid2]}, so only the last third [${low}..${high}] remains.`,
+            why: `Every index ≤ mid2 holds a value ≤ ${arr[mid2]} < target — two-thirds vanish from one comparison.`,
+            whatNext: 'Repeat on the last third.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -341,11 +401,16 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 13,
+          codeLine: 10,
           action: 'DISCARD_PARTITIONS',
           explanation: `arr[mid1] (${arr[mid1]}) < ${target} < arr[mid2] (${arr[mid2]}): target resides in middle partition [${low}..${high}]. Discarding outer thirds!`,
           callStack,
           variables: { low, high, target, eliminatedFraction: '2/3' },
+          pedagogy: {
+            what: `Target sits strictly between the probes, so only the middle third [${low}..${high}] remains.`,
+            why: 'Both outer thirds are provably too small or too large — the two comparisons eliminated them together.',
+            whatNext: 'Repeat on the middle third.',
+          },
           state: {
             array: arr.map((v, idx) => ({
               id: idx,
@@ -362,13 +427,18 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 15,
+      codeLine: 11,
       action: 'NOT_FOUND',
       isMilestone: true,
       milestoneTitle: 'Target Not Found',
       explanation: `Search range exhausted (low > high). Target ${target} not found in array. Returning -1.`,
       callStack,
       variables: { result: -1, target },
+      pedagogy: {
+        what: `low ${low} > high ${high}: the surviving third is empty.`,
+        why: 'Every discarded partition was ruled out by a probe comparison; nothing remains to check.',
+        whatNext: 'Return −1.',
+      },
       state: {
         array: arr.map((v, idx) => ({ id: idx, value: v, status: 'discarded' })),
         pointers: { low, high },

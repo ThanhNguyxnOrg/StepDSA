@@ -158,6 +158,7 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
     const target = input.target;
     let low = 0;
     let high = nums.length - 1;
+    let checkpointAdded = false;
 
     frames.push({
       stepIndex: 0,
@@ -173,6 +174,11 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
       ],
       variables: { low, high, target, 'nums[low]': nums[low], 'nums[high]': nums[high] },
       conditionEval: { expr: 'low <= high', result: low <= high },
+      pedagogy: {
+        what: `The array is sorted then rotated at one pivot, so it has two sorted runs. Ordinary binary search cannot compare against the midpoint alone.`,
+        why: 'At every step at least one half (left or right of mid) is fully sorted; checking whether the target lies inside that sorted half tells us which half to keep.',
+        whatNext: `Start with [0..${high}] and inspect the midpoint.`,
+      },
       state: {
         array: [...nums],
         target,
@@ -202,6 +208,11 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
         ],
         variables: { target, rotationProperty: 'at most one descent', descents: '> 1' },
         conditionEval: { expr: 'isRotationOfSorted(nums)', result: false },
+        pedagogy: {
+          what: `The input [${nums.join(', ')}] has more than one descent, so it is not a rotation of a sorted array.`,
+          why: 'The modified binary search relies on the two-runs structure; on arbitrary input its half-sorted test would silently discard the target.',
+          whatNext: 'Fix the input shape or use one of the presets — the search is not defined here.',
+        },
         state: {
           array: [...nums],
           target,
@@ -231,6 +242,11 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
         ],
         variables: { iter, low, high, target, windowSize: high - low + 1 },
         conditionEval: { expr: `low <= high`, result: true },
+        pedagogy: {
+          what: `Iteration ${iter}: ${high - low + 1} candidate(s) remain in [${low}..${high}].`,
+          why: 'As long as the window is non-empty, the target must be inside it if present.',
+          whatNext: 'Probe the midpoint and identify the sorted half.',
+        },
         state: {
           array: [...nums],
           target,
@@ -258,6 +274,11 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
         ],
         variables: { iter, low, mid, high, 'nums[mid]': nums[mid], target },
         conditionEval: { expr: `nums[${mid}] (${nums[mid]}) == target (${target})`, result: isMatch },
+        pedagogy: {
+          what: `Midpoint [${mid}] holds ${nums[mid]}; compare it with target ${target}.`,
+          why: 'A direct match ends the search before any half analysis is needed.',
+          whatNext: isMatch ? 'Match — return mid.' : 'Determine which half is sorted.',
+        },
         state: {
           array: [...nums],
           target,
@@ -284,6 +305,11 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
           ],
           variables: { resultIndex: mid, target, iterations: iter },
           conditionEval: { expr: `nums[${mid}] == target`, result: true },
+          pedagogy: {
+            what: `nums[${mid}] equals the target — found at index ${mid}.`,
+            why: `The rotation did not prevent halving: only ${iter} iteration(s) were needed.`,
+            whatNext: 'Return mid.',
+          },
           state: {
             array: [...nums],
             target,
@@ -320,6 +346,29 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
           ],
           variables: { sortedHalf: 'LEFT', range: `[${nums[low]}..${nums[mid]})`, target, inLeft },
           conditionEval: { expr: `nums[${low}] <= target && target < nums[${mid}]`, result: inLeft },
+          pedagogy: {
+            what: `nums[low] = ${nums[low]} ≤ nums[mid] = ${nums[mid]}, so [${low}..${mid}] is sorted; target ${target} is ${inLeft ? 'inside' : 'outside'} its value range.`,
+            why: 'Only a sorted half supports a value-range test; the other half contains the rotation and cannot be reasoned about by endpoints.',
+            whatNext: inLeft ? 'Keep the sorted left half; discard the right.' : 'Target is not in the sorted left half, so it must be in the right half.',
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'rotated-sorted-half',
+                question: `The left half [${nums[low]}..${nums[mid]}] is sorted, but the target is ${target}. Where must the search continue?`,
+                options: [
+                  inLeft
+                    ? `In the sorted left half, because ${target} lies inside [${nums[low]}..${nums[mid]})`
+                    : `In the right half, because ${target} is outside the sorted left range [${nums[low]}..${nums[mid]})`,
+                  inLeft
+                    ? 'In the right (rotated) half, because the left half is sorted'
+                    : 'Nowhere — a sorted half that excludes the target proves absence',
+                ],
+                correctIndex: 0,
+                explanation: inLeft
+                  ? 'A sorted half containing the value range also contains the target; the rotated half is discarded.'
+                  : 'The target is not in the sorted left range, so it can only be in the rotated right half — sortedness alone does not prove absence.',
+              }
+            : undefined,
           state: {
             array: [...nums],
             target,
@@ -330,6 +379,7 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
             phase: inLeft ? 'narrow_left' : 'narrow_right',
           },
         });
+        checkpointAdded = true;
 
         if (inLeft) {
           high = mid - 1;
@@ -341,6 +391,11 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
             soundCue: { type: 'step' },
             callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 7, isCurrent: true }],
             variables: { low, high, discarded: `[${mid}..${high + 1}]` },
+            pedagogy: {
+              what: `Discard the right side [${mid}..${high + 1}]; keep [${low}..${high}].`,
+              why: `Target ${target} is inside the sorted left range, and sortedness puts every right-side value outside it.`,
+              whatNext: 'Continue halving the left window.',
+            },
             state: { array: [...nums], target, low, mid: null, high, foundIndex: null, phase: 'narrow_left' },
           });
         } else {
@@ -353,6 +408,11 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
             soundCue: { type: 'step' },
             callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 8, isCurrent: true }],
             variables: { low, high, discarded: `[${low - 1}..${mid}]` },
+            pedagogy: {
+              what: `Discard the sorted left half [${low - 1}..${mid}]; keep [${low}..${high}].`,
+              why: `Target ${target} is outside the sorted left value range, so it can only be in the rotated right half.`,
+              whatNext: 'Continue halving the right window.',
+            },
             state: { array: [...nums], target, low, mid: null, high, foundIndex: null, phase: 'narrow_right' },
           });
         }
@@ -362,17 +422,22 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 11,
+          codeLine: 9,
           explanation: `Right half [${mid}..${high}] is sorted (${nums[mid]} <= ${nums[high]}). Target ${target} is ${
             inRight ? 'WITHIN right range' : 'OUTSIDE right range'
           } (${nums[mid]}..${nums[high]}].`,
           soundCue: { type: 'step' },
           callStack: [
-            { name: 'evaluateHalves()', params: { rightSorted: true, inRight }, line: 11, isCurrent: true },
-            { name: 'search()', params: { low, high }, line: 11 },
+            { name: 'evaluateHalves()', params: { rightSorted: true, inRight }, line: 9, isCurrent: true },
+            { name: 'search()', params: { low, high }, line: 9 },
           ],
           variables: { sortedHalf: 'RIGHT', range: `(${nums[mid]}..${nums[high]}]`, target, inRight },
           conditionEval: { expr: `nums[${mid}] < target && target <= nums[${high}]`, result: inRight },
+          pedagogy: {
+            what: `nums[mid] = ${nums[mid]} > nums[low] = ${nums[low]}, so the right half [${mid}..${high}] is sorted; target ${target} is ${inRight ? 'inside' : 'outside'} its value range.`,
+            why: 'The rotation pivot must lie in the left half, which is why the right half is the cleanly sorted one.',
+            whatNext: inRight ? 'Keep the sorted right half; discard the left.' : 'Target is not in the sorted right half, so it must be in the left half.',
+          },
           state: {
             array: [...nums],
             target,
@@ -389,11 +454,16 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 12,
+            codeLine: 10,
             explanation: `Discarding left half [${low - 1}..${mid}]. Narrowing search window to [${low}..${high}].`,
             soundCue: { type: 'step' },
-            callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 12, isCurrent: true }],
+            callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 10, isCurrent: true }],
             variables: { low, high, discarded: `[${low - 1}..${mid}]` },
+            pedagogy: {
+              what: `Discard the left half [${low - 1}..${mid}]; keep [${low}..${high}].`,
+              why: `Target ${target} is inside the sorted right range, so no left-side value can match.`,
+              whatNext: 'Continue halving the right window.',
+            },
             state: { array: [...nums], target, low, mid: null, high, foundIndex: null, phase: 'narrow_right' },
           });
         } else {
@@ -401,11 +471,16 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 13,
+            codeLine: 11,
             explanation: `Discarding right half [${mid}..${high + 1}]. Narrowing search window to [${low}..${high}].`,
             soundCue: { type: 'step' },
-            callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 13, isCurrent: true }],
+            callStack: [{ name: 'search()', params: { newLow: low, newHigh: high }, line: 11, isCurrent: true }],
             variables: { low, high, discarded: `[${mid}..${high + 1}]` },
+            pedagogy: {
+              what: `Discard the sorted right half [${mid}..${high + 1}]; keep [${low}..${high}].`,
+              why: `Target ${target} is outside the sorted right value range, so it can only be in the rotated left half.`,
+              whatNext: 'Continue halving the left window.',
+            },
             state: { array: [...nums], target, low, mid: null, high, foundIndex: null, phase: 'narrow_left' },
           });
         }
@@ -417,12 +492,17 @@ export const rotatedSortedArrayModule: AlgorithmModule<RotatedSearchInput, Rotat
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 16,
+      codeLine: 12,
       explanation: `Search exhausted: low (${low}) > high (${high}). Target ${target} does not exist in array. Returning -1.`,
       soundCue: { type: 'complete' },
-      callStack: [{ name: 'search()', params: { returnVal: -1 }, line: 16, isCurrent: true }],
+      callStack: [{ name: 'search()', params: { returnVal: -1 }, line: 12, isCurrent: true }],
       variables: { returnVal: -1, notFound: true, totalIterations: iter },
       conditionEval: { expr: 'low <= high', result: false },
+      pedagogy: {
+        what: `low ${low} > high ${high}: the window is empty, so the target is absent.`,
+        why: 'Every discarded half was ruled out by a sorted-range argument — no candidate was skipped unjustly.',
+        whatNext: 'Return −1.',
+      },
       state: {
         array: [...nums],
         target,

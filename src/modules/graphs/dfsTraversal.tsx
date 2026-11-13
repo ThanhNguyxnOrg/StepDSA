@@ -159,13 +159,13 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
     pseudocode: `function dfs(u):
     state[u] = VISITING
     push u to Call Stack
-
     for each neighbor v of u:
         if state[v] == VISITING:
             report CYCLE detected
-        if state[v] == UNVISITED:
+        else if state[v] == UNVISITED:
             dfs(v)
-
+        else:
+            skip v (already VISITED)
     state[u] = VISITED
     pop u from Call Stack`,
   },
@@ -188,6 +188,7 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
     const callStack: CallStackFrame[] = [];
     const activePath: number[] = [];
     let cycleFound = false;
+    let checkpointAdded = false;
 
     const buildState = (currentNode?: number): DFSState => ({
       nodes: nodes.map((n) => ({
@@ -220,6 +221,11 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
         label: 'All vertices unvisited (State = 0)',
         isValid: true,
       },
+      pedagogy: {
+        what: `DFS explores one branch as deep as possible before backtracking, using recursion (an explicit call stack) as its only memory.`,
+        why: 'The three colors matter: gray (visiting) nodes are on the active stack, so an edge back to gray proves a directed cycle; black nodes are finished.',
+        whatNext: `Enter dfs(${startNode}): mark it gray and push it on the stack.`,
+      },
       state: buildState(),
     });
 
@@ -249,6 +255,11 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
         invariantStatus: {
           label: `Node ${u} is on active recursion stack`,
           isValid: true,
+        },
+        pedagogy: {
+          what: `Node ${u} turns gray: it is now on the active recursion stack with discovery time d = ${timer}.`,
+          why: 'Gray means "partially explored": its neighbors are being processed and it has not finished yet.',
+          whatNext: `Scan ${u}'s outgoing edges one by one.`,
         },
         state: buildState(u),
       });
@@ -282,6 +293,11 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
               label: `Cycle detected via back-edge to ancestor ${v}`,
               isValid: false,
             },
+            pedagogy: {
+              what: `Edge ${u} → ${v} points to a gray node — a back-edge. Cycle: [${activePath.slice(activePath.indexOf(v)).join(' → ')} → ${v}].`,
+              why: 'Only an ancestor still on the recursion stack can be gray; reaching it again means the path loops.',
+              whatNext: 'Record the cycle, then continue DFS (or stop if only detection was required).',
+            },
             state: buildState(u),
           });
         } else if (nodeState[v] === 'unvisited') {
@@ -290,7 +306,7 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 9,
+            codeLine: 8,
             explanation: `Tree-edge (${u} → ${v}): Node ${v} is unvisited. Recursively invoking dfs(${v})...`,
             variables: { u, v, edgeType: 'TREE-EDGE' },
             callStack: [...callStack],
@@ -298,20 +314,44 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
               expr: `state[${v}] == UNVISITED`,
               result: true,
             },
+            pedagogy: {
+              what: `Edge ${u} → ${v} leads to an unvisited node, so it becomes a tree-edge and DFS descends into ${v}.`,
+              why: 'Recursing immediately — before looking at u\'s next neighbor — is what makes the traversal depth-first.',
+              whatNext: `dfs(${v}) runs to completion, then exploration resumes at ${u}.`,
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'dfs-depth-first',
+                  question: `Node ${v} is unvisited and DFS calls dfs(${v}) right away. What happens to ${u}'s remaining neighbors?`,
+                  options: [
+                    `They wait until the entire subtree of ${v} is finished`,
+                    `They are processed before descending into ${v}`,
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Immediate recursion is the definition of depth-first. Deferring neighbors in a queue instead would make it breadth-first search.',
+                }
+              : undefined,
             state: buildState(u),
           });
 
           dfsVisit(v);
+          checkpointAdded = true;
         } else {
           // Already visited
           edgeTypes[eKey] = 'forward';
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 4,
+            codeLine: 10,
             explanation: `Edge (${u} → ${v}): Node ${v} was already fully explored. Skipping.`,
             variables: { u, v, status: 'SKIPPED' },
             callStack: [...callStack],
+            pedagogy: {
+              what: `Edge ${u} → ${v} points to a black (fully explored) node, so it is skipped.`,
+              why: 'A finished node has already had all its descendants processed; revisiting it would duplicate work (and could loop forever without colors).',
+              whatNext: `Move to ${u}'s next outgoing edge.`,
+            },
             state: buildState(u),
           });
         }
