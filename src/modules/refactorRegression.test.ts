@@ -1066,6 +1066,74 @@ describe('pedagogical timeline regressions', () => {
     ).toBe(0);
   });
 
+  it("Boruvka contracts components phase by phase, skips duplicate picks, and reaches the true MST", () => {
+    const mod = moduleById('boruvka-mst');
+    const input = {
+      vertices: [1, 2, 3, 4, 5, 6],
+      edges: [
+        { u: 1, v: 2, weight: 4 },
+        { u: 1, v: 3, weight: 2 },
+        { u: 2, v: 3, weight: 1 },
+        { u: 2, v: 4, weight: 5 },
+        { u: 3, v: 4, weight: 8 },
+        { u: 3, v: 5, weight: 10 },
+        { u: 4, v: 5, weight: 2 },
+        { u: 4, v: 6, weight: 6 },
+        { u: 5, v: 6, weight: 3 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'boruvka-parallel-cheapest').length).toBe(1);
+
+    const scans = timeline.filter((f) => f.action === 'PHASE_SCAN');
+    const picks = timeline.filter((f) => f.action === 'PHASE_CHEAPEST_FOUND');
+    const unions = timeline.filter((f) => f.action === 'UNION_COMPONENTS');
+    const adds = timeline.filter((f) => f.action === 'EDGE_ADDED_TO_MST');
+    const skips = timeline.filter((f) => f.action === 'CYCLE_AVOIDED');
+    const phases = timeline.filter((f) => f.action === 'PHASE_CONTRACTED');
+
+    expect(scans.length).toBe(2);
+    expect(picks.length).toBe(8); // 6 singleton components in phase 1, 2 super-components in phase 2
+    expect(unions.length).toBe(5);
+    expect(adds.length).toBe(5);
+    expect(phases.map((f) => f.milestoneTitle)).toEqual(['Phase 1 Completed', 'Phase 2 Completed']);
+
+    // Every add is directly preceded by its union; duplicates are shown as skips.
+    for (const add of adds) {
+      const idx = timeline.indexOf(add);
+      expect(timeline[idx - 1].action).toBe('UNION_COMPONENTS');
+      expect(timeline[idx - 1].variables?.edge).toBe(add.variables?.edge);
+    }
+    expect(skips.length).toBe(3);
+    expect(skips.every((f) => f.variables?.cyclePrevented === true)).toBe(true);
+
+    // Phase 1 accepts 1-3(2), 2-3(1), 4-5(2), 5-6(3); phase 2 finishes with 2-4(5).
+    expect(timeline.filter((f) => f.action === 'EDGE_ADDED_TO_MST' && f.state.phase === 1).length).toBe(4);
+    expect(timeline.filter((f) => f.action === 'EDGE_ADDED_TO_MST' && f.state.phase === 2).length).toBe(1);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('MST Complete (weight 13)');
+    expect(final.state.totalWeight).toBe(13);
+    expect(final.state.mstEdges.length).toBe(5);
+    expect(final.state.componentCount).toBe(1);
+    expect(final.variables?.isSpanning).toBe(true);
+
+    // Disconnected graph: A-B exists, 3 and 4 are isolated.
+    const forest = mod.generateTimeline({
+      vertices: [1, 2, 3, 4],
+      edges: [{ u: 1, v: 2, weight: 3 }],
+    });
+    const last = forest[forest.length - 1];
+    expect(last.milestoneTitle).toBe('Disconnected — Spanning Forest (weight 3)');
+    expect(last.variables?.isSpanning).toBe(false);
+    expect(last.state.componentCount).toBe(3);
+    expect(last.state.mstEdges.length).toBe(1);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, { vertices: [1, 2, 3, 4], edges: [{ u: 1, v: 2, weight: 3 }] }).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

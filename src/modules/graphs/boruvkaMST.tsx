@@ -169,16 +169,35 @@ void boruvkaMST(int V, vector<Edge>& edges) {
     int numComponents = V;
     List<Edge> mst = new ArrayList<>();
     while (numComponents > 1) {
-        // Find cheapest crossing edge per component and contract
+        Edge[] cheapest = new Edge[V + 1];
+        for (Edge e : edges) {
+            int uSet = dsu.find(e.u), vSet = dsu.find(e.v);
+            if (uSet != vSet) {
+                if (cheapest[uSet] == null || e.weight < cheapest[uSet].weight) cheapest[uSet] = e;
+                if (cheapest[vSet] == null || e.weight < cheapest[vSet].weight) cheapest[vSet] = e;
+            }
+        }
+        for (int i = 1; i <= V; i++) {
+            if (cheapest[i] != null && dsu.unite(cheapest[i].u, cheapest[i].v)) {
+                mst.add(cheapest[i]);
+                numComponents--;
+            }
+        }
     }
     return mst;
 }`,
     pseudocode: `function boruvka(G):
+    DSU = makeSet(G.V); numComponents = |G.V|; MST = empty set
     while numComponents > 1:
-        for each component C:
-            find cheapest edge (u, v) crossing from C to another component
-        for each selected edge:
-            add to MST and union components in DSU`,
+        cheapest = [none for every component]
+        for each edge (u, v, w) in G.E:
+            if find(u) != find(v):
+                update cheapest[find(u)] and cheapest[find(v)] with (u, v, w)
+        for each component C with cheapest[C] != none:
+            (u, v, w) = cheapest[C]
+            if union(u, v):
+                MST.add((u, v, w)); numComponents -= 1
+    return MST`,
   },
   generateTimeline: (input: {
     vertices: number[];
@@ -233,7 +252,7 @@ void boruvkaMST(int V, vector<Edge>& edges) {
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
+      codeLine: 2,
       action: 'INIT',
       state: {
         vertices,
@@ -245,12 +264,18 @@ void boruvkaMST(int V, vector<Edge>& edges) {
         phase: 0,
         totalWeight: 0,
       },
-      callStack: [{ name: 'boruvkaInit', params: { vertexCount: vertices.length, edgeCount: edges.length } }],
+      callStack: [{ name: 'boruvkaInit', params: { vertexCount: vertices.length, edgeCount: edges.length }, line: 2, isCurrent: true }],
       variables: { vertices: vertices.length, edges: edges.length, initialComponents: vertices.length },
+      pedagogy: {
+        what: `Borůvka starts with ${vertices.length} singleton components (one per vertex) and an empty MST.`,
+        why: 'Unlike Kruskal and Prim, every component will grow at the same time — that parallel contraction is what makes the algorithm naturally parallelizable.',
+        whatNext: 'Enter the contraction loop; each phase halves the component count or better.',
+      },
       explanation: `Initialized Borůvka's algorithm with ${vertices.length} disconnected components.`,
     });
 
     let phase = 0;
+    let checkpointAdded = false;
     while (countComponents() > 1) {
       phase++;
       const cheapest: Record<number, GraphEdge> = {};
@@ -272,13 +297,59 @@ void boruvkaMST(int V, vector<Edge>& edges) {
       const candidateEdges = Object.values(cheapest);
       if (candidateEdges.length === 0) break; // Graph disconnected
 
-      // Step 1: Show each component's selected cheapest crossing edge
+      // Step 1a: Scan all edges to fill the per-component cheapest table
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 5,
+        action: 'PHASE_SCAN',
+        soundCue: { type: 'compare' },
+        state: {
+          vertices,
+          edges,
+          mstEdges: [...mstEdges],
+          cheapestEdges: candidateEdges,
+          componentMap: getComponentMap(),
+          componentCount: countComponents(),
+          phase,
+          totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0),
+        },
+        callStack: [{ name: 'scanEdges', params: { phase, edgeCount: edges.length, components: countComponents() }, line: 5, isCurrent: true }],
+        variables: {
+          phase,
+          scannedEdges: edges.length,
+          components: countComponents(),
+          picks: candidateEdges.map((e) => `C${find(e.u)}: ${e.u}-${e.v}(${e.weight})`).join(', '),
+        },
+        pedagogy: {
+          what: `Phase ${phase} scans all ${edges.length} edge(s) once and records, for every component, its lightest edge leaving that component.`,
+          why: 'One shared pass fills the cheapest[] table for all components at once — no component needs to know about the others, which is why Borůvka parallelizes.',
+          whatNext: `Each of the ${candidateEdges.length} component(s) now contributes its cheapest crossing edge.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'boruvka-parallel-cheapest',
+              question: `All components pick their cheapest outgoing edge at the same time. Why does this not put a cycle into the MST?`,
+              options: [
+                'The picks are processed one by one with DSU union: any edge whose endpoints are already merged is skipped, so a cycle can never close',
+                'Parallel picks can never point at each other, so cycles are impossible by construction',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Two components can pick the same edge, and with equal weights picks can even form a cycle on paper. The sequential union step resolves this: the first edge merges the components, and any later edge inside the merged component is rejected.',
+            }
+          : undefined,
+        explanation: `Phase ${phase}: scanned all ${edges.length} edges; ${candidateEdges.length} component(s) found a cheapest crossing edge.`,
+      });
+      checkpointAdded = true;
+
+      // Step 1b: Show each component's selected cheapest crossing edge
       for (const compId of Object.keys(cheapest)) {
         const e = cheapest[Number(compId)];
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 12,
+          codeLine: 7,
           action: 'PHASE_CHEAPEST_FOUND',
           soundCue: { type: 'compare' },
           state: {
@@ -291,9 +362,14 @@ void boruvkaMST(int V, vector<Edge>& edges) {
             phase,
             totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0),
           },
-          callStack: [{ name: 'findCheapestEdge', params: { component: compId, edge: `(${e.u}-${e.v})`, weight: e.weight }, line: 12, isCurrent: true }],
+          callStack: [{ name: 'findCheapestEdge', params: { component: compId, edge: `(${e.u}-${e.v})`, weight: e.weight }, line: 7, isCurrent: true }],
           variables: { phase, component: compId, cheapestEdge: `(${e.u}, ${e.v})`, weight: e.weight },
           conditionEval: { expr: `find(${e.u}) != find(${e.v})`, result: true },
+          pedagogy: {
+            what: `Component C${compId} locks in (${e.u} ↔ ${e.v}, w=${e.weight}) as cheapest[${compId}].`,
+            why: `Its endpoints lie in different components (find(${e.u})=${find(e.u)} ≠ find(${e.v})=${find(e.v)}), so this edge genuinely crosses outward.`,
+            whatNext: 'Repeat for every component, then merge the selections with union().',
+          },
           explanation: `Phase ${phase}: Component ${compId} selected its cheapest crossing edge (${e.u} ↔ ${e.v}, weight ${e.weight}).`,
         });
       }
@@ -306,12 +382,40 @@ void boruvkaMST(int V, vector<Edge>& edges) {
 
         if (canUnion) {
           union(e.u, e.v);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 10,
+            action: 'UNION_COMPONENTS',
+            soundCue: { type: 'step' },
+            state: {
+              vertices,
+              edges,
+              mstEdges: [...mstEdges],
+              cheapestEdges: [e],
+              componentMap: getComponentMap(),
+              componentCount: countComponents(),
+              phase,
+              totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0),
+            },
+            callStack: [{ name: 'dsuUnion', params: { u: e.u, v: e.v, weight: e.weight }, line: 10, isCurrent: true }],
+            variables: { edge: `(${e.u}, ${e.v})`, mergedRoots: `${uSet} + ${vSet}`, newComponentCount: countComponents() },
+            conditionEval: { expr: `union(${e.u}, ${e.v})`, result: true },
+            pedagogy: {
+              what: `union(${e.u}, ${e.v}) merges components ${uSet} and ${vSet}; ${countComponents()} component(s) remain.`,
+              why: 'The endpoints were in different components, so this edge is a real contraction, not a cycle-forming duplicate of an earlier pick.',
+              whatNext: 'Record the edge in the MST and decrease the component counter.',
+            },
+            explanation: `union(${e.u}, ${e.v}): merged components ${uSet} and ${vSet}. Remaining components: ${countComponents()}.`,
+          });
+
           mstEdges.push(e);
 
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 18,
+            codeLine: 11,
             action: 'EDGE_ADDED_TO_MST',
             isMilestone: true,
             milestoneTitle: `Added (${e.u}-${e.v}, w=${e.weight})`,
@@ -326,16 +430,21 @@ void boruvkaMST(int V, vector<Edge>& edges) {
               phase,
               totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0),
             },
-            callStack: [{ name: 'dsuUnion', params: { u: e.u, v: e.v, weight: e.weight }, line: 18, isCurrent: true }],
-            variables: { edge: `(${e.u}, ${e.v})`, weight: e.weight, newComponentCount: countComponents() },
-            conditionEval: { expr: `find(${e.u}) != find(${e.v})`, result: true },
+            callStack: [{ name: 'mstAdd', params: { u: e.u, v: e.v, weight: e.weight }, line: 11, isCurrent: true }],
+            variables: { edge: `(${e.u}, ${e.v})`, weight: e.weight, mstSize: mstEdges.length, totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0) },
+            conditionEval: { expr: `union(${e.u}, ${e.v}) succeeded`, result: true },
+            pedagogy: {
+              what: `MST.add((${e.u} ↔ ${e.v}, w=${e.weight})): now ${mstEdges.length} edge(s), total weight ${mstEdges.reduce((acc, edge) => acc + edge.weight, 0)}.`,
+              why: 'The edge was the cheapest exit from one of the merged components, so the cut property places it in some MST.',
+              whatNext: 'Process the remaining component selections of this phase.',
+            },
             explanation: `Added edge (${e.u} ↔ ${e.v}, weight ${e.weight}) to MST! Unified components ${uSet} and ${vSet}.`,
           });
         } else {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 16,
+            codeLine: 10,
             action: 'CYCLE_AVOIDED',
             soundCue: { type: 'step' },
             state: {
@@ -348,9 +457,14 @@ void boruvkaMST(int V, vector<Edge>& edges) {
               phase,
               totalWeight: mstEdges.reduce((acc, edge) => acc + edge.weight, 0),
             },
-            callStack: [{ name: 'dsuCheckCycle', params: { u: e.u, v: e.v }, line: 16, isCurrent: true }],
+            callStack: [{ name: 'dsuCheckCycle', params: { u: e.u, v: e.v }, line: 10, isCurrent: true }],
             variables: { edge: `(${e.u}, ${e.v})`, uSet, vSet, cyclePrevented: true },
             conditionEval: { expr: `find(${e.u}) == find(${e.v})`, result: true },
+            pedagogy: {
+              what: `union(${e.u}, ${e.v}) returns false: both endpoints already share root ${uSet} after an earlier pick this phase.`,
+              why: 'Two components can select opposite ends of the same edge, or a chain of picks can close a cycle. The DSU check is what keeps the MST acyclic.',
+              whatNext: 'Skip this edge; continue with the remaining selections.',
+            },
             explanation: `Edge (${e.u} ↔ ${e.v}) already unified by earlier parallel edge in this phase. Skipping to prevent cycle.`,
           });
         }
@@ -359,7 +473,7 @@ void boruvkaMST(int V, vector<Edge>& edges) {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 20,
+        codeLine: 3,
         action: 'PHASE_CONTRACTED',
         isMilestone: true,
         milestoneTitle: `Phase ${phase} Completed`,
@@ -374,8 +488,13 @@ void boruvkaMST(int V, vector<Edge>& edges) {
           phase,
           totalWeight: mstEdges.reduce((acc, e) => acc + e.weight, 0),
         },
-        callStack: [{ name: 'contractComponents', params: { phase, remainingComponents: countComponents() }, line: 20, isCurrent: true }],
+        callStack: [{ name: 'contractComponents', params: { phase, remainingComponents: countComponents() }, line: 3, isCurrent: true }],
         variables: { phase, newComponentCount: countComponents(), mstSize: mstEdges.length, totalWeight: mstEdges.reduce((acc, e) => acc + e.weight, 0) },
+        pedagogy: {
+          what: `Phase ${phase} ends with ${countComponents()} component(s) and ${mstEdges.length} MST edge(s), total weight ${mstEdges.reduce((acc, e) => acc + e.weight, 0)}.`,
+          why: 'Every merge at least halves the number of components, so the loop runs at most log₂ V phases — that bound is Borůvka\'s signature.',
+          whatNext: countComponents() > 1 ? 'Re-evaluate the while condition and run the next phase.' : 'Only one component remains — exit the loop.',
+        },
         explanation: `Phase ${phase} complete: Components contracted. Remaining components: ${countComponents()}. Total MST weight: ${mstEdges.reduce(
           (acc, e) => acc + e.weight,
           0
@@ -383,10 +502,14 @@ void boruvkaMST(int V, vector<Edge>& edges) {
       });
     }
 
+    const finalTotalWeight = mstEdges.reduce((acc, e) => acc + e.weight, 0);
+    const remainingComponents = countComponents();
+    const isSpanning = remainingComponents === 1;
+
     frames.push({
       stepIndex: frames.length,
       totalSteps: frames.length + 1,
-      codeLine: 28,
+      codeLine: 12,
       action: 'COMPLETE',
       state: {
         vertices,
@@ -394,16 +517,31 @@ void boruvkaMST(int V, vector<Edge>& edges) {
         mstEdges: [...mstEdges],
         cheapestEdges: [],
         componentMap: getComponentMap(),
-        componentCount: countComponents(),
+        componentCount: remainingComponents,
         phase,
-        totalWeight: mstEdges.reduce((acc, e) => acc + e.weight, 0),
+        totalWeight: finalTotalWeight,
       },
-      callStack: [{ name: 'complete', params: { totalWeight: mstEdges.reduce((acc, e) => acc + e.weight, 0) } }],
-      variables: { completed: true, mstEdges: mstEdges.length, totalWeight: mstEdges.reduce((acc, e) => acc + e.weight, 0) },
-      explanation: `Borůvka's algorithm finished. MST constructed with ${mstEdges.length} edges and total weight ${mstEdges.reduce(
-        (acc, e) => acc + e.weight,
-        0
-      )}.`,
+      callStack: [{ name: 'boruvka.complete', params: { totalWeight: finalTotalWeight, components: remainingComponents }, line: 12, isCurrent: true }],
+      variables: { completed: true, mstEdges: mstEdges.length, totalWeight: finalTotalWeight, isSpanning },
+      isMilestone: true,
+      milestoneTitle: isSpanning
+        ? `MST Complete (weight ${finalTotalWeight})`
+        : `Disconnected — Spanning Forest (weight ${finalTotalWeight})`,
+      soundCue: { type: 'complete' },
+      pedagogy: {
+        what: isSpanning
+          ? `Return MST with ${mstEdges.length} edge(s) and total weight ${finalTotalWeight}.`
+          : `Return a spanning forest: the graph still has ${remainingComponents} components, so no spanning tree exists.`,
+        why: isSpanning
+          ? 'Every phase added, for each component, the lightest edge leaving it; repeated contraction with the cut property yields a minimum spanning tree.'
+          : 'Borůvka only crosses between components. When no crossing edge remains, the graph is disconnected and each component gets its own minimum spanning tree.',
+        whatNext: isSpanning
+          ? 'Compare with Kruskal (global sorted edges) and Prim (single growing tree): same MST weight, different parallel structure.'
+          : 'Run the algorithm per component to obtain the full minimum spanning forest.',
+      },
+      explanation: isSpanning
+        ? `Borůvka's algorithm finished. MST constructed with ${mstEdges.length} edges and total weight ${finalTotalWeight}.`
+        : `Borůvka's algorithm stopped with ${remainingComponents} components remaining. Spanning forest constructed with ${mstEdges.length} edges and total weight ${finalTotalWeight}.`,
     });
 
     frames.forEach((f) => {
