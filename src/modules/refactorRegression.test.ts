@@ -969,6 +969,103 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, input).errorCount).toBe(0);
   });
 
+  it("Prim annexes the lightest cut edge and reports a forest honestly when disconnected", () => {
+    const mod = moduleById('prim-mst');
+    const input = {
+      startNode: 'A',
+      nodes: [
+        { id: 'A', label: 'A', x: 120, y: 120 },
+        { id: 'B', label: 'B', x: 280, y: 70 },
+        { id: 'C', label: 'C', x: 440, y: 120 },
+        { id: 'D', label: 'D', x: 120, y: 280 },
+        { id: 'E', label: 'E', x: 280, y: 320 },
+        { id: 'F', label: 'F', x: 440, y: 280 },
+      ],
+      edges: [
+        { id: 'e-AB', from: 'A', to: 'B', weight: 4, status: 'unvisited' as const },
+        { id: 'e-AD', from: 'A', to: 'D', weight: 2, status: 'unvisited' as const },
+        { id: 'e-BD', from: 'B', to: 'D', weight: 1, status: 'unvisited' as const },
+        { id: 'e-BC', from: 'B', to: 'C', weight: 5, status: 'unvisited' as const },
+        { id: 'e-BE', from: 'B', to: 'E', weight: 3, status: 'unvisited' as const },
+        { id: 'e-DE', from: 'D', to: 'E', weight: 7, status: 'unvisited' as const },
+        { id: 'e-CE', from: 'C', to: 'E', weight: 2, status: 'unvisited' as const },
+        { id: 'e-CF', from: 'C', to: 'F', weight: 6, status: 'unvisited' as const },
+        { id: 'e-EF', from: 'E', to: 'F', weight: 4, status: 'unvisited' as const },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'prim-min-cut-edge').length).toBe(1);
+
+    const byCall = (name: string) =>
+      timeline.filter((f) => (f.callStack?.[0] as any)?.name === name);
+
+    const extracts = byCall('extractMin');
+    const annexes = byCall('annexVertex');
+    const adds = byCall('addToMST');
+    const frontiers = byCall('updateFrontier');
+    expect(extracts.length).toBe(5);
+    expect(annexes.length).toBe(5);
+    expect(adds.length).toBe(5);
+    expect(frontiers.length).toBe(5);
+
+    // Prim's chosen weights are locally minimal, not globally sorted: 2, 1, 3, 2, 4.
+    expect(extracts.map((f) => f.variables?.minWeight)).toEqual([2, 1, 3, 2, 4]);
+    expect(annexes.map((f) => f.variables?.annexedVertex)).toEqual(['D', 'B', 'E', 'C', 'F']);
+
+    // The annex frame must precede the weight increment; only addToMST updates totalWeight.
+    const expectedWeights = [2, 3, 6, 8, 12];
+    adds.forEach((frame, i) => expect(frame.variables?.totalWeight).toBe(expectedWeights[i]));
+    annexes.forEach((frame, i) => {
+      expect(frame.variables?.totalWeight).toBeUndefined();
+      expect(frame.variables?.visitedSize).toBe(i + 2);
+    });
+
+    // Frontier shrinks exactly when an edge becomes internal.
+    expect(frontiers.map((f) => f.variables?.frontierSize)).toEqual([3, 3, 3, 2, 0]);
+    expect(frontiers.map((f) => f.variables?.discardedCount)).toEqual([0, 1, 1, 1, 1]);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('MST Complete (weight 12)');
+    expect(final.state.totalWeight).toBe(12);
+    expect(final.state.mstEdgesCount).toBe(5);
+    expect(final.state.visitedNodes.length).toBe(6);
+    expect(final.state.edges.filter((e: any) => e.status === 'selected').length).toBe(5);
+
+    // Disconnected graph: A-B exists, C and D are isolated.
+    const forest = mod.generateTimeline({
+      startNode: 'A',
+      nodes: [
+        { id: 'A', label: 'A', x: 0, y: 0 },
+        { id: 'B', label: 'B', x: 60, y: 0 },
+        { id: 'C', label: 'C', x: 120, y: 0 },
+        { id: 'D', label: 'D', x: 180, y: 0 },
+      ],
+      edges: [{ id: 'e1', from: 'A', to: 'B', weight: 3, status: 'unvisited' as const }],
+    });
+    const last = forest[forest.length - 1];
+    expect(last.milestoneTitle).toBe('Disconnected — Spanning Forest');
+    expect(last.variables?.isComplete).toBe(false);
+    expect(last.variables?.reachedVertices).toBe(2);
+    expect(last.state.totalWeight).toBe(3);
+    expect(last.state.mstEdgesCount).toBe(1);
+    expect(forest.some((f) => f.variables?.isComplete === true)).toBe(false);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(
+      auditTimeline(mod, {
+        startNode: 'A',
+        nodes: [
+          { id: 'A', label: 'A', x: 0, y: 0 },
+          { id: 'B', label: 'B', x: 60, y: 0 },
+          { id: 'C', label: 'C', x: 120, y: 0 },
+          { id: 'D', label: 'D', x: 180, y: 0 },
+        ],
+        edges: [{ id: 'e1', from: 'A', to: 'B', weight: 3, status: 'unvisited' as const }],
+      }).errorCount
+    ).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
