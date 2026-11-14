@@ -2058,6 +2058,48 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, dense.data as any).errorCount).toBe(0);
   });
 
+  it('BST inserts follow one comparison chain per value and ignore duplicates honestly', () => {
+    const mod = moduleById('bst-insert');
+    const input = { valuesToInsert: [50, 25, 75, 12, 37, 62, 87] };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'bst-insert-path').length).toBe(1);
+
+    // Root plus one create and one attach frame per remaining value.
+    expect(timeline.filter((f) => f.milestoneTitle?.startsWith('Root Inserted')).length).toBe(1);
+    const creates = timeline.filter((f) => f.codeLine === 3);
+    expect(creates.length).toBe(7); // 1 root + 6 created leaves
+    const attaches = timeline.filter((f) => f.milestoneTitle?.startsWith('Inserted '));
+    expect(attaches.length).toBe(6);
+
+    // Comparisons: direction sequence is exactly the search paths.
+    const compares = timeline.filter((f) => f.variables?.direction !== undefined);
+    expect(compares.map((f) => f.variables?.direction).join(',')).toBe(
+      'left,right,left,left,left,right,right,left,right,right'
+    );
+    // Left comparisons <- line 4, right comparisons -> line 6.
+    expect(timeline.filter((f) => f.codeLine === 4).length).toBe(5);
+    expect(timeline.filter((f) => f.codeLine === 6).length).toBe(5);
+    // Left links use line 5, right links line 7.
+    expect(timeline.filter((f) => f.codeLine === 5).length).toBe(3);
+    expect(timeline.filter((f) => f.codeLine === 7).length).toBe(3);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Inserted 87');
+    expect(final.state.nodes.length).toBe(7);
+
+    // Duplicates: the strict comparisons both fail, so nothing is inserted.
+    const dup = mod.generateTimeline({ valuesToInsert: [50, 50] });
+    const dupFrames = dup.filter((f) => f.milestoneTitle === 'Duplicate 50 Ignored');
+    expect(dupFrames.length).toBe(1);
+    expect(dupFrames[0].conditionEval?.result).toBe(false);
+    expect(dup[dup.length - 1].state.nodes.length).toBe(1);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, { valuesToInsert: [50, 50] }).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[2].data as any).errorCount).toBe(0); // skewed preset
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
