@@ -1367,6 +1367,80 @@ describe('pedagogical timeline regressions', () => {
     }).errorCount).toBe(0);
   });
 
+  it('articulation points skip parent edges, classify back-edges, and apply root vs non-root rules', () => {
+    const mod = moduleById('articulation-points');
+    const input = {
+      nodes: ['A', 'B', 'C', 'D', 'E'],
+      edges: [
+        { u: 'A', v: 'B' },
+        { u: 'B', v: 'C' },
+        { u: 'C', v: 'A' },
+        { u: 'C', v: 'D' },
+        { u: 'D', v: 'E' },
+        { u: 'E', v: 'C' },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'articulation-cut-condition').length).toBe(1);
+
+    // One frame per operation: 5 visits, 4 parent skips, 4 back-edges (each edge seen from both ends), 4 tree edges, 4 returns.
+    expect(timeline.filter((f) => f.codeLine === 4).length).toBe(5);
+    expect(timeline.filter((f) => f.variables?.action === 'SKIP_PARENT').length).toBe(4);
+    expect(timeline.filter((f) => f.codeLine === 7).length).toBe(4);
+    expect(timeline.filter((f) => f.variables?.edgeType === 'TREE_EDGE').length).toBe(4);
+    expect(timeline.filter((f) => f.codeLine === 11).length).toBe(4);
+
+    // Bowtie graph: only C separates the two triangles.
+    const cutFrames = timeline.filter((f) => f.codeLine === 12);
+    expect(cutFrames.length).toBe(1);
+    expect(cutFrames[0].milestoneTitle).toBe('Cut Vertex Found: "C"');
+    expect(cutFrames[0].variables?.lowChild).toBe(3);
+    expect(cutFrames[0].variables?.discU).toBe(3);
+    expect(timeline.filter((f) => f.codeLine === 13).length).toBe(0); // root has one child only
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Found 1 Articulation Point');
+    expect(final.state.cutVertices).toEqual(['C']);
+
+    // Linear chain: both internal nodes are cut vertices via the non-root rule.
+    const chain = mod.generateTimeline({
+      nodes: ['0', '1', '2', '3'],
+      edges: [
+        { u: '0', v: '1' },
+        { u: '1', v: '2' },
+        { u: '2', v: '3' },
+      ],
+    });
+    const chainFinal = chain[chain.length - 1];
+    expect(chainFinal.milestoneTitle).toBe('Found 2 Articulation Points');
+    expect(chainFinal.state.cutVertices.sort()).toEqual(['1', '2']);
+
+    // Star graph centered at 0: root rule fires (3 children), leaves are not cut vertices.
+    const star = mod.generateTimeline({
+      nodes: ['0', '1', '2', '3'],
+      edges: [
+        { u: '0', v: '1' },
+        { u: '0', v: '2' },
+        { u: '0', v: '3' },
+      ],
+    });
+    const rootFrames = star.filter((f) => f.codeLine === 13);
+    expect(rootFrames.length).toBe(1);
+    expect(rootFrames[0].milestoneTitle).toBe('Root Cut Vertex: "0" (3 Subtrees)');
+    expect(star[star.length - 1].state.cutVertices).toEqual(['0']);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      nodes: ['0', '1', '2', '3'],
+      edges: [
+        { u: '0', v: '1' },
+        { u: '0', v: '2' },
+        { u: '0', v: '3' },
+      ],
+    }).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
