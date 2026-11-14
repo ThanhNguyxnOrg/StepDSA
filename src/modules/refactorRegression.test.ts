@@ -1661,6 +1661,58 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('Hopcroft-Karp builds layers, prunes dead ends, and flips one augmenting path per search', () => {
+    const mod = moduleById('hopcroft-karp');
+    const input = {
+      uCount: 4,
+      vCount: 4,
+      edges: [
+        { u: 1, v: 1 },
+        { u: 1, v: 2 },
+        { u: 2, v: 1 },
+        { u: 2, v: 3 },
+        { u: 3, v: 2 },
+        { u: 3, v: 4 },
+        { u: 4, v: 3 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'hopcroft-karp-layer-dfs').length).toBe(1);
+
+    // Three BFS calls: two build a level graph, the last finds no free U vertex.
+    expect(timeline.filter((f) => f.action === 'BFS_INIT').length).toBe(3);
+    const builds = timeline.filter((f) => f.action === 'BFS_LAYER_BUILT');
+    expect(builds.map((f) => f.variables?.shortestAugPathLength)).toEqual([1, 4]);
+
+    // One frame per operation: dequeues, level assignments and rejections.
+    expect(timeline.filter((f) => f.action === 'DEQUEUE').length).toBe(10);
+    expect(timeline.filter((f) => f.action === 'LEVEL_ASSIGN').length).toBe(5);
+    expect(timeline.filter((f) => f.action === 'LEVEL_REJECT').length).toBe(9);
+
+    // DFS: 5 search attempts, 7 layered tries, 4 non-layered rejections, 1 pruning.
+    expect(timeline.filter((f) => f.action === 'DFS_SEARCH').length).toBe(5);
+    expect(timeline.filter((f) => f.action === 'DFS_TRY').length).toBe(7);
+    expect(timeline.filter((f) => f.action === 'DFS_REJECT').length).toBe(4);
+    const prunes = timeline.filter((f) => f.action === 'DFS_PRUNE');
+    expect(prunes.length).toBe(1);
+    expect(prunes[0].variables?.pruned).toBe('U4');
+
+    // Four augmentations: first phase picks U1, U2, U3; second phase reroutes through U4.
+    const augments = timeline.filter((f) => f.action === 'AUGMENT_PATH');
+    expect(augments.length).toBe(4);
+    expect(augments.map((f) => f.variables?.newMatchingSize)).toEqual([1, 2, 3, 4]);
+
+    // Perfect matching on this graph: U1-V2, U2-V1, U3-V4, U4-V3.
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Max Matching: 4 Pairs');
+    expect(final.state.matchingSize).toBe(4);
+    expect(final.state.pairU).toEqual({ 1: 2, 2: 1, 3: 4, 4: 3 });
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
