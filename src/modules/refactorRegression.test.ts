@@ -1598,6 +1598,69 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, input).errorCount).toBe(0);
   });
 
+  it('Dinic alternates level-graph BFS with blocking flows and terminates on the max flow', () => {
+    const mod = moduleById('dinics-algorithm');
+    const input = {
+      nodes: ['S', 'A', 'B', 'C', 'T'],
+      edges: [
+        { from: 'S', to: 'A', capacity: 10 },
+        { from: 'S', to: 'B', capacity: 10 },
+        { from: 'A', to: 'C', capacity: 4 },
+        { from: 'A', to: 'T', capacity: 8 },
+        { from: 'B', to: 'C', capacity: 9 },
+        { from: 'C', to: 'T', capacity: 10 },
+      ],
+      source: 'S',
+      sink: 'T',
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'dinic-blocking-flow').length).toBe(1);
+
+    // Two successful level graphs, the second strictly deeper.
+    expect(timeline.filter((f) => f.action === 'BFS_START').length).toBe(3);
+    const built = timeline.filter((f) => f.action === 'LEVEL_GRAPH_BUILT');
+    expect(built.map((f) => f.milestoneTitle)).toEqual([
+      'Phase 1 Level Graph (Sink dist = 2)',
+      'Phase 2 Level Graph (Sink dist = 3)',
+    ]);
+
+    // Every admissible path strictly increases in level and gets its own frame.
+    const paths = timeline.filter((f) => f.action === 'PATH_FOUND');
+    expect(paths.map((f) => f.variables?.path)).toEqual([
+      'S -> A -> T',
+      'S -> A -> C -> T',
+      'S -> B -> C -> T',
+    ]);
+
+    // Per-edge pushes then the maxFlow update: 8, then 8→10→18.
+    const edgePushes = timeline.filter((f) => f.action === 'AUGMENT_EDGE');
+    expect(edgePushes.length).toBe(8);
+    expect(edgePushes.every((f) => f.variables?.direction === 'FORWARD_PUSH')).toBe(true);
+    const updates = timeline.filter((f) => f.action === 'MAXFLOW_UPDATE');
+    expect(updates.map((f) => f.variables?.currentFlow)).toEqual([8, 10, 18]);
+
+    // Blocking-flow completion frames carry the per-phase totals.
+    const done = timeline.filter((f) => f.action === 'BLOCKING_FLOW_DONE');
+    expect(done.map((f) => f.variables?.phasePushed)).toEqual([8, 10]);
+
+    // Level-graph rejections distinguish saturated edges from already-labeled ones.
+    const rejects = timeline.filter((f) => f.action === 'LEVEL_REJECT');
+    expect(rejects.filter((f) => f.variables?.reason === 'NO_RESIDUAL').length).toBe(4);
+    expect(rejects.filter((f) => f.variables?.reason === 'ALREADY_LABELED').length).toBe(9);
+
+    // Termination: the sink never gets a level, so the algorithm returns the max flow.
+    const term = timeline.filter((f) => f.action === 'TERMINATED');
+    expect(term.length).toBe(1);
+    expect(term[0].milestoneTitle).toBe('Max Flow Reached: 18');
+    const final = timeline[timeline.length - 1];
+    expect(final.state.totalFlow).toBe(18);
+    expect(final.state.edges.map((e: any) => e.flow)).toEqual([10, 8, 2, 8, 8, 10]);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

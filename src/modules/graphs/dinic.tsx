@@ -188,10 +188,22 @@ int dinic(int s, int t) {
     pseudocode: `function dinic(s, t):
     maxFlow = 0
     while bfsLevelGraph(s, t):
-        ptr = all zeros
-        while pushed = dfsBlockingFlow(s, t, infinity):
-            maxFlow += pushed
-    return maxFlow`,
+        while true:
+            path = dfsBlocking(s, t, infinity)   # admissible: level[v] == level[u] + 1
+            if path is empty: break
+            push = min residual capacity along path
+            augment every edge on path by push
+            maxFlow += push
+    return maxFlow
+function bfsLevelGraph(s, t):
+    level = {s: 0}, queue = [s]
+    while queue not empty:
+        u = dequeue(queue)
+        for each residual edge (u, v) with cap > 0:
+            if v unlabeled:
+                level[v] = level[u] + 1
+                enqueue(queue, v)
+    return t labeled`,
   },
   generateTimeline: (input: {
     nodes: string[];
@@ -216,6 +228,7 @@ int dinic(int s, int t) {
     const frames: ExecutionFrame<DinicState>[] = [];
     const flowEdges: DinicEdge[] = rawEdges.map((e) => ({ ...e, flow: 0 }));
     let totalFlow = 0;
+    let checkpointAdded = false;
 
     frames.push({
       stepIndex: 0,
@@ -238,6 +251,11 @@ int dinic(int s, int t) {
       variables: { source, sink, totalFlow: 0, residualEdges: flowEdges.length },
       conditionEval: { expr: 'source !== sink', result: true },
       soundCue: { type: 'step' },
+      pedagogy: {
+        what: `Dinic alternates two phases: BFS builds a level graph, then DFS pushes a blocking flow along strictly increasing levels.`,
+        why: 'Each blocking flow phase pushes all flow that the current shortest path lengths allow; afterwards the shortest augmenting path gets strictly longer, bounding phases to O(V).',
+        whatNext: `Phase 1 begins with BFS from "${source}".`,
+      },
       explanation: `Initialized Dinic's Algorithm. Source = "${source}", Sink = "${sink}". Phase 1 begins with BFS Level Graph construction.`,
     });
 
@@ -251,7 +269,7 @@ int dinic(int s, int t) {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 5,
+        codeLine: 12,
         action: 'BFS_START',
         state: {
           nodes: rawNodes,
@@ -263,45 +281,190 @@ int dinic(int s, int t) {
           activeNode: source,
           totalFlow,
         },
-        callStack: [{ name: 'bfsLevelGraph', params: { phase: phaseNum, source }, line: 5, isCurrent: true }],
+        callStack: [{ name: 'bfsLevelGraph', params: { phase: phaseNum, source }, line: 12, isCurrent: true }],
         variables: { phase: phaseNum, queue: [source], currentLevel: 0 },
         conditionEval: { expr: 'queue.length > 0', result: true },
         soundCue: { type: 'select' },
+        pedagogy: {
+          what: `Phase ${phaseNum} BFS: level["${source}"] = 0 and the queue starts with the source.`,
+          why: 'Levels measure the fewest residual edges from the source in this phase; DFS may only descend level by level.',
+          whatNext: 'Dequeue the source and label its residual neighbors.',
+        },
         explanation: `Phase ${phaseNum} BFS: Initialize queue with source "${source}" at level 0.`,
       });
 
       while (queue.length > 0) {
         const u = queue.shift()!;
-        for (const e of flowEdges) {
-          if (e.from === u && levels[e.to] === undefined && e.capacity - e.flow > 0) {
-            levels[e.to] = levels[u] + 1;
-            queue.push(e.to);
 
-            frames.push({
-              stepIndex: frames.length,
-              totalSteps: 1,
-              codeLine: 8,
-              action: 'LEVEL_ASSIGNED',
-              state: {
-                nodes: rawNodes,
-                edges: flowEdges.map((e) => ({ ...e })),
-                levels: { ...levels },
-                source,
-                sink,
-                phase: 'BFS_LEVEL_GRAPH',
-                activeNode: e.to,
-                totalFlow,
-              },
-              callStack: [{ name: 'assignLevel', params: { node: e.to, level: levels[e.to], from: u }, line: 8, isCurrent: true }],
-              variables: { node: e.to, assignedLevel: levels[e.to], via: u, residualCap: e.capacity - e.flow },
-              conditionEval: { expr: `resCap(${u}->${e.to}) > 0 && levels[${e.to}] == null`, result: true },
-              soundCue: { type: 'insert' },
-              explanation: `BFS explored edge (${u} -> ${e.to}): Residual capacity = ${e.capacity - e.flow} > 0. Assigned level[${e.to}] = ${levels[e.to]}.`,
-            });
-          }
-          if (e.to === u && levels[e.from] === undefined && e.flow > 0) {
-            levels[e.from] = levels[u] + 1;
-            queue.push(e.from);
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 14,
+          action: 'DEQUEUE',
+          state: {
+            nodes: rawNodes,
+            edges: flowEdges.map((e) => ({ ...e })),
+            levels: { ...levels },
+            source,
+            sink,
+            phase: 'BFS_LEVEL_GRAPH',
+            activeNode: u,
+            totalFlow,
+          },
+          callStack: [{ name: `dequeue("${u}")`, params: { u }, line: 14, isCurrent: true }],
+          variables: { current: u, level: levels[u], queue: queue.join(', ') || '(empty)' },
+          pedagogy: {
+            what: `"${u}" leaves the queue at level ${levels[u]}.`,
+            why: 'BFS must finish all level-k vertices before level k+1, otherwise levels would not be shortest distances.',
+            whatNext: `Label unlabeled residual neighbors of "${u}" with level ${levels[u] + 1}.`,
+          },
+          explanation: `Dequeue "${u}" (level ${levels[u]}). Scanning its residual edges.`,
+        });
+
+        for (const e of flowEdges) {
+          if (e.from === u) {
+            const resCap = e.capacity - e.flow;
+            if (levels[e.to] === undefined && resCap > 0) {
+              levels[e.to] = levels[u] + 1;
+              queue.push(e.to);
+
+              frames.push({
+                stepIndex: frames.length,
+                totalSteps: 1,
+                codeLine: 17,
+                action: 'LEVEL_ASSIGNED',
+                state: {
+                  nodes: rawNodes,
+                  edges: flowEdges.map((e) => ({ ...e })),
+                  levels: { ...levels },
+                  source,
+                  sink,
+                  phase: 'BFS_LEVEL_GRAPH',
+                  activeNode: e.to,
+                  totalFlow,
+                },
+                callStack: [{ name: 'assignLevel', params: { node: e.to, level: levels[e.to], from: u }, line: 17, isCurrent: true }],
+                variables: { node: e.to, assignedLevel: levels[e.to], via: u, residualCap: resCap },
+                conditionEval: { expr: `resCap(${u}->${e.to}) = ${resCap} > 0 && levels[${e.to}] == null`, result: true },
+                soundCue: { type: 'insert' },
+                pedagogy: {
+                  what: `Forward residual ${u} → ${e.to} (${resCap} unit(s) free) labels "${e.to}" at level ${levels[e.to]}.`,
+                  why: 'An unlabeled reachable vertex always belongs to the next BFS level.',
+                  whatNext: `Enqueue "${e.to}".`,
+                },
+                explanation: `BFS explored edge (${u} -> ${e.to}): Residual capacity = ${resCap} > 0. Assigned level[${e.to}] = ${levels[e.to]} and enqueued.`,
+              });
+            } else if (resCap <= 0) {
+              frames.push({
+                stepIndex: frames.length,
+                totalSteps: 1,
+                codeLine: 17,
+                action: 'LEVEL_REJECT',
+                state: {
+                  nodes: rawNodes,
+                  edges: flowEdges.map((e) => ({ ...e })),
+                  levels: { ...levels },
+                  source,
+                  sink,
+                  phase: 'BFS_LEVEL_GRAPH',
+                  activeNode: u,
+                  totalFlow,
+                },
+                callStack: [{ name: `rejectEdge("${u}"→"${e.to}")`, params: { reason: 'NO_RESIDUAL' }, line: 17, isCurrent: true }],
+                variables: { from: u, to: e.to, residualCapacity: resCap, reason: 'NO_RESIDUAL' },
+                conditionEval: { expr: `resCap(${u}->${e.to}) = ${resCap} > 0`, result: false },
+                pedagogy: {
+                  what: `${u} → ${e.to} is saturated (${e.flow}/${e.capacity}); no residual capacity.`,
+                  why: 'Saturated edges do not exist in the level graph; they can only reappear through a later cancellation.',
+                  whatNext: 'Skip this edge.',
+                },
+                explanation: `Forward edge (${u} → ${e.to}) saturated: ${e.flow}/${e.capacity}. Not part of the level graph.`,
+              });
+            } else {
+              frames.push({
+                stepIndex: frames.length,
+                totalSteps: 1,
+                codeLine: 17,
+                action: 'LEVEL_REJECT',
+                state: {
+                  nodes: rawNodes,
+                  edges: flowEdges.map((e) => ({ ...e })),
+                  levels: { ...levels },
+                  source,
+                  sink,
+                  phase: 'BFS_LEVEL_GRAPH',
+                  activeNode: u,
+                  totalFlow,
+                },
+                callStack: [{ name: `rejectEdge("${u}"→"${e.to}")`, params: { reason: 'ALREADY_LABELED' }, line: 17, isCurrent: true }],
+                variables: { from: u, to: e.to, existingLevel: levels[e.to], reason: 'ALREADY_LABELED' },
+                conditionEval: { expr: `levels[${e.to}] == null`, result: false },
+                pedagogy: {
+                  what: `"${e.to}" already has level ${levels[e.to]} from an earlier BFS step.`,
+                  why: 'Keeping the first label preserves shortest distances; relabeling through a longer route would break the level graph.',
+                  whatNext: 'Skip this edge.',
+                },
+                explanation: `"${e.to}" already labeled level ${levels[e.to]}; keeping the shortest-distance label.`,
+              });
+            }
+          } else if (e.to === u && e.flow > 0) {
+            if (levels[e.from] === undefined) {
+              levels[e.from] = levels[u] + 1;
+              queue.push(e.from);
+
+              frames.push({
+                stepIndex: frames.length,
+                totalSteps: 1,
+                codeLine: 17,
+                action: 'LEVEL_ASSIGNED',
+                state: {
+                  nodes: rawNodes,
+                  edges: flowEdges.map((e) => ({ ...e })),
+                  levels: { ...levels },
+                  source,
+                  sink,
+                  phase: 'BFS_LEVEL_GRAPH',
+                  activeNode: e.from,
+                  totalFlow,
+                },
+                callStack: [{ name: 'assignLevel', params: { node: e.from, level: levels[e.from], from: u, backward: true }, line: 17, isCurrent: true }],
+                variables: { node: e.from, assignedLevel: levels[e.from], via: u, residualCap: e.flow, backward: true },
+                conditionEval: { expr: `flow(${e.from}->${u}) = ${e.flow} > 0 && levels[${e.from}] == null`, result: true },
+                soundCue: { type: 'insert' },
+                pedagogy: {
+                  what: `Backward residual: the ${e.flow} unit(s) flowing on ${e.from} → ${u} can be cancelled, so "${u}" reaches "${e.from}" with one residual edge.`,
+                  why: 'The level graph includes backward residuals; that is how Dinic reroutes earlier choices within later phases.',
+                  whatNext: `Label "${e.from}" at level ${levels[e.from]} and enqueue it.`,
+                },
+                explanation: `Backward residual edge (${u} → ${e.from}) via cancelling ${e.flow} unit(s). Assigned level[${e.from}] = ${levels[e.from]}.`,
+              });
+            } else if (levels[e.from] !== undefined) {
+              frames.push({
+                stepIndex: frames.length,
+                totalSteps: 1,
+                codeLine: 17,
+                action: 'LEVEL_REJECT',
+                state: {
+                  nodes: rawNodes,
+                  edges: flowEdges.map((e) => ({ ...e })),
+                  levels: { ...levels },
+                  source,
+                  sink,
+                  phase: 'BFS_LEVEL_GRAPH',
+                  activeNode: u,
+                  totalFlow,
+                },
+                callStack: [{ name: `rejectEdge("${u}"→"${e.from}")`, params: { reason: 'ALREADY_LABELED' }, line: 17, isCurrent: true }],
+                variables: { from: u, to: e.from, existingLevel: levels[e.from], reason: 'ALREADY_LABELED', backward: true },
+                conditionEval: { expr: `levels[${e.from}] == null`, result: false },
+                pedagogy: {
+                  what: `Backward target "${e.from}" already has level ${levels[e.from]}.`,
+                  why: 'Same shortest-distance rule as forward edges: first (shortest) label wins.',
+                  whatNext: 'Skip this edge.',
+                },
+                explanation: `Backward residual target "${e.from}" already labeled level ${levels[e.from]}.`,
+              });
+            }
           }
         }
       }
@@ -310,7 +473,7 @@ int dinic(int s, int t) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 35,
+          codeLine: 10,
           isMilestone: true,
           milestoneTitle: `Max Flow Reached: ${totalFlow}`,
           action: 'TERMINATED',
@@ -324,10 +487,15 @@ int dinic(int s, int t) {
             activeNode: null,
             totalFlow,
           },
-          callStack: [{ name: 'dinic', params: { maxFlow: totalFlow, status: 'DONE' }, line: 35, isCurrent: true }],
+          callStack: [{ name: 'dinic', params: { maxFlow: totalFlow, status: 'DONE' }, line: 10, isCurrent: true }],
           variables: { totalFlow, status: 'Sink unreachable in residual graph', maxFlowOptimal: true },
           conditionEval: { expr: `levels['${sink}'] !== undefined`, result: false },
           soundCue: { type: 'complete' },
+          pedagogy: {
+            what: `BFS cannot reach "${sink}" in the residual graph, so the while loop ends and maxFlow = ${totalFlow} is returned.`,
+            why: 'Unreachability certifies that no augmenting path exists; by max-flow min-cut the current flow is optimal.',
+            whatNext: 'Compare with Edmonds-Karp: Dinic reaches the same max flow in fewer phases by pushing whole blocking flows.',
+          },
           explanation: `Sink "${sink}" is unreachable from source in residual graph (no augmenting paths remain). Maximum Flow = ${totalFlow}.`,
         });
         break;
@@ -336,7 +504,7 @@ int dinic(int s, int t) {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 10,
+        codeLine: 3,
         isMilestone: true,
         milestoneTitle: `Phase ${phaseNum} Level Graph (Sink dist = ${levels[sink]})`,
         action: 'LEVEL_GRAPH_BUILT',
@@ -350,12 +518,31 @@ int dinic(int s, int t) {
           activeNode: null,
           totalFlow,
         },
-        callStack: [{ name: 'bfsLevelGraph', params: { phase: phaseNum, sinkLevel: levels[sink] }, line: 10, isCurrent: true }],
+        callStack: [{ name: 'bfsLevelGraph', params: { phase: phaseNum, sinkLevel: levels[sink] }, line: 3, isCurrent: true }],
         variables: { phase: phaseNum, sinkLevel: levels[sink], levelsSummary: Object.entries(levels).map(([k, v]) => `${k}:${v}`).join(', ') },
         conditionEval: { expr: `levels['${sink}'] !== undefined`, result: true },
         soundCue: { type: 'step' },
+        pedagogy: {
+          what: `The level graph admits only edges with level[v] = level[u] + 1, and the sink sits at distance ${levels[sink]}.`,
+          why: 'Restricting DFS to admissible edges makes every push follow a shortest augmenting path, so no shorter path survives the blocking flow.',
+          whatNext: 'Push a blocking flow with DFS along admissible edges.',
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'dinic-blocking-flow',
+              question: 'What does it mean to push a "blocking flow" in the level graph, and why is another BFS needed afterwards?',
+              options: [
+                'No admissible path of the current shortest length remains, so the next BFS must relabel at strictly greater distances',
+                'The blocking flow is already the maximum flow, so the extra BFS is only a verification step',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Blocking means every level-graph path is saturated. The next augmenting path, if any, must be longer, so BFS rebuilds levels; this is why the phase count is bounded by O(V).',
+            }
+          : undefined,
         explanation: `Phase ${phaseNum} Level Graph built successfully. Distance to sink = ${levels[sink]}. DFS will push blocking flow strictly along admissible edges where level[v] == level[u] + 1.`,
       });
+      checkpointAdded = true;
 
       // DFS to find blocking flows
       let phasePushed = 0;
@@ -385,24 +572,45 @@ int dinic(int s, int t) {
         path.push(source);
         const pushed = dfs(source);
 
-        if (pushed === 0 || pushed === Infinity) break;
-
-        for (let k = 0; k < edgeIdxPath.length; k++) {
-          const idx = edgeIdxPath[k];
-          if (isRevPath[k]) flowEdges[idx].flow -= pushed;
-          else flowEdges[idx].flow += pushed;
+        if (pushed === 0 || pushed === Infinity) {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 6,
+            isMilestone: true,
+            milestoneTitle: `Phase ${phaseNum} Blocking Flow Done (+${phasePushed})`,
+            action: 'BLOCKING_FLOW_DONE',
+            state: {
+              nodes: rawNodes,
+              edges: flowEdges.map((e) => ({ ...e })),
+              levels: { ...levels },
+              source,
+              sink,
+              phase: 'DFS_BLOCKING_FLOW',
+              activeNode: null,
+              totalFlow,
+            },
+            callStack: [{ name: 'dfsBlocking', params: { phase: phaseNum, phasePushed }, line: 6, isCurrent: true }],
+            variables: { phasePushed, totalFlow, status: 'No more admissible paths in this level graph' },
+            conditionEval: { expr: `path is empty`, result: true },
+            soundCue: { type: 'complete' },
+            pedagogy: {
+              what: `DFS finds no admissible path: every level-graph path is saturated. Phase ${phaseNum} pushed ${phasePushed} unit(s) in total.`,
+              why: 'A blocking flow is complete exactly when the admissible subgraph has no s→t path left.',
+              whatNext: 'Rebuild the level graph with another BFS — the next augmenting path, if any, is strictly longer.',
+            },
+            explanation: `Phase ${phaseNum} blocking flow complete: +${phasePushed} unit(s), cumulative ${totalFlow}. All admissible paths in this level graph are exhausted.`,
+          });
+          break;
         }
-
-        totalFlow += pushed;
-        phasePushed += pushed;
 
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 25,
+          codeLine: 5,
           isMilestone: true,
-          milestoneTitle: `Pushed ${pushed} Flow (+${pushed} -> ${totalFlow})`,
-          action: 'BLOCKING_FLOW_PUSH',
+          milestoneTitle: `Admissible Path: ${path.join(' → ')}`,
+          action: 'PATH_FOUND',
           state: {
             nodes: rawNodes,
             edges: flowEdges.map((e) => ({ ...e })),
@@ -413,11 +621,118 @@ int dinic(int s, int t) {
             activeNode: path[path.length - 1],
             totalFlow,
           },
-          callStack: [{ name: 'dfsBlocking', params: { path: path.join('->'), pushed }, line: 25, isCurrent: true }],
+          callStack: [{ name: 'dfsBlocking', params: { path: path.join('->') }, line: 5, isCurrent: true }],
+          variables: { path: path.join(' -> '), hops: path.length - 1, phasePushed },
+          pedagogy: {
+            what: `DFS descends only admissible edges (level + 1 each hop) and reaches the sink via ${path.join(' → ')}.`,
+            why: 'Because every hop increases the level by exactly one, this path has the current shortest length ${path.length - 1}.',
+            whatNext: 'Compute the bottleneck along this path.',
+          },
+          explanation: `DFS found admissible path [${path.join(' -> ')}] (length ${path.length - 1}) along level-increasing edges.`,
+        });
+
+        const pathResiduals = edgeIdxPath.map((idx) => flowEdges[idx].capacity - flowEdges[idx].flow);
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 7,
+          action: 'BOTTLENECK',
+          state: {
+            nodes: rawNodes,
+            edges: flowEdges.map((e) => ({ ...e })),
+            levels: { ...levels },
+            source,
+            sink,
+            phase: 'DFS_BLOCKING_FLOW',
+            activeNode: path[path.length - 1],
+            totalFlow,
+          },
+          callStack: [{ name: 'computeBottleneck', params: { push: pushed }, line: 7, isCurrent: true }],
+          variables: {
+            push: pushed,
+            path: path.join(' -> '),
+            residuals: pathResiduals.join(', '),
+          },
+          pedagogy: {
+            what: `The bottleneck is ${pushed}, the smallest residual capacity on ${path.join(' → ')}.`,
+            why: 'Pushing more would overflow the tightest edge; pushing less would leave capacity unused.',
+            whatNext: 'Push the bottleneck along every path edge.',
+          },
+          explanation: `Bottleneck push = ${pushed}: minimum of residual capacities [${pathResiduals.join(', ')}] along the path.`,
+        });
+
+        for (let k = 0; k < edgeIdxPath.length; k++) {
+          const idx = edgeIdxPath[k];
+          const e = flowEdges[idx];
+          const rev = isRevPath[k];
+          const before = e.flow;
+          if (rev) flowEdges[idx].flow -= pushed;
+          else flowEdges[idx].flow += pushed;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 8,
+            action: 'AUGMENT_EDGE',
+            state: {
+              nodes: rawNodes,
+              edges: flowEdges.map((x) => ({ ...x })),
+              levels: { ...levels },
+              source,
+              sink,
+              phase: 'DFS_BLOCKING_FLOW',
+              activeNode: e.to,
+              totalFlow,
+            },
+            callStack: [{ name: `pushAlong("${e.from}" → "${e.to}")`, params: { delta: pushed }, line: 8, isCurrent: true }],
+            variables: {
+              pathEdge: `${e.from} → ${e.to}`,
+              direction: rev ? 'BACKWARD_CANCEL' : 'FORWARD_PUSH',
+              flowBefore: before,
+              flowAfter: flowEdges[idx].flow,
+              residualAfter: e.capacity - flowEdges[idx].flow,
+            },
+            pedagogy: {
+              what: rev
+                ? `Cancelled ${pushed} unit(s) on ${e.from} → ${e.to}: flow ${before} → ${flowEdges[idx].flow}.`
+                : `Pushed ${pushed} unit(s) on ${e.from} → ${e.to}: flow ${before} → ${flowEdges[idx].flow} of ${e.capacity}.`,
+              why: 'Each admissible edge carries the full bottleneck; the tightest edge becomes saturated and leaves the level graph.',
+              whatNext: 'Continue with the next edge of the path.',
+            },
+            explanation: rev
+              ? `Cancel ${pushed} on (${e.from} → ${e.to}): flow ${before} → ${flowEdges[idx].flow}.`
+              : `Push ${pushed} on (${e.from} → ${e.to}): flow ${before} → ${flowEdges[idx].flow} of ${e.capacity}.`,
+          });
+        }
+
+        totalFlow += pushed;
+        phasePushed += pushed;
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 9,
+          action: 'MAXFLOW_UPDATE',
+          state: {
+            nodes: rawNodes,
+            edges: flowEdges.map((e) => ({ ...e })),
+            levels: { ...levels },
+            source,
+            sink,
+            phase: 'DFS_BLOCKING_FLOW',
+            activeNode: path[path.length - 1],
+            totalFlow,
+          },
+          callStack: [{ name: 'dinic', params: { maxFlow: totalFlow, phasePushed }, line: 9, isCurrent: true }],
           variables: { pushed, currentFlow: totalFlow, path: path.join(' -> '), phasePushed },
           conditionEval: { expr: `pushedFlow > 0`, result: true },
           soundCue: { type: 'swap' },
-          explanation: `DFS found admissible augmenting path [${path.join(' -> ')}] with bottleneck capacity ${pushed}. Pushed ${pushed} units. Cumulative flow: ${totalFlow}.`,
+          pedagogy: {
+            what: `maxFlow += ${pushed} → ${totalFlow} (this phase: +${phasePushed}).`,
+            why: 'Every push on an admissible path is a valid flow increase, so the total accumulates monotonically.',
+            whatNext: 'Search for the next admissible path in the same level graph.',
+          },
+          explanation: `Pushed ${pushed} unit(s) along ${path.join(' -> ')}. Cumulative flow: ${totalFlow}.`,
         });
       }
 
