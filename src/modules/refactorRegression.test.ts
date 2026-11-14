@@ -2398,6 +2398,41 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
   });
 
+  it('red-black fixup splits recolor/rotate cases and keeps the root black invariant', () => {
+    const mod = moduleById('red-black-tree');
+    const input = { keys: [10, 20, 30, 15, 25] };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'rb-fixup-cases').length).toBe(1);
+
+    // Five red inserts and two root-black enforcements (after 10 and after the case-1 recolor).
+    expect(timeline.filter((f) => f.action === 'INSERT_RED').length).toBe(5);
+    expect(timeline.filter((f) => f.action === 'ROOT_BLACK').length).toBe(2);
+
+    // Insert 30 triggers the symmetric case 3 (recolor + rotate on the grandparent).
+    expect(timeline.filter((f) => f.action === 'RECOLOR_CASE_3_SYM').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'ROTATE_CASE_3_SYM').length).toBe(1);
+
+    // Insert 15 triggers case 1: recolor parent+uncle (8), grandparent (9), ascend (10).
+    expect(timeline.filter((f) => f.action === 'RECOLOR_CASE_1').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'RECOLOR_GRANDPARENT').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'CASE1_ASCEND').length).toBe(1);
+
+    // Final tree: 20 black root, 10 black left with 15 red child, 30 black with 25 red child.
+    const tree = timeline[timeline.length - 1].state.tree;
+    expect(tree.key).toBe(20);
+    expect(tree.color).toBe('BLACK');
+    expect(tree.left.key).toBe(10);
+    expect(tree.left.color).toBe('BLACK');
+    expect(tree.left.right.color).toBe('RED');
+    expect(tree.right.key).toBe(30);
+    expect(tree.right.color).toBe('BLACK');
+    expect(tree.right.left.color).toBe('RED');
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

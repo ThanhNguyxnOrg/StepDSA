@@ -124,7 +124,11 @@ export const redBlackTreeModule: AlgorithmModule<
     }
     root.color = BLACK;
 }`,
-    pseudocode: `function insertFixup(root, z):
+    pseudocode: `function insert(key):
+    z = new Node(key, RED)
+    BST insertion of z by key comparisons
+    insertFixup(z)
+function insertFixup(z):
     while z.parent.color == RED:
         if uncle is RED:
             recolor parent and uncle BLACK
@@ -161,10 +165,12 @@ export const redBlackTreeModule: AlgorithmModule<
 
     let root: InternalNode | null = null;
 
+    let checkpointAdded = false;
+
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 2,
+      codeLine: 1,
       action: 'INIT',
       state: {
         tree: null,
@@ -175,6 +181,11 @@ export const redBlackTreeModule: AlgorithmModule<
       },
       callStack: [{ name: 'initRBTree', params: { totalKeys: rawKeys.length } }],
       variables: { totalKeys: rawKeys.length, status: 'Empty tree' },
+      pedagogy: {
+        what: `Insert each key of [${rawKeys.join(', ')}] as a normal BST leaf, painted RED, then repair any red-red conflict.`,
+        why: 'Red-Black rules (root black, no red-red parent-child, equal black height) keep the tree height ≤ 2·log₂(n+1), so operations stay logarithmic.',
+        whatNext: 'Insert the first key; every new node starts RED.',
+      },
       explanation: `Initialized Red-Black tree. Ready to insert [${rawKeys.join(', ')}].`,
     });
 
@@ -226,7 +237,7 @@ export const redBlackTreeModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 10,
+        codeLine: 3,
         action: 'INSERT_RED',
         state: {
           tree: toRBNode(root),
@@ -237,7 +248,12 @@ export const redBlackTreeModule: AlgorithmModule<
         },
         callStack: [{ name: 'insert', params: { key, color: 'RED' } }],
         variables: { insertedKey: key, initialColor: 'RED' },
-        explanation: `Inserted key ${key} as RED leaf. Checking Red-Black properties.`,
+        pedagogy: {
+          what: `Key ${key} found its BST slot by simple comparisons and starts RED.`,
+          why: 'A red leaf adds no black height, so only the no-red-red rule can be broken — exactly what fixup repairs.',
+          whatNext: z.parent ? `Check the parent (${z.parent.key}); if it is RED, run the fixup cases.` : 'It is the root; recolor it BLACK.',
+        },
+        explanation: `Inserted key ${key} as RED leaf (BST position found by comparisons). Checking Red-Black properties.`,
       });
 
       // Fixup logic
@@ -249,26 +265,90 @@ export const redBlackTreeModule: AlgorithmModule<
         if (curr.parent === grandParent.left) {
           const uncle = grandParent.right;
           if (uncle && uncle.color === 'RED') {
-            curr.parent.color = 'BLACK';
+            const parentC = curr.parent;
+            parentC.color = 'BLACK';
             uncle.color = 'BLACK';
-            grandParent.color = 'RED';
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
-              codeLine: 15,
+              codeLine: 8,
               action: 'RECOLOR_CASE_1',
               state: {
                 tree: toRBNode(root),
                 activeKey: curr.key,
-                recolorEvent: `Uncle ${uncle.key} is RED: recolored parent & uncle to BLACK, grandparent ${grandParent.key} to RED`,
+                recolorEvent: `Uncle ${uncle.key} is RED: recolored parent ${parentC.key} & uncle ${uncle.key} to BLACK`,
                 rotationEvent: null,
                 insertedKey: key,
               },
-              callStack: [{ name: 'recolor', params: { parent: curr.parent.key, uncle: uncle.key, grandParent: grandParent.key } }],
-              variables: { case: 'Case 1 (Red Uncle)', parent: curr.parent.key, uncle: uncle.key },
-              explanation: `Case 1: Uncle ${uncle.key} is RED. Recolor parent and uncle to BLACK, grandparent ${grandParent.key} to RED.`,
+              callStack: [{ name: 'recolor', params: { parent: parentC.key, uncle: uncle.key }, line: 8, isCurrent: true }],
+              variables: { case: 'Case 1 (Red Uncle)', parent: parentC.key, uncle: uncle.key },
+              pedagogy: {
+                what: `Parent ${parentC.key} and uncle ${uncle.key} both become BLACK.`,
+                why: 'The conflict pair is pushed apart; the subtree\'s black height rises on both sides equally, preserving balance.',
+                whatNext: `Recolor grandparent ${grandParent.key} RED to keep the black height constant.`,
+              },
+              checkpoint: !checkpointAdded
+                ? {
+                    id: 'rb-fixup-cases',
+                    question: 'Why does Case 1 (red uncle) recurse upward while Cases 2–3 finish after rotations?',
+                    options: [
+                      'Case 1 only moves the red-red conflict to the grandparent and repeats, while the triangle-to-line rotation plus a single rotation resolves the conflict locally',
+                      'Because rotations are only allowed when the uncle is black, so Case 1 must wait its turn',
+                    ],
+                    correctIndex: 0,
+                    explanation:
+                      'Recoloring conserves black heights but can leave grandparent red under a red parent — hence the loop continues from there. Cases 2–3 restructure locally with at most two rotations and end the fixup.',
+                  }
+                : undefined,
+              explanation: `Case 1: Uncle ${uncle.key} is RED. Recolored parent ${parentC.key} and uncle ${uncle.key} to BLACK first.`,
             });
+            checkpointAdded = true;
+
+            grandParent.color = 'RED';
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 9,
+              action: 'RECOLOR_GRANDPARENT',
+              state: {
+                tree: toRBNode(root),
+                activeKey: grandParent.key,
+                recolorEvent: `Grandparent ${grandParent.key} recolored RED`,
+                rotationEvent: null,
+                insertedKey: key,
+              },
+              callStack: [{ name: 'recolor', params: { grandParent: grandParent.key }, line: 9, isCurrent: true }],
+              variables: { case: 'Case 1 (Red Uncle)', grandParent: grandParent.key },
+              pedagogy: {
+                what: `Grandparent ${grandParent.key} turns RED.`,
+                why: 'Both child branches grew a black node, so the grandparent loses its black to keep every root-to-leaf black count unchanged.',
+                whatNext: 'Move the fixup pointer up to the grandparent.',
+              },
+              explanation: `Case 1: recolored grandparent ${grandParent.key} to RED (same black height, conflict moved up).`,
+            });
+
             curr = grandParent;
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 10,
+              action: 'CASE1_ASCEND',
+              state: {
+                tree: toRBNode(root),
+                activeKey: curr.key,
+                recolorEvent: null,
+                rotationEvent: null,
+                insertedKey: key,
+              },
+              callStack: [{ name: 'fixupUp', params: { z: curr.key }, line: 10, isCurrent: true }],
+              variables: { z: curr.key },
+              pedagogy: {
+                what: `z = grandparent (${curr.key}); the possible red-red conflict moved two levels up.`,
+                why: 'Only ancestors can still be violated, so the loop continues from here rather than from the original leaf.',
+                whatNext: 'Re-test the while condition with the grandparent as z.',
+              },
+              explanation: `Case 1 continue: z = grandparent ${curr.key}; loop re-checks z.parent color.`,
+            });
           } else {
             if (curr === curr.parent.right) {
               curr = curr.parent;
@@ -276,7 +356,7 @@ export const redBlackTreeModule: AlgorithmModule<
               frames.push({
                 stepIndex: frames.length,
                 totalSteps: 1,
-                codeLine: 18,
+                codeLine: 12,
                 action: 'ROTATE_CASE_2',
                 state: {
                   tree: toRBNode(root),
@@ -285,55 +365,138 @@ export const redBlackTreeModule: AlgorithmModule<
                   rotationEvent: `Left rotate on ${curr.key} to transform triangle to line`,
                   insertedKey: key,
                 },
-                callStack: [{ name: 'leftRotate', params: { pivot: curr.key } }],
+                callStack: [{ name: 'leftRotate', params: { pivot: curr.key }, line: 12, isCurrent: true }],
                 variables: { case: 'Case 2 (Triangle)', pivot: curr.key },
+                pedagogy: {
+                  what: `The zig-zag (inner child) is rotated at ${curr.key} into a straight line.`,
+                  why: 'Case 3 assumes a linear chain; the triangle→line rotation is a reversible preparation step, not a fix by itself.',
+                  whatNext: 'Now handle the line with one rotation at the grandparent.',
+                },
                 explanation: `Case 2: Inner triangle formed. Left rotate on ${curr.key} to align into linear path.`,
               });
             }
             if (curr.parent) curr.parent.color = 'BLACK';
+            const case3Parent = curr.parent;
             grandParent.color = 'RED';
-            rightRotate(grandParent);
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
-              codeLine: 22,
-              action: 'ROTATE_CASE_3',
+              codeLine: 13,
+              action: 'RECOLOR_CASE_3',
               state: {
                 tree: toRBNode(root),
                 activeKey: curr.key,
                 recolorEvent: `Recolor parent BLACK, grandparent ${grandParent.key} RED`,
+                rotationEvent: null,
+                insertedKey: key,
+              },
+              callStack: [{ name: 'recolor', params: { parent: case3Parent?.key ?? 0, grandParent: grandParent.key }, line: 13, isCurrent: true }],
+              variables: { case: 'Case 3 (Line)', pivot: grandParent.key, parent: case3Parent?.key ?? 0 },
+              pedagogy: {
+                what: `Parent ${case3Parent?.key} becomes BLACK and grandparent ${grandParent.key} RED.`,
+                why: 'The rotation will lift the parent; pre-swapping colors keeps the black height balanced afterwards.',
+                whatNext: `Rotate the grandparent ${grandParent.key} right.`,
+              },
+              explanation: `Case 3: recolored parent ${case3Parent?.key} BLACK and grandparent ${grandParent.key} RED before rotating.`,
+            });
+
+            rightRotate(grandParent);
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 14,
+              action: 'ROTATE_CASE_3',
+              state: {
+                tree: toRBNode(root),
+                activeKey: curr.key,
+                recolorEvent: null,
                 rotationEvent: `Right rotate on ${grandParent.key}`,
                 insertedKey: key,
               },
-              callStack: [{ name: 'rightRotate', params: { pivot: grandParent.key } }],
+              callStack: [{ name: 'rightRotate', params: { pivot: grandParent.key }, line: 14, isCurrent: true }],
               variables: { case: 'Case 3 (Line)', pivot: grandParent.key },
-              explanation: `Case 3: Linear Red-Red conflict. Right rotated on ${grandParent.key} and swapped colors.`,
+              pedagogy: {
+                what: `Right rotation lifts the (now BLACK) parent above the (now RED) grandparent.`,
+                why: 'The rotation restores both the no-red-red rule and an equal black height; no further fixup is needed on this path.',
+                whatNext: 'The while condition re-checks; the parent is BLACK, so the fixup ends.',
+              },
+              explanation: `Case 3: Right rotated on ${grandParent.key}; local conflict resolved.`,
             });
           }
         } else {
           // Symmetric right side
           const uncle = grandParent.left;
           if (uncle && uncle.color === 'RED') {
-            curr.parent.color = 'BLACK';
+            const parentC = curr.parent;
+            parentC.color = 'BLACK';
             uncle.color = 'BLACK';
-            grandParent.color = 'RED';
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
-              codeLine: 15,
+              codeLine: 8,
               action: 'RECOLOR_CASE_1_SYM',
               state: {
                 tree: toRBNode(root),
                 activeKey: curr.key,
-                recolorEvent: `Symmetric: Uncle ${uncle.key} is RED: recolored parent & uncle to BLACK, grandparent ${grandParent.key} to RED`,
+                recolorEvent: `Symmetric: Uncle ${uncle.key} is RED: recolored parent ${parentC.key} & uncle ${uncle.key} to BLACK`,
                 rotationEvent: null,
                 insertedKey: key,
               },
-              callStack: [{ name: 'recolor', params: { parent: curr.parent.key, uncle: uncle.key, grandParent: grandParent.key } }],
-              variables: { case: 'Case 1 (Symmetric)', parent: curr.parent.key, uncle: uncle.key },
-              explanation: `Symmetric Case 1: Recolor parent and uncle to BLACK, grandparent to RED.`,
+              callStack: [{ name: 'recolor', params: { parent: parentC.key, uncle: uncle.key }, line: 8, isCurrent: true }],
+              variables: { case: 'Case 1 (Symmetric)', parent: parentC.key, uncle: uncle.key },
+              pedagogy: {
+                what: `Symmetric Case 1: parent ${parentC.key} and uncle ${uncle.key} both turn BLACK.`,
+                why: 'The mirror side follows the same logic — the conflict moves up instead of rotating locally.',
+                whatNext: `Recolor grandparent ${grandParent.key} RED.`,
+              },
+              explanation: `Symmetric Case 1: recolored parent ${parentC.key} and uncle ${uncle.key} to BLACK.`,
             });
+
+            grandParent.color = 'RED';
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 9,
+              action: 'RECOLOR_GRANDPARENT_SYM',
+              state: {
+                tree: toRBNode(root),
+                activeKey: grandParent.key,
+                recolorEvent: `Grandparent ${grandParent.key} recolored RED`,
+                rotationEvent: null,
+                insertedKey: key,
+              },
+              callStack: [{ name: 'recolor', params: { grandParent: grandParent.key }, line: 9, isCurrent: true }],
+              variables: { case: 'Case 1 (Symmetric)', grandParent: grandParent.key },
+              pedagogy: {
+                what: `Grandparent ${grandParent.key} becomes RED.`,
+                why: 'Black heights stay equal on both sides; the violation, if any, is now at the grandparent.',
+                whatNext: 'Continue the loop from the grandparent.',
+              },
+              explanation: `Symmetric Case 1: recolored grandparent ${grandParent.key} to RED.`,
+            });
+
             curr = grandParent;
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 10,
+              action: 'CASE1_ASCEND_SYM',
+              state: {
+                tree: toRBNode(root),
+                activeKey: curr.key,
+                recolorEvent: null,
+                rotationEvent: null,
+                insertedKey: key,
+              },
+              callStack: [{ name: 'fixupUp', params: { z: curr.key }, line: 10, isCurrent: true }],
+              variables: { z: curr.key },
+              pedagogy: {
+                what: `z = grandparent (${curr.key}); fixup continues from here.`,
+                why: 'Same upward propagation as the mirrored case — only ancestors can still violate the rules.',
+                whatNext: 'Re-test the while condition.',
+              },
+              explanation: `Symmetric Case 1 continue: z = grandparent ${curr.key}.`,
+            });
           } else {
             if (curr === curr.parent.left) {
               curr = curr.parent;
@@ -341,7 +504,7 @@ export const redBlackTreeModule: AlgorithmModule<
               frames.push({
                 stepIndex: frames.length,
                 totalSteps: 1,
-                codeLine: 18,
+                codeLine: 12,
                 action: 'ROTATE_CASE_2_SYM',
                 state: {
                   tree: toRBNode(root),
@@ -350,29 +513,62 @@ export const redBlackTreeModule: AlgorithmModule<
                   rotationEvent: `Right rotate on ${curr.key}`,
                   insertedKey: key,
                 },
-                callStack: [{ name: 'rightRotate', params: { pivot: curr.key } }],
+                callStack: [{ name: 'rightRotate', params: { pivot: curr.key }, line: 12, isCurrent: true }],
                 variables: { case: 'Case 2 (Symmetric Triangle)', pivot: curr.key },
+                pedagogy: {
+                  what: `Symmetric Case 2: the triangle is straightened with a right rotation at ${curr.key}.`,
+                  why: 'Same preparation as the left-side case 2 — line up the chain for one final rotation.',
+                  whatNext: 'Apply the line fix at the grandparent.',
+                },
                 explanation: `Symmetric Case 2: Right rotate on ${curr.key}.`,
               });
             }
             if (curr.parent) curr.parent.color = 'BLACK';
+            const case3ParentSym = curr.parent;
             grandParent.color = 'RED';
-            leftRotate(grandParent);
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
-              codeLine: 22,
-              action: 'ROTATE_CASE_3_SYM',
+              codeLine: 13,
+              action: 'RECOLOR_CASE_3_SYM',
               state: {
                 tree: toRBNode(root),
                 activeKey: curr.key,
                 recolorEvent: `Recolor parent BLACK, grandparent ${grandParent.key} RED`,
+                rotationEvent: null,
+                insertedKey: key,
+              },
+              callStack: [{ name: 'recolor', params: { parent: case3ParentSym?.key ?? 0, grandParent: grandParent.key }, line: 13, isCurrent: true }],
+              variables: { case: 'Case 3 (Symmetric Line)', pivot: grandParent.key, parent: case3ParentSym?.key ?? 0 },
+              pedagogy: {
+                what: `Parent ${case3ParentSym?.key} BLACK, grandparent ${grandParent.key} RED.`,
+                why: 'Pre-rotation color swap that keeps black heights intact after the rotation lifts the parent.',
+                whatNext: `Left rotate the grandparent ${grandParent.key}.`,
+              },
+              explanation: `Symmetric Case 3: recolored colors before rotating the grandparent.`,
+            });
+
+            leftRotate(grandParent);
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 14,
+              action: 'ROTATE_CASE_3_SYM',
+              state: {
+                tree: toRBNode(root),
+                activeKey: curr.key,
+                recolorEvent: null,
                 rotationEvent: `Left rotate on ${grandParent.key}`,
                 insertedKey: key,
               },
-              callStack: [{ name: 'leftRotate', params: { pivot: grandParent.key } }],
+              callStack: [{ name: 'leftRotate', params: { pivot: grandParent.key }, line: 14, isCurrent: true }],
               variables: { case: 'Case 3 (Symmetric Line)', pivot: grandParent.key },
-              explanation: `Symmetric Case 3: Left rotate on ${grandParent.key}.`,
+              pedagogy: {
+                what: `Left rotation lifts the BLACK parent above the RED grandparent on the mirrored side.`,
+                why: 'The subtree now satisfies no-red-red with unchanged black height; fixup terminates.',
+                whatNext: 'Re-test the loop condition.',
+              },
+              explanation: `Symmetric Case 3: Left rotated on ${grandParent.key}; conflict resolved.`,
             });
           }
         }
@@ -383,7 +579,7 @@ export const redBlackTreeModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 25,
+          codeLine: 15,
           action: 'ROOT_BLACK',
           state: {
             tree: toRBNode(root),
@@ -392,8 +588,13 @@ export const redBlackTreeModule: AlgorithmModule<
             rotationEvent: null,
             insertedKey: key,
           },
-          callStack: [{ name: 'enforceRootBlack', params: { rootKey: root.key } }],
+          callStack: [{ name: 'enforceRootBlack', params: { rootKey: root.key }, line: 15, isCurrent: true }],
           variables: { rootKey: root.key, color: 'BLACK' },
+          pedagogy: {
+            what: `Root ${root.key} is forced BLACK.`,
+            why: 'Property 2 fixes the black height reference at the root; without it, all root-to-leaf counts would shift by one.',
+            whatNext: 'Insertion for this key is complete.',
+          },
           explanation: `Enforced Property 2: Root node ${root.key} recolored to BLACK.`,
         });
       }
