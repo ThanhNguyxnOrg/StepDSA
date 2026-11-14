@@ -123,14 +123,21 @@ function query(i):
     const tree: number[] = Array(n + 1).fill(0);
     const frames: ExecutionFrame<FenwickTreeState>[] = [];
 
+    let checkpointAdded = false;
+
     // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 2,
-      explanation: `Initialize Fenwick Tree (BIT) with 1-based indexing for ${n} elements. Lowbit trick: lowbit(i) = i & (-i).`,
+      codeLine: 1,
+      explanation: `Initialize Fenwick Tree (BIT) with 1-based indexing for ${n} elements. Build by calling update(${1}, A[1]) … update(${n}, A[n]).`,
       variables: { size: n, array: `[${originalArray.join(', ')}]` },
-      callStack: [{ name: 'initBIT()', params: { n }, line: 2, isCurrent: true }],
+      callStack: [{ name: 'initBIT()', params: { n }, line: 1, isCurrent: true }],
+      pedagogy: {
+        what: `A Fenwick tree stores partial sums in tree[1..n]; index i is responsible for a block of length lowbit(i) = i & (-i).`,
+        why: 'Both update and query walk indices by adding/subtracting that lowest set bit, visiting only O(log n) nodes.',
+        whatNext: 'Build the tree by updating every element — each update touches all blocks covering it.',
+      },
       state: {
         originalArray,
         tree: [...tree],
@@ -153,12 +160,16 @@ function query(i):
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 4,
-          explanation: `Build: Add element A[${idx}]=${delta} into tree[${i}]. lowbit(${i}) = ${lowbit} -> Next update index: ${i} + ${lowbit} = ${
-            i + lowbit
-          }.`,
+          codeLine: 3,
+          action: 'UPDATE_ADD',
+          explanation: `update(idx=${idx}): tree[${i}] += ${delta} → tree[${i}] = ${tree[i]}. Block length lowbit(${i}) = ${lowbit}.`,
           variables: { elementIdx: idx, treeIdx: i, lowbit, delta, treeVal: tree[i] },
-          callStack: [{ name: `update(idx=${idx}, delta=${delta})`, params: { i, delta }, line: 4, isCurrent: true }],
+          callStack: [{ name: `update(idx=${idx}, delta=${delta})`, params: { i, delta }, line: 3, isCurrent: true }],
+          pedagogy: {
+            what: `Element A[${idx}] = ${delta} is folded into tree[${i}], whose block covers index ${idx}.`,
+            why: 'Every ancestor block that spans the changed index must include the delta — those are exactly the indices reached by lowbit jumping.',
+            whatNext: `Advance i by lowbit: ${i} + ${lowbit} = ${i + lowbit}.`,
+          },
           state: {
             originalArray,
             tree: [...tree],
@@ -169,6 +180,28 @@ function query(i):
         });
 
         i += lowbit;
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 4,
+          action: 'UPDATE_ADVANCE',
+          explanation: `i = i + lowbit(${i - lowbit}) = ${i}. ${i <= n ? `tree[${i}] is the next covering block.` : `i > n = ${n}, so update stops.`}`,
+          variables: { nextIdx: i, inRange: i <= n, elementIdx: idx },
+          callStack: [{ name: `update(idx=${idx})`, params: { nextI: i }, line: 4, isCurrent: true }],
+          pedagogy: {
+            what: i <= n ? `Next covering block index ${i}.` : 'The jump left the array — update is complete.',
+            why: 'Adding the lowbit climbs to the next block that covers the same position; each step at least doubles the block size, hence O(log n).',
+            whatNext: i <= n ? `Add ${delta} into tree[${i}].` : `Continue with A[${idx + 1}] or run the query.`,
+          },
+          state: {
+            originalArray,
+            tree: [...tree],
+            activeIdx: i <= n ? i : i - (i & -i),
+            lowbitVal: i <= n ? i & -i : 0,
+            operation: 'UPDATE',
+          },
+        });
       }
     }
 
@@ -182,12 +215,29 @@ function query(i):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 9,
-        explanation: `Query Prefix Sum [1..${queryIdx}]: Add tree[${q}] (${tree[q]}) -> Partial Sum = ${sum}. lowbit(${q}) = ${lowbit} -> Next query index: ${q} - ${lowbit} = ${
-          q - lowbit
-        }.`,
-        variables: { queryTarget: queryIdx, currentTreeIdx: q, lowbit, partialSum: sum },
-        callStack: [{ name: `query(i=${q})`, params: { q, sum }, line: 9, isCurrent: true }],
+        codeLine: 8,
+        action: 'QUERY_ADD',
+        explanation: `query(${queryIdx}): sum += tree[${q}] (${tree[q]}) → partial sum ${sum}. Block [${q - lowbit + 1}..${q}] is added whole.`,
+        variables: { queryTarget: queryIdx, currentTreeIdx: q, lowbit, addedBlock: `[${q - lowbit + 1}..${q}]`, partialSum: sum },
+        callStack: [{ name: `query(i=${q})`, params: { q, sum }, line: 8, isCurrent: true }],
+        pedagogy: {
+          what: `tree[${q}] already equals the sum of the block [${q - lowbit + 1}..${q}], so it is added in one step.`,
+          why: 'The prefix [1..i] decomposes into these disjoint blocks; adding them tiling-wise gives the exact sum.',
+          whatNext: `Subtract lowbit: q = ${q} - ${lowbit} = ${q - lowbit}.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'fenwick-lowbit-blocks',
+              question: 'Why does subtracting lowbit (i & -i) enumerate the prefix [1..i] exactly?',
+              options: [
+                'lowbit isolates the lowest set bit, and each subtraction jumps back to the next disjoint block, so the visited blocks tile [1..i] with no overlap',
+                'Because the index is halved at every step, so the loop runs log2 n times',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Each block [i - lowbit + 1 .. i] is disjoint from the next (i - lowbit), and their lengths sum to exactly i. The count of steps is the number of set bits, at most log n — but the correctness comes from the tiling, not from halving.',
+            }
+          : undefined,
         state: {
           originalArray,
           tree: [...tree],
@@ -197,22 +247,53 @@ function query(i):
           querySum: sum,
         },
       });
+      checkpointAdded = true;
 
       q -= lowbit;
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 9,
+        action: 'QUERY_ADVANCE',
+        explanation: `q = q - lowbit(${q + lowbit}) = ${q}. ${q > 0 ? `Continue with tree[${q}].` : 'q == 0 — all blocks collected.'}`,
+        variables: { nextIdx: q, done: q <= 0, queryTarget: queryIdx, partialSum: sum },
+        callStack: [{ name: `query(i=${q})`, params: { nextQ: q }, line: 9, isCurrent: true }],
+        pedagogy: {
+          what: q > 0 ? `The walk continues at index ${q}.` : 'No blocks remain; the prefix sum is complete.',
+          why: 'Subtracting the block length removes exactly the block just added, so blocks never overlap.',
+          whatNext: q > 0 ? `Add tree[${q}].` : 'Return the accumulated sum.',
+        },
+        state: {
+          originalArray,
+          tree: [...tree],
+          activeIdx: q,
+          lowbitVal: q > 0 ? q & -q : 0,
+          operation: 'QUERY',
+          querySum: sum,
+        },
+      });
     }
 
     // Final Completion
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 12,
-      explanation: `Fenwick Tree execution complete! Prefix sum of A[1..${queryIdx}] is ${sum} computed in O(log N) jumps.`,
+      codeLine: 10,
+      isMilestone: true,
+      milestoneTitle: `Prefix Sum [1..${queryIdx}] = ${sum}`,
+      explanation: `return sum: prefix sum of A[1..${queryIdx}] is ${sum}, computed in O(log N) jumps.`,
       variables: {
         totalElements: n,
         queryIndex: queryIdx,
         prefixSumResult: sum,
       },
-      callStack: [{ name: 'complete()', params: { queryIdx, sum }, line: 12, isCurrent: true }],
+      callStack: [{ name: 'complete()', params: { queryIdx, sum }, line: 10, isCurrent: true }],
+      pedagogy: {
+        what: `The query cost only O(log ${n}) additions thanks to the block decomposition.`,
+        why: 'Point updates would walk the same kind of index chain upward, so both operations are logarithmic.',
+        whatNext: 'Fenwick trees suit prefix sums with updates; segment trees generalize to arbitrary associative merges.',
+      },
       state: {
         originalArray,
         tree: [...tree],

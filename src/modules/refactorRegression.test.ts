@@ -2370,6 +2370,34 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, { array: [1, 3, 5, 7], query: [0, 3] } as any).errorCount).toBe(0);
   });
 
+  it('Fenwick tree folds each element into its covering blocks and tiles the prefix on query', () => {
+    const mod = moduleById('fenwick-tree');
+    const input = { array: [3, 2, -1, 6], queryIndex: 3 };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'fenwick-lowbit-blocks').length).toBe(1);
+
+    // Build: every element visits exactly its covering blocks (8 add+advance pairs in total).
+    expect(timeline.filter((f) => f.action === 'UPDATE_ADD').length).toBe(8);
+    expect(timeline.filter((f) => f.action === 'UPDATE_ADVANCE').length).toBe(8);
+    const adds = timeline.filter((f) => f.action === 'UPDATE_ADD');
+    expect(adds[0].variables?.treeVal).toBe(3); // tree[1]
+    expect(adds[adds.length - 1].variables?.treeVal).toBe(10); // tree[4] after all elements
+
+    // Query [1..3] = tree[3] + tree[2] = -1 + 5.
+    const queryAdds = timeline.filter((f) => f.action === 'QUERY_ADD');
+    expect(queryAdds.map((f) => f.variables?.addedBlock)).toEqual(['[3..3]', '[1..2]']);
+    expect(queryAdds.map((f) => f.variables?.partialSum)).toEqual([-1, 4]);
+    expect(timeline.filter((f) => f.action === 'QUERY_ADVANCE').length).toBe(2);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Prefix Sum [1..3] = 4');
+    expect(final.variables?.prefixSumResult).toBe(4);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
