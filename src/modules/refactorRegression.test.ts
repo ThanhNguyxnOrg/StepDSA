@@ -2297,6 +2297,43 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('trie reuses shared-prefix nodes, marks word ends, and reports missing prefixes honestly', () => {
+    const mod = moduleById('trie-prefix');
+    const input = { wordsToInsert: ['cat', 'car', 'cart', 'dog', 'dot'], searchPrefix: 'car' };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'trie-shared-prefix').length).toBe(1);
+
+    // 16 characters total: 9 new nodes created, 7 characters reuse existing nodes.
+    expect(timeline.filter((f) => f.action === 'CREATE_NODE').length).toBe(9);
+    const moves = timeline.filter((f) => f.action === 'MOVE_CURSOR');
+    expect(moves.length).toBe(16);
+    expect(moves.filter((f) => f.variables?.reused === true).length).toBe(7);
+
+    // One end-of-word marker per inserted word.
+    const ends = timeline.filter((f) => f.action === 'SET_END_OF_WORD');
+    expect(ends.map((f) => f.variables?.word)).toEqual(['cat', 'car', 'cart', 'dog', 'dot']);
+
+    // Prefix "car": three matching steps, then completions car + cart.
+    expect(timeline.filter((f) => f.action === 'PREFIX_MATCH').length).toBe(3);
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Prefix "car" Found');
+    expect(final.variables?.completionsCount).toBe(2);
+    expect(final.state.matchedWords).toEqual(['car', 'cart']);
+
+    // Missing prefix: the walk stops at the first absent character and says so.
+    const missing = mod.generateTimeline({ wordsToInsert: ['cat', 'car'], searchPrefix: 'cax' } as any);
+    const miss = missing.filter((f) => f.action === 'PREFIX_MISS');
+    expect(miss.length).toBe(1);
+    expect(miss[0].variables?.missingChar).toBe('x');
+    const missFinal = missing[missing.length - 1];
+    expect(missFinal.milestoneTitle).toBe('Prefix "cax" Not Found');
+    expect(missFinal.variables?.completionsCount).toBe(0);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, { wordsToInsert: ['cat', 'car'], searchPrefix: 'cax' } as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

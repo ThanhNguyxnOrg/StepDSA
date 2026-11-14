@@ -166,7 +166,13 @@ class Trie {
         if char not in curr.children:
             curr.children[char] = new Node()
         curr = curr.children[char]
-    curr.isEndOfWord = true`,
+    curr.isEndOfWord = true
+function searchPrefix(prefix):
+    curr = root
+    for each char in prefix:
+        if char not in curr.children: return NOT_FOUND
+        curr = curr.children[char]
+    return collect all words under curr   # every completion of this prefix`,
   },
 
   generateTimeline: (input: TrieInput): ExecutionFrame<TrieState>[] => {
@@ -224,13 +230,20 @@ class Trie {
       return visualList;
     }
 
+    let checkpointAdded = false;
+
     // Frame 0: Init Empty Trie
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 8,
-      explanation: 'Initialized empty Trie with ROOT node. Preparing to insert word list.',
+      codeLine: 2,
+      explanation: `Initialized empty Trie with ROOT node. curr = root. Preparing to insert ${wordsToInsert.length} word(s): [${wordsToInsert.join(', ')}].`,
       variables: { totalWords: wordsToInsert.length, activeWord: '' },
+      pedagogy: {
+        what: `A trie stores words character by character; every node represents a prefix of the words below it.`,
+        why: 'Words sharing a prefix share the same nodes, so lookup/insert cost depends on word length, not the number of words.',
+        whatNext: `Insert "${wordsToInsert[0] ?? ''}" one character at a time from the root.`,
+      },
       state: {
         nodes: flattenNodes('root'),
         currentWord: '',
@@ -257,32 +270,77 @@ class Trie {
             depth: curr.depth + 1,
             children: {},
           };
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 5,
+            action: 'CREATE_NODE',
+            explanation: `Inserting "${word}": '${ch}' is missing under '${curr.id}'. curr.children['${ch}'] = new Node().`,
+            variables: {
+              word,
+              char: ch,
+              position: `${i + 1}/${word.length}`,
+              nodeId: `${curr.id}_${ch}`,
+            },
+            conditionEval: { expr: `'${ch}' in curr.children`, result: false },
+            state: {
+              nodes: flattenNodes(`${curr.id}_${ch}`),
+              currentWord: word,
+              currentCharIdx: i,
+              action: 'insert',
+            },
+          });
         }
 
+        const movedFrom = curr.id;
         curr = curr.children[ch];
-        if (isLast) {
-          curr.isEnd = true;
-        }
 
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: isNewNode ? 13 : 15,
+          codeLine: 6,
+          action: 'MOVE_CURSOR',
           explanation: isNewNode
-            ? `Inserting '${word}': Character '${ch}' not found under '${curr.parentId}'. Created new Trie node for '${ch}'.`
-            : `Inserting '${word}': Character '${ch}' already exists as a shared prefix. Reusing node.`,
-          isMilestone: isLast,
-          milestoneTitle: isLast ? `Inserted Word: "${word}"` : undefined,
+            ? `curr = curr.children['${ch}'] → node '${curr.id}' (newly created).`
+            : `curr = curr.children['${ch}'] → node '${curr.id}'. The prefix already existed, so the node is shared — no new allocation.`,
           variables: {
             word,
             char: ch,
             position: `${i + 1}/${word.length}`,
-            isEndOfWord: isLast,
+            movedFrom,
+            movedTo: curr.id,
+            reused: !isNewNode,
           },
           conditionEval: {
             expr: `hasChild('${ch}')`,
             result: !isNewNode,
           },
+          pedagogy: isNewNode
+            ? {
+                what: `The path now extends to '${ch}'.`,
+                why: 'Creating one node per unseen character is what grows the trie by exactly word.length minus the shared prefix.',
+                whatNext: isLast ? 'Mark the final node as an end of word.' : `Insert the next character "${word[i + 1]}" below.`,
+              }
+            : {
+                what: `'${ch}' already existed under '${movedFrom}', so "${word}" piggybacks on the shared prefix.`,
+                why: 'Node reuse is the memory advantage of a trie over storing each word independently.',
+                whatNext: isLast ? 'Mark the final node as an end of word.' : `Continue with "${word[i + 1]}".`,
+              },
+          checkpoint:
+            !isNewNode && !checkpointAdded
+              ? {
+                  id: 'trie-shared-prefix',
+                  question: `Why does "${word}" reuse the existing '${ch}' node instead of creating its own?`,
+                  options: [
+                    'Words with the same prefix share the same path from the root, so the trie allocates nodes per unique prefix, not per word',
+                    'Because the words were inserted in alphabetical order',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'The path from the root spells the prefix. Any word beginning with those characters must start along the same path, so the node is shared by construction — insertion order is irrelevant.',
+                }
+              : undefined,
           state: {
             nodes: flattenNodes(curr.id),
             currentWord: word,
@@ -290,6 +348,34 @@ class Trie {
             action: 'insert',
           },
         });
+        if (!isNewNode) checkpointAdded = true; // checkpoint can only fire on a reuse frame
+
+        if (isLast) {
+          curr.isEnd = true;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 7,
+            action: 'SET_END_OF_WORD',
+            isMilestone: true,
+            milestoneTitle: `Inserted Word: "${word}"`,
+            explanation: `curr.isEndOfWord = true on node '${curr.id}': "${word}" is now a complete word in the trie.`,
+            variables: { word, endNodeId: curr.id, position: `${i + 1}/${word.length}` },
+            conditionEval: { expr: `i === word.length - 1`, result: true },
+            pedagogy: {
+              what: `The terminal flag distinguishes "${word}" from any longer word that continues through this node.`,
+              why: 'Without isEndOfWord, a prefix like "car" could not be reported as a word when "cart" also exists.',
+              whatNext: `Continue with the next word or run a prefix query.`,
+            },
+            state: {
+              nodes: flattenNodes(curr.id),
+              currentWord: word,
+              currentCharIdx: i,
+              action: 'insert',
+            },
+          });
+        }
       }
     });
 
@@ -305,9 +391,16 @@ class Trie {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 23,
-            explanation: `Prefix search "${searchPrefix}": Matching char '${ch}' at depth ${i + 1}. Node exists!`,
-            variables: { prefix: searchPrefix, matchedChar: ch, status: 'MATCHING' },
+            codeLine: 12,
+            action: 'PREFIX_MATCH',
+            explanation: `searchPrefix("${searchPrefix}"): '${ch}' found at depth ${i + 1} — curr = curr.children['${ch}'] → '${currSearch.id}'.`,
+            variables: { prefix: searchPrefix, matchedChar: ch, status: 'MATCHING', depth: i + 1 },
+            conditionEval: { expr: `'${ch}' in curr.children`, result: true },
+            pedagogy: {
+              what: `Character ${i + 1} of "${searchPrefix}" matched; the walk descends one node.`,
+              why: 'A prefix exists iff its character path exists — no scanning of stored words is needed.',
+              whatNext: i + 1 < searchPrefix.length ? `Match '${searchPrefix[i + 1]}' next.` : 'Prefix path complete — collect the completions.',
+            },
             state: {
               nodes: flattenNodes(currSearch.id),
               currentWord: searchPrefix,
@@ -318,6 +411,29 @@ class Trie {
           });
         } else {
           matched = false;
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 11,
+            action: 'PREFIX_MISS',
+            isMilestone: true,
+            milestoneTitle: `Prefix "${searchPrefix}" Missing '${ch}'`,
+            explanation: `searchPrefix("${searchPrefix}"): '${ch}' is not in curr.children — no word with this prefix can exist. Returning NOT_FOUND.`,
+            variables: { prefix: searchPrefix, missingChar: ch, status: 'NOT_FOUND', depth: i + 1 },
+            conditionEval: { expr: `'${ch}' in curr.children`, result: false },
+            pedagogy: {
+              what: `The path breaks at '${ch}'; the prefix simply is not in the trie.`,
+              why: 'Absence of a child node proves no inserted word passes through this character sequence — a definitive negative in O(prefix length).',
+              whatNext: 'Report the prefix as not found.',
+            },
+            state: {
+              nodes: flattenNodes(currSearch ? currSearch.id : 'root'),
+              currentWord: searchPrefix,
+              currentCharIdx: i,
+              action: 'search',
+              queryPrefix: searchPrefix,
+            },
+          });
           break;
         }
       }
@@ -335,13 +451,27 @@ class Trie {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 26,
+        codeLine: 13,
         isMilestone: true,
-        milestoneTitle: `Prefix "${searchPrefix}" Found`,
-        explanation: `Prefix query "${searchPrefix}" complete! Found ${matches.length} matching completions: [${matches.join(', ')}].`,
-        variables: { query: searchPrefix, completionsCount: matches.length, status: 'FOUND' },
+        milestoneTitle: matched ? `Prefix "${searchPrefix}" Found` : `Prefix "${searchPrefix}" Not Found`,
+        action: 'PREFIX_COMPLETE',
+        explanation: matched
+          ? `collect all words under '${currSearch?.id}': found ${matches.length} completion(s): [${matches.join(', ')}].`
+          : `Prefix query "${searchPrefix}" ended without all characters matching; no completions collected.`,
+        variables: { query: searchPrefix, completionsCount: matches.length, status: matched ? 'FOUND' : 'NOT_FOUND' },
+        pedagogy: matched
+          ? {
+              what: `Every word under this node begins with "${searchPrefix}": [${matches.join(', ')}].`,
+              why: 'The subtree rooted at the prefix node is exactly the set of completions, so collecting them costs O(matches · length).',
+              whatNext: 'This subtree scan is how autocomplete lists suggestions.',
+            }
+          : {
+              what: `No completions are possible because the prefix itself is absent.`,
+              why: 'A trie never stores a word outside its character path, so a missing node prunes the whole subtree that would have contained matches.',
+              whatNext: 'Compare with substring search, which needs to inspect stored words one by one.',
+            },
         state: {
-          nodes: flattenNodes(currSearch ? currSearch.id : undefined),
+          nodes: flattenNodes(currSearch && matched ? currSearch.id : 'root'),
           currentWord: searchPrefix,
           currentCharIdx: searchPrefix.length,
           action: 'complete',
