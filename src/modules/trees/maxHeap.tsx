@@ -122,6 +122,7 @@ void buildMaxHeap(int[] arr) {
     n <- length(arr)
     for i from floor(n / 2) - 1 down to 0:
         heapify(arr, n, i)
+    return arr
 
 function heapify(arr, n, i):
     largest <- i
@@ -177,20 +178,26 @@ function heapify(arr, n, i):
     };
 
     const frames: ExecutionFrame<MaxHeapState>[] = [];
+    let checkpointAdded = false;
 
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 13,
-      explanation: `Initialized arbitrary array [${arr.join(', ')}] of size ${n}. Floyd's linear Build-Heap will start at index ${
+      codeLine: 2,
+      explanation: `n = ${n}; initialized arbitrary array [${arr.join(', ')}]. Floyd's bottom-up Build-Heap starts at the last internal node, index ${
         Math.floor(n / 2) - 1
       }.`,
       isMilestone: true,
       milestoneTitle: 'Build-Heap Initialized',
       soundCue: { type: 'start' },
       variables: { n, startInternalNode: Math.floor(n / 2) - 1 },
-      callStack: [{ name: 'buildMaxHeap', params: { n }, line: 13, isCurrent: true }],
+      callStack: [{ name: 'buildMaxHeap', params: { n }, line: 2, isCurrent: true }],
       conditionEval: { expr: `n > 1`, result: true },
+      pedagogy: {
+        what: `Any array is already a complete tree by index arithmetic: children of i are 2i+1 and 2i+2.`,
+        why: 'Starting at the last internal node (floor(n/2)-1) skips all leaves — they are trivially valid heaps.',
+        whatNext: 'Scan internal nodes from bottom to top, heapifying each subtree.',
+      },
       state: {
         nodes: buildTreeNodes(arr),
         heapArray: [...arr],
@@ -205,14 +212,19 @@ function heapify(arr, n, i):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 2,
-        explanation: `Heapify at node index ${idx} (val ${arr[idx]}). Left child index ${left} (${
+        codeLine: 8,
+        explanation: `heapify(index ${idx}, value ${arr[idx]}): largest <- ${idx}. Left child index ${left} (${
           left < n ? arr[left] : 'None'
         }), right child index ${right} (${right < n ? arr[right] : 'None'}).`,
         soundCue: { type: 'compare' },
         variables: { idx, val: arr[idx], left, right, leftVal: left < n ? arr[left] : null, rightVal: right < n ? arr[right] : null },
-        callStack: [{ name: 'heapifyDown', params: { idx, val: arr[idx] }, line: 2, isCurrent: true }],
+        callStack: [{ name: 'heapifyDown', params: { idx, val: arr[idx] }, line: 8, isCurrent: true }],
         conditionEval: { expr: `idx < Math.floor(n / 2)`, result: idx < Math.floor(n / 2) },
+        pedagogy: {
+          what: `The subtree rooted at index ${idx} is checked: candidate largest starts as the node itself.`,
+          why: 'Bottom-up processing guarantees both children subtrees are already valid heaps, so one pass fixes this subtree.',
+          whatNext: 'Compare the children and pick the largest among the three.',
+        },
         state: {
           nodes: buildTreeNodes(arr, idx),
           heapArray: [...arr],
@@ -235,14 +247,19 @@ function heapify(arr, n, i):
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 10,
-          explanation: `Violation: child arr[${largest}] (${arr[idx]}) > parent (${temp}). Swapped elements. Sifting downward.`,
+          codeLine: 12,
+          explanation: `largest = ${largest} ≠ ${idx}, so swap(arr[${idx}], arr[${largest}]). The larger child ${arr[idx]} rose; ${temp} continues sifting down.`,
           isMilestone: true,
           milestoneTitle: `Sift Down Swap (${temp} ↔ ${arr[idx]})`,
           soundCue: { type: 'swap' },
           variables: { parentIdx: idx, largestIdx: largest, swappedVal: arr[idx], demotedVal: temp },
-          callStack: [{ name: 'swapNodes', params: { parentIdx: idx, childIdx: largest }, line: 10, isCurrent: true }],
+          callStack: [{ name: 'swapNodes', params: { parentIdx: idx, childIdx: largest }, line: 12, isCurrent: true }],
           conditionEval: { expr: `largest !== idx`, result: true },
+          pedagogy: {
+            what: `The larger child (index ${largest}) took the parent's place; the demoted value ${temp} keeps falling.`,
+            why: 'Only the child that became the new parent can still violate the property below — hence the recursive call on that child.',
+            whatNext: `Recurse: heapify(arr, n, ${largest}).`,
+          },
           state: {
             nodes: buildTreeNodes(arr, idx, largest),
             heapArray: [...arr],
@@ -252,6 +269,27 @@ function heapify(arr, n, i):
         });
 
         siftDown(largest);
+      } else {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 11,
+          explanation: `largest = ${idx}: the subtree root ${arr[idx]} is already ≥ both children, so heapify returns immediately.`,
+          soundCue: { type: 'sorted' },
+          variables: { idx, val: arr[idx], stopReason: 'PARENT_ALREADY_LARGEST' },
+          callStack: [{ name: 'heapifyDown', params: { idx, stop: true }, line: 11, isCurrent: true }],
+          conditionEval: { expr: `largest != i`, result: false },
+          pedagogy: {
+            what: `No swap needed at index ${idx}.`,
+            why: 'A single bottom-up pass is enough because valid child subtrees plus a valid parent make the whole subtree valid.',
+            whatNext: 'Return to the build loop and continue with the next internal node.',
+          },
+          state: {
+            nodes: buildTreeNodes(arr, idx),
+            heapArray: [...arr],
+            currentIndex: idx,
+          },
+        });
       }
     };
 
@@ -260,35 +298,59 @@ function heapify(arr, n, i):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 15,
+        codeLine: 3,
         explanation: `Floyd's bottom-up scan: processing internal subtree rooted at index ${i} (value ${arr[i]}).`,
         isMilestone: true,
         milestoneTitle: `Processing Subtree Root #${i}`,
         soundCue: { type: 'step' },
         variables: { currentInternalIdx: i, val: arr[i] },
-        callStack: [{ name: 'buildMaxHeap.loop', params: { i }, line: 15, isCurrent: true }],
+        callStack: [{ name: 'buildMaxHeap.loop', params: { i }, line: 3, isCurrent: true }],
         conditionEval: { expr: `i >= 0 (${i} >= 0)`, result: true },
+        pedagogy: {
+          what: `Index ${i} is the next internal node, scanning from the last one upward.`,
+          why: 'Most nodes near the bottom sift down only one or two levels; this is why the total work is O(n), not O(n log n).',
+          whatNext: `heapify(arr, n, ${i}).`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'floyd-build-heap-linear',
+              question: 'Why is Floyd\'s build-heap O(n) even though each heapify can cost O(log n)?',
+              options: [
+                'Most nodes are near the bottom and sift down only a couple of levels; the total of heights over all nodes is linear',
+                'Because heapify is actually O(1) when called from the build loop',
+              ],
+              correctIndex: 0,
+              explanation:
+                'About half the nodes are leaves (zero work), a quarter fall at most one level, and so on. The sum of sift distances telescopes to O(n), unlike n independent inserts which cost O(n log n).',
+            }
+          : undefined,
         state: {
           nodes: buildTreeNodes(arr, i),
           heapArray: [...arr],
           currentIndex: i,
         },
       });
+      checkpointAdded = true;
       siftDown(i);
     }
 
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 16,
-      explanation: `Floyd's Build-Heap complete in O(N) operations! Valid Max-Heap: [${arr.join(
+      codeLine: 5,
+      explanation: `return arr: Floyd's Build-Heap complete in O(N) operations! Valid Max-Heap: [${arr.join(
         ', '
       )}]. Root holds max element ${arr[0]}.`,
       isMilestone: true,
       milestoneTitle: 'Build-Heap Complete',
       soundCue: { type: 'complete' },
+      pedagogy: {
+        what: `The array [${arr.join(', ')}] now satisfies heap[parent] ≥ heap[child] everywhere; the maximum ${arr[0]} is at the root.`,
+        why: 'Every internal node was heapified bottom-up, so each subtree became valid exactly once and stayed valid.',
+        whatNext: 'This O(n) build powers heapsort (heapify + repeated extract-max) in O(n log n) total.',
+      },
       variables: { maxElement: arr[0], n, heapValid: true },
-      callStack: [{ name: 'buildMaxHeap.done', params: { maxVal: arr[0] }, line: 16, isCurrent: true }],
+      callStack: [{ name: 'buildMaxHeap.done', params: { maxVal: arr[0] }, line: 5, isCurrent: true }],
       conditionEval: { expr: `i < 0`, result: true },
       state: {
         nodes: buildTreeNodes(arr),

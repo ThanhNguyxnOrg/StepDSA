@@ -51,7 +51,7 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | binary-search-answer | ✅ | answer-space explanation, monotone-predicate checkpoint, pile-hour breakdown pedagogy, code lines remapped (was 15 > 12 lines) |
 
 ### Trees (26)
-avl-tree ✅ · bst ✅ · bst-delete ✅ · tree-traversals ✅ · level-order-traversal ✅ · binary-heap ✅ / max-heap /
+avl-tree ✅ · bst ✅ · bst-delete ✅ · tree-traversals ✅ · level-order-traversal ✅ · binary-heap ✅ · max-heap ✅ /
 max-heap / trie / segment-tree / fenwick-tree / red-black-tree / treap / splay-tree /
 b-tree / two-three-tree / two-three-four-tree / skip-list / tree-map / kd-tree /
 interval-tree / radix-tree / tst / ternary-search-tree / octree-3d / suffix-tree / recursion-trees → ⬜

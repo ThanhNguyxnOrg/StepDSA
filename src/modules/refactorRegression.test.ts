@@ -2260,6 +2260,43 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, [80, 65, 75, 40, 50, 60] as any).errorCount).toBe(0);
   });
 
+  it("Floyd's build-heap scans internal nodes bottom-up and stops early on valid subtrees", () => {
+    const mod = moduleById('max-heap-build');
+    const timeline = mod.generateTimeline([4, 10, 3, 5, 1, 9, 8] as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'floyd-build-heap-linear').length).toBe(1);
+
+    // Three internal nodes (2, 1, 0) each get a loop frame; heapify descends 6 times total.
+    const loops = timeline.filter((f) => f.milestoneTitle?.startsWith('Processing Subtree Root'));
+    expect(loops.map((f) => f.variables?.currentInternalIdx)).toEqual([2, 1, 0]);
+    expect(timeline.filter((f) => f.codeLine === 8).length).toBe(6); // entries at 2,5,1,0,1,3
+
+    // Three swaps and three early stops.
+    const swaps = timeline.filter((f) => f.milestoneTitle?.startsWith('Sift Down Swap'));
+    expect(swaps.map((f) => f.milestoneTitle)).toEqual([
+      'Sift Down Swap (3 ↔ 9)',
+      'Sift Down Swap (4 ↔ 10)',
+      'Sift Down Swap (4 ↔ 5)',
+    ]);
+    const stops = timeline.filter((f) => f.variables?.stopReason === 'PARENT_ALREADY_LARGEST');
+    expect(stops.length).toBe(3);
+    expect(stops.map((f) => f.variables?.idx)).toEqual([5, 1, 3]);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Build-Heap Complete');
+    expect(final.variables?.maxElement).toBe(10);
+    expect(final.state.heapArray).toEqual([10, 5, 9, 4, 1, 3, 8]);
+
+    // Ascending input still produces a valid max heap with root 7.
+    const asc = mod.generateTimeline(mod.presets[1].data as any);
+    const ascFinal = asc[asc.length - 1];
+    expect(ascFinal.variables?.maxElement).toBe(7);
+    expect(ascFinal.state.heapArray[0]).toBe(7);
+
+    expect(auditTimeline(mod, [4, 10, 3, 5, 1, 9, 8] as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
