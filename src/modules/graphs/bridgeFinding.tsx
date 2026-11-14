@@ -184,7 +184,8 @@ export const bridgeFindingModule: AlgorithmModule<
                 low[u] = min(low[u], low[v])
                 if low[v] > disc[u]:
                     bridges.append((u, v))
-    for each u in graph: if unvisited dfs(u, null)`,
+    for each u in graph: if unvisited dfs(u, null)
+    return bridges`,
   },
 
   generateTimeline: (input: {
@@ -222,6 +223,8 @@ export const bridgeFindingModule: AlgorithmModule<
 
     const frames: ExecutionFrame<BridgeFindingState>[] = [];
 
+    let checkpointAdded = false;
+
     // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
@@ -230,6 +233,11 @@ export const bridgeFindingModule: AlgorithmModule<
       explanation: `Initialize Tarjan's Bridge-Finding algorithm for ${nodes.length} vertices and ${edges.length} edges.`,
       variables: { totalNodes: nodes.length, totalEdges: edges.length },
       callStack: [{ name: 'findBridges()', params: { vertices: nodes.length }, line: 2, isCurrent: true }],
+      pedagogy: {
+        what: 'A bridge is an edge whose removal disconnects the graph — the undirected analogue of a critical link.',
+        why: 'Same low-link pass as articulation points, but with a strict comparison: an edge is critical only when the child subtree cannot even reach the parent.',
+        whatNext: 'Run DFS and timestamp each visit.',
+      },
       state: {
         nodes,
         edges,
@@ -253,6 +261,11 @@ export const bridgeFindingModule: AlgorithmModule<
         explanation: `Visit node "${u}" (parent: ${parent ?? 'none'}). Set disc[${u}]=${disc[u]}, low[${u}]=${low[u]}.`,
         variables: { node: u, disc: disc[u], low: low[u], parent: parent ?? 'null' },
         callStack: [{ name: `dfs(u="${u}")`, params: { u, parent: parent ?? 'null' }, line: 4, isCurrent: true }],
+        pedagogy: {
+          what: `"${u}" receives discovery time ${disc[u]}; low[${u}] starts equal to it.`,
+          why: 'low[u] will track the earliest vertex reachable from u\'s subtree; a bridge appears whenever a child\'s reach stops below u.',
+          whatNext: `Scan the incident edges of "${u}".`,
+        },
         state: {
           nodes,
           edges,
@@ -265,18 +278,50 @@ export const bridgeFindingModule: AlgorithmModule<
       });
 
       for (const v of adj[u] || []) {
-        if (v === parent) continue;
+        if (v === parent) {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 6,
+            explanation: `Edge (${u} ↔ ${v}) is the tree edge back to the parent, so it is skipped.`,
+            variables: { node: u, parent: v, action: 'SKIP_PARENT' },
+            conditionEval: { expr: `v == parent ('${v}' == '${parent}')`, result: true },
+            callStack: [{ name: `skipParentEdge("${u}")`, params: { u, parent: v }, line: 6, isCurrent: true }],
+            pedagogy: {
+              what: `The parent edge is already part of the DFS tree.`,
+              why: 'Re-processing it as a back-edge would lower low[u] to the parent\'s value and mask real bridges.',
+              whatNext: `Continue with "${u}"'s next edge.`,
+            },
+            state: {
+              nodes,
+              edges,
+              activeNode: u,
+              activeNeighbor: v,
+              disc: { ...disc },
+              low: { ...low },
+              bridges: [...bridges],
+            },
+          });
+          continue;
+        }
 
         if (disc[v] !== undefined) {
           // Back-edge
+          const oldLow = low[u];
           low[u] = Math.min(low[u], disc[v]);
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 7,
-            explanation: `Back-edge (${u} -- ${v}): Neighbor "${v}" already visited! Update low[${u}] = min(low[${u}], disc[${v}]=${disc[v]}) -> ${low[u]}.`,
-            variables: { u, v, lowU: low[u], discV: disc[v] },
-            callStack: [{ name: `backEdge(${u}, ${v})`, params: { u, v }, line: 7, isCurrent: true }],
+            codeLine: 8,
+            explanation: `Back-edge (${u} ↔ ${v}): "${v}" was discovered earlier (disc ${disc[v]}). low[${u}] = min(${oldLow}, disc[${v}]) = ${low[u]}.`,
+            variables: { u, v, lowU: low[u], discV: disc[v], previousLow: oldLow },
+            conditionEval: { expr: `disc['${v}'] !== undefined`, result: true },
+            callStack: [{ name: `backEdge(${u}, ${v})`, params: { u, v }, line: 8, isCurrent: true }],
+            pedagogy: {
+              what: `"${u}" can reach "${v}", discovered at time ${disc[v]} — an escape route around the tree path.`,
+              why: 'Back-edges are what make an edge non-critical: the child subtree can reach an ancestor without using it.',
+              whatNext: `Keep low[${u}] = ${low[u]} when ancestors combine child values.`,
+            },
             state: {
               nodes,
               edges,
@@ -289,26 +334,19 @@ export const bridgeFindingModule: AlgorithmModule<
           });
         } else {
           // Tree edge
-          dfs(v, u);
-
-          low[u] = Math.min(low[u], low[v]);
-
-          const isBridge = low[v] > disc[u];
-          if (isBridge) {
-            bridges.push(`${u}-${v}`);
-          }
-
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
             codeLine: 10,
-            explanation: `Backtrack to "${u}" from child "${v}". low[${v}]=${low[v]}, disc[${u}]=${disc[u]}. ${
-              isBridge
-                ? `low[${v}] > disc[${u}] -> CRITICAL BRIDGE FOUND: (${u} -- ${v})!`
-                : `low[${v}] <= disc[${u}] -> Edge (${u} -- ${v}) is NOT a bridge (subgraph reaches ancestor).`
-            }`,
-            variables: { u, child: v, lowChild: low[v], discU: disc[u], isBridge: isBridge ? 'YES' : 'NO' },
-            callStack: [{ name: `checkBridge(${u}, ${v})`, params: { isBridge: String(isBridge) }, line: 10, isCurrent: true }],
+            explanation: `Edge (${u} ↔ ${v}): "${v}" is undiscovered, so recurse into it.`,
+            variables: { u, child: v, edgeType: 'TREE_EDGE' },
+            conditionEval: { expr: `disc['${v}'] === undefined`, result: true },
+            callStack: [{ name: `treeEdge("${u}" → "${v}")`, params: { u, v }, line: 10, isCurrent: true }],
+            pedagogy: {
+              what: `The edge ${u} ↔ ${v} joins the DFS tree; "${v}" becomes a child of "${u}".`,
+              why: 'Only tree edges can be bridges — removing a non-tree edge never disconnects a DFS tree.',
+              whatNext: `Explore "${v}" and return with its low value.`,
+            },
             state: {
               nodes,
               edges,
@@ -319,12 +357,134 @@ export const bridgeFindingModule: AlgorithmModule<
               bridges: [...bridges],
             },
           });
+          dfs(v, u);
+
+          const oldLow = low[u];
+          low[u] = Math.min(low[u], low[v]);
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 11,
+            explanation: `Returned from child "${v}": low[${u}] = min(${oldLow}, low[${v}]=${low[v]}) = ${low[u]}.`,
+            variables: { u, child: v, lowChild: low[v], updatedLow: low[u] },
+            callStack: [{ name: `returnFromChild(${u}, ${v})`, params: { u, v }, line: 11, isCurrent: true }],
+            pedagogy: {
+              what: `"${u}" inherits the reach of child "${v}".`,
+              why: 'The comparison low[v] > disc[u] now decides whether "${v}"\'s subtree can bypass "${u}" or not.',
+              whatNext: `Evaluate the bridge condition for (${u} ↔ ${v}).`,
+            },
+            state: {
+              nodes,
+              edges,
+              activeNode: u,
+              activeNeighbor: v,
+              disc: { ...disc },
+              low: { ...low },
+              bridges: [...bridges],
+            },
+          });
+
+          const isBridge = low[v] > disc[u];
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 12,
+            explanation: isBridge
+              ? `Bridge check (${u} ↔ ${v}): low[${v}]=${low[v]} > disc[${u}]=${disc[u]} — the subtree cannot reach "${u}" or above. The edge is critical.`
+              : `Bridge check (${u} ↔ ${v}): low[${v}]=${low[v]} <= disc[${u}]=${disc[u]} — the subtree reaches an ancestor, so the edge is NOT a bridge.`,
+            variables: { u, child: v, lowChild: low[v], discU: disc[u], isBridge: isBridge ? 'YES' : 'NO' },
+            conditionEval: { expr: `low['${v}'] (${low[v]}) > disc['${u}'] (${disc[u]})`, result: isBridge },
+            callStack: [{ name: `checkBridge(${u}, ${v})`, params: { isBridge: String(isBridge) }, line: 12, isCurrent: true }],
+            pedagogy: {
+              what: isBridge
+                ? `Nothing in "${v}"'s subtree links back to "${u}" or earlier; the only link is this edge.`
+                : `"${v}"'s subtree can reach an earlier vertex (low ${low[v]} ≤ disc ${disc[u]}), so a bypass exists — removing (${u} ↔ ${v}) keeps the graph connected.`,
+              why: 'Strict inequality is the bridge signature: equality would mean the subtree reaches "${u}" itself, so removing the edge still leaves "${v}" connected through that route.',
+              whatNext: isBridge ? 'Record the bridge.' : `Continue with "${u}"'s next edge.`,
+            },
+            state: {
+              nodes,
+              edges,
+              activeNode: u,
+              activeNeighbor: v,
+              disc: { ...disc },
+              low: { ...low },
+              bridges: [...bridges],
+            },
+          });
+
+          if (isBridge) {
+            bridges.push(`${u}-${v}`);
+            frames.push({
+              stepIndex: frames.length,
+              totalSteps: 1,
+              codeLine: 13,
+              isMilestone: true,
+              milestoneTitle: `Bridge Found: ${u} — ${v}`,
+              explanation: `bridges.append(('${u}', '${v}')): removing this edge splits the graph. Total bridges: ${bridges.length}.`,
+              variables: { bridge: `${u}-${v}`, totalBridges: bridges.length },
+              callStack: [{ name: `bridgeFound(${u}, ${v})`, params: { u, v }, line: 13, isCurrent: true }],
+              pedagogy: {
+                what: `(${u} ↔ ${v}) is a bridge.`,
+                why: 'low[v] > disc[u] means the subtree of "${v}" hangs from exactly this edge — there is no cycle covering it.',
+                whatNext: 'Continue the DFS; other tree edges may also qualify.',
+              },
+              checkpoint: !checkpointAdded
+                ? {
+                    id: 'bridge-low-strict',
+                    question: `Bridges use low[v] > disc[u], while articulation points use low[v] >= disc[u]. Why the strict inequality here?`,
+                    options: [
+                      'A bridge needs the child subtree to be unable to reach even the parent u; reaching u itself still gives a bypass path, so equality means the edge is safe',
+                      'It is an arbitrary convention; both inequalities give the same result',
+                    ],
+                    correctIndex: 0,
+                    explanation:
+                      'If low[v] == disc[u], the subtree can reach u directly (or through a back-edge to u), so removing the edge (u, v) still leaves v connected via that route. Only when the reach stops strictly below u does the edge itself become the sole connection.',
+                  }
+                : undefined,
+              state: {
+                nodes,
+                edges,
+                activeNode: u,
+                activeNeighbor: v,
+                disc: { ...disc },
+                low: { ...low },
+                bridges: [...bridges],
+              },
+            });
+            checkpointAdded = true;
+          }
         }
       }
     }
 
     for (const node of nodes) {
       if (disc[node] === undefined) {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 14,
+          explanation: `Outer scan: "${node}" is still undiscovered, so start a new DFS root at it (parent = null).`,
+          variables: { root: node, action: 'NEW_ROOT' },
+          conditionEval: { expr: `disc['${node}'] === undefined`, result: true },
+          callStack: [{ name: `newRoot("${node}")`, params: { node }, line: 14, isCurrent: true }],
+          pedagogy: {
+            what: `"${node}" begins a separate connected component.`,
+            why: 'Bridges are found per DFS tree; a disconnected graph simply gets one pass per component.',
+            whatNext: `Run dfs("${node}", null).`,
+          },
+          state: {
+            nodes,
+            edges,
+            activeNode: node,
+            activeNeighbor: null,
+            disc: { ...disc },
+            low: { ...low },
+            bridges: [...bridges],
+          },
+        });
         dfs(node, null);
       }
     }
@@ -333,12 +493,19 @@ export const bridgeFindingModule: AlgorithmModule<
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 13,
+      codeLine: 15,
       explanation: `Bridge-finding complete! Identified ${bridges.length} bridge edge${bridges.length === 1 ? '' : 's'}: ${
         bridges.length > 0 ? bridges.join(', ') : 'None (2-edge-connected)'
       }.`,
+      isMilestone: true,
+      milestoneTitle: `Found ${bridges.length} Bridge${bridges.length === 1 ? '' : 's'}`,
       variables: { totalBridges: bridges.length, bridgesFound: bridges.join(', ') },
-      callStack: [{ name: 'complete()', params: { bridges: bridges.length }, line: 13, isCurrent: true }],
+      callStack: [{ name: 'complete()', params: { bridges: bridges.length }, line: 15, isCurrent: true }],
+      pedagogy: {
+        what: `Return ${bridges.length} bridge edge(s): ${bridges.length > 0 ? bridges.join(', ') : 'none — every edge lies on a cycle'}.`,
+        why: 'Each reported edge had a child subtree whose lowest reach stopped strictly below the parent, so no cycle covered it.',
+        whatNext: 'Bridges define the 2-edge-connected components of the graph, just as cut vertices define its biconnected components.',
+      },
       state: {
         nodes,
         edges,

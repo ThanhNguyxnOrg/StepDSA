@@ -1441,6 +1441,68 @@ describe('pedagogical timeline regressions', () => {
     }).errorCount).toBe(0);
   });
 
+  it('bridge finding uses the strict low/disc comparison and finds every tree edge as a bridge', () => {
+    const mod = moduleById('bridge-finding');
+    const input = {
+      nodes: ['A', 'B', 'C', 'D', 'E', 'F'],
+      edges: [
+        { u: 'A', v: 'B' },
+        { u: 'B', v: 'C' },
+        { u: 'C', v: 'A' },
+        { u: 'C', v: 'D' },
+        { u: 'D', v: 'E' },
+        { u: 'E', v: 'F' },
+        { u: 'F', v: 'D' },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'bridge-low-strict').length).toBe(1);
+
+    // One frame per operation: 6 visits, 5 parent skips, 4 back-edges, 5 tree edges, 5 returns, 5 checks.
+    expect(timeline.filter((f) => f.codeLine === 4).length).toBe(6);
+    expect(timeline.filter((f) => f.variables?.action === 'SKIP_PARENT').length).toBe(5);
+    expect(timeline.filter((f) => f.codeLine === 8).length).toBe(4);
+    expect(timeline.filter((f) => f.variables?.edgeType === 'TREE_EDGE').length).toBe(5);
+    expect(timeline.filter((f) => f.codeLine === 11).length).toBe(5);
+    const checks = timeline.filter((f) => f.codeLine === 12);
+    expect(checks.length).toBe(5);
+    expect(checks.filter((f) => f.variables?.isBridge === 'YES').length).toBe(1);
+
+    // Only C-D survives the strict test: low[D]=4 > disc[C]=3.
+    const bridgeFrames = timeline.filter((f) => f.codeLine === 13);
+    expect(bridgeFrames.length).toBe(1);
+    expect(bridgeFrames[0].milestoneTitle).toBe('Bridge Found: C — D');
+    expect(bridgeFrames[0].state.bridges).toEqual(['C-D']);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Found 1 Bridge');
+    expect(final.state.bridges).toEqual(['C-D']);
+
+    // A path is all bridges: 3 edges, 3 bridge frames.
+    const tree = mod.generateTimeline({
+      nodes: ['0', '1', '2', '3'],
+      edges: [
+        { u: '0', v: '1' },
+        { u: '1', v: '2' },
+        { u: '2', v: '3' },
+      ],
+    });
+    expect(tree.filter((f) => f.codeLine === 13).length).toBe(3);
+    expect(tree[tree.length - 1].milestoneTitle).toBe('Found 3 Bridges');
+    expect(tree[tree.length - 1].state.bridges).toEqual(['2-3', '1-2', '0-1']);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      nodes: ['0', '1', '2', '3'],
+      edges: [
+        { u: '0', v: '1' },
+        { u: '1', v: '2' },
+        { u: '2', v: '3' },
+      ],
+    }).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
