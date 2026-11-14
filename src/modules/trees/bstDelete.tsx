@@ -178,21 +178,27 @@ export const bstDeleteModule: AlgorithmModule<
     const frames: ExecutionFrame<TreeStageState>[] = [];
     const initialTreeNodes = computePositions(internalRoot);
 
+    let checkpointAdded = false;
+
     // Frame 0: Initial state
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 2,
+      codeLine: 1,
       explanation: `BST loaded with ${values.length} nodes. Commencing search and deletion of key = ${key}.`,
       isMilestone: true,
       milestoneTitle: 'BST Initialized',
       soundCue: { type: 'start' },
       variables: { targetKey: key, treeNodes: initialTreeNodes.length, rootVal: internalRoot?.value ?? 0 },
       callStack: [
-        { name: `deleteNode(root, ${key})`, params: { key, root: internalRoot?.value ?? 0 }, line: 2, isCurrent: true },
+        { name: `deleteNode(root, ${key})`, params: { key, root: internalRoot?.value ?? 0 }, line: 1, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
-      conditionEval: { expr: `root !== null`, result: true },
+      pedagogy: {
+        what: `deleteNode walks the tree like a search, following one path per comparison.`,
+        why: 'Deletion must preserve left < node < right globally; the three structural cases decide how the node is unlinked.',
+        whatNext: `Compare the key ${key} with the root and descend.`,
+      },
       state: {
         nodes: initialTreeNodes.map((n) => ({ ...n })),
         targetValue: key,
@@ -203,18 +209,26 @@ export const bstDeleteModule: AlgorithmModule<
     let curr = internalRoot;
 
     // Frame: Inspect initial candidate node at root
+    const rootEquals = curr?.value === key;
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 2,
-      explanation: `Inspect node ${curr ? curr.value : 'null'}. Compare key (${key}) with node value (${curr?.value}).`,
+      codeLine: rootEquals ? 5 : key < (curr?.value ?? 0) ? 3 : 4,
+      explanation: `Compare key ${key} with node ${curr ? curr.value : 'null'}: ${rootEquals ? 'equal — this is the delete target' : key < (curr?.value ?? 0) ? 'go left' : 'go right'}.`,
       soundCue: { type: 'compare' },
       variables: { currentVal: curr?.value ?? 'null', targetKey: key },
-      conditionEval: { expr: `node.val === key`, result: curr?.value === key },
+      conditionEval: { expr: `node.val === key`, result: rootEquals },
       callStack: [
-        { name: `deleteNode(${curr?.value}, ${key})`, params: { curr: curr?.value ?? 'null', key }, line: 2, isCurrent: true },
+        { name: `deleteNode(${curr?.value}, ${key})`, params: { curr: curr?.value ?? 'null', key }, line: rootEquals ? 5 : key < (curr?.value ?? 0) ? 3 : 4, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
+      pedagogy: {
+        what: rootEquals
+          ? `${key} matches the root, so the search stops immediately and the case analysis begins.`
+          : `${key} is ${key < (curr?.value ?? 0) ? 'smaller' : 'larger'} than ${curr?.value}, so only the ${key < (curr?.value ?? 0) ? 'left' : 'right'} subtree can contain it.`,
+        why: 'The strict BST invariant rules out the opposite subtree, exactly like insert.',
+        whatNext: rootEquals ? 'Classify the node: leaf, single child, or two children.' : 'Descend one level.',
+      },
       state: {
         nodes: computePositions(internalRoot).map((n) => ({
           ...n,
@@ -223,6 +237,12 @@ export const bstDeleteModule: AlgorithmModule<
         targetValue: key,
       },
     });
+
+    // The root comparison already happened in the inspect frame: descend once so the
+    // loop below only compares the remaining path nodes (no duplicated root frame).
+    if (curr && curr.value !== key) {
+      curr = key < curr.value ? curr.left : curr.right;
+    }
 
     const path: InternalNode[] = [];
     while (curr && curr.value !== key) {
@@ -233,8 +253,8 @@ export const bstDeleteModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: key < currVal ? 3 : 5,
-        explanation: `Target key ${key} ${key < currVal ? '<' : '>'} current node ${currVal}. Traverse ${nextDir} subtree.`,
+        codeLine: key < currVal ? 3 : 4,
+        explanation: `Target key ${key} ${key < currVal ? '<' : '>'} current node ${currVal}. Descend into the ${nextDir} subtree.`,
         soundCue: { type: 'step' },
         variables: { currentVal: currVal, targetKey: key, direction: nextDir },
         conditionEval: {
@@ -242,9 +262,14 @@ export const bstDeleteModule: AlgorithmModule<
           result: true,
         },
         callStack: [
-          { name: `deleteNode(${currVal}, ${key})`, params: { curr: currVal, key }, line: key < currVal ? 3 : 5, isCurrent: true },
+          { name: `deleteNode(${currVal}, ${key})`, params: { curr: currVal, key }, line: key < currVal ? 3 : 4, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
         ],
+        pedagogy: {
+          what: `The recursion moves ${nextDir} from ${currVal}; the other subtree is discarded for this key.`,
+          why: 'This is the same O(h) search guarantee as insert — the deletion cost is dominated by this path.',
+          whatNext: `Continue comparing at the ${nextDir} child.`,
+        },
         state: {
           nodes: computePositions(internalRoot).map((n) => ({
             ...n,
@@ -271,6 +296,11 @@ export const bstDeleteModule: AlgorithmModule<
           { name: 'returnNull()', params: {}, line: 2, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
         ],
+        pedagogy: {
+          what: `The search fell off the tree: root is null, so return null.`,
+          why: 'A miss costs the same O(h) path as a hit but mutates nothing.',
+          whatNext: 'No case analysis is needed — the key simply does not exist.',
+        },
         state: {
           nodes: computePositions(internalRoot),
           targetValue: key,
@@ -285,7 +315,7 @@ export const bstDeleteModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 7,
+        codeLine: 5,
         isMilestone: true,
         milestoneTitle: `Located Node (${key})`,
         explanation: `Located target node ${key}. Topology: ${
@@ -297,9 +327,14 @@ export const bstDeleteModule: AlgorithmModule<
         }.`,
         variables: { targetVal: key, hasLeft: String(hasLeft), hasRight: String(hasRight) },
         callStack: [
-          { name: `foundNode(${key})`, params: { val: key, children: hasLeft && hasRight ? 2 : hasLeft || hasRight ? 1 : 0 }, line: 7, isCurrent: true },
+          { name: `foundNode(${key})`, params: { val: key, children: hasLeft && hasRight ? 2 : hasLeft || hasRight ? 1 : 0 }, line: 5, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
         ],
+        pedagogy: {
+          what: `The key matches here; the branch chosen depends on how many children this node has.`,
+          why: 'The three cases replace different parts of the parent link, which is why deletion is harder than insert.',
+          whatNext: hasLeft && hasRight ? 'Two children: find the inorder successor.' : hasLeft || hasRight ? 'One child: splice that child in place.' : 'No children: unlink the leaf.',
+        },
         state: {
           nodes: computePositions(internalRoot).map((n) => ({
             ...n,
@@ -323,15 +358,20 @@ export const bstDeleteModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 9,
+          codeLine: 6,
           isMilestone: true,
           milestoneTitle: `Leaf Node (${key}) Unlinked`,
-          explanation: `Leaf node ${key} has no children. Unlinked directly from parent pointer.`,
+          explanation: `Leaf node ${key}: root.left is null, so return root.right — which is also null. The node simply disappears from its parent reference.`,
           variables: { removedLeaf: key, remainingNodes: computePositions(internalRoot).length },
           callStack: [
-            { name: `unlinkLeaf(${key})`, params: { unlinked: key }, line: 9, isCurrent: true },
+            { name: `unlinkLeaf(${key})`, params: { unlinked: key }, line: 6, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
           ],
+          pedagogy: {
+            what: `The parent's child pointer is overwritten with null; no other node moves.`,
+            why: 'A leaf has no subtree to preserve, so the base case of the recursion returns null directly.',
+            whatNext: 'Return up the search path — every other node is unchanged.',
+          },
           state: {
             nodes: computePositions(internalRoot).map((n) => ({ ...n, status: 'sorted' })),
             targetValue: key,
@@ -352,15 +392,20 @@ export const bstDeleteModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 10,
+          codeLine: hasLeft ? 7 : 6,
           isMilestone: true,
           milestoneTitle: `Promoted Child (${child.value})`,
-          explanation: `Node ${key} has single child ${child.value}. Promoted child directly into parent reference.`,
+          explanation: `Node ${key} has a single child ${child.value}: ${hasLeft ? 'root.right is null, so return root.left' : 'root.left is null, so return root.right'} — the child takes the node's place.`,
           variables: { removedNode: key, promotedChild: child.value },
           callStack: [
-            { name: `spliceChild(${key})`, params: { child: child.value }, line: 10, isCurrent: true },
+            { name: `spliceChild(${key})`, params: { child: child.value }, line: hasLeft ? 7 : 6, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
           ],
+          pedagogy: {
+            what: `${child.value} is spliced directly into ${key}'s parent link.`,
+            why: 'The whole subtree of the child already respects the ordering relative to the parent, so no rebalancing is needed.',
+            whatNext: 'Return up the path; the tree is a valid BST again.',
+          },
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,
@@ -374,17 +419,22 @@ export const bstDeleteModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 12,
+          codeLine: 8,
           action: 'ENTER_CASE_3',
           isMilestone: true,
           milestoneTitle: `Case 3: Two Children on Node ${key}`,
-          explanation: `Node ${key} has both left child (${targetNode.left?.value}) and right child (${targetNode.right?.value}). Strategy: replace ${key} with its Inorder Successor (the smallest value in its right subtree).`,
+          explanation: `Node ${key} has both left child (${targetNode.left?.value}) and right child (${targetNode.right?.value}). succ = findMin(root.right): the smallest value of the right subtree replaces ${key}.`,
           variables: { targetVal: key, strategy: 'Inorder Successor Replacement', rightSubtreeRoot: targetNode.right?.value ?? 0 },
           callStack: [
-            { name: `findInorderSuccessor(root.right=${targetNode.right?.value})`, params: { rightRoot: targetNode.right?.value ?? 0 }, line: 12, isCurrent: true },
-            { name: `deleteNode(${key})`, params: { key }, line: 7 },
+            { name: `findMin(root.right=${targetNode.right?.value})`, params: { rightRoot: targetNode.right?.value ?? 0 }, line: 8, isCurrent: true },
+            { name: `deleteNode(${key})`, params: { key }, line: 5 },
             { name: 'main()', params: {}, line: 1 },
           ],
+          pedagogy: {
+            what: `Both subtrees exist, so the node cannot be unlinked directly.`,
+            why: 'The inorder successor is the next larger value; swapping it in keeps left < node < right valid for every remaining node.',
+            whatNext: 'Find the minimum of the right subtree by walking left.',
+          },
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,
@@ -399,15 +449,20 @@ export const bstDeleteModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 13,
+          codeLine: 8,
           action: 'SUCCESSOR_TRAVERSE_START',
-          explanation: `Step into right subtree root ${succTracker.value}. Minimum value in right subtree will be found by traversing left as far as possible.`,
+          explanation: `Step into right subtree root ${succTracker.value}. The minimum is found by traversing left as far as possible.`,
           variables: { currentSubtree: succTracker.value, currentCandidateMin: succTracker.value },
           callStack: [
-            { name: `traverseLeft(${succTracker.value})`, params: { curr: succTracker.value }, line: 13, isCurrent: true },
-            { name: `deleteNode(${key})`, params: { key }, line: 7 },
+            { name: `findMin(${succTracker.value})`, params: { curr: succTracker.value }, line: 8, isCurrent: true },
+            { name: `deleteNode(${key})`, params: { key }, line: 5 },
             { name: 'main()', params: {}, line: 1 },
           ],
+          pedagogy: {
+            what: `${succTracker.value} is the candidate minimum of the right subtree.`,
+            why: 'Going left always finds smaller values; when no left child remains, the candidate is the successor.',
+            whatNext: succTracker.left ? `Follow the left child ${succTracker.left.value}.` : 'No left child — the candidate is already the successor.',
+          },
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,
@@ -423,15 +478,20 @@ export const bstDeleteModule: AlgorithmModule<
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 13,
+            codeLine: 8,
             action: 'SUCCESSOR_TRAVERSE_LEFT',
-            explanation: `Found left child ${succTracker.value} < candidate. Traversing left to smaller value ${succTracker.value}.`,
+            explanation: `Left child ${succTracker.value} is smaller than the previous candidate — keep traversing left.`,
             variables: { currentCandidateMin: succTracker.value },
             callStack: [
-              { name: `traverseLeft(${succTracker.value})`, params: { curr: succTracker.value }, line: 13, isCurrent: true },
-              { name: `deleteNode(${key})`, params: { key }, line: 7 },
+              { name: `findMin(${succTracker.value})`, params: { curr: succTracker.value }, line: 8, isCurrent: true },
+              { name: `deleteNode(${key})`, params: { key }, line: 5 },
               { name: 'main()', params: {}, line: 1 },
             ],
+            pedagogy: {
+              what: `The candidate minimum drops to ${succTracker.value}.`,
+              why: 'findMin(root.right) walks left while a left child exists — one path, O(h) worst case.',
+              whatNext: succTracker.left ? 'Continue left.' : 'The candidate has no left child: confirmed successor.',
+            },
             state: {
               nodes: computePositions(internalRoot).map((n) => ({
                 ...n,
@@ -449,19 +509,37 @@ export const bstDeleteModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 13,
+          codeLine: 8,
           action: 'SUCCESSOR_CONFIRMED',
           isMilestone: true,
           milestoneTitle: `Successor Identified: ${succVal}`,
           soundCue: { type: 'pivot' },
-          explanation: `Node ${succVal} has no left child: confirmed as Inorder Successor (next value in sorted sequence).`,
+          explanation: `Node ${succVal} has no left child: confirmed as the inorder successor (next value in sorted order after ${key}).`,
           variables: { targetNode: key, inorderSuccessor: succVal },
           callStack: [
-            { name: `successorConfirmed(${succVal})`, params: { succ: succVal }, line: 13, isCurrent: true },
-            { name: `deleteNode(${key})`, params: { key }, line: 7 },
+            { name: `successorConfirmed(${succVal})`, params: { succ: succVal }, line: 8, isCurrent: true },
+            { name: `deleteNode(${key})`, params: { key }, line: 5 },
             { name: 'main()', params: {}, line: 1 },
           ],
           conditionEval: { expr: `succ.left === null`, result: true },
+          pedagogy: {
+            what: `${succVal} is the smallest value bigger than ${key}, so it can take ${key}'s place and preserve sorted order.`,
+            why: 'Because the successor has no left child, it will later be removable with the simple case-1/2 logic — that is what makes the two-child case solvable.',
+            whatNext: `Copy ${succVal} into the target node.`,
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'bst-delete-successor',
+                question: `Why does the inorder successor ${succVal} make a valid replacement for ${key}?`,
+                options: [
+                  'It is the next value in sorted order and has no left child, so after copying its value it can be removed with the simple single-child rule',
+                  'It is any leaf of the right subtree, since value order does not matter there',
+                ],
+                correctIndex: 0,
+                explanation:
+                  'The successor sits between the target\'s left subtree and the rest of its right subtree in sorted order, so the invariant survives. Its missing left child guarantees an easy removal afterwards.',
+              }
+            : undefined,
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,
@@ -470,6 +548,7 @@ export const bstDeleteModule: AlgorithmModule<
             targetValue: succVal,
           },
         });
+        checkpointAdded = true;
 
         // Step 2 of Case 3: Copy successor value to target node
         targetNode.value = succVal;
@@ -477,19 +556,24 @@ export const bstDeleteModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 14,
+          codeLine: 9,
           action: 'OVERWRITE_VALUE',
           isMilestone: true,
           milestoneTitle: `Copy Value: ${key} -> ${succVal}`,
           soundCue: { type: 'swap' },
-          explanation: `Copied successor value ${succVal} into target node (formerly ${key}). Node ${succVal} is now temporarily duplicated.`,
+          explanation: `root.val = succ.val: the target node now carries ${succVal}; the original successor node still exists, so the value ${succVal} is temporarily duplicated.`,
           variables: { oldTargetValue: key, newTargetValue: succVal, duplicatedValue: succVal },
           callStack: [
-            { name: `copyValue(target.val = ${succVal})`, params: { val: succVal }, line: 14, isCurrent: true },
-            { name: `deleteNode(${key})`, params: { key }, line: 7 },
+            { name: `copyValue(target.val = ${succVal})`, params: { val: succVal }, line: 9, isCurrent: true },
+            { name: `deleteNode(${key})`, params: { key }, line: 5 },
             { name: 'main()', params: {}, line: 1 },
           ],
           conditionEval: { expr: `root.val = succ.val`, result: true },
+          pedagogy: {
+            what: `Only the value is copied, not the node — links stay untouched for now.`,
+            why: 'Copying first keeps the tree valid except for the duplicate; the next step removes the physical duplicate.',
+            whatNext: 'Delete the original successor node from the right subtree.',
+          },
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,
@@ -512,18 +596,23 @@ export const bstDeleteModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 15,
+          codeLine: 10,
           action: 'PRUNE_OLD_SUCCESSOR',
           isMilestone: true,
           milestoneTitle: `Pruned Old Successor Node`,
           soundCue: { type: 'discard' },
-          explanation: `Recursively spliced out original successor node from right subtree. Tree is valid BST again without duplicate ${succVal}.`,
+          explanation: `root.right = deleteNode(root.right, ${succVal}): the original successor node is recursively spliced out. The duplicate ${succVal} is gone and the tree is a valid BST again.`,
           variables: { removedSuccessorId: succId, rootValue: internalRoot?.value ?? 0 },
           callStack: [
-            { name: `deleteNode(root.right, ${succVal})`, params: { val: succVal }, line: 15, isCurrent: true },
+            { name: `deleteNode(root.right, ${succVal})`, params: { val: succVal }, line: 10, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
           ],
           conditionEval: { expr: `deleteNode(root.right, succ.val)`, result: true },
+          pedagogy: {
+            what: `The physical node that used to hold ${succVal} is removed from the right subtree.`,
+            why: 'This recursive call is a case-1/2 delete: the successor has no left child, so at most it promotes one child.',
+            whatNext: 'Verify the global ordering invariant.',
+          },
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,
@@ -537,7 +626,7 @@ export const bstDeleteModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 16,
+          codeLine: 11,
           action: 'VERIFY_BST_INVARIANT',
           isMilestone: true,
           milestoneTitle: 'BST Invariant Verified',
@@ -546,12 +635,17 @@ export const bstDeleteModule: AlgorithmModule<
             label: 'BST Invariant: Left < Current < Right holds globally',
             isValid: true,
           },
-          explanation: `🎉 Deletion complete! BST invariant verified: left subtree elements < ${succVal} < right subtree elements.`,
+          explanation: `Deletion complete: the recursion returns the updated root. Left subtree elements < ${succVal} < right subtree elements holds for every node.`,
           variables: { deletedKey: key, newSubtreeRoot: succVal, totalNodesRemaining: computePositions(internalRoot).length },
           callStack: [
-            { name: 'verifyInvariant()', params: {}, line: 16, isCurrent: true },
+            { name: 'verifyInvariant()', params: {}, line: 11, isCurrent: true },
             { name: 'main()', params: {}, line: 1 },
           ],
+          pedagogy: {
+            what: `return root hands the repaired subtree back up the recursion.`,
+            why: 'Every frame on the search path restored its child pointer, so the whole tree is consistent again.',
+            whatNext: 'Compare with AVL deletion, which also restores height balance with rotations.',
+          },
           state: {
             nodes: computePositions(internalRoot).map((n) => ({
               ...n,

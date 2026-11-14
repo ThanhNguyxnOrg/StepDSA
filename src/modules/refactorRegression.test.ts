@@ -2100,6 +2100,53 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[2].data as any).errorCount).toBe(0); // skewed preset
   });
 
+  it('BST delete walks one path, handles all three cases, and swaps the inorder successor', () => {
+    const mod = moduleById('bst-delete');
+    const base = [50, 25, 75, 12, 37, 62, 87];
+
+    // Case 3: two children at the root — successor 62 replaces 50.
+    const two = mod.generateTimeline({ initialValues: base, keyToDelete: 50 });
+    expect(two.filter((f) => f.checkpoint?.id === 'bst-delete-successor').length).toBe(1);
+    expect(two.filter((f) => f.action === 'ENTER_CASE_3').length).toBe(1);
+    const succ = two.filter((f) => f.action === 'SUCCESSOR_CONFIRMED');
+    expect(succ.length).toBe(1);
+    expect(succ[0].milestoneTitle).toBe('Successor Identified: 62');
+    expect(two.filter((f) => f.action === 'OVERWRITE_VALUE').length).toBe(1);
+    expect(two.filter((f) => f.action === 'PRUNE_OLD_SUCCESSOR').length).toBe(1);
+    const verify = two.filter((f) => f.action === 'VERIFY_BST_INVARIANT');
+    expect(verify.length).toBe(1);
+    expect(verify[0].milestoneTitle).toBe('BST Invariant Verified');
+    expect(two[two.length - 1].state.nodes.length).toBe(6);
+
+    // Case 1: leaf 12 — single unlink frame; root compared once, then 25 exactly once.
+    const leaf = mod.generateTimeline({ initialValues: base, keyToDelete: 12 });
+    expect(leaf.filter((f) => f.milestoneTitle === 'Leaf Node (12) Unlinked').length).toBe(1);
+    expect(leaf.filter((f) => f.codeLine === 3).length).toBe(2); // inspect root + compare node 25, no duplication
+    expect(leaf[leaf.length - 1].state.nodes.length).toBe(6);
+
+    // Case 2: node 25 with a single right child — child 37 is promoted.
+    const single = mod.generateTimeline({
+      initialValues: [50, 25, 75, 37, 62, 87],
+      keyToDelete: 25,
+    });
+    const promo = single.filter((f) => f.milestoneTitle?.startsWith('Promoted Child'));
+    expect(promo.length).toBe(1);
+    expect(promo[0].milestoneTitle).toBe('Promoted Child (37)');
+    expect(promo[0].codeLine).toBe(6); // left is null -> return root.right
+    expect(single[single.length - 1].state.nodes.length).toBe(5);
+
+    // Not found: search falls off a null leaf without mutating the tree.
+    const missing = mod.generateTimeline({ initialValues: base, keyToDelete: 99 });
+    const notFound = missing.filter((f) => f.milestoneTitle === 'Key 99 Not Found');
+    expect(notFound.length).toBe(1);
+    expect(notFound[0].codeLine).toBe(2);
+    expect(missing[missing.length - 1].state.nodes.length).toBe(7);
+
+    expect(auditTimeline(mod, { initialValues: base, keyToDelete: 50 }).errorCount).toBe(0);
+    expect(auditTimeline(mod, { initialValues: base, keyToDelete: 99 }).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[2].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
