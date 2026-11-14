@@ -1536,6 +1536,68 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, { isOddCyclePreset: true } as any).errorCount).toBe(0);
   });
 
+  it('Edmonds-Karp finds shortest paths, pushes the bottleneck per edge and verifies the min-cut', () => {
+    const mod = moduleById('edmonds-karp');
+    const input = {
+      nodes: ['S', 'A', 'B', 'T'],
+      edges: [
+        { from: 'S', to: 'A', capacity: 10 },
+        { from: 'S', to: 'B', capacity: 10 },
+        { from: 'A', to: 'B', capacity: 2 },
+        { from: 'A', to: 'T', capacity: 4 },
+        { from: 'B', to: 'T', capacity: 8 },
+      ],
+      source: 'S',
+      sink: 'T',
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'edmonds-karp-bfs-shortest').length).toBe(1);
+    expect(timeline.filter((f) => f.checkpoint?.id === 'edmonds-karp-bottleneck').length).toBe(1);
+
+    // Two successful rounds then one exhausted BFS.
+    expect(timeline.filter((f) => f.action === 'BFS_START').length).toBe(3);
+
+    // Paths: S→A→T with Δ=4, then S→B→T with Δ=8.
+    const paths = timeline.filter((f) => f.action === 'PATH_FOUND');
+    expect(paths.map((f) => f.variables?.augmentingPath)).toEqual(['S -> A -> T', 'S -> B -> T']);
+    const bottlenecks = timeline.filter((f) => f.action === 'BOTTLENECK');
+    expect(bottlenecks.map((f) => f.variables?.bottleneck)).toEqual([4, 8]);
+
+    // Each augmentation mutates one path edge per frame before the total grows.
+    const edgePushes = timeline.filter((f) => f.action === 'AUGMENT_EDGE');
+    expect(edgePushes.length).toBe(4);
+    expect(edgePushes.every((f) => f.variables?.direction === 'FORWARD_PUSH')).toBe(true);
+    const totals = timeline.filter((f) => f.action === 'AUGMENT_FLOW');
+    expect(totals.map((f) => f.variables?.newTotalFlow)).toEqual([4, 12]);
+
+    // Rejections are explicit: saturated edges and already-visited targets.
+    const rejects = timeline.filter((f) => f.action === 'BFS_REJECT');
+    expect(rejects.filter((f) => f.variables?.reason === 'SATURATED').length).toBe(3);
+    expect(rejects.filter((f) => f.variables?.reason === 'ALREADY_VISITED').length).toBe(6);
+
+    // Termination: BFS reaches no sink, then return maxFlow.
+    const noPaths = timeline.filter((f) => f.action === 'NO_MORE_PATHS');
+    expect(noPaths.length).toBe(1);
+    expect(noPaths[0].milestoneTitle).toBe('No More Paths (flow 12)');
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Max Flow = 12');
+    expect(final.variables?.maxFlow).toBe(12);
+    expect(final.variables?.rounds).toBe(2);
+    const flows = final.state.edges.map((e: any) => e.flow);
+    expect(flows).toEqual([4, 8, 0, 4, 8]);
+
+    // The min-cut partitions: S side {S, A, B} vs {T}, all crossing edges saturated.
+    expect(noPaths[0].variables?.minCutS).toBe('[S, A, B]');
+    expect(noPaths[0].variables?.minCutT).toBe('[T]');
+
+    // Bridge-network preset still runs audit-clean.
+    const preset = mod.presets[1];
+    expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
