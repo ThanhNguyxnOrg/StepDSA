@@ -2334,6 +2334,42 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, { wordsToInsert: ['cat', 'car'], searchPrefix: 'cax' } as any).errorCount).toBe(0);
   });
 
+  it('segment tree builds leaf-by-leaf and decomposes a range into full-cover segments', () => {
+    const mod = moduleById('segment-tree');
+
+    // Default: [1,3,5,7] query [1,3] = 3 + 5 + 7 = 15.
+    const timeline = mod.generateTimeline({ array: [1, 3, 5, 7], query: [1, 3] } as any);
+    expect(timeline.filter((f) => f.checkpoint?.id === 'segment-tree-log-decomposition').length).toBe(1);
+
+    // Build first: 4 leaves then 3 merges, root merge announces completion.
+    expect(timeline.filter((f) => f.action === 'BUILD_LEAF').length).toBe(4);
+    const merges = timeline.filter((f) => f.action === 'BUILD_MERGE');
+    expect(merges.length).toBe(3);
+    expect(merges[merges.length - 1].milestoneTitle).toBe('Segment Tree Built');
+    expect(merges[merges.length - 1].variables?.mergedSum).toBe(16);
+
+    // Query [1,3]: 5 visits, 2 splits on the left boundary, one right subtree taken whole.
+    expect(timeline.filter((f) => f.action === 'QUERY_VISIT').length).toBe(5);
+    expect(timeline.filter((f) => f.action === 'SPLIT').length).toBe(2);
+    const overlaps = timeline.filter((f) => f.action === 'TOTAL_OVERLAP');
+    expect(overlaps.map((f) => f.variables?.addedValue)).toEqual([3, 12]);
+    expect(timeline.filter((f) => f.action === 'DISJOINT').length).toBe(1);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Query Result: 15');
+    expect(final.variables?.totalRangeSum).toBe(15);
+
+    // Full range hits the root in a single O(1) frame.
+    const full = mod.generateTimeline({ array: [1, 3, 5, 7], query: [0, 3] } as any);
+    expect(full.filter((f) => f.action === 'QUERY_VISIT').length).toBe(1);
+    expect(full.filter((f) => f.action === 'SPLIT').length).toBe(0);
+    expect(full.filter((f) => f.action === 'TOTAL_OVERLAP')[0].variables?.addedValue).toBe(16);
+    expect(full[full.length - 1].milestoneTitle).toBe('Query Result: 16');
+
+    expect(auditTimeline(mod, { array: [1, 3, 5, 7], query: [1, 3] } as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, { array: [1, 3, 5, 7], query: [0, 3] } as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

@@ -123,7 +123,13 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
     int mid = (l + r) / 2;
     return query(2 * node, l, mid, ql, qr, tree) + query(2 * node + 1, mid + 1, r, ql, qr, tree);
 }`,
-    pseudocode: `function query(node, l, r, ql, qr):
+    pseudocode: `function build(node, l, r):
+    if l == r: tree[node] = arr[l]; return
+    mid <- (l + r) / 2
+    build(2*node, l, mid)
+    build(2*node+1, mid+1, r)
+    tree[node] = tree[2*node] + tree[2*node+1]
+function query(node, l, r, ql, qr):
     if [l, r] is within [ql, qr]: return tree[node]
     if [l, r] outside [ql, qr]: return 0
     mid <- (l + r) / 2
@@ -172,20 +178,6 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
 
     const frames: ExecutionFrame<SegmentTreeState>[] = [];
 
-    // Build segment tree
-    const build = (node: number, l: number, r: number) => {
-      if (l === r) {
-        tree[node] = rawArr[l];
-        return;
-      }
-      const mid = Math.floor((l + r) / 2);
-      build(2 * node, l, mid);
-      build(2 * node + 1, mid + 1, r);
-      tree[node] = tree[2 * node] + tree[2 * node + 1];
-    };
-
-    build(1, 0, n - 1);
-
     const ql = Math.max(0, input.query[0]);
     const qr = Math.min(n - 1, input.query[1]);
     const truncationNote =
@@ -196,18 +188,21 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 4,
-      explanation: `Segment Tree built over array [${rawArr.join(
+      codeLine: 1,
+      explanation: `Preparing build(1, 0, ${n - 1}) over array [${rawArr.join(
         ', '
-      )}]. Root node #1 represents interval [0, 3] with total sum ${
-        tree[1]
-      }. Target Range Query: [${ql}, ${qr}].${truncationNote}`,
+      )}]. Target Range Query: [${ql}, ${qr}].${truncationNote}`,
       isMilestone: true,
       milestoneTitle: 'Segment Tree Initialized',
       soundCue: { type: 'start' },
-      variables: { queryRange: `[${ql}, ${qr}]`, rootSum: tree[1], arrayLength: n },
-      callStack: [{ name: 'buildSegmentTree', params: { n }, line: 4, isCurrent: true }],
+      variables: { queryRange: `[${ql}, ${qr}]`, arrayLength: n },
+      callStack: [{ name: 'buildSegmentTree', params: { n }, line: 1, isCurrent: true }],
       conditionEval: { expr: `n > 0`, result: true },
+      pedagogy: {
+        what: `A segment tree stores a range aggregate (here: sum) per interval, so a query can combine O(log n) stored nodes.`,
+        why: 'Build first: leaves hold the array values and every parent merges its two children.',
+        whatNext: 'Build the tree bottom-up, leaf by leaf.',
+      },
       state: {
         rawArray: [...rawArr],
         nodes: buildTreeNodes(),
@@ -215,19 +210,98 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
       },
     });
 
+    // Build segment tree — one frame per leaf write and per internal merge.
+    const build = (node: number, l: number, r: number) => {
+      if (l === r) {
+        tree[node] = rawArr[l];
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 2,
+          action: 'BUILD_LEAF',
+          explanation: `build #${node}: l == r == ${l}, so tree[${node}] = arr[${l}] = ${rawArr[l]}.`,
+          variables: { node, leafIndex: l, value: rawArr[l] },
+          conditionEval: { expr: `l == r (${l} == ${r})`, result: true },
+          callStack: [{ name: 'build', params: { node, l, r }, line: 2, isCurrent: true }],
+          pedagogy: {
+            what: `Leaf node #${node} becomes the array value ${rawArr[l]}.`,
+            why: 'Leaves are the base case of the build — the only place actual input data is stored.',
+            whatNext: 'Its parent will merge the two leaf values.',
+          },
+          state: {
+            rawArray: [...rawArr],
+            nodes: buildTreeNodes(node),
+            activeRange: [ql, qr],
+          },
+        });
+        return;
+      }
+      const mid = Math.floor((l + r) / 2);
+      build(2 * node, l, mid);
+      build(2 * node + 1, mid + 1, r);
+      tree[node] = tree[2 * node] + tree[2 * node + 1];
+
+      const isRoot = node === 1;
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 6,
+        action: 'BUILD_MERGE',
+        isMilestone: isRoot,
+        milestoneTitle: isRoot ? 'Segment Tree Built' : undefined,
+        explanation: `build #${node} ([${l}, ${r}]): tree[${node}] = tree[${2 * node}] + tree[${2 * node + 1}] = ${
+          tree[2 * node]
+        } + ${tree[2 * node + 1]} = ${tree[node]}.`,
+        soundCue: { type: 'step' },
+        variables: {
+          node,
+          segment: `[${l}, ${r}]`,
+          leftSum: tree[2 * node],
+          rightSum: tree[2 * node + 1],
+          mergedSum: tree[node],
+        },
+        callStack: [{ name: 'build', params: { node, l, r }, line: 6, isCurrent: true }],
+        pedagogy: {
+          what: `Node #${node} summarizes [${l}, ${r}] with sum ${tree[node]}.`,
+          why: 'Postorder merging guarantees children are complete before the parent combines them.',
+          whatNext: isRoot ? `Run the range query [${ql}, ${qr}].` : 'Return to the parent merge.',
+        },
+        state: {
+          rawArray: [...rawArr],
+          nodes: buildTreeNodes(node),
+          activeRange: [ql, qr],
+        },
+      });
+    };
+
+    build(1, 0, n - 1);
+
     const chosenSegments = new Set<number>();
     let totalSum = 0;
+    let queryCheckpointAdded = false;
 
     const query = (node: number, l: number, r: number): number => {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 16,
-        explanation: `Query visiting node #${node} spanning [${l}, ${r}] with sum ${tree[node]}. Comparing against target range [${ql}, ${qr}].`,
+        codeLine: 7,
+        action: 'QUERY_VISIT',
+        explanation: `query(#${node}, [${l}, ${r}]): compare with target [${ql}, ${qr}] — within? ${ql <= l && r <= qr}; outside? ${r < ql || l > qr}.`,
         soundCue: { type: 'compare' },
         variables: { node, segment: `[${l}, ${r}]`, sum: tree[node], target: `[${ql}, ${qr}]` },
-        callStack: [{ name: 'rangeQuery', params: { node, l, r }, line: 16, isCurrent: true }],
+        callStack: [{ name: 'rangeQuery', params: { node, l, r }, line: 7, isCurrent: true }],
         conditionEval: { expr: `ql <= l && r <= qr (${ql} <= ${l} && ${r} <= ${qr})`, result: ql <= l && r <= qr },
+        pedagogy: {
+          what: `Node #${node} covers [${l}, ${r}] with stored sum ${tree[node]}.`,
+          why: 'The two overlap tests decide whether this whole subtree can be answered in O(1), skipped, or split.',
+          whatNext:
+            ql <= l && r <= qr
+              ? 'Full cover — take the stored sum.'
+              : r < ql || l > qr
+                ? 'No overlap — skip this subtree entirely.'
+                : 'Partial overlap — split and recurse into both children.',
+        },
         state: {
           rawArray: [...rawArr],
           nodes: buildTreeNodes(node, chosenSegments),
@@ -244,14 +318,20 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 18,
-          explanation: `Total overlap! Segment [${l}, ${r}] is strictly inside [${ql}, ${qr}]. Adding ${tree[node]} to accumulator. Running sum = ${totalSum}.`,
+          codeLine: 8,
+          action: 'TOTAL_OVERLAP',
+          explanation: `Total overlap: [${l}, ${r}] is inside [${ql}, ${qr}], so return tree[${node}] = ${tree[node]} directly. Running sum = ${totalSum}.`,
           isMilestone: true,
           milestoneTitle: `Merged Segment [${l}, ${r}]: +${tree[node]}`,
           soundCue: { type: 'swap' },
           variables: { matchedSegment: `[${l}, ${r}]`, addedValue: tree[node], runningTotal: totalSum },
-          callStack: [{ name: 'accumulateSegment', params: { node, val: tree[node] }, line: 18, isCurrent: true }],
+          callStack: [{ name: 'accumulateSegment', params: { node, val: tree[node] }, line: 8, isCurrent: true }],
           conditionEval: { expr: `ql <= l && r <= qr`, result: true },
+          pedagogy: {
+            what: `The stored sum ${tree[node]} is added in O(1) without visiting any descendant.`,
+            why: 'Full coverage is the payoff of the tree: one node replaces consulting every element of the interval.',
+            whatNext: 'Return to the parent and continue with the sibling.',
+          },
           state: {
             rawArray: [...rawArr],
             nodes: buildTreeNodes(node, chosenSegments),
@@ -268,12 +348,18 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 20,
-          explanation: `Disjoint: Segment [${l}, ${r}] lies entirely outside [${ql}, ${qr}]. Returning 0.`,
+          codeLine: 9,
+          action: 'DISJOINT',
+          explanation: `Disjoint: [${l}, ${r}] lies entirely outside [${ql}, ${qr}], so return 0 and prune the subtree.`,
           soundCue: { type: 'step' },
           variables: { disjointSegment: `[${l}, ${r}]`, target: `[${ql}, ${qr}]`, contribution: 0 },
-          callStack: [{ name: 'disjointSegment', params: { node, l, r }, line: 20, isCurrent: true }],
+          callStack: [{ name: 'disjointSegment', params: { node, l, r }, line: 9, isCurrent: true }],
           conditionEval: { expr: `r < ql || l > qr`, result: true },
+          pedagogy: {
+            what: `This subtree contributes nothing and is skipped whole.`,
+            why: 'Disjoint pruning is what keeps the query logarithmic — entire child branches disappear from the recursion.',
+            whatNext: 'Return 0 to the parent.',
+          },
           state: {
             rawArray: [...rawArr],
             nodes: buildTreeNodes(undefined, chosenSegments),
@@ -286,6 +372,44 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
 
       // Partial overlap: split
       const mid = Math.floor((l + r) / 2);
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 10,
+        action: 'SPLIT',
+        explanation: `Partial overlap on [${l}, ${r}]: mid = ${mid}, recursing into left [${l}, ${mid}] and right [${mid + 1}, ${r}].`,
+        soundCue: { type: 'step' },
+        variables: { node, segment: `[${l}, ${r}]`, mid, leftChild: `[${l}, ${mid}]`, rightChild: `[${mid + 1}, ${r}]` },
+        callStack: [{ name: 'partialOverlap', params: { node, mid }, line: 10, isCurrent: true }],
+        pedagogy: {
+          what: `The target covers part of [${l}, ${r}], so both children must be examined.`,
+          why: 'Only boundary paths split: one side usually becomes full cover or disjoint immediately, so the total split depth stays O(log n).',
+          whatNext: `Recurse left [${l}, ${mid}] then right [${mid + 1}, ${r}].`,
+        },
+        checkpoint: !queryCheckpointAdded
+          ? {
+              id: 'segment-tree-log-decomposition',
+              question: 'Why does a range query visit only O(log n) nodes?',
+              options: [
+                'Full-cover nodes are answered in O(1) and disjoint nodes are pruned whole, so splitting happens only along the two boundaries of the range',
+                'Because the query visits exactly one node per level of the tree',
+              ],
+              correctIndex: 0,
+              explanation:
+                'The range decomposes into at most 2·log n canonical segments: interior subtrees are taken whole while only the two boundary paths keep splitting. That is the "segment" in segment tree.',
+            }
+          : undefined,
+        state: {
+          rawArray: [...rawArr],
+          nodes: buildTreeNodes(node, chosenSegments),
+          activeRange: [ql, qr],
+          queryResult: totalSum,
+          highlightedTreeIndex: node,
+        },
+      });
+      queryCheckpointAdded = true;
+
       const leftSum = query(2 * node, l, mid);
       const rightSum = query(2 * node + 1, mid + 1, r);
       return leftSum + rightSum;
@@ -296,14 +420,22 @@ int query(int node, int l, int r, int ql, int qr, const vector<int>& tree) {
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 23,
-      explanation: `Range Sum Query for [${ql}, ${qr}] complete in O(log N)! Total Range Sum = ${totalSum}.`,
+      codeLine: 11,
+      action: 'QUERY_COMPLETE',
+      explanation: `Range Sum Query for [${ql}, ${qr}] complete in O(log N): total range sum = ${totalSum}.`,
       isMilestone: true,
       milestoneTitle: `Query Result: ${totalSum}`,
       soundCue: { type: 'complete' },
       variables: { totalRangeSum: totalSum, range: `[${ql}, ${qr}]`, queryComplete: true },
-      callStack: [{ name: 'rangeQuery.done', params: { result: totalSum }, line: 23, isCurrent: true }],
+      callStack: [{ name: 'rangeQuery.done', params: { result: totalSum }, line: 11, isCurrent: true }],
       conditionEval: { expr: `totalSum >= 0`, result: true },
+      pedagogy: {
+        what: `The selected segments ${Array.from(chosenSegments)
+          .map((idx) => `#${idx}(${tree[idx]})`)
+          .join(' + ')} combine to ${totalSum}.`,
+        why: 'Their intervals tile the query range exactly — disjoint sums are pruned, so no element is counted twice.',
+        whatNext: 'Point updates re-merge the same O(log n) path, which is why the structure suits dynamic range queries.',
+      },
       state: {
         rawArray: [...rawArr],
         nodes: buildTreeNodes(undefined, chosenSegments),
