@@ -2188,6 +2188,45 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, { values, mode: 'postorder' } as any).errorCount).toBe(0);
   });
 
+  it('level-order traversal snapshots level sizes, seales each level and uses a FIFO queue', () => {
+    const mod = moduleById('level-order-traversal');
+    const timeline = mod.generateTimeline([50, 30, 70, 20, 40, 60, 80] as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'level-order-queue-fifo').length).toBe(1);
+
+    // Three levels, each opened with a size snapshot and sealed with result.append.
+    const levelStarts = timeline.filter((f) => f.milestoneTitle?.startsWith('Level ') && f.milestoneTitle?.includes('('));
+    expect(levelStarts.map((f) => f.variables?.levelSize)).toEqual([1, 2, 4]);
+    const seals = timeline.filter((f) => f.milestoneTitle?.endsWith('Complete') && f.codeLine === 12);
+    expect(seals.map((f) => f.variables?.sealedLevel)).toEqual([1, 2, 3]);
+
+    // One dequeue+visit per node, one enqueue per edge.
+    expect(timeline.filter((f) => f.codeLine === 8).length).toBe(7);
+    expect(timeline.filter((f) => f.codeLine === 9).length).toBe(7);
+    expect(timeline.filter((f) => f.codeLine === 10).length).toBe(3);
+    expect(timeline.filter((f) => f.codeLine === 11).length).toBe(3);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Traversal Complete');
+    expect(final.state.visitedLevels).toEqual([
+      [50],
+      [30, 70],
+      [20, 40, 60, 80],
+    ]);
+
+    // Zig-zag preset [10,5,15,3,12,18]: levels [10], [5,15], [3,12,18].
+    const skewed = mod.generateTimeline(mod.presets[1].data as any);
+    const skewedFinal = skewed[skewed.length - 1];
+    expect(skewedFinal.state.visitedLevels).toEqual([
+      [10],
+      [5, 15],
+      [3, 12, 18],
+    ]);
+
+    expect(auditTimeline(mod, [50, 30, 70, 20, 40, 60, 80] as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
