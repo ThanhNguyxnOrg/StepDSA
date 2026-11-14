@@ -174,8 +174,8 @@ export const hierholzerModule: AlgorithmModule<
             choose and remove edge (curr, next)
             stack.push(next)
         else:
-            circuit.append(stack.pop())
-    return reverse(circuit)`,
+            circuit.prepend(stack.pop())   # postorder builds the trail
+    return circuit`,
   },
   generateTimeline: (input: {
     nodes: string[];
@@ -201,6 +201,15 @@ export const hierholzerModule: AlgorithmModule<
     const edgeList = rawEdges.map((e, idx) => ({ ...e, id: idx, used: false }));
     const stack: string[] = [startNode];
     const circuit: string[] = [];
+    let checkpointAdded = false;
+
+    const degree: Record<string, number> = {};
+    rawNodes.forEach((n) => (degree[n] = 0));
+    rawEdges.forEach((e) => {
+      degree[e.u] = (degree[e.u] ?? 0) + 1;
+      degree[e.v] = (degree[e.v] ?? 0) + 1;
+    });
+    const oddVertices = rawNodes.filter((n) => (degree[n] ?? 0) % 2 === 1);
 
     frames.push({
       stepIndex: 0,
@@ -215,9 +224,19 @@ export const hierholzerModule: AlgorithmModule<
         activeNode: startNode,
         activeEdgeId: null,
       },
-      callStack: [{ name: 'hierholzer', params: { startNode, totalEdges: rawEdges.length } }],
-      variables: { startNode, stack: stack.join(' -> '), edgesLeft: rawEdges.length },
-      explanation: `Initialized Hierholzer's Algorithm starting at vertex "${startNode}". Pushed start node onto traversal stack.`,
+      callStack: [{ name: 'hierholzer', params: { startNode, totalEdges: rawEdges.length }, line: 2, isCurrent: true }],
+      variables: { startNode, stack: stack.join(' -> '), edgesLeft: rawEdges.length, oddVertices: oddVertices.join(', ') || 'none' },
+      pedagogy: {
+        what:
+          oddVertices.length === 0
+            ? `Every vertex has even degree (odd-degree vertices: none), so an Eulerian circuit exists and "${startNode}" can be any vertex.`
+            : oddVertices.length === 2
+              ? `Exactly two odd-degree vertices exist (${oddVertices.join(', ')}), so an Eulerian path runs between them — starting elsewhere would strand edges.`
+              : `${oddVertices.length} odd-degree vertices exist (${oddVertices.join(', ')}); no Eulerian trail covers all edges. Expect a partial trail.`,
+        why: 'Euler proved the trail exists iff 0 or 2 vertices have odd degree and all edges lie in one component. Parity is checked before walking.',
+        whatNext: `Push "${startNode}" and start walking unused edges.`,
+      },
+      explanation: `Initialized Hierholzer's Algorithm starting at vertex "${startNode}". Pushed start node onto traversal stack. Odd-degree vertices: ${oddVertices.join(', ') || 'none'}.`,
     });
 
     while (stack.length > 0) {
@@ -229,13 +248,42 @@ export const hierholzerModule: AlgorithmModule<
       if (edge) {
         edge.used = true;
         const next = edge.u === curr ? edge.v : edge.u;
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 7,
+          action: 'SELECT_EDGE',
+          state: {
+            nodes: rawNodes,
+            remainingEdges: edgeList.filter((e) => !e.used),
+            currentStack: [...stack],
+            circuit: [...circuit],
+            activeNode: curr,
+            activeEdgeId: edge.id,
+          },
+          callStack: [{ name: 'selectEdge', params: { from: curr, to: next, edgeId: edge.id }, line: 7, isCurrent: true }],
+          variables: {
+            from: curr,
+            to: next,
+            edgeId: edge.id,
+            remainingEdges: edgeList.filter((e) => !e.used).length,
+          },
+          pedagogy: {
+            what: `Take unused edge #${edge.id} (${curr} — ${next}) and remove it from the graph. ${edgeList.filter((e) => !e.used).length} edge(s) remain.`,
+            why: 'Removing each edge the moment it is used guarantees no edge is traversed twice.',
+            whatNext: `Push "${next}" onto the stack and continue walking from it.`,
+          },
+          explanation: `Selected and consumed edge (${curr}, ${next}). Remaining unused edges: ${edgeList.filter((e) => !e.used).length}.`,
+        });
+
         stack.push(next);
 
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
           codeLine: 8,
-          action: 'TRAVERSE_EDGE',
+          action: 'PUSH_VERTEX',
           state: {
             nodes: rawNodes,
             remainingEdges: edgeList.filter((e) => !e.used),
@@ -244,16 +292,18 @@ export const hierholzerModule: AlgorithmModule<
             activeNode: next,
             activeEdgeId: edge.id,
           },
-          callStack: [{ name: 'exploreEdge', params: { from: curr, to: next, edgeId: edge.id } }],
+          callStack: [{ name: 'pushVertex', params: { vertex: next }, line: 8, isCurrent: true }],
           variables: {
-            from: curr,
-            to: next,
+            pushed: next,
             stack: stack.join(' -> '),
-            remainingEdges: edgeList.filter((e) => !e.used).length,
+            stackDepth: stack.length,
           },
-          explanation: `Traversed edge (${curr}, ${next}). Pushed "${next}" onto stack. Remaining unused edges: ${
-            edgeList.filter((e) => !e.used).length
-          }.`,
+          pedagogy: {
+            what: `"${next}" joins the walk stack: [${stack.join(' → ')}].`,
+            why: 'The stack is the current open walk; it only shrinks when a vertex runs out of unused edges.',
+            whatNext: `Continue from "${next}".`,
+          },
+          explanation: `Pushed "${next}" onto stack: [${stack.join(' -> ')}].`,
         });
       } else {
         const popped = stack.pop()!;
@@ -262,7 +312,7 @@ export const hierholzerModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 12,
+          codeLine: 10,
           action: 'BACKTRACK_POP',
           state: {
             nodes: rawNodes,
@@ -272,33 +322,70 @@ export const hierholzerModule: AlgorithmModule<
             activeNode: popped,
             activeEdgeId: null,
           },
-          callStack: [{ name: 'popVertex', params: { popped, circuitLength: circuit.length } }],
+          callStack: [{ name: 'popVertex', params: { popped, circuitLength: circuit.length }, line: 10, isCurrent: true }],
           variables: {
             poppedVertex: popped,
             currentCircuit: circuit.join(' -> '),
             stackLength: stack.length,
           },
-          explanation: `Vertex "${popped}" has no more unused incident edges. Popped to circuit: [${circuit.join(' -> ')}].`,
+          pedagogy: {
+            what: `"${popped}" has no unused incident edge left, so it becomes the next element of the circuit (prepended).`,
+            why: 'A stuck vertex marks the end of a sub-tour; placing vertices in postorder (and prepending each) splices sub-tours into one trail automatically.',
+            whatNext: stack.length ? `Continue from stack top "${stack[stack.length - 1]}".` : 'The walk is exhausted.',
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'hierholzer-stuck-pop',
+                question: 'Why does a vertex with no unused edges get popped into the circuit at that exact moment?',
+                options: [
+                  'It closes the current sub-tour; postorder placement splices it into the final trail when the stack resumes',
+                  'Because it has odd degree and must be an endpoint of the Eulerian path',
+                ],
+                correctIndex: 0,
+                explanation:
+                  'Stuck vertices are where cycles close, not necessarily path endpoints. Recording them as the stack unwinds (postorder) is exactly what merges the sub-tours into one Eulerian trail.',
+              }
+            : undefined,
+          explanation: `Vertex "${popped}" has no more unused incident edges. Prepended to circuit: [${circuit.join(' -> ')}].`,
         });
+        checkpointAdded = true;
       }
     }
+
+    const unusedCount = edgeList.filter((e) => !e.used).length;
+    const allUsed = unusedCount === 0;
 
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 16,
+      codeLine: 11,
+      isMilestone: true,
+      milestoneTitle: allUsed ? 'Eulerian Trail Complete' : `Partial Trail (${unusedCount} edge${unusedCount === 1 ? '' : 's'} unused)`,
       action: 'COMPLETE',
       state: {
         nodes: rawNodes,
-        remainingEdges: [],
+        remainingEdges: edgeList.filter((e) => !e.used),
         currentStack: [],
         circuit: [...circuit],
         activeNode: null,
         activeEdgeId: null,
       },
-      callStack: [{ name: 'hierholzer', params: { totalPathEdges: circuit.length - 1, status: 'DONE' } }],
-      variables: { completeEulerianTrail: circuit.join(' -> '), length: circuit.length },
-      explanation: `Complete Eulerian path discovered: ${circuit.join(' -> ')}. Every edge traversed exactly once!`,
+      callStack: [{ name: 'hierholzer', params: { totalPathEdges: circuit.length - 1, status: allUsed ? 'DONE' : 'PARTIAL' }, line: 11, isCurrent: true }],
+      variables: { completeEulerianTrail: circuit.join(' -> '), length: circuit.length, unusedEdges: unusedCount },
+      pedagogy: {
+        what: allUsed
+          ? `Return the circuit ${circuit.join(' → ')} — all ${rawEdges.length} edges used exactly once.`
+          : `Return a trail covering ${rawEdges.length - unusedCount}/${rawEdges.length} edge(s); ${unusedCount} edge(s) were never reached because the graph is disconnected or has more than two odd-degree vertices.`,
+        why: allUsed
+          ? 'Postorder prepending put every sub-tour in the right position, and the stack emptied only after every edge was consumed.'
+          : 'Hierholzer only walks the connected component of the start vertex; leftover edges prove the Eulerian precondition was violated.',
+        whatNext: allUsed
+          ? 'Eulerian circuits are the basis for de Bruijn sequences and Chinese postman route inspection.'
+          : 'Check degree parities and connectivity before claiming an Eulerian trail.',
+      },
+      explanation: allUsed
+        ? `Complete Eulerian path discovered: ${circuit.join(' -> ')}. Every edge traversed exactly once!`
+        : `Trail ended with ${unusedCount} unused edge(s) (graph disconnected or parity violated): ${circuit.join(' -> ')}.`,
     });
 
     frames.forEach((f) => {

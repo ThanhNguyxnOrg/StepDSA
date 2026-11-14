@@ -1713,6 +1713,67 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('Hierholzer consumes edges one by one, pops stuck vertices in postorder, and reports partial trails honestly', () => {
+    const mod = moduleById('hierholzer-eulerian');
+    const input = {
+      nodes: ['1', '2', '3', '4', '5'],
+      edges: [
+        { u: '1', v: '2' },
+        { u: '2', v: '3' },
+        { u: '3', v: '4' },
+        { u: '4', v: '1' },
+        { u: '1', v: '3' },
+        { u: '2', v: '4' },
+        { u: '3', v: '5' },
+        { u: '4', v: '5' },
+      ],
+      startNode: '1',
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'hierholzer-stuck-pop').length).toBe(1);
+
+    // Parity analysis up front: vertices 1 and 2 have odd degree.
+    const init = timeline[0];
+    expect(init.variables?.oddVertices).toBe('1, 2');
+
+    // Every consumed edge is a separate select frame, in deterministic id order.
+    const selects = timeline.filter((f) => f.action === 'SELECT_EDGE');
+    expect(selects.map((f) => f.variables?.edgeId)).toEqual([0, 1, 2, 3, 4, 6, 7, 5]);
+    expect(timeline.filter((f) => f.action === 'PUSH_VERTEX').length).toBe(8);
+    expect(timeline.filter((f) => f.action === 'BACKTRACK_POP').length).toBe(9);
+
+    // Known Eulerian trail from 1 to 2 covering every edge once.
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Eulerian Trail Complete');
+    expect(final.variables?.unusedEdges).toBe(0);
+    expect(final.state.circuit.join(' -> ')).toBe('1 -> 2 -> 3 -> 4 -> 1 -> 3 -> 5 -> 4 -> 2');
+
+    // Disconnected edges: 4 odd-degree vertices, trail must not claim completeness.
+    const partial = mod.generateTimeline({
+      nodes: ['1', '2', '3', '4'],
+      edges: [
+        { u: '1', v: '2' },
+        { u: '3', v: '4' },
+      ],
+      startNode: '1',
+    });
+    const partialFinal = partial[partial.length - 1];
+    expect(partialFinal.milestoneTitle).toBe('Partial Trail (1 edge unused)');
+    expect(partialFinal.variables?.unusedEdges).toBe(1);
+    expect(partialFinal.state.circuit.join(' -> ')).toBe('1 -> 2');
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      nodes: ['1', '2', '3', '4'],
+      edges: [
+        { u: '1', v: '2' },
+        { u: '3', v: '4' },
+      ],
+      startNode: '1',
+    }).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
