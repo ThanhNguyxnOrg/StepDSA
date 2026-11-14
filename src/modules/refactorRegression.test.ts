@@ -1892,6 +1892,116 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
   });
 
+  it('Welsh-Powell colors degree-ordered classes with explicit conflict, skip and assign frames', () => {
+    const mod = moduleById('graph-coloring');
+    const input = {
+      nodes: ['A', 'B', 'C', 'D', 'E'],
+      edges: [
+        { u: 'A', v: 'B' },
+        { u: 'B', v: 'C' },
+        { u: 'C', v: 'D' },
+        { u: 'D', v: 'E' },
+        { u: 'E', v: 'A' },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'welsh-powell-degree-order').length).toBe(1);
+
+    // Init is two honest frames: degrees then the degree sort.
+    expect(timeline.filter((f) => f.action === 'INIT_DEGREES').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'INIT_DEGREE_SORT').length).toBe(1);
+
+    // Three color classes open; non-adjacent vertices join existing classes.
+    expect(timeline.filter((f) => f.action === 'COLOR_PRIMARY_VERTEX').length).toBe(3);
+    expect(timeline.filter((f) => f.action === 'COLOR_GREEDY_PASS').length).toBe(2);
+    expect(timeline.filter((f) => f.action === 'CHECK_CONFLICT').length).toBe(4);
+    // Single sweep over the sorted order: only C and D are already colored when reached.
+    expect(timeline.filter((f) => f.action === 'OUTER_SKIP').length).toBe(2);
+    expect(timeline.filter((f) => f.action === 'INNER_SKIP').length).toBe(9);
+
+    // Pentagon: A, C emerald; B, D cyan; E amber — three classes.
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Coloring Finished: 3 Colors');
+    expect(final.state.colors).toEqual({ A: 0, B: 1, C: 0, D: 1, E: 2 });
+
+    // A triangle must use three distinct colors.
+    const triangle = mod.generateTimeline({
+      nodes: ['A', 'B', 'C'],
+      edges: [
+        { u: 'A', v: 'B' },
+        { u: 'B', v: 'C' },
+        { u: 'C', v: 'A' },
+      ],
+    });
+    const triColors = triangle[triangle.length - 1].state.colors;
+    expect(new Set(Object.values(triColors)).size).toBe(3);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      nodes: ['A', 'B', 'C'],
+      edges: [
+        { u: 'A', v: 'B' },
+        { u: 'B', v: 'C' },
+        { u: 'C', v: 'A' },
+      ],
+    }).errorCount).toBe(0);
+  });
+
+  it('flood fill spreads one ring per dequeue with explicit bounds and color rejections', () => {
+    const mod = moduleById('flood-fill');
+    const input = {
+      grid: [
+        [1, 1, 0],
+        [1, 0, 0],
+        [0, 0, 0],
+      ],
+      startRow: 0,
+      startCol: 0,
+      newColor: 2,
+    };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'flood-fill-visited-by-color').length).toBe(1);
+
+    // Seed path: init, queue, fill; then 3 dequeues and 2 fill/enqueue pairs.
+    expect(timeline.filter((f) => f.codeLine === 4).length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'DEQUEUE_CELL').length).toBe(3);
+    expect(timeline.filter((f) => f.codeLine === 11).length).toBe(2);
+    expect(timeline.filter((f) => f.action === 'ENQUEUE_CELL').length).toBe(2);
+
+    // Every rejected neighbor explains why: 4 out-of-bounds, 6 wrong color.
+    const rejects = timeline.filter((f) => f.action === 'NEIGHBOR_REJECT');
+    expect(rejects.length).toBe(10);
+    expect(rejects.filter((f) => f.variables?.reason === 'OUT_OF_BOUNDS').length).toBe(4);
+    expect(rejects.filter((f) => f.variables?.reason === 'COLOR_MISMATCH').length).toBe(6);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Flood Fill Finished (3 Cells)');
+    expect(final.state.filledCount).toBe(3);
+    expect(final.state.grid).toEqual([
+      [2, 2, 0],
+      [2, 0, 0],
+      [0, 0, 0],
+    ]);
+
+    // Identical colors: the early exit guards against an unmarkable wavefront.
+    const noop = mod.generateTimeline({
+      grid: [
+        [1, 1],
+        [0, 0],
+      ],
+      startRow: 0,
+      startCol: 0,
+      newColor: 1,
+    } as any);
+    expect(noop.length).toBe(2);
+    expect(noop[1].milestoneTitle).toBe('Early Exit (Identical Color)');
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

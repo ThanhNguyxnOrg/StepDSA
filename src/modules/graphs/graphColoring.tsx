@@ -221,11 +221,39 @@ export const graphColoringModule: AlgorithmModule<
 
     const sortedOrder = [...rawNodes].sort((a, b) => degrees[b] - degrees[a]);
     const colors: Record<string, number> = {};
+    let checkpointAdded = false;
 
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
+      codeLine: 2,
+      action: 'INIT_DEGREES',
+      state: {
+        nodes: rawNodes,
+        edges: rawEdges,
+        degrees: { ...degrees },
+        sortedOrder: [...sortedOrder],
+        colors: {},
+        activeNode: null,
+        currentColor: 0,
+      },
+      callStack: [{ name: 'computeDegrees', params: { nodeCount: rawNodes.length }, line: 2, isCurrent: true }],
+      variables: {
+        degrees: rawNodes.map((u) => `${u}:${degrees[u]}`).join(', '),
+        status: 'Degrees computed',
+      },
+      pedagogy: {
+        what: `Degrees computed: ${rawNodes.map((u) => `${u}=${degrees[u]}`).join(', ')}.`,
+        why: 'Degree measures how constrained a vertex is: a high-degree vertex has the most neighbors competing for colors.',
+        whatNext: 'Sort vertices by degree descending.',
+      },
+      explanation: `Computed degrees: [${rawNodes.map((u) => `${u}: ${degrees[u]}`).join(', ')}].`,
+    });
+
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 3,
       isMilestone: true,
       milestoneTitle: 'Compute Degrees & Sort Descending',
       action: 'INIT_DEGREE_SORT',
@@ -238,19 +266,65 @@ export const graphColoringModule: AlgorithmModule<
         activeNode: null,
         currentColor: 0,
       },
-      callStack: [{ name: 'welshPowell', params: { nodeCount: rawNodes.length, edgeCount: rawEdges.length }, line: 1, isCurrent: true }],
+      callStack: [{ name: 'sortByDegree', params: { nodeCount: rawNodes.length }, line: 3, isCurrent: true }],
       variables: {
         sortedOrder: sortedOrder.map((u) => `${u}(deg ${degrees[u]})`).join(', '),
         status: 'Degrees sorted descending',
       },
       conditionEval: { expr: 'nodes.length > 0', result: true },
       soundCue: { type: 'step' },
-      explanation: `Computed degrees and sorted vertices in descending order: [${sortedOrder.map((u) => `${u}: ${degrees[u]}`).join(', ')}]. Vertices with highest degrees are prioritized because they are most constrained.`,
+      pedagogy: {
+        what: `Processing order: [${sortedOrder.map((u) => `${u}(deg ${degrees[u]})`).join(', ')}].`,
+        why: 'High-degree vertices are the hardest to fit; coloring them first with fresh colors leaves low-degree vertices easier to slot into existing colors.',
+        whatNext: 'Color the first uncolored vertex with a fresh color.',
+      },
+      checkpoint: !checkpointAdded
+        ? {
+            id: 'welsh-powell-degree-order',
+            question: 'Why does Welsh-Powell color the highest-degree vertices first?',
+            options: [
+              'Most-constrained vertices get a fresh color early, so the greedy passes tend to use fewer colors overall — a good heuristic, not a guarantee',
+              'It guarantees the minimum possible number of colors (the chromatic number)',
+            ],
+            correctIndex: 0,
+            explanation:
+              'Graph coloring is NP-hard; Welsh-Powell is a greedy upper bound. Degree ordering usually beats arbitrary order, but the chromatic number can still be smaller.',
+          }
+        : undefined,
+      explanation: `Sorted vertices in descending degree order: [${sortedOrder.map((u) => `${u}: ${degrees[u]}`).join(', ')}]. Vertices with highest degrees are prioritized because they are most constrained.`,
     });
+    checkpointAdded = true;
 
     let currentColor = 0;
     for (const u of sortedOrder) {
-      if (colors[u] !== undefined) continue;
+      if (colors[u] !== undefined) {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 6,
+          action: 'OUTER_SKIP',
+          state: {
+            nodes: rawNodes,
+            edges: rawEdges,
+            degrees: { ...degrees },
+            sortedOrder: [...sortedOrder],
+            colors: { ...colors },
+            activeNode: u,
+            currentColor,
+          },
+          callStack: [{ name: `skipVertex(${u})`, params: { u }, line: 6, isCurrent: true }],
+          variables: { vertex: u, alreadyColored: true, color: colors[u] },
+          conditionEval: { expr: `colors['${u}'] === undefined`, result: false },
+          soundCue: { type: 'step' },
+          pedagogy: {
+            what: `${u} already received color ${colors[u]} in an earlier pass.`,
+            why: 'Only uncolored vertices can open a new color class; re-coloring would break the greedy invariant.',
+            whatNext: 'Advance to the next vertex in the sorted order.',
+          },
+          explanation: `Skipping vertex ${u}: already colored with color ${colors[u]}.`,
+        });
+        continue;
+      }
 
       const paletteEntry = COLOR_PALETTE[currentColor % COLOR_PALETTE.length];
       colors[u] = currentColor;
@@ -258,7 +332,7 @@ export const graphColoringModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 8,
+        codeLine: 7,
         isMilestone: true,
         milestoneTitle: `Start Color #${currentColor} (${paletteEntry.name}) with ${u}`,
         action: 'COLOR_PRIMARY_VERTEX',
@@ -271,7 +345,7 @@ export const graphColoringModule: AlgorithmModule<
           activeNode: u,
           currentColor,
         },
-        callStack: [{ name: 'welshPowell', params: { vertex: u, color: paletteEntry.name, colorId: currentColor }, line: 8, isCurrent: true }],
+        callStack: [{ name: 'welshPowell', params: { vertex: u, color: paletteEntry.name, colorId: currentColor }, line: 7, isCurrent: true }],
         variables: {
           activeNode: u,
           assignedColor: paletteEntry.name,
@@ -280,6 +354,11 @@ export const graphColoringModule: AlgorithmModule<
         },
         conditionEval: { expr: `colors['${u}'] === undefined`, result: true },
         soundCue: { type: 'select' },
+        pedagogy: {
+          what: `${u} opens color class #${currentColor} (${paletteEntry.name}).`,
+          why: 'The most constrained remaining vertex starts each class; everyone added to this class must avoid it as a neighbor.',
+          whatNext: 'Scan the other uncolored vertices for candidates that do not touch this color.',
+        },
         explanation: `Assigned Color ${currentColor} (${paletteEntry.name}) to uncolored vertex ${u} with highest degree (${degrees[u]}). Now scanning remaining vertices for non-adjacent candidates.`,
       });
 
@@ -293,7 +372,7 @@ export const graphColoringModule: AlgorithmModule<
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
-              codeLine: 11,
+              codeLine: 10,
               action: 'CHECK_CONFLICT',
               state: {
                 nodes: rawNodes,
@@ -304,14 +383,19 @@ export const graphColoringModule: AlgorithmModule<
                 activeNode: v,
                 currentColor,
               },
-              callStack: [{ name: 'checkConflict', params: { vertex: v, color: paletteEntry.name }, line: 11, isCurrent: true }],
+              callStack: [{ name: 'checkConflict', params: { vertex: v, color: paletteEntry.name }, line: 10, isCurrent: true }],
               variables: {
                 candidateNode: v,
                 conflictFoundWith: conflictingNeighbor,
                 colorChecked: paletteEntry.name,
               },
-              conditionEval: { expr: `hasNeighborWithColor('${v}', ${paletteEntry.name})`, result: true },
+              conditionEval: { expr: `no neighbor of '${v}' has ${paletteEntry.name}`, result: false },
               soundCue: { type: 'compare' },
+              pedagogy: {
+                what: `${v} cannot join class #${currentColor}: neighbor ${conflictingNeighbor} already wears ${paletteEntry.name}.`,
+                why: 'Adjacent vertices must differ; this conflict check is the entire correctness condition of greedy coloring.',
+                whatNext: 'Leave v uncolored for a later color class.',
+              },
               explanation: `Cannot color vertex ${v} with ${paletteEntry.name}: neighbor ${conflictingNeighbor} already has color ${paletteEntry.name}.`,
             });
           } else {
@@ -319,7 +403,7 @@ export const graphColoringModule: AlgorithmModule<
             frames.push({
               stepIndex: frames.length,
               totalSteps: 1,
-              codeLine: 13,
+              codeLine: 11,
               isMilestone: true,
               milestoneTitle: `Assigned ${paletteEntry.name} to ${v}`,
               action: 'COLOR_GREEDY_PASS',
@@ -332,17 +416,48 @@ export const graphColoringModule: AlgorithmModule<
                 activeNode: v,
                 currentColor,
               },
-              callStack: [{ name: 'welshPowell', params: { vertex: v, color: paletteEntry.name, colorId: currentColor }, line: 13, isCurrent: true }],
+              callStack: [{ name: 'welshPowell', params: { vertex: v, color: paletteEntry.name, colorId: currentColor }, line: 11, isCurrent: true }],
               variables: {
                 activeNode: v,
                 assignedColor: paletteEntry.name,
                 reason: `No conflict with existing ${paletteEntry.name} vertices`,
               },
-              conditionEval: { expr: `hasNeighborWithColor('${v}', ${paletteEntry.name})`, result: false },
+              conditionEval: { expr: `no neighbor of '${v}' has ${paletteEntry.name}`, result: true },
               soundCue: { type: 'swap' },
+              pedagogy: {
+                what: `${v} joins class #${currentColor}: none of its neighbors wears ${paletteEntry.name}.`,
+                why: 'Greedy assignment reuses the current color as long as the local constraint holds, which keeps the class count down.',
+                whatNext: 'Continue scanning the remaining candidates.',
+              },
               explanation: `Vertex ${v} has NO neighbors colored with ${paletteEntry.name}. Greedily assigned color ${currentColor} (${paletteEntry.name}).`,
             });
           }
+        } else {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 10,
+            action: 'INNER_SKIP',
+            state: {
+              nodes: rawNodes,
+              edges: rawEdges,
+              degrees: { ...degrees },
+              sortedOrder: [...sortedOrder],
+              colors: { ...colors },
+              activeNode: v,
+              currentColor,
+            },
+            callStack: [{ name: `scanSkip(${v})`, params: { v }, line: 10, isCurrent: true }],
+            variables: { candidateNode: v, alreadyColored: true, color: colors[v], reason: 'ALREADY_COLORED' },
+            conditionEval: { expr: `colors['${v}'] === undefined`, result: false },
+            soundCue: { type: 'step' },
+            pedagogy: {
+              what: `${v} was already colored (class #${colors[v]}), so it is not a candidate for this class.`,
+              why: 'The scan only fills the current class; colored vertices cannot switch classes.',
+              whatNext: 'Continue the scan.',
+            },
+            explanation: `Vertex ${v} already colored (color ${colors[v]}); skipping as a candidate for color ${currentColor}.`,
+          });
         }
       }
 
@@ -352,7 +467,7 @@ export const graphColoringModule: AlgorithmModule<
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 18,
+      codeLine: 13,
       isMilestone: true,
       milestoneTitle: `Coloring Finished: ${currentColor} Colors`,
       action: 'COMPLETE',
@@ -365,7 +480,7 @@ export const graphColoringModule: AlgorithmModule<
         activeNode: null,
         currentColor,
       },
-      callStack: [{ name: 'welshPowell', params: { totalColorsUsed: currentColor, status: 'DONE' }, line: 18, isCurrent: true }],
+      callStack: [{ name: 'welshPowell', params: { totalColorsUsed: currentColor, status: 'DONE' }, line: 13, isCurrent: true }],
       variables: {
         totalColorsUsed: currentColor,
         chromaticEstimate: currentColor,
@@ -373,6 +488,11 @@ export const graphColoringModule: AlgorithmModule<
       },
       conditionEval: { expr: 'allVerticesColored && noAdjacentConflicts', result: true },
       soundCue: { type: 'complete' },
+      pedagogy: {
+        what: `Return colors: ${rawNodes.map((u) => `${u}=${colors[u]}`).join(', ')} — ${currentColor} class(es) in total.`,
+        why: 'Every class was built conflict-free, so no edge joins equal colors; the number of classes is an upper bound on the chromatic number.',
+        whatNext: 'Compare with DSATUR or exact branch-and-bound when fewer colors are required.',
+      },
       explanation: `Graph coloring complete! Successfully colored all ${rawNodes.length} vertices using ${currentColor} colors with zero adjacent conflicts.`,
     });
 
