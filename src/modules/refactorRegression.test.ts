@@ -1283,6 +1283,90 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
   });
 
+  it('Kosaraju builds the finish stack first, then seals one SCC per pass-2 tree', () => {
+    const mod = moduleById('kosaraju-scc');
+    const input = {
+      nodes: ['A', 'B', 'C', 'D', 'E'],
+      edges: [
+        { from: 'A', to: 'B' },
+        { from: 'B', to: 'C' },
+        { from: 'C', to: 'A' },
+        { from: 'C', to: 'D' },
+        { from: 'D', to: 'E' },
+        { from: 'E', to: 'D' },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'kosaraju-reverse-pass').length).toBe(1);
+
+    // Pass 1: 5 visits, 4 tree edges, 2 skipped edges, 5 finish pushes in postorder.
+    const pass1 = timeline.filter((f) => f.state.phase === 'PASS_1_DFS');
+    expect(pass1.filter((f) => f.codeLine === 4).length).toBe(5);
+    expect(pass1.filter((f) => f.variables?.edgeType === 'TREE_EDGE').length).toBe(4);
+    expect(pass1.filter((f) => f.variables?.edgeType === 'SKIP_VISITED').length).toBe(2);
+    const finishes = pass1.filter((f) => f.codeLine === 6);
+    expect(finishes.map((f) => f.variables?.finishedNode)).toEqual(['E', 'D', 'C', 'B', 'A']);
+    expect(finishes[finishes.length - 1].variables?.finishStack).toBe('E, D, C, B, A');
+
+    // Transpose then reset: two distinct frames.
+    expect(timeline.filter((f) => f.codeLine === 8).length).toBe(1);
+    expect(timeline.filter((f) => f.codeLine === 9).length).toBe(1);
+    const transpose = timeline.find((f) => f.codeLine === 8)!;
+    expect(transpose.state.edges[0]).toEqual({ from: 'B', to: 'A' });
+
+    // Pass 2: stack pops in reverse push order; assigned vertices are skipped explicitly.
+    const popFrames = timeline.filter((f) => (f.callStack?.[0] as any)?.name === 'popFinishStack()');
+    expect(popFrames.map((f) => f.variables?.popped)).toEqual(['A', 'B', 'C', 'D', 'E']);
+    expect(timeline.filter((f) => (f.callStack?.[0] as any)?.name?.startsWith('skipAssigned')).length).toBe(3);
+
+    // Two pass-2 trees: A→C→B and D→E, each sealed once.
+    const pass2 = timeline.filter((f) => f.state.phase === 'PASS_2_SCC');
+    expect(pass2.filter((f) => f.codeLine === 12).length).toBe(5);
+    expect(pass2.filter((f) => f.codeLine === 13).length).toBe(5);
+    expect(pass2.filter((f) => f.codeLine === 14 && f.variables?.edgeType === 'TREE_EDGE').length).toBe(3);
+    expect(pass2.filter((f) => f.codeLine === 14 && f.variables?.edgeType === 'SKIP_VISITED').length).toBe(3);
+    const seals = timeline.filter((f) => (f.callStack?.[0] as any)?.name === 'sealSCC()');
+    expect(seals.map((f) => f.milestoneTitle)).toEqual(['SCC #1: {A, C, B}', 'SCC #2: {D, E}']);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Kosaraju Complete (2 SCCs)');
+    expect(final.state.sccList).toEqual([
+      ['A', 'C', 'B'],
+      ['D', 'E'],
+    ]);
+
+    // Two disjoint cycles: exactly two pass-2 trees.
+    const two = mod.generateTimeline({
+      nodes: ['A', 'B', 'C', 'D'],
+      edges: [
+        { from: 'A', to: 'B' },
+        { from: 'B', to: 'A' },
+        { from: 'B', to: 'C' },
+        { from: 'C', to: 'D' },
+        { from: 'D', to: 'C' },
+      ],
+    });
+    const twoSeals = two.filter((f) => (f.callStack?.[0] as any)?.name === 'sealSCC()');
+    expect(twoSeals.map((f) => f.milestoneTitle)).toEqual(['SCC #1: {A, B}', 'SCC #2: {C, D}']);
+    expect(two[two.length - 1].state.sccList).toEqual([
+      ['A', 'B'],
+      ['C', 'D'],
+    ]);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      nodes: ['A', 'B', 'C', 'D'],
+      edges: [
+        { from: 'A', to: 'B' },
+        { from: 'B', to: 'A' },
+        { from: 'B', to: 'C' },
+        { from: 'C', to: 'D' },
+        { from: 'D', to: 'C' },
+      ],
+    }).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

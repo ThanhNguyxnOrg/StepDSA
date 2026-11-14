@@ -639,7 +639,7 @@ export const tarjanSCCModule: AlgorithmModule<
         .map((scc, idx) => `SCC #${idx + 1}: {${scc.join(', ')}}`)
         .join(' | ')}.`,
       isMilestone: true,
-      milestoneTitle: `Tarjan Complete (${sccList.length} SCCs)`,
+      milestoneTitle: `Tarjan Complete (${sccList.length} SCC${sccList.length === 1 ? '' : 's'})`,
       variables: {
         totalSCCs: sccList.length,
       },

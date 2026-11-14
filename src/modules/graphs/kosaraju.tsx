@@ -184,16 +184,51 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
     }
     return sccs;
 }`,
-    java: `List<List<String>> kosaraju(List<String> nodes, List<Edge> edges) {
-    // 2-pass DFS with reversed adjacency list
-    return new ArrayList<>();
+    java: `void dfs1(String u, Map<String, List<String>> adj, Set<String> seen, Deque<String> out) {
+    seen.add(u);
+    for (String v : adj.get(u)) if (!seen.contains(v)) dfs1(v, adj, seen, out);
+    out.push(u); // postorder
+}
+void dfs2(String u, Map<String, List<String>> radj, Set<String> seen, List<String> comp) {
+    seen.add(u);
+    comp.add(u);
+    for (String v : radj.get(u)) if (!seen.contains(v)) dfs2(v, radj, seen, comp);
+}
+List<List<String>> kosaraju(List<String> nodes, List<Edge> edges) {
+    Map<String, List<String>> adj = new HashMap<>(), radj = new HashMap<>();
+    for (String n : nodes) { adj.put(n, new ArrayList<>()); radj.put(n, new ArrayList<>()); }
+    for (Edge e : edges) { adj.get(e.from).add(e.to); radj.get(e.to).add(e.from); }
+
+    Set<String> seen = new HashSet<>();
+    Deque<String> stack = new ArrayDeque<>();
+    for (String n : nodes) if (!seen.contains(n)) dfs1(n, adj, seen, stack);
+
+    seen.clear();
+    List<List<String>> sccs = new ArrayList<>();
+    while (!stack.isEmpty()) {
+        String u = stack.pop();
+        if (!seen.contains(u)) {
+            List<String> comp = new ArrayList<>();
+            dfs2(u, radj, seen, comp);
+            sccs.add(comp);
+        }
+    }
+    return sccs;
 }`,
     pseudocode: `function kosaraju(G):
     S = []
-    for each u in G: if unvisited dfs1(u, S)
+    function dfs1(u):
+        visited[u] = true
+        for each v in adj[u]: if unvisited: dfs1(v)
+        S.push(u)                  # postorder
+    for each u in G: if unvisited: dfs1(u)
     G_rev = transpose(G)
     reset visited
     sccs = []
+    function dfs2(u, comp):
+        visited[u] = true
+        comp.push(u)
+        for each v in radj[u]: if unvisited: dfs2(v)
     while S not empty:
         u = S.pop()
         if u unvisited:
@@ -241,14 +276,21 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
     const sccList: string[][] = [];
     const frames: ExecutionFrame<KosarajuState>[] = [];
 
+    let checkpointAdded = false;
+
     // Frame 0: Initialization
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
       codeLine: 2,
-      explanation: `Initialize Kosaraju's Algorithm for ${nodes.length} vertices and ${edges.length} directed edges.`,
+      explanation: `Initialize Kosaraju's Algorithm for ${nodes.length} vertices and ${edges.length} directed edges. The finish stack S starts empty.`,
       variables: { totalNodes: nodes.length, phase: 'PASS_1_DFS' },
       callStack: [{ name: 'kosaraju()', params: { n: nodes.length }, line: 2, isCurrent: true }],
+      pedagogy: {
+        what: 'Kosaraju is a two-pass DFS: pass 1 records vertices in finishing order, pass 2 explores the transposed graph from that order to extract one SCC per tree.',
+        why: 'Finishing order encodes how components depend on each other; reversing the graph lets each pass-2 search close off exactly one component.',
+        whatNext: 'Run pass 1 from every unvisited vertex.',
+      },
       state: {
         nodes,
         edges,
@@ -267,9 +309,14 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 4,
-        explanation: `Pass 1: Visit node "${u}". Exploring forward edges.`,
+        explanation: `Pass 1: mark visited["${u}"] = true and explore its forward edges.`,
         variables: { node: u, phase: 'PASS_1_DFS' },
         callStack: [{ name: `dfs1(u="${u}")`, params: { u }, line: 4, isCurrent: true }],
+        pedagogy: {
+          what: `Pass 1 enters "${u}"; its postorder position will be decided when it finishes.`,
+          why: 'A vertex is pushed to S only after its entire forward-reachable subtree is done, so S orders vertices by completion time.',
+          whatNext: `Look at each outgoing edge of "${u}".`,
+        },
         state: {
           nodes,
           edges,
@@ -282,7 +329,55 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
       });
 
       for (const v of adj[u] || []) {
-        if (!visited[v]) dfs1(v);
+        if (!visited[v]) {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 5,
+            explanation: `Edge (${u} → ${v}): "${v}" is unvisited, so recurse into it before finishing "${u}".`,
+            variables: { from: u, to: v, edgeType: 'TREE_EDGE' },
+            callStack: [{ name: `dfs1(u="${u}") -> visit "${v}"`, params: { u, v }, line: 5, isCurrent: true }],
+            pedagogy: {
+              what: `"${v}" is new, so DFS descends into it first.`,
+              why: 'Depth-first order is what makes the finish stack a valid topological-like order of the condensation.',
+              whatNext: `Finish "${v}" and all its descendants before returning to "${u}".`,
+            },
+            state: {
+              nodes,
+              edges,
+              phase: 'PASS_1_DFS',
+              activeNode: u,
+              finishStack: [...finishStack],
+              sccList: [],
+              visited: { ...visited },
+            },
+          });
+          dfs1(v);
+        } else {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 5,
+            explanation: `Edge (${u} → ${v}): "${v}" is already visited in pass 1, so nothing to do here.`,
+            variables: { from: u, to: v, edgeType: 'SKIP_VISITED' },
+            callStack: [{ name: `dfs1(u="${u}")`, params: { u, v }, line: 5, isCurrent: true }],
+            conditionEval: { expr: `unvisited("${v}")`, result: false },
+            pedagogy: {
+              what: `"${v}" was reached earlier, so this edge does not extend the DFS tree.`,
+              why: 'Only the first arrival creates a tree edge; later edges are non-tree edges and do not affect the finish stack.',
+              whatNext: `Continue with "${u}"'s next edge.`,
+            },
+            state: {
+              nodes,
+              edges,
+              phase: 'PASS_1_DFS',
+              activeNode: u,
+              finishStack: [...finishStack],
+              sccList: [],
+              visited: { ...visited },
+            },
+          });
+        }
       }
 
       finishStack.push(u);
@@ -290,9 +385,14 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 6,
-        explanation: `Pass 1: Finished node "${u}". Pushed to finish stack: [${finishStack.join(', ')}].`,
-        variables: { finishedNode: u, stackTop: u },
-        callStack: [{ name: `pushStack(${u})`, params: { u }, line: 6, isCurrent: true }],
+        explanation: `Pass 1: "${u}" finished — every forward-reachable vertex is done. S.push("${u}"), S = [${finishStack.join(', ')}].`,
+        variables: { finishedNode: u, finishStack: finishStack.join(', ') },
+        callStack: [{ name: `pushFinishStack("${u}")`, params: { u }, line: 6, isCurrent: true }],
+        pedagogy: {
+          what: `"${u}" enters the finish stack; later pushes (deeper components) sit on top of it.`,
+          why: 'Vertices in sink components of the condensation finish first, so they end up nearest the stack bottom; the top holds a source component.',
+          whatNext: 'Return from dfs1 and continue the outer scan or the caller.',
+        },
         state: {
           nodes,
           edges,
@@ -309,44 +409,117 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
       if (!visited[n]) dfs1(n);
     }
 
+    const transposedEdges = edges.map((e) => ({ from: e.to, to: e.from }));
+
     // Step: Transpose graph
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 8,
-      explanation: `Transpose graph G -> G^T: All ${edges.length} directed edges reversed. Reset visited markers for Pass 2.`,
-      variables: { phase: 'TRANSPOSE', finishStack: finishStack.join(', ') },
+      explanation: `Transpose graph G → G^T: all ${edges.length} directed edges reversed. Example: A→B becomes B→A.`,
+      variables: { phase: 'TRANSPOSE', edgeCount: edges.length, finishStack: finishStack.join(', ') },
       callStack: [{ name: 'transposeGraph()', params: { edges: edges.length }, line: 8, isCurrent: true }],
+      pedagogy: {
+        what: `Every edge direction flips. SCC membership is unchanged because a cycle reversed is still a cycle.`,
+        why: 'In G^T, the component with the highest finish time has no outgoing edges to other components, so a search starting there cannot leak — that is the whole trick of pass 2.',
+        whatNext: 'Reset all visited marks and start pass 2.',
+      },
+      checkpoint: !checkpointAdded
+        ? {
+            id: 'kosaraju-reverse-pass',
+            question: 'Why does the second pass run on the reversed graph in decreasing finish-time order?',
+            options: [
+              'Reversal keeps cycles intact, and the latest-finishing SCC has no outgoing edges in the reversed graph, so each DFS tree is exactly one SCC',
+              'Reversing the edges breaks large cycles apart so they can be counted one component at a time',
+            ],
+            correctIndex: 0,
+            explanation:
+              'SCCs survive reversal. In pass 1 the last-finished component is a source of the condensation; in G^T it becomes a sink, so DFS from its vertex cannot escape it — and since the component is still strongly connected, DFS collects all of it.',
+          }
+        : undefined,
       state: {
         nodes,
-        edges: edges.map((e) => ({ from: e.to, to: e.from })),
+        edges: transposedEdges,
         phase: 'TRANSPOSE',
         activeNode: null,
         finishStack: [...finishStack],
-        sccList: [],
+        sccList: sccList.map((c) => [...c]),
         visited: nodes.reduce((acc, k) => ({ ...acc, [k]: false }), {}),
       },
     });
+    checkpointAdded = true;
 
     nodes.forEach((n) => {
       visited[n] = false;
     });
 
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 9,
+      explanation: `Reset visited for all ${nodes.length} vertices: pass 2 starts with a clean mark table.`,
+      variables: { phase: 'TRANSPOSE', visitedCount: 0 },
+      callStack: [{ name: 'resetVisited()', params: { n: nodes.length }, line: 9, isCurrent: true }],
+      pedagogy: {
+        what: 'All visited[] flags are cleared, while the finish stack S is preserved from pass 1.',
+        why: 'Pass 2 must be able to re-explore every vertex; only the finish order carries information across passes.',
+        whatNext: 'Pop the finish stack and DFS on the reversed graph.',
+      },
+      state: {
+        nodes,
+        edges: transposedEdges,
+        phase: 'TRANSPOSE',
+        activeNode: null,
+        finishStack: [...finishStack],
+        sccList: sccList.map((c) => [...c]),
+        visited: { ...visited },
+      },
+    });
+
     // Pass 2: Pop from stack and traverse transposed graph
     function dfs2(u: string, comp: string[]) {
       visited[u] = true;
-      comp.push(u);
 
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
         codeLine: 12,
-        explanation: `Pass 2 (Transposed): Visit "${u}". Added to active SCC: [${comp.join(', ')}].`,
-        variables: { node: u, currentSCC: comp.join(', ') },
+        explanation: `Pass 2 on G^T: mark visited["${u}"] = true; new DFS tree starts here.`,
+        variables: { node: u, phase: 'PASS_2_SCC' },
         callStack: [{ name: `dfs2(u="${u}")`, params: { u }, line: 12, isCurrent: true }],
+        pedagogy: {
+          what: `"${u}" enters the current component; its whole reachable set in G^T will join it.`,
+          why: 'The starting vertex has the latest finish time among unassigned vertices, so its G^T component is a sink with no exits.',
+          whatNext: `Add "${u}" to the component list.`,
+        },
         state: {
           nodes,
-          edges: edges.map((e) => ({ from: e.to, to: e.from })),
+          edges: transposedEdges,
+          phase: 'PASS_2_SCC',
+          activeNode: u,
+          finishStack: [...finishStack],
+          sccList: sccList.map((c) => [...c]),
+          visited: { ...visited },
+        },
+      });
+
+      comp.push(u);
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 13,
+        explanation: `comp.push("${u}"): active SCC is now [${comp.join(', ')}].`,
+        variables: { node: u, currentSCC: comp.join(', ') },
+        callStack: [{ name: `addToComponent("${u}")`, params: { u, size: comp.length }, line: 13, isCurrent: true }],
+        pedagogy: {
+          what: `"${u}" is recorded in the component rooted at the pass-2 start vertex.`,
+          why: 'Being reachable from the start in G^T means being able to reach the start in G; together with the reverse direction, they are strongly connected.',
+          whatNext: `Follow "${u}"'s reversed edges (radj) to unvisited vertices.`,
+        },
+        state: {
+          nodes,
+          edges: transposedEdges,
           phase: 'PASS_2_SCC',
           activeNode: u,
           finishStack: [...finishStack],
@@ -356,13 +529,109 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
       });
 
       for (const v of radj[u] || []) {
-        if (!visited[v]) dfs2(v, comp);
+        if (!visited[v]) {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 14,
+            explanation: `Reversed edge (${u} ⇠ ${v}): "${v}" is unvisited, so recurse into it.`,
+            variables: { from: u, to: v, edgeType: 'TREE_EDGE' },
+            callStack: [{ name: `dfs2(u="${u}") -> visit "${v}"`, params: { u, v }, line: 14, isCurrent: true }],
+            pedagogy: {
+              what: `In G^T, "${u}" can reach "${v}", which means "${v}" can reach "${u}" in the original graph.`,
+              why: 'This is the strong-connectivity condition; the pass-2 tree grows exactly over mutually reachable vertices.',
+              whatNext: `Explore "${v}" and its reversed reachable set.`,
+            },
+            state: {
+              nodes,
+              edges: transposedEdges,
+              phase: 'PASS_2_SCC',
+              activeNode: u,
+              finishStack: [...finishStack],
+              sccList: sccList.map((c) => [...c]),
+              visited: { ...visited },
+            },
+          });
+          dfs2(v, comp);
+        } else {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 14,
+            explanation: `Reversed edge (${u} ⇠ ${v}): "${v}" is already assigned or visited, so skip.`,
+            variables: { from: u, to: v, edgeType: 'SKIP_VISITED' },
+            callStack: [{ name: `dfs2(u="${u}")`, params: { u, v }, line: 14, isCurrent: true }],
+            conditionEval: { expr: `unvisited("${v}")`, result: false },
+            pedagogy: {
+              what: `"${v}" is already part of a finished or active component.`,
+              why: 'The component boundary is exactly where the reversed reachability stops; revisiting would merge unrelated components.',
+              whatNext: `Continue with "${u}"'s next reversed edge.`,
+            },
+            state: {
+              nodes,
+              edges: transposedEdges,
+              phase: 'PASS_2_SCC',
+              activeNode: u,
+              finishStack: [...finishStack],
+              sccList: sccList.map((c) => [...c]),
+              visited: { ...visited },
+            },
+          });
+        }
       }
     }
 
     while (finishStack.length > 0) {
       const u = finishStack.pop()!;
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 16,
+        explanation: `S.pop() → "${u}". ${visited[u] ? 'Already assigned, check next.' : 'Unvisited, so it roots the next component search.'}`,
+        variables: { popped: u, finishStack: finishStack.join(', ') || '(empty)', alreadyVisited: visited[u] },
+        callStack: [{ name: `popFinishStack()`, params: { u }, line: 16, isCurrent: true }],
+        pedagogy: {
+          what: `The stack hands back "${u}", the next candidate root in decreasing finish order.`,
+          why: 'Ties are impossible here: each vertex appears exactly once, and the top is the latest-finishing unassigned vertex.',
+          whatNext: visited[u] ? 'It is already assigned — skip.' : 'Start dfs2 from it.',
+        },
+        state: {
+          nodes,
+          edges: transposedEdges,
+          phase: 'PASS_2_SCC',
+          activeNode: u,
+          finishStack: [...finishStack],
+          sccList: sccList.map((c) => [...c]),
+          visited: { ...visited },
+        },
+      });
+
       if (!visited[u]) {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 17,
+          explanation: `"${u}" is unvisited, so it roots a new SCC. Starting dfs2 with an empty component list.`,
+          variables: { sccRoot: u, sccIndex: sccList.length + 1 },
+          callStack: [{ name: `newComponent("${u}")`, params: { u }, line: 17, isCurrent: true }],
+          conditionEval: { expr: `unvisited("${u}")`, result: true },
+          pedagogy: {
+            what: `A fresh component opens at "${u}".`,
+            why: 'Vertices already assigned were popped earlier from the same SCC; leaving them unvisited guarantees one component per pass-2 root.',
+            whatNext: 'Explore the reversed graph to collect every member.',
+          },
+          state: {
+            nodes,
+            edges: transposedEdges,
+            phase: 'PASS_2_SCC',
+            activeNode: u,
+            finishStack: [...finishStack],
+            sccList: sccList.map((c) => [...c]),
+            visited: { ...visited },
+          },
+        });
+
         const comp: string[] = [];
         dfs2(u, comp);
         sccList.push(comp);
@@ -370,13 +639,44 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 15,
-          explanation: `Completed SCC #${sccList.length}: {${comp.join(', ')}}!`,
+          codeLine: 20,
+          isMilestone: true,
+          milestoneTitle: `SCC #${sccList.length}: {${comp.join(', ')}}`,
+          explanation: `sccs.append([${comp.join(', ')}]) — SCC #${sccList.length} sealed with ${comp.length} vertex/vertices.`,
           variables: { sccFound: comp.join(', '), totalSCCs: sccList.length },
-          callStack: [{ name: `finishSCC()`, params: { count: comp.length }, line: 15, isCurrent: true }],
+          callStack: [{ name: `sealSCC()`, params: { count: comp.length }, line: 20, isCurrent: true }],
+          pedagogy: {
+            what: `The component {${comp.join(', ')}} is final.`,
+            why: 'Its members were exactly the unvisited vertices reachable in G^T from the latest-finishing root — the definition of one SCC.',
+            whatNext: 'Pop the next stack vertex and repeat until S is empty.',
+          },
           state: {
             nodes,
-            edges: edges.map((e) => ({ from: e.to, to: e.from })),
+            edges: transposedEdges,
+            phase: 'PASS_2_SCC',
+            activeNode: u,
+            finishStack: [...finishStack],
+            sccList: sccList.map((c) => [...c]),
+            visited: { ...visited },
+          },
+        });
+      } else {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 17,
+          explanation: `"${u}" was already collected into an earlier SCC, so this entry is skipped.`,
+          variables: { popped: u, alreadyVisited: true },
+          callStack: [{ name: `skipAssigned("${u}")`, params: { u }, line: 17, isCurrent: true }],
+          conditionEval: { expr: `unvisited("${u}")`, result: false },
+          pedagogy: {
+            what: `"${u}" is visited, so no new search starts.`,
+            why: 'One SCC can be popped multiple times at the top level; only the first pop, while unvisited, starts its DFS.',
+            whatNext: 'Continue popping.',
+          },
+          state: {
+            nodes,
+            edges: transposedEdges,
             phase: 'PASS_2_SCC',
             activeNode: u,
             finishStack: [...finishStack],
@@ -391,15 +691,22 @@ vector<vector<int>> kosaraju(int n, const vector<vector<int>>& adj) {
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 18,
+      codeLine: 21,
       explanation: `Kosaraju's algorithm complete! Identified ${sccList.length} strongly connected components: ${sccList
         .map((c, idx) => `SCC #${idx + 1}: {${c.join(', ')}}`)
         .join(' | ')}.`,
+      isMilestone: true,
+      milestoneTitle: `Kosaraju Complete (${sccList.length} SCC${sccList.length === 1 ? '' : 's'})`,
       variables: { totalSCCs: sccList.length },
-      callStack: [{ name: 'complete()', params: { sccCount: sccList.length }, line: 18, isCurrent: true }],
+      callStack: [{ name: 'complete()', params: { sccCount: sccList.length }, line: 21, isCurrent: true }],
+      pedagogy: {
+        what: `Two linear passes produced ${sccList.length} component(s): ${sccList.map((c) => `{${c.join(', ')}}`).join(', ')}.`,
+        why: 'Pass 1 fixed the processing order via finish times; pass 2 on G^T turned that order into exact component boundaries.',
+        whatNext: 'Compare with Tarjan: same O(V + E) result in one pass, at the cost of low-link bookkeeping instead of a transpose.',
+      },
       state: {
         nodes,
-        edges,
+        edges: transposedEdges,
         phase: 'DONE',
         activeNode: null,
         finishStack: [],
