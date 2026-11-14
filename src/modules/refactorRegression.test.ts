@@ -1774,6 +1774,66 @@ describe('pedagogical timeline regressions', () => {
     }).errorCount).toBe(0);
   });
 
+  it('Hamiltonian backtracking prunes visited neighbors, evaluates closure and undoes failed branches', () => {
+    const mod = moduleById('hamiltonian-path');
+    const input = {
+      vertices: [1, 2, 3, 4, 5],
+      edges: [
+        { u: 1, v: 2 },
+        { u: 2, v: 3 },
+        { u: 3, v: 4 },
+        { u: 4, v: 5 },
+        { u: 5, v: 1 },
+      ],
+      requireCycle: true,
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'hamiltonian-pruning').length).toBe(1);
+
+    // Pentagon: 4 explores, 3 visited-prunes, then closure and solution immediately.
+    expect(timeline.filter((f) => f.action === 'EXPLORE_STEP').length).toBe(4);
+    expect(timeline.filter((f) => f.action === 'SKIP_VISITED').length).toBe(3);
+    expect(timeline.filter((f) => f.action === 'EVALUATE_CLOSURE').length).toBe(1);
+    const solutions = timeline.filter((f) => f.action === 'SOLUTION_FOUND');
+    expect(solutions.length).toBe(1);
+    expect(solutions[0].milestoneTitle).toBe('Hamiltonian Cycle Found!');
+    expect(timeline.filter((f) => f.milestoneTitle?.startsWith('Halfway')).length).toBe(1);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Hamiltonian Cycle Confirmed');
+    expect(final.state.foundPath).toEqual([1, 2, 3, 4, 5]);
+    expect(final.state.foundCycle).toBe(true);
+
+    // Open path preset: closure edge missing but requireCycle is false, so it still succeeds.
+    const preset = mod.presets[1];
+    const presetTimeline = mod.generateTimeline(preset.data as any);
+    const presetSolutions = presetTimeline.filter((f) => f.action === 'SOLUTION_FOUND');
+    expect(presetSolutions.length).toBe(1);
+    expect(presetSolutions[0].milestoneTitle).toBe('Hamiltonian Path Found!');
+    expect(presetTimeline[presetTimeline.length - 1].milestoneTitle).toBe('Hamiltonian Path Confirmed');
+
+    // Unsolvable input: every branch fails, so the search backtracks and reports no solution.
+    const unsolvable = mod.generateTimeline({
+      vertices: [1, 2, 3],
+      edges: [{ u: 1, v: 2 }],
+      requireCycle: false,
+    });
+    expect(unsolvable.filter((f) => f.action === 'BACKTRACK').length).toBe(1);
+    const noSolution = unsolvable[unsolvable.length - 1];
+    expect(noSolution.milestoneTitle).toBe('No Hamiltonian Configuration');
+    expect(noSolution.state.foundPath).toBeNull();
+    expect(noSolution.variables?.exists).toBe(false);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, {
+      vertices: [1, 2, 3],
+      edges: [{ u: 1, v: 2 }],
+      requireCycle: false,
+    }).errorCount).toBe(0);
+    expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

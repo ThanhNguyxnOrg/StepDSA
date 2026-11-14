@@ -152,7 +152,10 @@ export const hamiltonianPathModule: AlgorithmModule<
     }
     return false;
 }`,
-    pseudocode: `function backtrack(u, count):
+    pseudocode: `function hamiltonian(graph, start):
+    path = [start], count = 1
+    return backtrack(start, count) ? path : null
+function backtrack(u, count):
     if count == V:
         return requireCycle ? isConnected(u, start) : true
     for each neighbor v of u:
@@ -194,6 +197,7 @@ export const hamiltonianPathModule: AlgorithmModule<
     const visited = new Set<number>([vertices[0]]);
     let foundPath: number[] | null = null;
     let foundCycle = false;
+    let checkpointAdded = false;
 
     function getMask(): number {
       let mask = 0;
@@ -204,7 +208,7 @@ export const hamiltonianPathModule: AlgorithmModule<
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 1,
+      codeLine: 2,
       isMilestone: true,
       milestoneTitle: `Init Hamiltonian Search (Start: ${vertices[0]})`,
       action: 'INIT',
@@ -217,10 +221,15 @@ export const hamiltonianPathModule: AlgorithmModule<
         foundCycle: false,
         message: `Initialized search from vertex ${vertices[0]} (${requireCycle ? 'Hamiltonian Cycle' : 'Hamiltonian Path'})`,
       },
-      callStack: [{ name: 'hamiltonianInit', params: { startVertex: vertices[0], V }, line: 1, isCurrent: true }],
+      callStack: [{ name: 'hamiltonianInit', params: { startVertex: vertices[0], V }, line: 2, isCurrent: true }],
       variables: { startVertex: vertices[0], targetLength: V, requireCycle, unvisitedRemaining: V - 1 },
       conditionEval: { expr: 'vertices.length > 0', result: true },
       soundCue: { type: 'step' },
+      pedagogy: {
+        what: `Backtracking search: path = [${vertices[0]}], count = 1. Target: visit all ${V} vertices${requireCycle ? ' and close the cycle back to the start' : ''}.`,
+        why: 'Hamiltonian path is NP-complete, so the search explores candidates depth-first and undoes each choice that cannot succeed.',
+        whatNext: `Try each unvisited neighbor of "${vertices[0]}" as the next step.`,
+      },
       explanation: `Starting search from start vertex ${vertices[0]}. Target: visit all ${V} vertices${
         requireCycle ? ' and return to start vertex to form a closed cycle' : ''
       }.`,
@@ -234,7 +243,7 @@ export const hamiltonianPathModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 10,
+          codeLine: 6,
           action: 'EVALUATE_CLOSURE',
           state: {
             vertices,
@@ -245,10 +254,17 @@ export const hamiltonianPathModule: AlgorithmModule<
             foundCycle: false,
             message: `Visited all ${V} vertices! Testing closing edge (${u} -> ${vertices[0]})...`,
           },
-          callStack: [{ name: 'checkClosure', params: { lastVertex: u, startVertex: vertices[0] }, line: 10, isCurrent: true }],
+          callStack: [{ name: 'checkClosure', params: { lastVertex: u, startVertex: vertices[0] }, line: 6, isCurrent: true }],
           variables: { lastVertex: u, startVertex: vertices[0], hasClosingEdge: canClose, requireCycle },
-          conditionEval: { expr: `adj[${u}].includes(${vertices[0]})`, result: canClose },
+          conditionEval: { expr: `count == ${V} -> requireCycle ? isConnected(${u}, ${vertices[0]}) : true`, result: !requireCycle || canClose },
           soundCue: { type: 'compare' },
+          pedagogy: {
+            what: `All ${V} vertices are on the path; ${requireCycle ? `the closing edge (${u} → ${vertices[0]}) ${canClose ? 'exists' : 'is missing'}` : 'a cycle is not required, so the path is already valid'}.`,
+            why: requireCycle
+              ? 'A Hamiltonian cycle needs the last vertex to connect back to the start; otherwise the search must keep backtracking.'
+              : 'For an open Hamiltonian path, reaching all vertices is sufficient.',
+            whatNext: !requireCycle || canClose ? 'Accept the solution.' : 'Reject this branch and backtrack.',
+          },
           explanation: `All ${V} vertices visited in path [${path.join(' -> ')}]! Testing closing edge back to start: (${u}, ${vertices[0]})${
             canClose ? ' EXISTS in graph!' : ' does not exist.'
           }`,
@@ -260,7 +276,7 @@ export const hamiltonianPathModule: AlgorithmModule<
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 12,
+            codeLine: 6,
             isMilestone: true,
             milestoneTitle: canClose ? `Hamiltonian Cycle Found!` : `Hamiltonian Path Found!`,
             action: 'SOLUTION_FOUND',
@@ -275,10 +291,15 @@ export const hamiltonianPathModule: AlgorithmModule<
                 ? `Hamiltonian Cycle found: [${path.join(' -> ')} -> ${vertices[0]}]`
                 : `Hamiltonian Path found: [${path.join(' -> ')}]`,
             },
-            callStack: [{ name: 'solution', params: { pathLength: path.length, cycle: canClose ? 1 : 0 }, line: 12, isCurrent: true }],
+            callStack: [{ name: 'solution', params: { pathLength: path.length, cycle: canClose ? 1 : 0 }, line: 6, isCurrent: true }],
             variables: { path: path.join('->'), cycleFormed: canClose, totalVerticesVisited: V },
-            conditionEval: { expr: 'validHamiltonianFound', result: true },
+            conditionEval: { expr: 'return true', result: true },
             soundCue: { type: 'complete' },
+            pedagogy: {
+              what: `Return true: ${canClose ? `cycle [${path.join(' → ')} → ${vertices[0]}]` : `path [${path.join(' → ')}]`} is valid.`,
+              why: 'The recursive calls now unwind all the way to the driver, which keeps exactly this path as the answer.',
+              whatNext: 'Collect the path in the final frame and stop searching.',
+            },
             explanation: `Success! Discovered complete ${canClose ? 'Hamiltonian Cycle' : 'Hamiltonian Path'}: [${path.join(
               ' -> '
             )}${canClose ? ` -> ${vertices[0]}` : ''}].`,
@@ -296,7 +317,7 @@ export const hamiltonianPathModule: AlgorithmModule<
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 14,
+            codeLine: 8,
             action: 'SKIP_VISITED',
             state: {
               vertices,
@@ -307,12 +328,31 @@ export const hamiltonianPathModule: AlgorithmModule<
               foundCycle: false,
               message: `Neighbor ${nextV} is already visited, pruning candidate.`,
             },
-            callStack: [{ name: 'checkNeighbor', params: { current: u, candidate: nextV }, line: 14, isCurrent: true }],
+            callStack: [{ name: 'checkNeighbor', params: { current: u, candidate: nextV }, line: 8, isCurrent: true }],
             variables: { current: u, candidate: nextV, alreadyInPath: true },
             conditionEval: { expr: `!visited.has(${nextV})`, result: false },
             soundCue: { type: 'step' },
+            pedagogy: {
+              what: `Neighbor ${nextV} is already on the path, so this branch is pruned.`,
+              why: 'A Hamiltonian path is simple: revisiting a vertex wastes one of the V slots, so such a branch can never cover every vertex.',
+              whatNext: `Try the next neighbor of ${u}.`,
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'hamiltonian-pruning',
+                  question: `Why is a visited neighbor pruned immediately instead of explored?`,
+                  options: [
+                    'A Hamiltonian path must be simple: revisiting a vertex cannot cover all vertices in exactly V steps, so the branch is doomed',
+                    'Because revisiting would repeat an edge, and edges must also be unique',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Hamiltonian constraints are on vertices, not edges. Repeating a vertex means some other vertex can never be reached within the remaining steps, so pruning is safe.',
+                }
+              : undefined,
             explanation: `Neighbor ${nextV} is already in the current path. Skipping to maintain simple path invariant.`,
           });
+          checkpointAdded = true;
           continue;
         }
 
@@ -322,7 +362,7 @@ export const hamiltonianPathModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 16,
+          codeLine: 9,
           isMilestone: path.length === Math.ceil(V / 2),
           milestoneTitle: path.length === Math.ceil(V / 2) ? `Halfway: ${path.length}/${V} Vertices` : undefined,
           action: 'EXPLORE_STEP',
@@ -335,10 +375,15 @@ export const hamiltonianPathModule: AlgorithmModule<
             foundCycle: false,
             message: `Stepping: ${u} -> ${nextV} (Visited: ${path.length}/${V})`,
           },
-          callStack: [{ name: 'backtrack', params: { current: nextV, depth: path.length }, line: 16, isCurrent: true }],
+          callStack: [{ name: 'backtrack', params: { current: nextV, depth: path.length }, line: 9, isCurrent: true }],
           variables: { currentVertex: nextV, pathLength: path.length, remaining: V - path.length },
           conditionEval: { expr: `!visited.has(${nextV})`, result: true },
           soundCue: { type: 'insert' },
+          pedagogy: {
+            what: `${nextV} is marked visited and appended: [${path.join(' → ')}] (${path.length}/${V}).`,
+            why: 'Extending the path commits to this candidate; correct backtracking later undoes it if the branch fails.',
+            whatNext: `Recurse into ${nextV} with count ${path.length}.`,
+          },
           explanation: `Advancing along valid edge (${u}, ${nextV}). Current path: [${path.join(' -> ')}].`,
         });
 
@@ -350,7 +395,7 @@ export const hamiltonianPathModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 20,
+          codeLine: 11,
           action: 'BACKTRACK',
           state: {
             vertices,
@@ -361,10 +406,15 @@ export const hamiltonianPathModule: AlgorithmModule<
             foundCycle: false,
             message: `Backtracking from ${nextV} back to ${u}`,
           },
-          callStack: [{ name: 'backtrackReturn', params: { from: nextV, to: u }, line: 20, isCurrent: true }],
-          variables: { backtrackedFrom: nextV, current: u },
+          callStack: [{ name: 'backtrackReturn', params: { from: nextV, to: u }, line: 11, isCurrent: true }],
+          variables: { backtrackedFrom: nextV, current: u, pathLength: path.length },
           conditionEval: { expr: `subPathFailed`, result: true },
           soundCue: { type: 'swap' },
+          pedagogy: {
+            what: `The branch through ${nextV} failed, so it is unmarked and removed: path back to [${path.join(' → ')}].`,
+            why: 'Undoing the choice restores exactly the state before this attempt — that is what lets the search try every candidate combination.',
+            whatNext: `Try the next neighbor of ${u}.`,
+          },
           explanation: `Dead end reached at vertex ${nextV}. Backtracking to ${u} to explore alternative edges.`,
         });
       }
@@ -376,7 +426,13 @@ export const hamiltonianPathModule: AlgorithmModule<
     frames.push({
       stepIndex: frames.length,
       totalSteps: frames.length + 1,
-      codeLine: 28,
+      codeLine: 3,
+      isMilestone: true,
+      milestoneTitle: foundPath
+        ? foundCycle
+          ? 'Hamiltonian Cycle Confirmed'
+          : 'Hamiltonian Path Confirmed'
+        : 'No Hamiltonian Configuration',
       action: 'COMPLETE',
       state: {
         vertices,
@@ -389,8 +445,17 @@ export const hamiltonianPathModule: AlgorithmModule<
           ? `Search complete: Solution confirmed`
           : 'Search complete: No Hamiltonian configuration exists in this graph',
       },
-      callStack: [{ name: 'complete', params: { solved: foundPath ? 1 : 0 } }],
-      variables: { completed: true, exists: foundPath !== null },
+      callStack: [{ name: 'complete', params: { solved: foundPath ? 1 : 0 }, line: 3, isCurrent: true }],
+      variables: { completed: true, exists: foundPath !== null, path: foundPath ? (foundPath as number[]).join(' -> ') : 'none' },
+      pedagogy: {
+        what: foundPath
+          ? `Return ${foundCycle ? `cycle [${(foundPath as number[]).join(' → ')} → ${vertices[0]}]` : `path [${(foundPath as number[]).join(' → ')}]`}.`
+          : 'Return null: every branch was exhausted without covering all vertices.',
+        why: foundPath
+          ? 'The first valid completion short-circuits all remaining recursion, so this solution is guaranteed valid.'
+          : 'Exhaustive backtracking visited every reachable state, which certifies that no Hamiltonian path exists for this start vertex.',
+        whatNext: foundPath ? 'Compare with TSP dynamic programming, which searches the same state space in O(2^V · V).' : 'Try another start vertex or relax the cycle requirement.',
+      },
       explanation: foundPath
         ? `Hamiltonian search terminated successfully.`
         : 'Exhausted state space: No valid Hamiltonian path or cycle exists.',
