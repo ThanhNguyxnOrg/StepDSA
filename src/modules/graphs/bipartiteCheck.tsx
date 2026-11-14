@@ -200,20 +200,25 @@ def is_bipartite(graph):
 
     const frames: ExecutionFrame<BipartiteState>[] = [];
     const colors: Record<number, 0 | 1 | 2> = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    let checkpointAdded = false;
 
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 4,
-      explanation: `Initialized Bipartite Verification on ${
+      codeLine: 2,
+      explanation: `Initialize Bipartite Verification on ${
         isOdd ? 'Triangle Graph with Odd Cycle' : '4-Cycle Bipartite Graph'
-      }. All 4 vertices uncolored (Color 0).`,
+      }. All 4 vertices start with color 0 (uncolored).`,
       isMilestone: true,
       milestoneTitle: 'Bipartite Initialized',
       soundCue: { type: 'start' },
       variables: { totalNodes: nodes.length, totalEdges: edges.length, isOddPreset: isOdd },
-      callStack: [{ name: 'isBipartite', params: { V: nodes.length }, line: 4, isCurrent: true }],
-      conditionEval: { expr: `nodes.length > 0`, result: true },
+      callStack: [{ name: 'isBipartite', params: { V: nodes.length }, line: 2, isCurrent: true }],
+      pedagogy: {
+        what: 'A graph is bipartite iff its vertices can be split into two sets such that every edge joins opposite sets.',
+        why: 'Equivalently: the graph contains no odd-length cycle. A BFS 2-coloring detects exactly that.',
+        whatNext: 'Pick an uncolored vertex and color it with set 1.',
+      },
       state: {
         nodes: nodes.map((n) => ({ ...n })),
         edges: [...edges],
@@ -223,19 +228,48 @@ def is_bipartite(graph):
 
     // Start BFS from node 0
     colors[0] = 1;
+
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 5,
+      explanation: 'Seeded vertex 0 with color 1 (Cyan / Set A). Color 0 stays reserved for "uncolored".',
+      isMilestone: true,
+      milestoneTitle: 'Color Vertex 0: Cyan',
+      soundCue: { type: 'step' },
+      variables: { seedVertex: 0, assignedColor: 1, colorName: 'Cyan' },
+      callStack: [{ name: 'colorRoot', params: { u: 0, color: 1 }, line: 5, isCurrent: true }],
+      pedagogy: {
+        what: 'The starting vertex is placed in set A (color 1); the choice is arbitrary because the sets are interchangeable.',
+        why: 'Every other vertex will be forced to an opposite color by its edges, so fixing one vertex fixes the whole component.',
+        whatNext: 'Enqueue vertex 0 and start BFS.',
+      },
+      state: {
+        nodes: nodes.map((n) => ({
+          ...n,
+          color: colors[n.id],
+          status: n.id === 0 ? 'active' : 'unvisited',
+        })),
+        edges: [...edges],
+        isBipartite: true,
+      },
+    });
+
     const queue: number[] = [0];
 
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
       codeLine: 6,
-      explanation: 'Assigned Color 1 (Cyan / Set A) to starting vertex 0. Enqueued vertex 0.',
-      isMilestone: true,
-      milestoneTitle: 'Color Vertex 0: Cyan',
+      explanation: 'queue = [0]: the seed vertex enters the BFS queue; its neighbors will be colored when it is processed.',
       soundCue: { type: 'step' },
-      variables: { seedVertex: 0, assignedColor: 1, colorName: 'Cyan' },
-      callStack: [{ name: 'bfsSeed', params: { u: 0, color: 1 }, line: 6, isCurrent: true }],
-      conditionEval: { expr: `queue.length > 0`, result: true },
+      variables: { queue: queue.join(', '), queueSize: queue.length },
+      callStack: [{ name: 'enqueue', params: { v: 0 }, line: 6, isCurrent: true }],
+      pedagogy: {
+        what: 'BFS expands level by level from the seed.',
+        why: 'Level-by-level expansion guarantees that when a vertex is colored, all vertices closer to the seed are already colored, so any conflict is genuine.',
+        whatNext: 'Dequeue the front vertex and inspect its edges.',
+      },
       state: {
         nodes: nodes.map((n) => ({
           ...n,
@@ -252,18 +286,51 @@ def is_bipartite(graph):
     while (queue.length > 0 && !conflict) {
       const u = queue.shift()!;
 
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 8,
+        explanation: `curr = dequeue() → vertex ${u} (color ${colors[u]}). Queue now [${queue.join(', ')}].`,
+        soundCue: { type: 'step' },
+        variables: { curr: u, currColor: colors[u], queue: queue.join(', ') || '(empty)' },
+        callStack: [{ name: `dequeue(${u})`, params: { u }, line: 8, isCurrent: true }],
+        pedagogy: {
+          what: `Vertex ${u} leaves the queue so its edges can be checked.`,
+          why: 'Every neighbor must be the opposite color; checking at dequeue time uses the BFS layer order to find any contradiction as early as possible.',
+          whatNext: `Inspect the ${adj[u].length} edge(s) incident to ${u}.`,
+        },
+        state: {
+          nodes: nodes.map((n) => ({
+            ...n,
+            color: colors[n.id],
+            status: n.id === u ? 'active' : 'colored',
+          })),
+          edges: [...edges],
+          isBipartite: true,
+        },
+      });
+
       for (const v of adj[u]) {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 10,
-          explanation: `Inspecting edge (${u} ↔ ${v}). Vertex ${u} has Color ${colors[u]} (${
+          codeLine: 9,
+          explanation: `Inspect edge (${u} ↔ ${v}): vertex ${u} has color ${colors[u]} (${
             colors[u] === 1 ? 'Cyan' : 'Rose'
-          }).`,
+          }); neighbor ${v} currently has color ${colors[v] === 0 ? '0 (uncolored)' : `${colors[v]} (${colors[v] === 1 ? 'Cyan' : 'Rose'})`}.`,
           soundCue: { type: 'compare' },
           variables: { u, v, uColor: colors[u], vColor: colors[v] },
-          callStack: [{ name: 'checkEdge', params: { u, v }, line: 10, isCurrent: true }],
+          callStack: [{ name: 'checkEdge', params: { u, v }, line: 9, isCurrent: true }],
           conditionEval: { expr: `color[${v}] == 0 (${colors[v] === 0})`, result: colors[v] === 0 },
+          pedagogy: {
+            what: `The edge demands that ${v} differ from ${u}'s color ${colors[u]}.`,
+            why: 'Bipartiteness is exactly this local rule: every single edge must join opposite sets.',
+            whatNext: colors[v] === 0
+              ? `"${v}" is uncolored — assign the opposite color.`
+              : colors[v] === colors[u]
+                ? `"${v}" already has the same color ${colors[v]} — contradiction!`
+                : `"${v}" is already the opposite color — fine, continue.`,
+          },
           state: {
             nodes: nodes.map((n) => ({
               ...n,
@@ -278,26 +345,56 @@ def is_bipartite(graph):
         if (colors[v] === 0) {
           const nextColor = (colors[u] === 1 ? 2 : 1) as 1 | 2;
           colors[v] = nextColor;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 11,
+            explanation: `color[${v}] = 3 - color[${u}] = ${nextColor} (${
+              nextColor === 1 ? 'Cyan' : 'Rose'
+            }): the opposite set of vertex ${u}.`,
+            isMilestone: true,
+            milestoneTitle: `Color Vertex ${v}: ${nextColor === 1 ? 'Cyan' : 'Rose'}`,
+            soundCue: { type: 'swap' },
+            variables: { vertex: v, from: colors[u], color: nextColor, colorName: nextColor === 1 ? 'Cyan' : 'Rose' },
+            callStack: [{ name: 'assignColor', params: { v, color: nextColor }, line: 11, isCurrent: true }],
+            conditionEval: { expr: `color[${v}] == 0`, result: true },
+            pedagogy: {
+              what: `"${v}" is forced into the ${nextColor === 1 ? 'Cyan' : 'Rose'} set because it touches "${u}".`,
+              why: '3 - color flips 1↔2; there is no third option in a 2-coloring, so the choice is not free.',
+              whatNext: 'Enqueue the freshly colored vertex.',
+            },
+            state: {
+              nodes: nodes.map((n) => ({
+                ...n,
+                color: colors[n.id],
+                status: n.id === v ? 'active' : 'colored',
+              })),
+              edges: [...edges],
+              isBipartite: true,
+            },
+          });
+
           queue.push(v);
 
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
             codeLine: 12,
-            explanation: `Vertex ${v} was uncolored. Assigned opposite Color ${nextColor} (${
-              nextColor === 1 ? 'Cyan' : 'Rose'
-            }) and enqueued.`,
-            isMilestone: true,
-            milestoneTitle: `Color Vertex ${v}: ${nextColor === 1 ? 'Cyan' : 'Rose'}`,
-            soundCue: { type: 'swap' },
-            variables: { vertex: v, color: nextColor, colorName: nextColor === 1 ? 'Cyan' : 'Rose' },
-            callStack: [{ name: 'assignColor', params: { v, color: nextColor }, line: 12, isCurrent: true }],
-            conditionEval: { expr: `color[${v}] == 0`, result: true },
+            explanation: `Enqueue vertex ${v}: queue = [${queue.join(', ')}]. Its own edges will be checked later.`,
+            soundCue: { type: 'step' },
+            variables: { vertex: v, queue: queue.join(', '), queueSize: queue.length },
+            callStack: [{ name: `enqueue(${v})`, params: { v }, line: 12, isCurrent: true }],
+            pedagogy: {
+              what: `"${v}" joins the BFS frontier.`,
+              why: 'Colored vertices must be processed eventually to propagate the constraint to their own neighbors.',
+              whatNext: 'Continue with the remaining neighbors of the current vertex.',
+            },
             state: {
               nodes: nodes.map((n) => ({
                 ...n,
                 color: colors[n.id],
-                status: 'colored',
+                status: n.id === v ? 'active' : 'colored',
               })),
               edges: [...edges],
               isBipartite: true,
@@ -308,14 +405,32 @@ def is_bipartite(graph):
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 15,
-            explanation: `COLOR CONFLICT! Adjacent vertices ${u} and ${v} share identical Color ${colors[u]}! Graph contains an odd cycle and is NOT bipartite.`,
+            codeLine: 14,
+            explanation: `COLOR CONFLICT: adjacent vertices ${u} and ${v} both have color ${colors[u]}. That edge closes an odd-length cycle, so the graph is NOT bipartite.`,
             isMilestone: true,
             milestoneTitle: 'Conflict Detected: Non-Bipartite',
             soundCue: { type: 'complete' },
             variables: { u, v, sharedColor: colors[u], isBipartite: false, conflict: true },
-            callStack: [{ name: 'conflictDetected', params: { u, v, color: colors[u] }, line: 15, isCurrent: true }],
+            callStack: [{ name: 'conflictDetected', params: { u, v, color: colors[u] }, line: 14, isCurrent: true }],
             conditionEval: { expr: `color[${v}] == color[${u}] (${colors[v]} == ${colors[u]})`, result: true },
+            pedagogy: {
+              what: `Both endpoints of (${u} ↔ ${v}) sit in the same set, which breaks the bipartition rule immediately.`,
+              why: 'Walking the tree path from ${u} to ${v} plus this edge yields an odd cycle; 2-coloring is impossible on odd cycles.',
+              whatNext: 'Return false; no valid 2-coloring exists.',
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'bipartite-odd-cycle',
+                  question: `Two adjacent vertices share color ${colors[u]}. Why does that single edge prove the whole graph is not bipartite?`,
+                  options: [
+                    'The edge closes a cycle of odd length, and an odd cycle can never be split into two sets with all edges crossing',
+                    'Because the graph then has more edges than vertices, which is never allowed',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'A 2-coloring must alternate along every cycle. Walking an odd cycle forces the start vertex to have the opposite of its own color; one same-color edge is exactly that contradiction, regardless of graph size.',
+                }
+              : undefined,
             state: {
               nodes: nodes.map((n) => ({
                 ...n,
@@ -331,6 +446,7 @@ def is_bipartite(graph):
               conflictNode: v,
             },
           });
+          checkpointAdded = true;
           break;
         }
       }
@@ -340,14 +456,43 @@ def is_bipartite(graph):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 18,
+        codeLine: 3,
+        explanation: `Outer loop check: all ${nodes.length} vertices are colored, so no further component needs a new BFS root.`,
+        soundCue: { type: 'step' },
+        variables: { coloredVertices: nodes.length, conflict: false },
+        callStack: [{ name: 'outerScan()', params: { colored: nodes.length }, line: 3, isCurrent: true }],
+        pedagogy: {
+          what: 'Every vertex has color 1 or 2; the outer loop finds no uncolored root.',
+          why: 'A disconnected graph would need one BFS per component — here a single component covered everything.',
+          whatNext: 'Conclude that the coloring is valid.',
+        },
+        state: {
+          nodes: nodes.map((n) => ({
+            ...n,
+            color: colors[n.id],
+            status: 'colored',
+          })),
+          edges: [...edges],
+          isBipartite: true,
+        },
+      });
+
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 15,
         explanation: 'BFS completed with zero color conflicts across all edges. Graph is strictly BIPARTITE (2-colorable)!',
         isMilestone: true,
         milestoneTitle: 'Graph is Bipartite',
         soundCue: { type: 'complete' },
         variables: { isBipartite: true, conflict: false },
-        callStack: [{ name: 'bipartite.verified', params: { result: true }, line: 18, isCurrent: true }],
+        callStack: [{ name: 'bipartite.verified', params: { result: true }, line: 15, isCurrent: true }],
         conditionEval: { expr: `!conflict`, result: true },
+        pedagogy: {
+          what: 'Return true: the two color classes form a valid bipartition.',
+          why: 'Every edge was inspected and joined opposite colors, so no same-color edge exists anywhere.',
+          whatNext: 'Bipartite graphs admit matching algorithms (Hopcroft-Karp) and 2-coloring applications like scheduling.',
+        },
         state: {
           nodes: nodes.map((n) => ({
             ...n,

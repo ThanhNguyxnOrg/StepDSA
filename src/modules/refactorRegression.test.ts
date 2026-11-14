@@ -1503,6 +1503,39 @@ describe('pedagogical timeline regressions', () => {
     }).errorCount).toBe(0);
   });
 
+  it('bipartite BFS alternates colors level by level and stops at the first same-color edge', () => {
+    const mod = moduleById('bipartite-check');
+
+    // Even cycle: clean 2-coloring, no conflict.
+    const even = mod.generateTimeline({ isOddCyclePreset: false } as any);
+    expect(even.filter((f) => f.codeLine === 8).length).toBe(4); // one dequeue per vertex
+    expect(even.filter((f) => f.codeLine === 9).length).toBe(8); // every undirected edge checked once per endpoint pass
+    expect(even.filter((f) => f.codeLine === 11).length).toBe(3); // vertices 1, 3, 2 colored
+    expect(even.filter((f) => f.codeLine === 12).length).toBe(3); // and enqueued
+    expect(even.filter((f) => f.codeLine === 14).length).toBe(0);
+    expect(even.filter((f) => f.codeLine === 3).length).toBe(1); // outer scan finds every vertex colored
+
+    const evenFinal = even[even.length - 1];
+    expect(evenFinal.milestoneTitle).toBe('Graph is Bipartite');
+    expect(evenFinal.state.isBipartite).toBe(true);
+    expect((evenFinal.state.nodes as any[]).map((n) => n.color)).toEqual([1, 2, 1, 2]);
+
+    // Odd cycle: conflict at edge (1,2), the moment two same-color neighbors meet.
+    const odd = mod.generateTimeline({ isOddCyclePreset: true } as any);
+    expect(odd.filter((f) => f.checkpoint?.id === 'bipartite-odd-cycle').length).toBe(1);
+    const conflicts = odd.filter((f) => f.codeLine === 14);
+    expect(conflicts.length).toBe(1);
+    expect(conflicts[0].milestoneTitle).toBe('Conflict Detected: Non-Bipartite');
+    expect(conflicts[0].variables?.u).toBe(1);
+    expect(conflicts[0].variables?.v).toBe(2);
+    expect(conflicts[0].variables?.sharedColor).toBe(2);
+    expect(conflicts[0].state.isBipartite).toBe(false);
+    expect(odd[odd.length - 1].milestoneTitle).toBe('Conflict Detected: Non-Bipartite');
+
+    expect(auditTimeline(mod, { isOddCyclePreset: false } as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, { isOddCyclePreset: true } as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
