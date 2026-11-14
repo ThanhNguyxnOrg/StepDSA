@@ -2147,6 +2147,47 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[2].data as any).errorCount).toBe(0);
   });
 
+  it('tree traversals visit at the correct recursion moment and share one NULL base case', () => {
+    const mod = moduleById('tree-traversals');
+    const values = [2, 1, 3];
+
+    const run = (mode: 'preorder' | 'inorder' | 'postorder') => mod.generateTimeline({ values, mode } as any);
+
+    const pre = run('preorder');
+    const ino = run('inorder');
+    const post = run('postorder');
+
+    // One checkpoint per mode, on the first recorded visit.
+    for (const timeline of [pre, ino, post]) {
+      expect(timeline.filter((f) => f.checkpoint?.id === 'tree-traversal-order').length).toBe(1);
+      // Shared recursion skeleton: 3 enters, 4 NULL base cases, 1 completion.
+      expect(timeline.filter((f) => f.codeLine === 5).length).toBe(3);
+      expect(timeline.filter((f) => f.codeLine === 6).length).toBe(4);
+      expect(timeline.filter((f) => f.codeLine === 4).length).toBe(1);
+    }
+
+    // Recording moments and resulting orders differ per mode.
+    expect(pre.filter((f) => f.codeLine === 7).length).toBe(3);
+    expect(ino.filter((f) => f.codeLine === 9).length).toBe(3);
+    expect(post.filter((f) => f.codeLine === 11).length).toBe(3);
+
+    const visits = (timeline: any[]) =>
+      timeline.filter((f) => f.milestoneTitle?.startsWith('Visit ')).map((f) => f.variables?.recorded);
+    expect(visits(pre)).toEqual([2, 1, 3]);
+    expect(visits(ino)).toEqual([1, 2, 3]);
+    expect(visits(post)).toEqual([1, 3, 2]);
+
+    expect(pre[pre.length - 1].variables?.completedSequence).toBe('2, 1, 3');
+    expect(ino[ino.length - 1].variables?.completedSequence).toBe('1, 2, 3');
+    expect(post[post.length - 1].variables?.completedSequence).toBe('1, 3, 2');
+
+    // Inorder of a BST is sorted — the signature property.
+    expect(visits(ino)).toEqual([...visits(ino)].sort((a: any, b: any) => a - b));
+
+    expect(auditTimeline(mod, { values, mode: 'preorder' } as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, { values, mode: 'postorder' } as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
