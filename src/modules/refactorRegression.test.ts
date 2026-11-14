@@ -2002,6 +2002,62 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
   });
 
+  it('graph representations insert each edge into matrix, list and edge list as separate frames', () => {
+    const mod = moduleById('graph-representations');
+    const input = {
+      numVertices: 5,
+      edges: [
+        { u: 0, v: 1, weight: 4 },
+        { u: 0, v: 2, weight: 2 },
+        { u: 1, v: 2, weight: 1 },
+        { u: 1, v: 3, weight: 5 },
+        { u: 2, v: 3, weight: 8 },
+        { u: 2, v: 4, weight: 10 },
+        { u: 3, v: 4, weight: 2 },
+      ],
+      queries: [
+        { type: 'hasEdge' as const, u: 0, v: 2 },
+        { type: 'hasEdge' as const, u: 0, v: 3 },
+        { type: 'getNeighbors' as const, u: 2 },
+        { type: 'getNeighbors' as const, u: 3 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'graph-rep-space-time').length).toBe(1);
+
+    // Every edge touches all three representations in its own frame.
+    expect(timeline.filter((f) => f.action === 'INSERT_MATRIX').length).toBe(7);
+    expect(timeline.filter((f) => f.action === 'INSERT_LIST').length).toBe(7);
+    expect(timeline.filter((f) => f.action === 'INSERT_EDGELIST').length).toBe(7);
+
+    // hasEdge: found and not-found both work in matrix and list form.
+    const matrixQueries = timeline.filter((f) => f.action === 'QUERY_MATRIX_EDGE');
+    const listQueries = timeline.filter((f) => f.action === 'QUERY_LIST_EDGE');
+    expect(matrixQueries.map((f) => f.variables?.exists)).toEqual([true, false]);
+    expect(listQueries.map((f) => f.variables?.exists)).toEqual([true, false]);
+    expect(matrixQueries[0].variables?.lookupTime).toBe('O(1)');
+
+    // getNeighbors: matrix scans V cells, list scans only the degree.
+    const matrixNb = timeline.filter((f) => f.action === 'MATRIX_GET_NEIGHBORS');
+    const listNb = timeline.filter((f) => f.action === 'LIST_GET_NEIGHBORS');
+    expect(matrixNb.map((f) => f.variables?.scannedCells)).toEqual([5, 5]);
+    expect(listNb.map((f) => f.variables?.degree)).toEqual([4, 3]);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.action).toBe('COMPLETE');
+    expect(final.variables?.E).toBe(7);
+
+    // Dense preset K4: 6 edges, degree-3 neighbors.
+    const dense = mod.presets[1];
+    const denseTimeline = mod.generateTimeline(dense.data as any);
+    expect(denseTimeline.filter((f) => f.action === 'INSERT_MATRIX').length).toBe(6);
+    expect(denseTimeline.filter((f) => f.action === 'LIST_GET_NEIGHBORS')[0].variables?.degree).toBe(3);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, dense.data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

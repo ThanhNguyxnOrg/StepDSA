@@ -157,9 +157,19 @@ for (int i = 0; i < V; i++) adjList.add(new ArrayList<>());
 // 3. Edge List
 record Edge(int u, int v, int w) {}
 List<Edge> edgeList = new ArrayList<>();`,
-    pseudocode: `Matrix[u][v] <- weight
-List[u].append((v, weight))
-EdgeList.append((u, v, weight))`,
+    pseudocode: `function buildRepresentations(V, edges):
+    Matrix = V x V zeros, List = V empty lists, EdgeList = []
+    for each edge (u, v, w):
+        Matrix[u][v] <- w, Matrix[v][u] <- w
+        List[u].append((v, w)), List[v].append((u, w))
+        EdgeList.append((u, v, w))
+function hasEdge(u, v):
+    return Matrix[u][v] != 0            # O(1)
+    # List alternative: scan List[u]   # O(deg(u))
+function getNeighbors(u):
+    return non-zero cells in Matrix row u   # O(V)
+    # List alternative: return List[u]        # O(deg(u))
+return Matrix, List, EdgeList`,
   },
   generateTimeline: (input) => {
     const frames: ExecutionFrame<GraphRepresentationsState>[] = [];
@@ -174,6 +184,8 @@ EdgeList.append((u, v, weight))`,
         action?: string;
         variables?: Record<string, string | number | boolean>;
         callStack?: CallStackFrame[];
+        pedagogy?: ExecutionFrame['pedagogy'];
+        checkpoint?: ExecutionFrame['checkpoint'];
       }
     ) => {
       frames.push({
@@ -184,6 +196,8 @@ EdgeList.append((u, v, weight))`,
         action: options?.action,
         variables: options?.variables,
         callStack: options?.callStack,
+        pedagogy: options?.pedagogy,
+        checkpoint: options?.checkpoint,
         state,
       });
     };
@@ -199,10 +213,11 @@ EdgeList.append((u, v, weight))`,
     });
 
     const edges: GraphRepEdge[] = rawEdges.map((e) => ({ ...e }));
+    let checkpointAdded = false;
 
     addFrame(
-      1,
-      `Initialized Graph with ${V} vertices and ${edges.length} edges. Inspecting representations.`,
+      2,
+      `Initialized structures for ${V} vertices and ${edges.length} edges: Matrix = ${V}×${V} zeros, List = ${V} empty buckets, EdgeList = [].`,
       {
         nodes,
         edges,
@@ -216,6 +231,11 @@ EdgeList.append((u, v, weight))`,
         action: 'INIT',
         variables: { numVertices: V, numEdges: edges.length, matrixCells: V * V },
         callStack: [{ name: 'initGraph', params: { V, E: edges.length } }],
+        pedagogy: {
+          what: `Three parallel structures are allocated: the ${V}×${V} matrix, ${V} empty adjacency buckets, and an empty edge list.`,
+          why: 'The module compares the same graph in all three forms; every later insertion keeps them structurally equivalent.',
+          whatNext: 'Insert the first edge into each representation, one frame each.',
+        },
       }
     );
 
@@ -223,21 +243,88 @@ EdgeList.append((u, v, weight))`,
     for (let eIdx = 0; eIdx < edges.length; eIdx++) {
       const e = edges[eIdx];
       addFrame(
-        1,
-        `[Insert Edge #${eIdx + 1}] Adding edge (${e.u} ↔ ${e.v}, weight=${e.weight}): Matrix updates M[${e.u}][${e.v}] = M[${e.v}][${e.u}] = ${e.weight}. List appends to List[${e.u}] and List[${e.v}]. EdgeList appends tuple.`,
+        4,
+        `[Insert Edge #${eIdx + 1}] Matrix: set M[${e.u}][${e.v}] = M[${e.v}][${e.u}] = ${e.weight} — both directions because the graph is undirected.`,
         {
           nodes,
           edges,
-          activeRepresentation: 'all',
+          activeRepresentation: 'matrix',
           activeU: e.u,
           activeV: e.v,
           activeEdgeIdx: eIdx,
-          message: `Inserted edge (${e.u}, ${e.v}, w=${e.weight}) into Matrix, List, and EdgeList.`,
+          message: `Matrix updated symmetrically: M[${e.u}][${e.v}] = M[${e.v}][${e.u}] = ${e.weight}.`,
         },
         {
-          action: 'INSERT_EDGE',
-          variables: { edgeIndex: eIdx, u: e.u, v: e.v, weight: e.weight },
-          callStack: [{ name: 'addEdge', params: { u: e.u, v: e.v, weight: e.weight } }],
+          action: 'INSERT_MATRIX',
+          variables: { edgeIndex: eIdx, u: e.u, v: e.v, weight: e.weight, representation: 'matrix' },
+          callStack: [{ name: 'matrixInsert', params: { u: e.u, v: e.v, weight: e.weight } }],
+          pedagogy: {
+            what: `Matrix cells (${e.u}, ${e.v}) and (${e.v}, ${e.u}) both become ${e.weight}.`,
+            why: 'Two assignments per edge give the matrix its symmetry — and its O(V²) space cost.',
+            whatNext: 'Append the edge to both adjacency buckets.',
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'graph-rep-space-time',
+                question: 'Why does the adjacency matrix allow O(1) hasEdge while the adjacency list needs O(deg(u))?',
+                options: [
+                  'The matrix stores every pair explicitly, so (u, v) is a direct index — at the cost of V² cells even when the graph is sparse',
+                  'Because the matrix keeps its rows sorted, enabling binary search',
+                ],
+                correctIndex: 0,
+                explanation:
+                  'Direct indexing trades memory for speed: V² cells are allocated regardless of E. The list only stores real edges, so lookups scan the bucket but memory stays O(V + E).',
+              }
+            : undefined,
+        }
+      );
+      checkpointAdded = true;
+
+      addFrame(
+        5,
+        `[Insert Edge #${eIdx + 1}] List: append (${e.v}, ${e.weight}) to List[${e.u}] and (${e.u}, ${e.weight}) to List[${e.v}].`,
+        {
+          nodes,
+          edges,
+          activeRepresentation: 'list',
+          activeU: e.u,
+          activeV: e.v,
+          activeEdgeIdx: eIdx,
+          message: `Adjacency list buckets List[${e.u}] and List[${e.v}] each gained one neighbor entry.`,
+        },
+        {
+          action: 'INSERT_LIST',
+          variables: { edgeIndex: eIdx, u: e.u, v: e.v, weight: e.weight, representation: 'list' },
+          callStack: [{ name: 'listInsert', params: { u: e.u, v: e.v, weight: e.weight } }],
+          pedagogy: {
+            what: `The edge appears in exactly two buckets: List[${e.u}] and List[${e.v}].`,
+            why: 'Undirected edges are stored twice in the list form, once per endpoint — that is what makes neighbor iteration O(deg) instead of O(V).',
+            whatNext: 'Append the flat tuple to the edge list.',
+          },
+        }
+      );
+
+      addFrame(
+        6,
+        `[Insert Edge #${eIdx + 1}] EdgeList: append the tuple (${e.u}, ${e.v}, ${e.weight}) as one flat record.`,
+        {
+          nodes,
+          edges,
+          activeRepresentation: 'edgeList',
+          activeU: e.u,
+          activeV: e.v,
+          activeEdgeIdx: eIdx,
+          message: `EdgeList grew to ${eIdx + 1} tuple(s).`,
+        },
+        {
+          action: 'INSERT_EDGELIST',
+          variables: { edgeIndex: eIdx, u: e.u, v: e.v, weight: e.weight, representation: 'edgeList', edgeListSize: eIdx + 1 },
+          callStack: [{ name: 'edgeListInsert', params: { u: e.u, v: e.v, weight: e.weight } }],
+          pedagogy: {
+            what: `Edge #${eIdx + 1} joins the flat tuple array.`,
+            why: 'One record per edge gives O(E) memory; Kruskal sorts exactly this list by weight.',
+            whatNext: 'Move to the next edge or run a query.',
+          },
         }
       );
     }
@@ -253,7 +340,7 @@ EdgeList.append((u, v, weight))`,
 
         // Sub-step A: Matrix direct cell check O(1)
         addFrame(
-          3,
+          8,
           `Query hasEdge(${u}, ${v}) via Adjacency Matrix: Direct cell indexing M[${u}][${v}] in O(1) time. Cell value is ${foundEdge ? foundEdge.weight : 0}.`,
           {
             nodes,
@@ -268,12 +355,17 @@ EdgeList.append((u, v, weight))`,
             action: 'QUERY_MATRIX_EDGE',
             variables: { u, v, representation: 'matrix', exists: !!foundEdge, lookupTime: 'O(1)' },
             callStack: [{ name: 'matrixHasEdge', params: { u, v } }],
+            pedagogy: {
+              what: `One array access answers hasEdge(${u}, ${v}): M[${u}][${v}] = ${foundEdge ? foundEdge.weight : 0}.`,
+              why: 'The pair index exists for every vertex combination, so no scanning is needed at all.',
+              whatNext: 'Contrast with the adjacency-list search.',
+            },
           }
         );
 
         // Sub-step B: List sequential scan O(deg(u))
         addFrame(
-          4,
+          9,
           `Query hasEdge(${u}, ${v}) via Adjacency List: Sequentially iterates through linked list at List[${u}] in O(deg(${u})) time to locate neighbor ${v}.`,
           {
             nodes,
@@ -288,6 +380,11 @@ EdgeList.append((u, v, weight))`,
             action: 'QUERY_LIST_EDGE',
             variables: { u, v, representation: 'list', exists: !!foundEdge, lookupTime: `O(deg(${u}))` },
             callStack: [{ name: 'listHasEdge', params: { u, v } }],
+            pedagogy: {
+              what: `The list walk checks each entry of List[${u}] until it finds V${v} or runs out.`,
+              why: 'Cost grows with the bucket size, not with V — on sparse graphs this stays small.',
+              whatNext: 'Compare neighbor-listing queries next.',
+            },
           }
         );
       } else if (q.type === 'getNeighbors') {
@@ -298,7 +395,7 @@ EdgeList.append((u, v, weight))`,
 
         // Sub-step A: Matrix scanning row u O(V)
         addFrame(
-          7,
+          11,
           `Query getNeighbors(${u}) via Adjacency Matrix: Must scan all ${V} columns in row M[${u}][*] in O(V) time to collect non-zero entries.`,
           {
             nodes,
@@ -313,12 +410,17 @@ EdgeList.append((u, v, weight))`,
             action: 'MATRIX_GET_NEIGHBORS',
             variables: { u, representation: 'matrix', scannedCells: V, time: `O(${V})` },
             callStack: [{ name: 'matrixGetNeighbors', params: { u, scanned: V } }],
+            pedagogy: {
+              what: `Listing neighbors of V${u} scans the whole row of ${V} cells, including the zeros.`,
+              why: 'The matrix knows no list of actual edges, so runtime depends on V even when the vertex has degree 1.',
+              whatNext: 'Watch the list answer the same query without touching empty slots.',
+            },
           }
         );
 
         // Sub-step B: List scanning directly in O(deg(u))
         addFrame(
-          8,
+          12,
           `Query getNeighbors(${u}) via Adjacency List: Scans only the ${neighbors.length} existing neighbors in List[${u}] in optimal O(deg(${u})) = O(${neighbors.length}) time.`,
           {
             nodes,
@@ -333,13 +435,18 @@ EdgeList.append((u, v, weight))`,
             action: 'LIST_GET_NEIGHBORS',
             variables: { u, representation: 'list', degree: neighbors.length, time: `O(${neighbors.length})` },
             callStack: [{ name: 'listGetNeighbors', params: { u, degree: neighbors.length } }],
+            pedagogy: {
+              what: `The bucket holds exactly ${neighbors.length} entries, so the answer is immediate.`,
+              why: 'List memory is proportional to real edges, which is why sparse graphs prefer it; dense graphs eventually make the matrix cheaper.',
+              whatNext: 'Continue with the remaining queries.',
+            },
           }
         );
       }
     }
 
     addFrame(
-      14,
+      13,
       `Representation analysis complete! Tradeoff summary: Matrix provides O(1) edge lookup at O(V^2) memory. List provides optimal O(V+E) memory and fast iteration. EdgeList is ideal for Kruskal's MST.`,
       {
         nodes,
@@ -354,6 +461,11 @@ EdgeList.append((u, v, weight))`,
         action: 'COMPLETE',
         variables: { V, E: edges.length, matrixSpace: `O(${V * V})`, listSpace: `O(${V}+${edges.length * 2})` },
         callStack: [{ name: 'complete', params: { V, E: edges.length } }],
+        pedagogy: {
+          what: `All three structures encode the same ${edges.length} edges: matrix (${V}×${V}), list (${edges.length * 2} entries), edge list (${edges.length} tuples).`,
+          why: 'Picking a representation is a space-time trade-off: O(1) membership favours the matrix, sparse memory and iteration favour the list, edge-centric algorithms favour the tuple array.',
+          whatNext: 'Kruskal consumes the edge list, BFS/Dijkstra consume the adjacency list, Floyd-Warshall consumes the matrix.',
+        },
       }
     );
 
