@@ -2227,6 +2227,39 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('binary heap sifts up to the root, extracts the max, and sifts down one path', () => {
+    const mod = moduleById('binary-heap');
+    const timeline = mod.generateTimeline([80, 65, 75, 40, 50, 60] as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'binary-heap-single-path').length).toBe(1);
+
+    // Insert 95: two comparisons and two swaps bring it to the root.
+    const compares = timeline.filter((f) => f.codeLine === 6);
+    expect(compares.length).toBe(2);
+    expect(compares.map((f) => f.conditionEval?.result)).toEqual([true, true]);
+    expect(timeline.filter((f) => f.codeLine === 7).length).toBe(2);
+    const insertDone = timeline.filter((f) => f.milestoneTitle === 'Inserted 95 Successfully');
+    expect(insertDone.length).toBe(1);
+    expect(insertDone[0].variables?.root).toBe(95);
+
+    // Extract: root replaced by the last leaf, then two largest-child scans and one swap.
+    const extract = timeline.filter((f) => f.milestoneTitle === 'Extract-Max (95)');
+    expect(extract.length).toBe(1);
+    expect(extract[0].variables?.temporaryRoot).toBe(75);
+    expect(timeline.filter((f) => f.action === 'FIND_LARGEST_CHILD').length).toBe(2);
+    expect(timeline.filter((f) => f.codeLine === 18).length).toBe(1);
+    const siftDone = timeline.filter((f) => f.action === 'SIFT_DOWN_DONE');
+    expect(siftDone.length).toBe(1);
+    expect(siftDone[0].variables?.stoppedAtIndex).toBe(2);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Heap Operations Complete');
+    expect(final.variables?.finalRoot).toBe(80);
+    expect(final.state.heap).toEqual([80, 65, 75, 40, 50, 60]);
+
+    expect(auditTimeline(mod, [80, 65, 75, 40, 50, 60] as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

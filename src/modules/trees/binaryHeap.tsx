@@ -81,15 +81,25 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
     }
 }`,
     pseudocode: `function insert(heap, val):
-  append val to heap
-  i = last index
-  while i > 0:
-    parent = (i - 1) / 2
-    if heap[i] > heap[parent]:
-      swap(heap[i], heap[parent])
-      i = parent
-    else:
-      break`,
+    append val to heap
+    i = last index
+    while i > 0:
+        parent = (i - 1) / 2
+        if heap[i] > heap[parent]:
+            swap(heap[i], heap[parent])
+            i = parent
+        else:
+            break
+    return heap
+function extractMax(heap):
+    max = heap[0]; heap[0] = heap.pop()
+    i = 0
+    while true:
+        largest = max of i, 2i+1, 2i+2 within bounds
+        if largest == i: break
+        swap(heap[i], heap[largest])
+        i = largest
+    return max`,
   },
   presets: [
     {
@@ -105,6 +115,8 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
     const heap = [...input];
     const newVal = 95;
 
+    let checkpointAdded = false;
+
     // Step 0: Initial valid heap
     frames.push({
       stepIndex: 0,
@@ -119,6 +131,11 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
         { name: 'main()', params: {}, line: 1 },
       ],
       variables: { size: heap.length, root: heap[0], inserting: newVal },
+      pedagogy: {
+        what: `A binary heap is a complete tree stored in an array: children of i live at 2i+1 and 2i+2, parent (i-1)/2.`,
+        why: 'The max-heap property heap[parent] >= heap[child] makes the maximum the root in O(1), at the price of fixing one path per change.',
+        whatNext: `Append ${newVal} at the first free slot to keep the tree complete.`,
+      },
       state: { heap: [...heap] },
     });
 
@@ -136,6 +153,11 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
         { name: 'main()', params: {}, line: 1 },
       ],
       variables: { currentIndex: i, currentValue: newVal, heapSize: heap.length },
+      pedagogy: {
+        what: `${newVal} starts at the very bottom (index ${i}).`,
+        why: 'Appending keeps the shape complete; the order is what sift-up will repair.',
+        whatNext: `Compare ${newVal} with its parent.`,
+      },
       state: { heap: [...heap], activeIndices: [i] },
     });
 
@@ -157,8 +179,27 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
         ],
         variables: { childIndex: i, parentIndex: parent, childVal: heap[i], parentVal: heap[parent], needsSwap },
         conditionEval: { expr: `heap[${i}] (${heap[i]}) > heap[${parent}] (${heap[parent]})`, result: needsSwap },
+        pedagogy: {
+          what: `heap[${i}] = ${heap[i]} vs heap[${parent}] = ${heap[parent]}: ${needsSwap ? 'the child is larger, so the pair is inverted.' : 'the parent is already at least as large — the invariant holds here.'}`,
+          why: 'Only this ancestor chain can be violated by the append; everything else was a valid heap before.',
+          whatNext: needsSwap ? 'Swap the pair and climb one level.' : 'Stop: the heap property is restored.',
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'binary-heap-single-path',
+              question: 'Why does fixing a single ancestor path restore the heap after an insert?',
+              options: [
+                'Only the appended node\'s ancestors can violate the invariant, so sift-up repairs one path and every other parent-child pair was already valid',
+                'Because the heap array is kept sorted left to right',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Insert changes exactly one leaf; a violation can only propagate upward. Sift-up stops at the first valid parent, so O(log n) fixes suffice. Extract-max mirrors this downward.',
+            }
+          : undefined,
         state: { heap: [...heap], swappingIndices: [i, parent] },
       });
+      checkpointAdded = true;
 
       if (needsSwap) {
         [heap[i], heap[parent]] = [heap[parent], heap[i]];
@@ -175,6 +216,11 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
             { name: 'insertMaxHeap()', params: { val: newVal }, line: 4 },
           ],
           variables: { currentIndex: i, currentValue: newVal },
+          pedagogy: {
+            what: `${newVal} moved up one level to index ${i}.`,
+            why: 'Swapping with the parent is the only way to move a larger value upward without breaking anything else.',
+            whatNext: i > 0 ? 'Continue comparing with the next parent.' : 'Reached the root — the heap is fully repaired.',
+          },
           state: { heap: [...heap], activeIndices: [i] },
         });
       } else {
@@ -190,9 +236,14 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
       isMilestone: true,
       milestoneTitle: `Inserted ${newVal} Successfully`,
       soundCue: { type: 'sorted' },
-      explanation: `Insertion complete! Max Heap invariant restored with ${newVal} positioned at index ${i}. Root is now ${heap[0]}.`,
+      explanation: `return heap: insertion complete with ${newVal} positioned at index ${i}. Root is now ${heap[0]}.`,
       callStack: [{ name: 'insertMaxHeap()', params: { root: heap[0] }, line: 11, isCurrent: true }],
       variables: { root: heap[0], finalIndex: i, heapSize: heap.length },
+      pedagogy: {
+        what: `The sift-up visited ${heap.length > 0 ? 'a suffix of one ancestor path' : 'nothing'} and stopped at the first valid parent.`,
+        why: 'Total cost O(log n): at most one swap per level of a complete tree.',
+        whatNext: 'Demonstrate the symmetric operation: extract the maximum.',
+      },
       state: { heap: [...heap], activeIndices: [i] },
     });
 
@@ -204,16 +255,21 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 14,
+      codeLine: 13,
       isMilestone: true,
       milestoneTitle: `Extract-Max (${maxExtracted})`,
       soundCue: { type: 'step' },
-      explanation: `Extract-Max: Removed root ${maxExtracted}. Replaced root with last element (${lastElement}). Now sifting down from root.`,
+      explanation: `max = heap[0] (${maxExtracted}); heap[0] = heap.pop() (${lastElement}). The shape stays complete and sift-down repairs the order from the root.`,
       callStack: [
-        { name: 'extractMax(heap)', params: { extracted: maxExtracted, newRoot: lastElement }, line: 14, isCurrent: true },
+        { name: 'extractMax(heap)', params: { extracted: maxExtracted, newRoot: lastElement }, line: 13, isCurrent: true },
         { name: 'main()', params: {}, line: 1 },
       ],
       variables: { extractedMax: maxExtracted, temporaryRoot: lastElement, heapSize: heap.length },
+      pedagogy: {
+        what: `The maximum was the root ${maxExtracted}. The last element ${lastElement} takes its place temporarily.`,
+        why: 'Removing the root would break the tree shape; overwriting it with the last leaf keeps the complete-tree array compact before re-ordering.',
+        whatNext: 'Sift the temporary root down to its correct level.',
+      },
       state: { heap: [...heap], activeIndices: [0] },
     });
 
@@ -231,36 +287,67 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
         largest = right;
       }
 
-      if (largest !== curr) {
-        frames.push({
-          stepIndex: frames.length,
-          totalSteps: 1,
-          codeLine: 18,
-          explanation: `Sift-Down: Node heap[${curr}] (${heap[curr]}) is smaller than largest child heap[${largest}] (${heap[largest]}). Swapping!`,
-          soundCue: { type: 'compare' },
-          callStack: [
-            { name: 'siftDown(curr)', params: { curr, largestChild: largest }, line: 18, isCurrent: true },
-            { name: 'extractMax()', params: {}, line: 14 },
-          ],
-          variables: { currIndex: curr, largestChildIndex: largest, childVal: heap[largest] },
-          conditionEval: { expr: `heap[${largest}] > heap[${curr}]`, result: true },
-          state: { heap: [...heap], swappingIndices: [curr, largest] },
-        });
+      const leftVal = left < heap.length ? heap[left] : 'none';
+      const rightVal = right < heap.length ? heap[right] : 'none';
 
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: 1,
+        codeLine: 16,
+        action: 'FIND_LARGEST_CHILD',
+        explanation: `Sift-Down at index ${curr} (${heap[curr]}): compare with children left=${leftVal}${left < heap.length ? ` (idx ${left})` : ''}, right=${rightVal}${right < heap.length ? ` (idx ${right})` : ''} → largest is index ${largest}.`,
+        soundCue: { type: 'compare' },
+        callStack: [
+          { name: 'siftDown(curr)', params: { curr, largestChild: largest }, line: 16, isCurrent: true },
+          { name: 'extractMax()', params: {}, line: 13 },
+        ],
+        variables: { currIndex: curr, currVal: heap[curr], leftVal: String(leftVal), rightVal: String(rightVal), largestChildIndex: largest },
+        conditionEval: { expr: `largest == ${curr}`, result: largest === curr },
+        pedagogy: {
+          what: `Among {${heap[curr]}, ${leftVal}, ${rightVal}} the largest is ${heap[largest]}.`,
+          why: 'A max-heap only needs the maximum child: swapping with it restores the local invariant, and the other child can never be larger than the new parent.',
+          whatNext: largest === curr ? 'The node is already the largest — stop.' : `Swap with child at index ${largest}.`,
+        },
+        state: { heap: [...heap], swappingIndices: [curr, largest] },
+      });
+
+      if (largest !== curr) {
         [heap[curr], heap[largest]] = [heap[largest], heap[curr]];
         curr = largest;
 
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 19,
-          explanation: `Sift-Down: Swapped! Element moved down to index ${curr}.`,
+          codeLine: 18,
+          explanation: `swap(heap[i], heap[largest]) done: the element moved down to index ${curr}.`,
           soundCue: { type: 'swap' },
-          callStack: [{ name: 'siftDown(curr)', params: { newCurr: curr }, line: 19, isCurrent: true }],
+          callStack: [{ name: 'siftDown(curr)', params: { newCurr: curr }, line: 18, isCurrent: true }],
           variables: { currentIndex: curr, currentValue: heap[curr] },
+          pedagogy: {
+            what: `The larger child rose one level; the displaced value continues falling from index ${curr}.`,
+            why: 'Sift-down is the mirror of sift-up: one path from root toward the leaves, O(log n) swaps.',
+            whatNext: 'Repeat the comparison at the new position.',
+          },
           state: { heap: [...heap], activeIndices: [curr] },
         });
       } else {
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 17,
+          action: 'SIFT_DOWN_DONE',
+          explanation: `largest == i (${curr}): node ${heap[curr]} is at least as large as both children. Break — the heap is valid again.`,
+          soundCue: { type: 'sorted' },
+          callStack: [{ name: 'siftDown(curr)', params: { stopAt: curr }, line: 17, isCurrent: true }],
+          variables: { stoppedAtIndex: curr, value: heap[curr] },
+          conditionEval: { expr: `largest == i`, result: true },
+          pedagogy: {
+            what: `The falling element found a valid home at index ${curr}.`,
+            why: 'Once a node is ≥ both children, every descendant below is already in order — no further checks needed.',
+            whatNext: 'Return the extracted maximum.',
+          },
+          state: { heap: [...heap], activeIndices: [curr] },
+        });
         break;
       }
     }
@@ -269,13 +356,18 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 22,
+      codeLine: 20,
       isMilestone: true,
       milestoneTitle: 'Heap Operations Complete',
       soundCue: { type: 'complete' },
-      explanation: `🎉 Max Heap operations complete! Both O(log N) insert and extract-max verified. Final root = ${heap[0]}.`,
-      callStack: [{ name: 'main()', params: { finalRoot: heap[0], size: heap.length }, line: 22, isCurrent: true }],
+      explanation: `return max: both O(log N) insert and extract-max verified. Final root = ${heap[0]}.`,
+      callStack: [{ name: 'main()', params: { finalRoot: heap[0], size: heap.length }, line: 20, isCurrent: true }],
       variables: { finalRoot: heap[0], finalHeap: `[${heap.join(', ')}]`, finalSize: heap.length },
+      pedagogy: {
+        what: `Final heap array [${heap.join(', ')}] with root ${heap[0]} — the new maximum.`,
+        why: 'Both operations touched a single O(log n) path; arrays give the complete tree its cache-friendly layout.',
+        whatNext: 'Compare with a sorted array: heaps trade full order for fast max access and fast updates.',
+      },
       state: { heap: [...heap], activeIndices: [0] },
     });
 
