@@ -147,10 +147,60 @@ export const transitiveClosureModule: AlgorithmModule<
     const V = rawNodes.length;
     const nodeIndex = new Map<string, number>();
     rawNodes.forEach((name: string, idx: number) => nodeIndex.set(name, idx));
+    let checkpointAdded = false;
 
-    const matrix: number[][] = Array.from({ length: V }, (_, i) =>
-      Array.from({ length: V }, (_, j) => (i === j ? 1 : 0))
+    const matrix: number[][] = Array.from({ length: V }, () =>
+      Array.from({ length: V }, () => 0)
     );
+
+    // Frame: zero matrix
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 2,
+      action: 'INIT_ZEROS',
+      state: {
+        nodes: rawNodes,
+        matrix: matrix.map((row) => [...row]),
+        k: -1,
+        i: -1,
+        j: -1,
+        justUpdated: null,
+      },
+      callStack: [{ name: 'initMatrix', params: { V }, line: 2, isCurrent: true }],
+      variables: { V, status: 'All pairs unreachable' },
+      pedagogy: {
+        what: `reach[V][V] starts as all zeros: no pair is known to be connected yet.`,
+        why: 'Warshall builds reachability incrementally; the empty matrix is the honest starting state before any evidence is added.',
+        whatNext: 'Every vertex reaches itself — set the diagonal.',
+      },
+      explanation: `Initialized ${V}x${V} reachability matrix with zeros.`,
+    });
+
+    for (let d = 0; d < V; d++) matrix[d][d] = 1;
+
+    frames.push({
+      stepIndex: frames.length,
+      totalSteps: 1,
+      codeLine: 3,
+      action: 'INIT_DIAGONAL',
+      state: {
+        nodes: rawNodes,
+        matrix: matrix.map((row) => [...row]),
+        k: -1,
+        i: -1,
+        j: -1,
+        justUpdated: null,
+      },
+      callStack: [{ name: 'setDiagonal', params: { V }, line: 3, isCurrent: true }],
+      variables: { reflexivePairs: V },
+      pedagogy: {
+        what: `reach[v][v] = 1 for all ${V} vertices: a zero-length path always exists.`,
+        why: 'Reflexivity means the closure is reflexive-transitive: every node reaches itself even with no edges.',
+        whatNext: 'Add the direct edges of the graph.',
+      },
+      explanation: `Set reflexive 1s on the diagonal: every vertex reaches itself.`,
+    });
 
     rawEdges.forEach((e: { from: string; to: string }) => {
       const u = nodeIndex.get(e.from);
@@ -161,9 +211,9 @@ export const transitiveClosureModule: AlgorithmModule<
     });
 
     frames.push({
-      stepIndex: 0,
+      stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 1,
+      codeLine: 4,
       action: 'INIT',
       isMilestone: true,
       milestoneTitle: 'Matrix Initialized',
@@ -176,10 +226,14 @@ export const transitiveClosureModule: AlgorithmModule<
         j: -1,
         justUpdated: null,
       },
-      callStack: [{ name: 'transitiveClosure', params: { V, edgesCount: rawEdges.length } }],
+      callStack: [{ name: 'transitiveClosure', params: { V, edgesCount: rawEdges.length }, line: 4, isCurrent: true }],
       variables: { V, totalEdges: rawEdges.length, status: 'Adjacency initialized' },
-      conditionEval: { expr: `V === ${V}`, result: true },
-      explanation: `Initialized reachability matrix with reflexive 1s on diagonal and direct graph edges.`,
+      pedagogy: {
+        what: `Direct edges set ${rawEdges.length} entries to 1: ${rawEdges.map((e) => `${e.from}→${e.to}`).join(', ') || 'none'}.`,
+        why: 'These are paths of length 1; Warshall will now discover the longer paths.',
+        whatNext: 'Run the triple loop, one intermediate pivot k at a time.',
+      },
+      explanation: `Initialized reachability matrix with reflexive 1s on diagonal and ${rawEdges.length} direct graph edge(s).`,
     });
 
     for (let k = 0; k < V; k++) {
@@ -199,11 +253,32 @@ export const transitiveClosureModule: AlgorithmModule<
           j: -1,
           justUpdated: null,
         },
-        callStack: [{ name: 'transitiveClosure', params: { pivotK: rawNodes[k], k } }],
+        callStack: [{ name: 'transitiveClosure', params: { pivotK: rawNodes[k], k }, line: 5, isCurrent: true }],
         variables: { pivotNode: rawNodes[k], k, phase: `Exploring paths through node ${rawNodes[k]}` },
         conditionEval: { expr: `k < ${V}`, result: true },
+        pedagogy: {
+          what: `Pivot k = ${rawNodes[k]}: this round discovers all paths that may use ${rawNodes[k]} as their intermediate vertex.`,
+          why: `Invariant: after pivot k, reach[i][j] is correct for all paths whose intermediates come from {${rawNodes
+            .slice(0, k + 1)
+            .join(', ')}}. Induction extends it one vertex per round.`,
+          whatNext: `For every i that reaches ${rawNodes[k]}, OR in the whole row k.`,
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'warshall-pivot',
+              question: `Why does Warshall need only one pass over k = 0..V-1?`,
+              options: [
+                'After processing pivot k, all paths using intermediates among the first k+1 vertices are correct, so the last pivot completes the closure by induction',
+                'Because the reachability matrix is symmetric, each pair gets discovered twice',
+              ],
+              correctIndex: 0,
+              explanation:
+                'Each pivot round permanently refines the matrix: any path splits at its highest-numbered intermediate, which that pivot round handles. No revisit is needed — that is the dynamic-programming argument behind O(V³).',
+            }
+          : undefined,
         explanation: `Set intermediate pivot vertex k = ${rawNodes[k]} (index ${k}). Examining all candidate paths i -> ${rawNodes[k]} -> j.`,
       });
+      checkpointAdded = true;
 
       for (let i = 0; i < V; i++) {
         const canReachPivot = matrix[i][k] === 1;
@@ -222,10 +297,40 @@ export const transitiveClosureModule: AlgorithmModule<
               j: -1,
               justUpdated: null,
             },
-            callStack: [{ name: 'scanRow', params: { source: rawNodes[i], pivot: rawNodes[k] } }],
+            callStack: [{ name: 'scanRow', params: { source: rawNodes[i], pivot: rawNodes[k] }, line: 6, isCurrent: true }],
             variables: { source: rawNodes[i], pivot: rawNodes[k], canReachPivot: true },
             conditionEval: { expr: `reach[${rawNodes[i]}][${rawNodes[k]}] === 1`, result: true },
+            pedagogy: {
+              what: `${rawNodes[i]} reaches the pivot ${rawNodes[k]}, so every j reachable from ${rawNodes[k]} becomes reachable from ${rawNodes[i]}.`,
+              why: 'Reachability is transitive: i → k and k → j concatenate into a valid walk i → … → j.',
+              whatNext: `Sweep all j and OR in reach[${rawNodes[i]}][j] |= reach[${rawNodes[k]}][j].`,
+            },
             explanation: `Source node ${rawNodes[i]} can reach pivot ${rawNodes[k]}. Propagating reachability to all nodes reachable from ${rawNodes[k]}.`,
+          });
+        } else {
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 6,
+            action: 'ROW_SKIP',
+            soundCue: { type: 'step' },
+            state: {
+              nodes: rawNodes,
+              matrix: matrix.map((row) => [...row]),
+              k,
+              i,
+              j: -1,
+              justUpdated: null,
+            },
+            callStack: [{ name: `skipRow(${rawNodes[i]})`, params: { pivot: rawNodes[k] }, line: 6, isCurrent: true }],
+            variables: { source: rawNodes[i], pivot: rawNodes[k], canReachPivot: false },
+            conditionEval: { expr: `reach[${rawNodes[i]}][${rawNodes[k]}] === 1`, result: false },
+            pedagogy: {
+              what: `${rawNodes[i]} cannot reach ${rawNodes[k]}, so no path of the form ${rawNodes[i]} → … → ${rawNodes[k]} → … exists.`,
+              why: 'The OR would add nothing for any j; skipping the whole row is exactly the O(1) guard the algorithm gets for free.',
+              whatNext: `Move to the next source vertex.`,
+            },
+            explanation: `Source node ${rawNodes[i]} cannot reach pivot ${rawNodes[k]}; its row contributes nothing this round.`,
           });
         }
 
@@ -251,7 +356,7 @@ export const transitiveClosureModule: AlgorithmModule<
                 j,
                 justUpdated: [i, j],
               },
-              callStack: [{ name: 'transitiveClosure', params: { k, i, j } }],
+              callStack: [{ name: 'transitiveClosure', params: { k, i, j }, line: 8, isCurrent: true }],
               variables: {
                 from: rawNodes[i],
                 pivot: rawNodes[k],
@@ -260,6 +365,11 @@ export const transitiveClosureModule: AlgorithmModule<
                 newReach: `reach[${rawNodes[i]}][${rawNodes[j]}] = 1`,
               },
               conditionEval: { expr: `reach[${i}][${k}] && reach[${k}][${j}]`, result: true },
+              pedagogy: {
+                what: `reach[${rawNodes[i]}][${rawNodes[j]}] flips 0 → 1: the walk ${rawNodes[i]} → ${rawNodes[k]} → ${rawNodes[j]} exists.`,
+                why: 'This is the DP recurrence in action: combine "i reaches k" with "k reaches j" to prove "i reaches j".',
+                whatNext: 'Continue the j sweep; later pivots may add even longer walks.',
+              },
               explanation: `New path discovered: ${rawNodes[i]} -> ${rawNodes[k]} -> ${rawNodes[j]}. Updated reach[${rawNodes[i]}][${rawNodes[j]}] = 1!`,
             });
           }
@@ -267,10 +377,12 @@ export const transitiveClosureModule: AlgorithmModule<
       }
     }
 
+    const totalReachablePairs = matrix.reduce((acc, row) => acc + row.filter((x) => x === 1).length, 0);
+
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 10,
+      codeLine: 9,
       action: 'COMPLETE',
       isMilestone: true,
       milestoneTitle: 'Transitive Closure Complete',
@@ -283,10 +395,15 @@ export const transitiveClosureModule: AlgorithmModule<
         j: V - 1,
         justUpdated: null,
       },
-      callStack: [{ name: 'transitiveClosure', params: { status: 'DONE' } }],
-      variables: { V, status: 'Transitive closure complete' },
+      callStack: [{ name: 'transitiveClosure', params: { status: 'DONE' }, line: 9, isCurrent: true }],
+      variables: { V, reachablePairs: totalReachablePairs, totalPairs: V * V, status: 'Transitive closure complete' },
       conditionEval: { expr: `completed === true`, result: true },
-      explanation: "Warshall's algorithm completed. Reachability matrix fully computed in O(V^3).",
+      pedagogy: {
+        what: `Return reach with ${totalReachablePairs}/${V * V} pairs reachable — one bit per ordered pair.`,
+        why: 'All V pivot rounds are done, so by the loop invariant every walk (however long) is encoded as a 1.',
+        whatNext: 'Reachability supports answering "can u get to v?" in O(1), and SCCs are the maximal pairs where both directions are 1.',
+      },
+      explanation: `Warshall's algorithm completed. Reachability matrix fully computed in O(V^3) with ${totalReachablePairs} reachable pair(s).`,
     });
 
     frames.forEach((f) => {

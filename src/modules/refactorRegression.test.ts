@@ -1834,6 +1834,64 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
   });
 
+  it('Warshall pivot rounds split init into zeros/diagonal/edges and skip unreachable source rows', () => {
+    const mod = moduleById('transitive-closure');
+    const input = {
+      nodes: ['0', '1', '2', '3'],
+      edges: [
+        { from: '0', to: '1' },
+        { from: '1', to: '2' },
+        { from: '2', to: '3' },
+      ],
+    };
+    const timeline = mod.generateTimeline(input);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'warshall-pivot').length).toBe(1);
+
+    // Init is three honest frames: zeros, diagonal, direct edges.
+    expect(timeline.filter((f) => f.codeLine === 2).length).toBe(1);
+    expect(timeline.filter((f) => f.codeLine === 3).length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'INIT').length).toBe(1);
+
+    // One pivot per vertex, with four row scans in the last round.
+    const pivots = timeline.filter((f) => f.action === 'PIVOT_SELECT');
+    expect(pivots.map((f) => f.milestoneTitle)).toEqual([
+      'Pivot Node 0 (k=0)',
+      'Pivot Node 1 (k=1)',
+      'Pivot Node 2 (k=2)',
+      'Pivot Node 3 (k=3)',
+    ]);
+    expect(timeline.filter((f) => f.action === 'ROW_SCAN').length).toBe(10);
+    expect(timeline.filter((f) => f.action === 'ROW_SKIP').length).toBe(6);
+
+    // Chain graph: exactly three new reachabilities, in DP order.
+    const updates = timeline.filter((f) => f.action === 'REACHABILITY_DISCOVERED');
+    expect(updates.map((f) => f.milestoneTitle)).toEqual([
+      'New Path: 0 → 2',
+      'New Path: 0 → 3',
+      'New Path: 1 → 3',
+    ]);
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Transitive Closure Complete');
+    expect(final.state.matrix).toEqual([
+      [1, 1, 1, 1],
+      [0, 1, 1, 1],
+      [0, 0, 1, 1],
+      [0, 0, 0, 1],
+    ]);
+    expect(final.variables?.reachablePairs).toBe(10);
+
+    // Cycle preset: 0, 1, 2 all reach everything; isolated sink 3 reaches only itself → 13 pairs.
+    const preset = mod.presets[1];
+    const presetFinal = mod.generateTimeline(preset.data as any);
+    expect(presetFinal[presetFinal.length - 1].variables?.reachablePairs).toBe(13);
+    expect(presetFinal[presetFinal.length - 1].state.matrix[3]).toEqual([0, 0, 0, 1]);
+
+    expect(auditTimeline(mod, input).errorCount).toBe(0);
+    expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
