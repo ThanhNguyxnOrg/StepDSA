@@ -2556,10 +2556,10 @@ describe('pedagogical timeline regressions', () => {
 
     // Final tree: root [10,20] with leaves [5], [15], [25,30].
     const final = timeline[timeline.length - 1];
-    const nodes = final.state.nodes;
-    const root = nodes[final.state.rootIdx];
+    const nodes = final.state.nodes as { keys: number[]; children: number[] }[];
+    const root = nodes[final.state.rootIdx as number];
     expect(root.keys).toEqual([10, 20]);
-    expect(root.children.map((idx) => nodes[idx].keys)).toEqual([[5], [15], [25, 30]]);
+    expect(root.children.map((idx: number) => nodes[idx].keys)).toEqual([[5], [15], [25, 30]]);
 
     expect(auditTimeline(mod, input as any).errorCount).toBe(0);
     expect(auditTimeline(mod, mod.presets[2].data as any).errorCount).toBe(0);
