@@ -159,12 +159,41 @@ def insert(root, word):
     boolean isEnd;
     Map<String, RadixNode> children = new HashMap<>();
 }`,
-    pseudocode: `function insert(root, word):
-    match longest prefix along edges
-    if partial edge match:
-        split edge into common prefix and remaining suffix
-    else if no match:
-        create new edge with full word`,
+    pseudocode: `function buildRadixTree(words):
+    root = new Node()
+    for each word w:
+        insert(root, w)
+    return root
+
+function insert(node, word):
+    remaining = word
+    while remaining is not empty:
+        # scan the outgoing edges for the longest shared prefix
+        commonLabel = best edge label sharing a prefix with remaining
+        if commonLabel is empty: attach a new leaf edge labeled remaining
+        else:
+            let common = shared prefix length with that edge
+            if common == edge.label.length:
+                # the edge fully matches: descend
+                remaining = remaining.slice(common); node = edge.target
+            else:
+                # divergence inside the edge: split it
+                splitNode = new Node()
+                splitNode.edges.add(edge.label.slice(common) -> edge.target)
+                edge.label = edge.label.slice(0, common); edge.target = splitNode
+                if remaining.length == common: splitNode.isEnd = true
+                else: splitNode.edges.add(remaining.slice(common) -> new leaf)
+                return
+    node.isEnd = true       # the word ends exactly here
+
+function search(root, target):
+    remaining = target; curr = root
+    while remaining is not empty:
+        find an edge whose label is a prefix of remaining
+        if none: return MISS
+        curr = edge.target; remaining = remaining without the label
+    return curr.isEnd ? HIT : MISS
+# result: exact-match lookup with O(|target|) character work`,
   },
   generateTimeline: (input: {
     words: string[];
@@ -184,6 +213,7 @@ def insert(root, word):
 
     const frames: ExecutionFrame<RadixTreeState>[] = [];
     const root: RadixNodeData = makeNode(false);
+    let checkpointAdded = false;
 
     frames.push({
       stepIndex: 0,
@@ -198,8 +228,13 @@ def insert(root, word):
         matchedPrefix: '',
         found: null,
       },
-      callStack: [{ name: 'radixInit', params: { totalWords: words.length } }],
+      callStack: [{ name: 'radixInit', params: { totalWords: words.length }, line: 1, isCurrent: true }],
       variables: { totalWords: words.length, searchTarget: target },
+      pedagogy: {
+        what: `A radix tree compacts every edge into a whole substring; nodes exist only at branch points and word ends.`,
+        why: 'Unlike a character trie, an n-character chain becomes one labeled edge, so lookups compare substrings.',
+        whatNext: `Insert [${words.join(', ')}] one word at a time.`,
+      },
       explanation: `Initialized empty Radix Tree root. Preparing to insert ${words.length} words.`,
     });
 
@@ -228,12 +263,98 @@ def insert(root, word):
         if (!matchedEdge) {
           const newNode = makeNode(true);
           curr.edges.push({ label: remaining, target: newNode });
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 12,
+            action: 'ATTACH_LEAF',
+            state: {
+              root: cloneRadix(root),
+              activeWord: word,
+              activeNodeId: newNode.id,
+              activeEdgeLabel: remaining,
+              matchedPrefix: word.slice(0, word.length - remaining.length),
+              found: null,
+            },
+            callStack: [{ name: `attachLeaf("${remaining}")`, params: { label: remaining }, line: 12, isCurrent: true }],
+            variables: { attachedLabel: remaining, parentId: curr.id, asLeaf: true },
+            pedagogy: {
+              what: `No outgoing edge shares a prefix with "${remaining}", so the whole remainder becomes a new leaf edge.`,
+              why: 'Compaction: the entire suffix is stored in one label instead of one node per character.',
+              whatNext: '"' + word + '" is fully inserted.',
+            },
+            explanation: `Attached new leaf edge "${remaining}" under node ${curr.id}.`,
+          });
           return;
         }
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: 1,
+          codeLine: 14,
+          action: 'MATCH_EDGE',
+          state: {
+            root: cloneRadix(root),
+            activeWord: word,
+            activeNodeId: curr.id,
+            activeEdgeLabel: matchedEdge.label,
+            matchedPrefix: word.slice(0, word.length - remaining.length) + matchedEdge.label.slice(0, common),
+            found: null,
+          },
+          callStack: [{ name: `matchEdge("${matchedEdge.label}")`, params: { common }, line: 14, isCurrent: true }],
+          variables: { edgeLabel: matchedEdge.label, remaining, commonPrefixLength: common },
+          pedagogy: {
+            what: `Edge label "${matchedEdge.label}" shares the ${common}-character prefix "${matchedEdge.label.slice(0, common)}" with remaining "${remaining}".`,
+            why: 'Substring comparison at each node replaces character-by-character walking; that is the radix advantage.',
+            whatNext:
+              common === matchedEdge.label.length
+                ? 'The whole label matched — descend into its target node.'
+                : 'The match ends inside the label — split the edge at the divergence point.',
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'radix-edge-compaction',
+                question: 'Why can a radix tree store several characters on a single edge?',
+                options: [
+                  'Chains with no branching are compressed into one label, so nodes appear only where paths diverge or words end — fewer nodes and substring compares instead of per-character hops',
+                  'Because edge labels are sorted alphabetically for binary search',
+                ],
+                correctIndex: 0,
+                explanation:
+                  'Compaction is the whole point of a radix tree: "romane" and "romanus" share "roma", so one edge carries the common prefix and the divergence creates a split node.',
+              }
+            : undefined,
+          explanation: `Edge "${matchedEdge.label}" shares prefix length ${common} with "${remaining}".`,
+        });
+        checkpointAdded = true;
 
         if (common === matchedEdge.label.length) {
           remaining = remaining.slice(common);
           curr = matchedEdge.target;
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 17,
+            action: 'DESCEND',
+            state: {
+              root: cloneRadix(root),
+              activeWord: word,
+              activeNodeId: curr.id,
+              activeEdgeLabel: matchedEdge.label,
+              matchedPrefix: word.slice(0, word.length - remaining.length),
+              found: null,
+            },
+            callStack: [{ name: `descend("${matchedEdge.label}")`, params: { remaining }, line: 17, isCurrent: true }],
+            variables: { consumedLabel: matchedEdge.label, remaining },
+            pedagogy: {
+              what: `Edge "${matchedEdge.label}" was consumed entirely; remaining drops to "${remaining}".`,
+              why: 'A full-edge match needs no structural change — the walk simply continues one level deeper.',
+              whatNext: remaining.length > 0 ? `Continue inserting "${remaining}" from the new node.` : 'The word ends exactly here; mark isEnd.',
+            },
+            explanation: `Descended along edge "${matchedEdge.label}"; remaining = "${remaining}".`,
+          });
         } else {
           // Split edge
           const splitNode = makeNode(false);
@@ -244,12 +365,43 @@ def insert(root, word):
           matchedEdge.label = matchedEdge.label.slice(0, common);
           matchedEdge.target = splitNode;
 
+          let newSuffix: string | null = null;
           if (common === remaining.length) {
             splitNode.isEnd = true;
           } else {
+            newSuffix = remaining.slice(common);
             const newLeaf = makeNode(true);
-            splitNode.edges.push({ label: remaining.slice(common), target: newLeaf });
+            splitNode.edges.push({ label: newSuffix, target: newLeaf });
           }
+
+          frames.push({
+            stepIndex: frames.length,
+            totalSteps: 1,
+            codeLine: 22,
+            action: 'SPLIT_EDGE',
+            state: {
+              root: cloneRadix(root),
+              activeWord: word,
+              activeNodeId: splitNode.id,
+              activeEdgeLabel: matchedEdge.label,
+              matchedPrefix: word.slice(0, word.length - remaining.length) + matchedEdge.label,
+              found: null,
+            },
+            callStack: [{ name: `splitEdge("${matchedEdge.label}")`, params: { common, oldSuffix: oldRemainingLabel }, line: 22, isCurrent: true }],
+            variables: {
+              commonPrefix: matchedEdge.label,
+              pushedDownSuffix: oldRemainingLabel,
+              newBranchSuffix: newSuffix ?? '(word ends at split)',
+            },
+            pedagogy: {
+              what: `The edge is split after "${matchedEdge.label}": its old suffix "${oldRemainingLabel}" moves under a new split node.`,
+              why: 'The paths diverge inside this edge, so a branch point must be created exactly where the shared prefix ends.',
+              whatNext: newSuffix
+                ? `Attach the divergent remainder "${newSuffix}" as a sibling leaf.`
+                : 'The inserted word ends at the split node, so it is marked as a word end.',
+            },
+            explanation: `Split edge: common "${matchedEdge.label}", old suffix "${oldRemainingLabel}" pushed down${newSuffix ? `, new branch "${newSuffix}"` : ', split node marked as word end'}.`,
+          });
           return;
         }
       }
