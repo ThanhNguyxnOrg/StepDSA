@@ -2600,6 +2600,36 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
   });
 
+  it('skip list walks express lanes top-down, stepping forward then dropping a level', () => {
+    const mod = moduleById('skip-list');
+    const elements = [3, 7, 9, 12, 17, 21, 25, 31, 38, 45, 52];
+    const timeline = mod.generateTimeline({ elements, searchTarget: 25 } as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'skip-list-express-lanes').length).toBe(1);
+
+    // Two lanes visited: L3 skips 3 and 17, overshoots at 38; L2 matches 25 directly.
+    const levels = timeline.filter((f) => f.action === 'LEVEL_START');
+    expect(levels.map((f) => f.variables?.currentLevel)).toEqual([3, 2]);
+    const compares = timeline.filter((f) => f.action === 'COMPARE_NODE');
+    expect(compares.map((f) => f.variables?.candidateKey)).toEqual([3, 17, 38, 25]);
+    expect(timeline.filter((f) => f.action === 'FORWARD_STEP').length).toBe(2);
+    expect(timeline.filter((f) => f.action === 'OVERSHOOT').length).toBe(1);
+    const found = timeline.filter((f) => f.action === 'FOUND');
+    expect(found.length).toBe(1);
+    expect(found[0].milestoneTitle).toBe('Target Key 25 Found at L2!');
+
+    // Missing key: the walk drops lanes and ends in an honest NOT_FOUND.
+    const missing = mod.generateTimeline({ elements, searchTarget: 41 } as any);
+    expect(missing.filter((f) => f.action === 'DROP_DOWN').length).toBe(1);
+    expect(missing.filter((f) => f.action === 'OVERSHOOT').length).toBe(3);
+    const notFound = missing.filter((f) => f.action === 'NOT_FOUND');
+    expect(notFound.length).toBe(1);
+    expect(notFound[0].milestoneTitle).toBe('Key 41 Not Found');
+
+    expect(auditTimeline(mod, { elements, searchTarget: 25 } as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

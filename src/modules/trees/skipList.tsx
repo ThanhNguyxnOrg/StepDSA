@@ -117,11 +117,19 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
 }`,
     pseudocode: `function search(head, target, maxLevel):
     curr = head
-    for level = maxLevel down to 0:
-        while curr.forward[level] != null and curr.forward[level].key < target:
-            curr = curr.forward[level]
-    curr = curr.forward[0]
-    return curr != null and curr.key == target`,
+    for level from maxLevel down to 0:
+        # express lane at this level: look at the next tower
+        next = closest tower after curr with height >= level
+        while next exists:
+            # candidate found — compare against target
+            if next.key < target: curr = next; next = next tower
+            else if next.key == target: return FOUND
+            else: break             # overshoot: descend
+        # no next tower here: descend to the slower lane
+        level = level - 1
+    # reached level 0
+    next = curr.forward[0]
+    return next != null and next.key == target   # else NOT FOUND`,
   },
   generateTimeline: (input: {
     elements: number[];
@@ -143,6 +151,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
     const maxLevel = 3;
     const frames: ExecutionFrame<SkipListState>[] = [];
     const visited: { key: number; level: number }[] = [];
+    let checkpointAdded = false;
 
     frames.push({
       stepIndex: 0,
@@ -164,6 +173,11 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
       variables: { target, maxLevel, totalKeys: rawElements.length, towers: Object.entries(heights).map(([k, v]) => `${k}:h${v}`).join(', ') },
       conditionEval: { expr: 'elements.length > 0', result: true },
       soundCue: { type: 'step' },
+      pedagogy: {
+        what: `Deterministic tower heights: ${Object.entries(heights).map(([k, v]) => `${k}→h${v}`).join(', ')}. Search for ${target}.`,
+        why: 'A tower of height h appears in express lanes L0..h-1; taller towers let the search skip more nodes per hop.',
+        whatNext: `Start at the top express lane L${maxLevel} from the head pointer.`,
+      },
       explanation: `Initialized SkipList with ${rawElements.length} elements across ${maxLevel + 1} levels (L0 to L3). Higher levels act as express lanes to bypass sequences of nodes. Target search key: ${target}.`,
     });
 
@@ -174,7 +188,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 8,
+        codeLine: 3,
         isMilestone: true,
         milestoneTitle: `Enter Express Level ${level}`,
         action: 'LEVEL_START',
@@ -187,12 +201,31 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
           visitedNodes: [...visited],
           found: null,
         },
-        callStack: [{ name: 'scanLevel', params: { level, current: currentKey ?? 'HEAD' }, line: 8, isCurrent: true }],
+        callStack: [{ name: 'scanLevel', params: { level, current: currentKey ?? 'HEAD' }, line: 3, isCurrent: true }],
         variables: { currentLevel: level, currentKey: currentKey ?? 'HEAD' },
         conditionEval: { expr: `level >= 0`, result: true },
         soundCue: { type: 'select' },
+        pedagogy: {
+          what: `Begin scanning express lane L${level} from ${currentKey !== null ? `key ${currentKey}` : 'the head pointer'}.`,
+          why: 'Higher lanes skip more nodes; the search only moves forward on the current lane and never needs to go back up.',
+          whatNext: 'Inspect the next tower on this lane.',
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'skip-list-express-lanes',
+              question: 'Why do express lanes keep the expected search O(log n)?',
+              options: [
+                'Each lane advances past every tower whose key is below the target and then drops one level, so only a handful of nodes are visited on the way down',
+                'Because every level scans the full list of nodes',
+              ],
+              correctIndex: 0,
+              explanation:
+                'With random-ish tower heights, lane Lk keeps about 1/2^k of the nodes. The search skips roughly half the remaining candidates per level, giving O(log n) hops in expectation.',
+            }
+          : undefined,
         explanation: `Scanning along express Level ${level} starting from ${currentKey !== null ? `key ${currentKey}` : 'HEAD pointer'}.`,
       });
+      checkpointAdded = true;
 
       // Find candidates at this level after currentKey
       while (true) {
@@ -204,7 +237,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 12,
+            codeLine: 11,
             action: 'DROP_DOWN',
             state: {
               elements: rawElements,
@@ -215,10 +248,15 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
               visitedNodes: [...visited],
               found: null,
             },
-            callStack: [{ name: 'dropDown', params: { fromLevel: level, toLevel: level - 1 }, line: 12, isCurrent: true }],
+            callStack: [{ name: 'dropDown', params: { fromLevel: level, toLevel: level - 1 }, line: 11, isCurrent: true }],
             variables: { droppedToLevel: level - 1, atKey: currentKey ?? 'HEAD' },
             conditionEval: { expr: `forward[${level}] === null`, result: true },
             soundCue: { type: 'step' },
+            pedagogy: {
+              what: `Lane L${level} has no tower left after ${currentKey ?? 'HEAD'}, so the search drops to L${level - 1}.`,
+              why: 'Descending keeps the position (curr) — lower lanes contain every tower the current lane could reach, plus more.',
+              whatNext: `Continue scanning at L${level - 1}.`,
+            },
             explanation: `No further forward express pointers exist at Level ${level}. Dropping vertically down to Level ${level - 1}.`,
           });
           break;
@@ -230,7 +268,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 9,
+          codeLine: 7,
           action: 'COMPARE_NODE',
           state: {
             elements: rawElements,
@@ -241,10 +279,15 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
             visitedNodes: [...visited],
             found: null,
           },
-          callStack: [{ name: 'compareKey', params: { candidateKey: nextNode, target, level }, line: 9, isCurrent: true }],
+          callStack: [{ name: 'compareKey', params: { candidateKey: nextNode, target, level }, line: 7, isCurrent: true }],
           variables: { candidateKey: nextNode, target, comparison: `${nextNode} vs ${target}` },
           conditionEval: { expr: `nextNode.key (${nextNode}) < target (${target})`, result: nextNode < target },
           soundCue: { type: 'compare' },
+          pedagogy: {
+            what: `Candidate ${nextNode} on lane L${level} is compared with ${target}.`,
+            why: 'Keys are sorted in every lane, so one comparison tells the search whether to step forward, stop, or descend.',
+            whatNext: nextNode < target ? 'Step forward.' : nextNode === target ? 'Match found.' : 'Overshoot — drop down.',
+          },
           explanation: `Inspecting next node in Level ${level} express lane: Key ${nextNode}. Comparing against target ${target}.`,
         });
 
@@ -253,7 +296,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 10,
+            codeLine: 8,
             action: 'FORWARD_STEP',
             state: {
               elements: rawElements,
@@ -264,10 +307,15 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
               visitedNodes: [...visited],
               found: null,
             },
-            callStack: [{ name: 'stepForward', params: { key: currentKey, level }, line: 10, isCurrent: true }],
+            callStack: [{ name: 'stepForward', params: { key: currentKey, level }, line: 8, isCurrent: true }],
             variables: { currentKey, target, status: 'Advanced forward' },
             conditionEval: { expr: `${nextNode} < ${target}`, result: true },
             soundCue: { type: 'swap' },
+            pedagogy: {
+              what: `${nextNode} < ${target}, so the walk advances to ${currentKey} without ever considering the skipped keys at lower lanes.`,
+              why: 'Forward stepping on a higher lane is what makes the search skip many nodes at once.',
+              whatNext: `Compare the next tower on L${level}.`,
+            },
             explanation: `Since ${nextNode} < ${target}, advance forward to node ${currentKey} at Level ${level}.`,
           });
         } else if (nextNode === target) {
@@ -276,7 +324,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 14,
+            codeLine: 9,
             isMilestone: true,
             milestoneTitle: `Target Key ${target} Found at L${level}!`,
             action: 'FOUND',
@@ -289,10 +337,15 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
               visitedNodes: [...visited],
               found: true,
             },
-            callStack: [{ name: 'matchFound', params: { key: currentKey, level }, line: 14, isCurrent: true }],
+            callStack: [{ name: 'matchFound', params: { key: currentKey, level }, line: 9, isCurrent: true }],
             variables: { matchedKey: currentKey, levelFound: level, searchSuccessful: true },
             conditionEval: { expr: `${nextNode} === ${target}`, result: true },
             soundCue: { type: 'complete' },
+            pedagogy: {
+              what: `Candidate ${nextNode} equals the target on lane L${level}; the search returns FOUND.`,
+              why: 'Every skipped key on this lane was smaller, and the tower being compared is in the base list too, so the match is genuine.',
+              whatNext: 'Search complete — no further levels are scanned.',
+            },
             explanation: `Target key ${target} located directly in Level ${level} express lane! Search terminated in O(log N) operations.`,
           });
           break;
@@ -301,7 +354,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 11,
+            codeLine: 10,
             action: 'OVERSHOOT',
             state: {
               elements: rawElements,
@@ -312,10 +365,15 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
               visitedNodes: [...visited],
               found: null,
             },
-            callStack: [{ name: 'overshoot', params: { nextNode, target, level }, line: 11, isCurrent: true }],
+            callStack: [{ name: 'overshoot', params: { nextNode, target, level }, line: 10, isCurrent: true }],
             variables: { nextNode, target, comparison: `${nextNode} > ${target}` },
             conditionEval: { expr: `${nextNode} > ${target}`, result: true },
             soundCue: { type: 'step' },
+            pedagogy: {
+              what: `${nextNode} > ${target}: stepping forward would skip past the target, so the lane is abandoned here.`,
+              why: 'Skipping an overshooting tower can never lose the target — if it exists, it lies between the current key and this candidate.',
+              whatNext: `Drop to L${level - 1} and search the finer-grained lane.`,
+            },
             explanation: `Key ${nextNode} exceeds target ${target}. Halting forward advance at Level ${level} to drop down to Level ${level - 1}.`,
           });
           break;
@@ -329,7 +387,7 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 16,
+        codeLine: 15,
         isMilestone: true,
         milestoneTitle: `Key ${target} Not Found`,
         action: 'NOT_FOUND',
@@ -342,10 +400,15 @@ function search(head: SkipNode, target: number, maxLevel: number): boolean {
           visitedNodes: [...visited],
           found: false,
         },
-        callStack: [{ name: 'searchFailed', params: { target }, line: 16, isCurrent: true }],
+        callStack: [{ name: 'searchFailed', params: { target }, line: 15, isCurrent: true }],
         variables: { target, result: 'NOT_FOUND', finalKey: currentKey },
         conditionEval: { expr: 'targetFound', result: false },
         soundCue: { type: 'complete' },
+        pedagogy: {
+          what: `The base lane L0 was scanned to its end without matching ${target}, so the key does not exist.`,
+          why: 'L0 contains every element; if the target were present, the walk on L0 would have found it.',
+          whatNext: 'Compare with a balanced BST: same O(log n) search, but skip lists use randomization instead of rotations.',
+        },
         explanation: `Reached bottom Level 0 without finding key ${target}. Target key does not exist in SkipList.`,
       });
     }
