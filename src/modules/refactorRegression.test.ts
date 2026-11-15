@@ -2565,6 +2565,41 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[2].data as any).errorCount).toBe(0);
   });
 
+  it('2-3-4 tree pre-splits 4-nodes top-down and keeps every leaf at one depth', () => {
+    const mod = moduleById('two-three-four-tree');
+    const input = { keys: [10, 20, 30, 40, 50, 25] };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'ttf-topdown-split').length).toBe(1);
+
+    // One root creation, one root split, one child split, three descents, five leaf inserts.
+    expect(timeline.filter((f) => f.action === 'CREATE_ROOT').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'SPLIT_ROOT').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'SPLIT_CHILD').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'TRAVERSE').length).toBe(3);
+    expect(timeline.filter((f) => f.action === 'INSERT_LEAF').length).toBe(5);
+
+    // Root split on insert 40 promotes the middle key 20.
+    const splitRoot = timeline.find((f) => f.action === 'SPLIT_ROOT')!;
+    expect(splitRoot.variables?.midKey).toBe(20);
+
+    // Child split on insert 25 promotes 40 out of [30,40,50].
+    const splitChild = timeline.find((f) => f.action === 'SPLIT_CHILD')!;
+    expect(splitChild.variables?.mid).toBe(40);
+
+    // Final tree: root [20,40]; leaves [10], [25,30], [50].
+    interface N234 { keys: number[]; children: N234[] }
+    const root = timeline[timeline.length - 1].state.root as N234;
+    expect(root.keys).toEqual([20, 40]);
+    expect(root.children.map((c: N234) => c.keys)).toEqual([[10], [25, 30], [50]]);
+    const depths = (n: N234): number[] =>
+      n.children.length === 0 ? [1] : n.children.flatMap((c) => depths(c).map((d) => d + 1));
+    expect(new Set(depths(root)).size).toBe(1);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

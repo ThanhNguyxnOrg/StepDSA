@@ -126,13 +126,22 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
     Node234[] children = new Node234[4];
     int numKeys = 0;
 }`,
-    pseudocode: `function insertNonFull(node, val):
+    pseudocode: `function insert(tree, val):
+    if tree is empty: root = new Node([val]); return root
+    if root is a 4-node (3 keys):          # preemptive root split
+        mid = root.keys[1]
+        left = Node([root.keys[0]], root.children[0..1])
+        right = Node([root.keys[2]], root.children[2..3])
+        root = new Node([mid], [left, right])
+    insertNonFull(root, val)
+    return root
+function insertNonFull(node, val):
     if node.isLeaf():
         insertKeySorted(node, val)
     else:
         childIdx = findChild(node, val)
         if node.children[childIdx].isFull():
-            splitChild(node, childIdx)
+            splitChild(node, childIdx)     # promote middle key into node
             if val > node.keys[childIdx]: childIdx++
         insertNonFull(node.children[childIdx], val)`,
   },
@@ -140,6 +149,8 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
     const frames: ExecutionFrame<TwoThreeFourTreeState>[] = [];
     let root: TTFNodeData | null = null;
     let nodeCount = 0;
+
+    let checkpointAdded = false;
 
     const addFrame = (
       codeLine: number,
@@ -149,6 +160,8 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
         action?: string;
         variables?: Record<string, string | number | boolean>;
         callStack?: CallStackFrame[];
+        pedagogy?: ExecutionFrame['pedagogy'];
+        checkpoint?: ExecutionFrame['checkpoint'];
       }
     ) => {
       frames.push({
@@ -159,6 +172,8 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
         action: options?.action,
         variables: options?.variables,
         callStack: options?.callStack,
+        pedagogy: options?.pedagogy,
+        checkpoint: options?.checkpoint,
         state,
       });
     };
@@ -176,7 +191,12 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
       {
         action: 'INIT',
         variables: { totalKeys: input.keys.length },
-        callStack: [{ name: 'init', params: { count: input.keys.length } }],
+        callStack: [{ name: 'init', params: { count: input.keys.length }, line: 1, isCurrent: true }],
+        pedagogy: {
+          what: `Insert [${input.keys.join(', ')}] into a B-tree of order 4: nodes hold 1–3 keys (2-, 3-, 4-nodes).`,
+          why: 'Top-down preemptive splitting removes any 4-node on the way down, so the algorithm never backtracks and parents always have room for a promoted key.',
+          whatNext: 'Create the root with the first key.',
+        },
       }
     );
 
@@ -187,7 +207,7 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
         nodeCount++;
         root = { id: `ttf-${nodeCount}`, keys: [val], children: [] };
         addFrame(
-          4,
+          2,
           `Created root node containing key ${val} (2-node: 1 key, 0 children).`,
           {
             root: cloneTTF(root),
@@ -199,7 +219,12 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
           {
             action: 'CREATE_ROOT',
             variables: { val, rootKeys: [val].join(',') },
-            callStack: [{ name: 'insert', params: { val } }],
+            callStack: [{ name: 'insert', params: { val }, line: 2, isCurrent: true }],
+            pedagogy: {
+              what: `The empty tree gets a single 2-node holding ${val}.`,
+              why: 'A 2-node (one key, two child slots) is the smallest legal order-4 node.',
+              whatNext: 'Insert the next key by descending from this root.',
+            },
           }
         );
         continue;
@@ -239,9 +264,28 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
           {
             action: 'SPLIT_ROOT',
             variables: { midKey, newRootId: root.id },
-            callStack: [{ name: 'splitRoot', params: { midKey } }],
+            callStack: [{ name: 'splitRoot', params: { midKey }, line: 7, isCurrent: true }],
+            pedagogy: {
+              what: `The root held 3 keys; it becomes two 2-nodes and the middle key ${midKey} rises into a brand-new root.`,
+              why: 'Splitting the root before descending guarantees that any later split can push a key upward and the parent always has room.',
+              whatNext: 'Continue the descent inside the correct half.',
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'ttf-topdown-split',
+                  question: 'Why does this 2-3-4 tree split 4-nodes on the way DOWN instead of after insertion?',
+                  options: [
+                    'Splitting any full node before descending into its children guarantees the leaf has room and every parent can accept a promoted key — a single pass with no backtracking',
+                    'Because 4-nodes are illegal and must never be visited',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Preemptive splitting is what makes top-down 2-3-4 insertion one-pass. Bottom-up B-tree splits instead overflow first and repair on the way back. Both yield the same final tree; the 2-3-4 style removes the need to revisit ancestors.',
+                }
+              : undefined,
           }
         );
+        checkpointAdded = true;
       }
 
       // Traverse down
@@ -253,6 +297,29 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
         }
 
         const child = curr.children[childIdx];
+
+        addFrame(
+          14,
+          `Traverse node [${curr.keys.join(' | ')}]: key ${val} belongs in child index ${childIdx}.`,
+          {
+            root: cloneTTF(root),
+            activeVal: val,
+            activeNodeId: curr.children[childIdx].id,
+            splitOccurred: false,
+            message: `Descending into child ${childIdx} of [${curr.keys.join(' | ')}].`,
+          },
+          {
+            action: 'TRAVERSE',
+            variables: { val, nodeKeys: curr.keys.join(','), childIdx },
+            callStack: [{ name: 'findChild', params: { val, childIdx }, line: 14, isCurrent: true }],
+            pedagogy: {
+              what: `At node [${curr.keys.join(' | ')}], key ${val} picks child index ${childIdx}.`,
+              why: 'Child key ranges are disjoint and ordered, so the comparison chain finds the single subtree that can contain the value.',
+              whatNext: `Check whether child ${childIdx} is a 4-node that needs a preemptive split.`,
+            },
+          }
+        );
+
         if (child.keys.length === 3) {
           nodeCount += 2;
           const mid = child.keys[1];
@@ -268,7 +335,7 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
           curr.children.splice(childIdx + 1, 0, rightSibling);
 
           addFrame(
-            11,
+            16,
             `Encountered full child 4-node on path. Preemptively split child: promoted ${mid} into parent.`,
             {
               root: cloneTTF(root),
@@ -280,9 +347,28 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
             {
               action: 'SPLIT_CHILD',
               variables: { mid, parentKeys: curr.keys.join(',') },
-              callStack: [{ name: 'splitChild', params: { mid } }],
+              callStack: [{ name: 'splitChild', params: { mid }, line: 16, isCurrent: true }],
+              pedagogy: {
+                what: `The child 4-node splits around its middle key ${mid}, which rises into parent [${curr.keys.join(' | ')}].`,
+                why: 'After this split both halves are 2-nodes and the parent has at most 2 keys, so the upcoming descent cannot force a cascade.',
+                whatNext: val > mid ? `The promotional key ${mid} is smaller than ${val}: follow the right half.` : `Follow the half whose range contains ${val}.`,
+              },
+              checkpoint: !checkpointAdded
+                ? {
+                    id: 'ttf-topdown-split',
+                    question: 'Why does this 2-3-4 tree split 4-nodes on the way DOWN instead of after insertion?',
+                    options: [
+                      'Splitting any full node before descending into its children guarantees the leaf has room and every parent can accept a promoted key — a single pass with no backtracking',
+                      'Because 4-nodes are illegal and must never be visited',
+                    ],
+                    correctIndex: 0,
+                    explanation:
+                      'Preemptive splitting is what makes top-down 2-3-4 insertion one-pass. Bottom-up B-tree splits instead overflow first and repair on the way back. Both yield the same final tree; the 2-3-4 style removes the need to revisit ancestors.',
+                  }
+                : undefined,
             }
           );
+          checkpointAdded = true;
 
           if (val > mid) {
             childIdx++;
@@ -297,8 +383,8 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
       curr.keys.sort((a, b) => a - b);
 
       addFrame(
-        15,
-        `Inserted key ${val} into leaf node [${curr.keys.join(' | ')}]. Node is now a ${curr.keys.length + 1}-node.`,
+        12,
+        `Inserted key ${val} into leaf node [${curr.keys.join(' | ')}]. Node is now a ${curr.keys.length}-key node.`,
         {
           root: cloneTTF(root),
           activeVal: val,
@@ -309,13 +395,18 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
         {
           action: 'INSERT_LEAF',
           variables: { val, leafKeys: curr.keys.join(',') },
-          callStack: [{ name: 'insertLeaf', params: { val, keys: curr.keys.join(',') } }],
+          callStack: [{ name: 'insertLeaf', params: { val, keys: curr.keys.join(',') }, line: 12, isCurrent: true }],
+          pedagogy: {
+            what: `Leaf [${curr.keys.join(' | ')}] receives ${val} in sorted position.`,
+            why: 'The preemptive splits guaranteed this leaf was not a 4-node, so the insert always fits in one pass.',
+            whatNext: 'Insertion complete for this key.',
+          },
         }
       );
     }
 
     addFrame(
-      20,
+      9,
       `All keys inserted. 2-3-4 Tree maintains strict uniform leaf depth and logarithmic height.`,
       {
         root: cloneTTF(root),
@@ -327,7 +418,12 @@ function splitChild(parent: Node234, idx: number, child: Node234): void {
       {
         action: 'COMPLETE',
         variables: { totalNodes: nodeCount },
-        callStack: [{ name: 'complete', params: { total: input.keys.length } }],
+        callStack: [{ name: 'complete', params: { total: input.keys.length }, line: 9, isCurrent: true }],
+        pedagogy: {
+          what: `return root: all ${input.keys.length} keys stored in ${nodeCount} nodes, every leaf at the same depth.`,
+          why: 'Every descent pre-split full nodes, so no insertion ever needed to backtrack; height grew only when the root itself was split.',
+          whatNext: 'The same structure in red-black clothing is a red-black tree — the 4-node splits correspond to color flips.',
+        },
       }
     );
 
