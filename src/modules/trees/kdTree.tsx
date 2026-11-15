@@ -181,7 +181,12 @@ KDNode insert(KDNode node, double[] pt, int depth) {
     else node.right = insert(node.right, pt, depth + 1);
     return node;
 }`,
-    pseudocode: `function insert(node, point, depth):
+    pseudocode: `function buildKD(points):
+    root = null
+    for each point p:
+        root = insert(root, p, 0)      # root splits on X
+    return root
+function insert(node, point, depth):
     if node is null:
         return Node(point, axis = depth % 2)
     axis = depth % 2
@@ -189,13 +194,23 @@ KDNode insert(KDNode node, double[] pt, int depth) {
         node.left = insert(node.left, point, depth + 1)
     else:
         node.right = insert(node.right, point, depth + 1)
-    return node`,
+    return node
+function nearestNeighbor(root, target):
+    best = null, bestDist = Infinity
+    for each node visited:
+        dist = euclidean(node.point, target)
+        if dist < bestDist: best = node.point; bestDist = dist
+    (visit children until the search area is exhausted)
+    return best
+# result: closest point with its distance`,
   },
   generateTimeline: (input) => {
     const frames: ExecutionFrame<KDTreeState>[] = [];
     const pts: KDPoint[] = input.points.map((p, idx) => ({ id: idx, x: p.x, y: p.y, label: `P${idx}` }));
     let root: KDNodeData | null = null;
     const splitLines: KDSplitLine[] = [];
+
+    let checkpointAdded = false;
 
     const addFrame = (
       codeLine: number,
@@ -205,6 +220,8 @@ KDNode insert(KDNode node, double[] pt, int depth) {
         action?: string;
         variables?: Record<string, string | number | boolean>;
         callStack?: CallStackFrame[];
+        pedagogy?: ExecutionFrame['pedagogy'];
+        checkpoint?: ExecutionFrame['checkpoint'];
       }
     ) => {
       frames.push({
@@ -215,6 +232,8 @@ KDNode insert(KDNode node, double[] pt, int depth) {
         action: options?.action,
         variables: options?.variables,
         callStack: options?.callStack,
+        pedagogy: options?.pedagogy,
+        checkpoint: options?.checkpoint,
         state,
       });
     };
@@ -236,7 +255,12 @@ KDNode insert(KDNode node, double[] pt, int depth) {
       {
         action: 'INIT',
         variables: { totalPoints: pts.length, dimensions: 2 },
-        callStack: [{ name: 'buildKDTree', params: { pointsCount: pts.length } }],
+        callStack: [{ name: 'buildKDTree', params: { pointsCount: pts.length }, line: 1, isCurrent: true }],
+        pedagogy: {
+          what: `Build a 2D kd-tree from ${pts.length} points; the root splits on X, the next level on Y, alternating by depth.`,
+          why: 'Alternating axes recursively halve the plane so spatial queries can discard whole regions instead of scanning every point.',
+          whatNext: 'Insert the first point — it becomes the root and creates a vertical split line.',
+        },
       }
     );
 
@@ -280,7 +304,12 @@ KDNode insert(KDNode node, double[] pt, int depth) {
           {
             action: 'INSERT_ROOT',
             variables: { pointId: p.id, x: p.x, y: p.y, axis: 'x', depth: 0 },
-            callStack: [{ name: 'insert', params: { x: p.x, y: p.y, depth: 0 } }],
+            callStack: [{ name: 'insert', params: { x: p.x, y: p.y, depth: 0 }, line: 4, isCurrent: true }],
+            pedagogy: {
+              what: `P${p.id} becomes the root at depth 0, splitting on X with the vertical line x = ${p.x}.`,
+              why: 'The root separates the plane into left (smaller x) and right (larger x) regions; later levels subdivide those regions on Y.',
+              whatNext: 'Insert the remaining points by comparing against this X split.',
+            },
           }
         );
       } else {
@@ -295,7 +324,7 @@ KDNode insert(KDNode node, double[] pt, int depth) {
           const currVal = axis === 'x' ? curr.point.x : curr.point.y;
 
           addFrame(
-            7,
+            10,
             `Comparing P${p.id}(${p.x}, ${p.y}) with node P${curr.point.id} on ${axis.toUpperCase()}-axis: ${pVal} ${pVal < currVal ? '<' : '>='} ${currVal}.`,
             {
               points: pts,
@@ -311,9 +340,28 @@ KDNode insert(KDNode node, double[] pt, int depth) {
             {
               action: 'COMPARE_AXIS',
               variables: { currPoint: curr.point.id, axis, pVal, currVal },
-              callStack: [{ name: 'insert', params: { id: p.id, depth: curr.depth } }],
+              callStack: [{ name: 'insert', params: { id: p.id, depth: curr.depth }, line: 10, isCurrent: true }],
+              pedagogy: {
+                what: `At depth ${curr.depth} the split axis is ${axis.toUpperCase()}: ${pVal} ${pVal < currVal ? '<' : '>='} ${currVal}, so P${p.id} continues ${pVal < currVal ? 'left/below' : 'right/above'}.`,
+                why: 'Only one comparison per level is needed because each node owns a half-plane in its axis.',
+                whatNext: `Follow the ${pVal < currVal ? 'left' : 'right'} child.`,
+              },
+              checkpoint: !checkpointAdded
+                ? {
+                    id: 'kd-alternating-axis',
+                    question: 'Why does the kd-tree alternate split axes by depth instead of always splitting on X?',
+                    options: [
+                      'Alternating axes subdivide the plane in both dimensions, so each level halves the candidate region — spatial queries approach logarithmic time',
+                      'Because points with equal X coordinates would otherwise collide',
+                    ],
+                    correctIndex: 0,
+                    explanation:
+                      'Always splitting one axis would leave long thin slabs and degrade to a linked list. Cycling X/Y makes regions shrink in both directions, which is what makes nearest-neighbor pruning effective.',
+                  }
+                : undefined,
             }
           );
+          checkpointAdded = true;
 
           if (pVal < currVal) {
             isLeft = true;
@@ -350,7 +398,7 @@ KDNode insert(KDNode node, double[] pt, int depth) {
         });
 
         addFrame(
-          11,
+          isLeft ? 11 : 13,
           `Attached P${p.id} as ${isLeft ? 'Left' : 'Right'} child of P${parent?.point.id ?? 0} at depth ${depth}. Split axis: ${nextAxis.toUpperCase()}.`,
           {
             points: pts,
@@ -366,7 +414,12 @@ KDNode insert(KDNode node, double[] pt, int depth) {
           {
             action: 'ATTACH_NODE',
             variables: { pointId: p.id, parentId: parent?.point.id ?? 0, depth, axis: nextAxis },
-            callStack: [{ name: 'insert', params: { id: p.id, depth } }],
+            callStack: [{ name: 'insert', params: { id: p.id, depth }, line: isLeft ? 11 : 13, isCurrent: true }],
+            pedagogy: {
+              what: `P${p.id} attaches as the ${isLeft ? 'left/below' : 'right/above'} child at depth ${depth}, splitting on ${nextAxis.toUpperCase()}.`,
+              why: 'Each level alternates the axis (depth even → X, odd → Y), slicing the remaining region in half.',
+              whatNext: 'Continue inserting the next point.',
+            },
           }
         );
       }
@@ -379,7 +432,7 @@ KDNode insert(KDNode node, double[] pt, int depth) {
       let bestD = Infinity;
 
       addFrame(
-        15,
+        16,
         `Starting Nearest Neighbor Search for target query Q(${target.x}, ${target.y}).`,
         {
           points: pts,
@@ -395,7 +448,12 @@ KDNode insert(KDNode node, double[] pt, int depth) {
         {
           action: 'NN_START',
           variables: { targetX: target.x, targetY: target.y, bestDist: 'Infinity' },
-          callStack: [{ name: 'nearestNeighbor', params: { x: target.x, y: target.y } }],
+          callStack: [{ name: 'nearestNeighbor', params: { x: target.x, y: target.y }, line: 16, isCurrent: true }],
+          pedagogy: {
+            what: `best = null, bestDist = ∞. Every visited node will try to beat this bound.`,
+            why: 'Maintaining the running best distance is what allows a production kd-tree to prune half-planes: if the split line is farther than bestDist, the whole side is skippable. This stage visits every node to show the distance bookkeeping explicitly.',
+            whatNext: 'Evaluate the first node against the target.',
+          },
         }
       );
 
@@ -426,7 +484,12 @@ KDNode insert(KDNode node, double[] pt, int depth) {
           {
             action: 'NN_EXPLORE',
             variables: { currPoint: curr.point.id, dist: dist.toFixed(2), bestDist: bestD.toFixed(2) },
-            callStack: [{ name: 'nnExplore', params: { node: curr.point.id, dist: dist.toFixed(2) } }],
+            callStack: [{ name: 'nnExplore', params: { node: curr.point.id, dist: dist.toFixed(2) }, line: 18, isCurrent: true }],
+            pedagogy: {
+              what: `Distance from P${curr.point.id} to the target is ${dist.toFixed(2)}; best is P${bestPt?.id ?? 0} at ${bestD.toFixed(2)}.`,
+              why: dist < bestD ? 'Smaller than the bound, so the best point and distance update.' : 'Not smaller, so the current best stands.',
+              whatNext: 'Visit the remaining children.',
+            },
           }
         );
 
@@ -435,7 +498,7 @@ KDNode insert(KDNode node, double[] pt, int depth) {
       }
 
       addFrame(
-        22,
+        21,
         `Nearest Neighbor Found: P${bestPt?.id ?? 0} (${bestPt?.x ?? 0}, ${bestPt?.y ?? 0}) with distance ${bestD.toFixed(2)}.`,
         {
           points: pts,
@@ -451,7 +514,12 @@ KDNode insert(KDNode node, double[] pt, int depth) {
         {
           action: 'NN_FOUND',
           variables: { bestId: bestPt?.id ?? 0, bestX: bestPt?.x ?? 0, bestY: bestPt?.y ?? 0, distance: bestD.toFixed(2) },
-          callStack: [{ name: 'finish', params: { bestId: bestPt?.id ?? 0 } }],
+          callStack: [{ name: 'finish', params: { bestId: bestPt?.id ?? 0 }, line: 21, isCurrent: true }],
+          pedagogy: {
+            what: `return best: P${bestPt?.id ?? 0} at (${bestPt?.x ?? 0}, ${bestPt?.y ?? 0}) with distance ${bestD.toFixed(2)}.`,
+            why: 'The running bound only ever decreased, and every point was compared against it, so no closer point can remain.',
+            whatNext: 'A pruned kd-tree search would reach the same answer while skipping whole half-planes whose split line is farther than bestDist.',
+          },
         }
       );
     }

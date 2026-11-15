@@ -2672,6 +2672,38 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
   });
 
+  it('kd-tree alternates split axes on insert and tracks the running best distance', () => {
+    const mod = moduleById('kd-tree');
+    const input = {
+      points: [
+        { x: 20, y: 30 },
+        { x: 40, y: 70 },
+        { x: 80, y: 20 },
+      ],
+      targetQuery: { x: 45, y: 45 },
+    };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'kd-alternating-axis').length).toBe(1);
+
+    // One root insert, three axis comparisons, two attachments.
+    expect(timeline.filter((f) => f.action === 'INSERT_ROOT').length).toBe(1);
+    const compares = timeline.filter((f) => f.action === 'COMPARE_AXIS');
+    expect(compares.map((f) => f.variables?.axis)).toEqual(['x', 'x', 'y']);
+    const attaches = timeline.filter((f) => f.action === 'ATTACH_NODE');
+    expect(attaches.map((f) => f.codeLine)).toEqual([13, 11]); // right of root, then left of P1
+
+    // Nearest neighbor: P1 (40,70) at distance sqrt(25^2+15^2 ...) ≈ 25.50 beats P0 and P2.
+    expect(timeline.filter((f) => f.action === 'NN_EXPLORE').length).toBe(3);
+    const found = timeline.filter((f) => f.action === 'NN_FOUND');
+    expect(found.length).toBe(1);
+    expect(found[0].variables?.bestId).toBe(1);
+    expect(found[0].variables?.distance).toBe('25.50');
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
