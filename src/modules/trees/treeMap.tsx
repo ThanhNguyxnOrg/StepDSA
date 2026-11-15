@@ -154,13 +154,36 @@ String status = treeMap.get(30);
 
 // Submap range query O(K + log N)
 NavigableMap<Integer, String> sub = treeMap.subMap(15, true, 45, true);`,
-    pseudocode: `function put(key, val):
-    insert into Red-Black Tree
-    rebalance tree (recolor + rotate)
+    pseudocode: `function treeMap(ops):
+    # Ordered dictionary backed by a Red-Black-style BST
+    # keys iterate in sorted order via in-order traversal
 
-function get(key):
-    traverse BST pointers left/right
-    return val if key matches else null`,
+    function put(key, val):
+        descend from the root comparing key with node keys
+        attach as a RED leaf (or update the value if the key exists)
+    root.color = BLACK                    # Red-Black root invariant
+
+    function get(key):
+        curr = root
+        while curr != null:
+            # one comparison decides the next move
+            if key == curr.key: return curr.val          # hit
+            else if key < curr.key: curr = curr.left
+            else: curr = curr.right
+        return null                       # miss after falling off a leaf
+
+    function rangeQuery(low, high):
+        sub = subMap(low, high)           # NavigableMap view
+        # in-order traversal emits keys in sorted order
+        result = []
+        for each key in inorder(root):
+            if low <= key <= high: result.append(key)
+        return result                     # O(K + log N)
+
+    for each op in ops:
+        dispatch to put / get / rangeQuery
+
+    return root                           # dictionary state after all ops`,
   },
   generateTimeline: (input: {
     operations: TreeMapOp[];
@@ -183,6 +206,7 @@ function get(key):
 
     const frames: ExecutionFrame<TreeMapState>[] = [];
     let root: TreeMapNodeData | null = null;
+    let checkpointAdded = false;
 
     function getInorder(node: TreeMapNodeData | null): number[] {
       if (!node) return [];
@@ -206,9 +230,14 @@ function get(key):
         rangeResults: [],
         message: 'Initialized empty TreeMap (Red-Black BST ordered dictionary)',
       },
-      callStack: [{ name: 'treeMapInit', params: { totalOps: ops.length } }],
+      callStack: [{ name: 'treeMapInit', params: { totalOps: ops.length }, line: 1, isCurrent: true }],
       variables: { totalOps: ops.length, rootColor: 'BLACK' },
       conditionEval: { expr: `totalOps > 0`, result: true },
+      pedagogy: {
+        what: `A TreeMap is a key→value dictionary whose keys stay sorted, so in-order traversal yields them in order.`,
+        why: 'Ordering enables O(log n) lookup plus range queries in O(K + log n) — impossible with a hash map.',
+        whatNext: `Run ${ops.length} operation(s): ${ops.map((o) => o.op).join(', ')}.`,
+      },
       explanation: 'Initialized empty TreeMap. Ready to execute ordered key-value dictionary operations.',
     });
 
@@ -234,7 +263,7 @@ function get(key):
         frames.push({
           stepIndex: frames.length,
           totalSteps: frames.length + 1,
-          codeLine: 8,
+          codeLine: 7,
           action: 'PUT_ENTRY',
           isMilestone: true,
           milestoneTitle: `Put (${op.key} -> "${op.val ?? ''}")`,
@@ -248,9 +277,14 @@ function get(key):
             rangeResults: [],
             message: `PUT [Key: ${op.key} -> "${op.val ?? ''}"]. In-order keys: [${inKeys.join(', ')}]`,
           },
-          callStack: [{ name: 'put', params: { key: op.key, val: op.val ?? '' } }],
+          callStack: [{ name: 'put', params: { key: op.key, val: op.val ?? '' }, line: 7, isCurrent: true }],
           variables: { key: op.key, val: op.val ?? '', size: inKeys.length },
           conditionEval: { expr: `inKeys.includes(${op.key})`, result: true },
+          pedagogy: {
+            what: `${op.key} → "${op.val ?? ''}" is attached as a RED leaf (or its value updated); the root stays BLACK.`,
+            why: 'New nodes start RED so only a local recoloring could ever be needed; the root is forced BLACK as the base invariant.',
+            whatNext: `In-order keys: [${inKeys.join(', ')}] — verify they are sorted.`,
+          },
           explanation: `Inserted key ${op.key} with value "${op.val ?? ''}". TreeMap maintains strict sorted order: [${inKeys.join(
             ', '
           )}].`,
@@ -276,9 +310,14 @@ function get(key):
               rangeResults: [],
               message: `GET probe: key ${op.key} vs node key ${curr.key}`,
             },
-            callStack: [{ name: 'getProbe', params: { targetKey: op.key, nodeKey: curr.key } }],
+            callStack: [{ name: 'getProbe', params: { targetKey: op.key, nodeKey: curr.key }, line: 14, isCurrent: true }],
             variables: { targetKey: op.key, nodeKey: curr.key, isMatch },
             conditionEval: { expr: `targetKey === curr.key (${op.key} === ${curr.key})`, result: isMatch },
+            pedagogy: {
+              what: `Compare ${op.key} with node ${curr.key}.`,
+              why: 'One comparison eliminates an entire subtree: smaller goes left, larger goes right.',
+              whatNext: isMatch ? 'Return the stored value.' : `Move ${op.key < curr.key ? 'left' : 'right'}.`,
+            },
             explanation: isMatch
               ? `Key ${op.key} matches current node ${curr.key}! Found value "${curr.val}".`
               : `Key ${op.key} ${op.key < curr.key ? '<' : '>'} current node ${curr.key}. Moving ${op.key < curr.key ? 'left' : 'right'}.`,
@@ -297,7 +336,7 @@ function get(key):
         frames.push({
           stepIndex: frames.length,
           totalSteps: frames.length + 1,
-          codeLine: 16,
+          codeLine: found ? 14 : 17,
           action: 'GET_ENTRY',
           isMilestone: true,
           milestoneTitle: found ? `Get Hit: [${op.key}] -> "${curr?.val}"` : `Get Miss: [${op.key}]`,
@@ -313,9 +352,20 @@ function get(key):
               ? `GET [Key: ${op.key}] -> MATCH: "${curr?.val}"`
               : `GET [Key: ${op.key}] -> MISS: Key not found in TreeMap`,
           },
-          callStack: [{ name: 'get', params: { key: op.key, found: found ? 1 : 0 } }],
+          callStack: [{ name: 'get', params: { key: op.key, found: found ? 1 : 0 }, line: found ? 14 : 17, isCurrent: true }],
           variables: { key: op.key, found, resultVal: curr?.val ?? 'null' },
           conditionEval: { expr: `found === ${found}`, result: true },
+          pedagogy: found
+            ? {
+                what: `Hit: ${op.key} maps to "${curr?.val}".`,
+                why: 'The probe chain only moved in directions that could contain the key, so a match is the definitive entry.',
+                whatNext: 'Continue with the next operation.',
+              }
+            : {
+                what: `Miss: the walk fell off a leaf without meeting ${op.key}.`,
+                why: 'An absent key always dead-ends at a null child — the tree never contains keys outside the compared ranges.',
+                whatNext: 'Optionally PUT the key to add it.',
+              },
           explanation: found
             ? `Point lookup hit! Key ${op.key} maps to value "${curr?.val}".`
             : `Point lookup miss. Key ${op.key} is not present in TreeMap.`,
@@ -341,9 +391,27 @@ function get(key):
             rangeResults: matched,
             message: `RANGE [${op.low} .. ${op.high}] -> Found ${matched.length} keys: [${matched.join(', ')}]`,
           },
-          callStack: [{ name: 'rangeQuery', params: { low: op.low, high: op.high, matchedCount: matched.length } }],
+          callStack: [{ name: 'rangeQuery', params: { low: op.low, high: op.high, matchedCount: matched.length }, line: 24, isCurrent: true }],
           variables: { low: op.low, high: op.high, matchedKeys: matched.join(',') },
           conditionEval: { expr: `low <= high (${op.low} <= ${op.high})`, result: true },
+          pedagogy: {
+            what: `In-order traversal kept ${matched.length} key(s) in [${op.low} .. ${op.high}]: [${matched.join(', ')}].`,
+            why: 'Sorted order means whole subtrees can be skipped outside the interval; the cost is O(K + log n) — proportional to the K keys returned plus one boundary search.',
+            whatNext: 'Compare with a hash map, which would need a full scan and sorting for the same query.',
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'treemap-range-inorder',
+                question: 'Why does a TreeMap range query cost O(K + log n) instead of O(n)?',
+                options: [
+                  'The sorted tree structure prunes subtrees that lie entirely outside the interval, then emits the K matching keys in order',
+                  'Because subMap copies all keys into a new hash table and filters them',
+                ],
+                correctIndex: 0,
+                explanation:
+                  'The NavigableMap view walks the tree skipping out-of-range subtrees; printing/collecting K keys is the only unavoidable cost. A hash map cannot answer this without scanning and sorting everything.',
+              }
+            : undefined,
           explanation: `Executed ordered range query [${op.low} .. ${op.high}] in O(K + log N) time. Extracted keys: [${matched.join(
             ', '
           )}].`,
@@ -368,9 +436,14 @@ function get(key):
         rangeResults: [],
         message: 'All TreeMap operations executed successfully',
       },
-      callStack: [{ name: 'complete', params: { finalSize: getInorder(root).length } }],
+      callStack: [{ name: 'complete', params: { finalSize: getInorder(root).length }, line: 30, isCurrent: true }],
       variables: { completed: true, finalEntries: getInorder(root).length },
       conditionEval: { expr: `finalEntries === ${getInorder(root).length}`, result: true },
+      pedagogy: {
+        what: `return root: the dictionary holds ${getInorder(root).length} sorted entry/entries.`,
+        why: 'Every PUT kept in-order traversal sorted and every GET followed real pointer ranges, so the ordered-dictionary contract holds.',
+        whatNext: 'Range queries, floor/ceiling and subMap all derive from this sorted backbone.',
+      },
       explanation: 'TreeMap demonstration complete. All ordered dictionary invariants preserved.',
     });
 

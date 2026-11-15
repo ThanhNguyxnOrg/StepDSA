@@ -2630,6 +2630,48 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
   });
 
+  it('TreeMap keeps keys sorted, probes one path per lookup, and answers ranges from order', () => {
+    const mod = moduleById('tree-map');
+    const input = {
+      operations: [
+        { op: 'PUT' as const, key: 20, val: 'Paid' },
+        { op: 'PUT' as const, key: 10, val: 'Draft' },
+        { op: 'PUT' as const, key: 30, val: 'Refunded' },
+        { op: 'GET' as const, key: 30 },
+        { op: 'GET' as const, key: 99 },
+        { op: 'RANGE' as const, low: 15, high: 25 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'treemap-range-inorder').length).toBe(1);
+
+    expect(timeline.filter((f) => f.action === 'PUT_ENTRY').length).toBe(3);
+
+    // Two lookups: one hit in two probes, one miss in two probes.
+    const probes = timeline.filter((f) => f.action === 'GET_PROBE');
+    expect(probes.map((f) => f.variables?.nodeKey)).toEqual([20, 30, 20, 30]);
+    const entries = timeline.filter((f) => f.action === 'GET_ENTRY');
+    expect(entries.map((f) => f.milestoneTitle)).toEqual([
+      'Get Hit: [30] -> "Refunded"',
+      'Get Miss: [99]',
+    ]);
+    expect(entries[0].codeLine).toBe(14);
+    expect(entries[1].codeLine).toBe(17);
+
+    // Range [15..25] returns exactly the middle key.
+    const range = timeline.filter((f) => f.action === 'RANGE_QUERY');
+    expect(range.length).toBe(1);
+    expect(range[0].variables?.matchedKeys).toBe('20');
+
+    // In-order traversal stays sorted across all operations.
+    const final = timeline[timeline.length - 1];
+    expect(final.state.inorderKeys).toEqual([10, 20, 30]);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
