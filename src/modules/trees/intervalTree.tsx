@@ -167,15 +167,28 @@ function searchOverlap(node: Node | null, q: Interval): Interval | null {
 boolean doOverlap(int l1, int h1, int l2, int h2) {
     return l1 <= h2 && l2 <= h1;
 }`,
-    pseudocode: `function searchOverlap(node, q):
-    if node is null:
-        return null
-    if overlaps(node.interval, q):
-        return node.interval
-    if node.left != null and node.left.maxHigh >= q.low:
-        return searchOverlap(node.left, q)
-    else:
-        return searchOverlap(node.right, q)`,
+    pseudocode: `function buildIntervalTree(intervals, query):
+    root = null
+    for each interval iv of intervals:
+        root = insert(root, iv)                  # first interval becomes the root
+    # each node stores maxHigh: the largest interval end in its subtree
+    # that value is what lets the search prune whole subtrees
+function insert(root, iv):
+    BST-descend by interval.low; attach the leaf and refresh maxHigh on the path
+    return root
+# Search for every interval overlapping the query:
+function searchOverlap(root, q):
+    curr = root; found = []
+    while curr != null:
+        if overlaps(curr.interval, q): found.append(curr.interval)
+        # left subtree may contain an overlap only if its maxHigh reaches q.low
+        if curr.left != null and curr.left.maxHigh >= q.low:
+            curr = curr.left
+        else:
+            curr = curr.right   # left side provably has no overlap: prune
+    # traversal ends when curr falls off the tree
+    return found
+# result: all overlapping intervals`,
   },
   generateTimeline: (input) => {
     const frames: ExecutionFrame<IntervalTreeState>[] = [];
@@ -183,6 +196,8 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
     const items: IntervalItem[] = raw.map((iv, idx) => ({ id: idx, low: iv.low, high: iv.high, label: `I${idx}` }));
     let root: IntervalTreeNode | null = null;
     let nodeSeq = 0;
+
+    let checkpointAdded = false;
 
     const addFrame = (
       codeLine: number,
@@ -192,6 +207,8 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
         action?: string;
         variables?: Record<string, string | number | boolean>;
         callStack?: CallStackFrame[];
+        pedagogy?: ExecutionFrame['pedagogy'];
+        checkpoint?: ExecutionFrame['checkpoint'];
       }
     ) => {
       frames.push({
@@ -202,6 +219,8 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
         action: options?.action,
         variables: options?.variables,
         callStack: options?.callStack,
+        pedagogy: options?.pedagogy,
+        checkpoint: options?.checkpoint,
         state,
       });
     };
@@ -221,7 +240,12 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
       {
         action: 'INIT',
         variables: { totalIntervals: items.length, queryLow: input.query.low, queryHigh: input.query.high },
-        callStack: [{ name: 'init', params: { intervals: items.length } }],
+        callStack: [{ name: 'init', params: { intervals: items.length }, line: 1, isCurrent: true }],
+        pedagogy: {
+          what: `Build a tree over ${items.length} intervals; every node will store maxHigh for pruning.`,
+          why: 'Intervals are ordered by their low endpoint, and maxHigh lets the search skip subtrees that cannot overlap the query.',
+          whatNext: 'Insert the first interval as the root.',
+        },
       }
     );
 
@@ -253,7 +277,12 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
           {
             action: 'INSERT_ROOT',
             variables: { low: iv.low, high: iv.high, maxHigh: iv.high },
-            callStack: [{ name: 'insert', params: { low: iv.low, high: iv.high } }],
+            callStack: [{ name: 'insert', params: { low: iv.low, high: iv.high }, line: 4, isCurrent: true }],
+            pedagogy: {
+              what: `[${iv.low}, ${iv.high}] becomes the root with maxHigh = ${iv.high}.`,
+              why: 'Insertion is ordered by the low endpoint; maxHigh initially equals the node\'s own high.',
+              whatNext: 'Insert the remaining intervals by comparing low endpoints.',
+            },
           }
         );
       } else {
@@ -293,7 +322,12 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
           {
             action: 'INSERT_CHILD',
             variables: { low: iv.low, high: iv.high, maxHigh: iv.high },
-            callStack: [{ name: 'insert', params: { low: iv.low, high: iv.high } }],
+            callStack: [{ name: 'insert', params: { low: iv.low, high: iv.high }, line: 8, isCurrent: true }],
+            pedagogy: {
+              what: `[${iv.low}, ${iv.high}] attaches as the ${isLeft ? 'left' : 'right'} leaf; every ancestor\'s maxHigh was refreshed.`,
+              why: 'maxHigh = max high in the subtree — maintaining it on the way down is what makes O(log n + K) overlap queries possible.',
+              whatNext: 'Insertion done; the tree is ready for overlap queries.',
+            },
           }
         );
       }
@@ -316,7 +350,12 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
       {
         action: 'SEARCH_START',
         variables: { qLow: q.low, qHigh: q.high },
-        callStack: [{ name: 'searchOverlap', params: { qLow: q.low, qHigh: q.high } }],
+        callStack: [{ name: 'searchOverlap', params: { qLow: q.low, qHigh: q.high }, line: 12, isCurrent: true }],
+        pedagogy: {
+          what: `Overlap query [${q.low}, ${q.high}]: two intervals intersect iff low1 <= high2 and low2 <= high1.`,
+          why: 'The search collects EVERY overlapping interval (not just one) by walking down with pruning.',
+          whatNext: 'Inspect the root.',
+        },
       }
     );
 
@@ -348,7 +387,12 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
             maxHigh: curr.maxHigh,
             overlaps,
           },
-          callStack: [{ name: 'inspect', params: { low: curr.interval.low, high: curr.interval.high } }],
+          callStack: [{ name: 'inspect', params: { low: curr.interval.low, high: curr.interval.high }, line: 14, isCurrent: true }],
+          pedagogy: {
+            what: `[${curr.interval.low}, ${curr.interval.high}] ${overlaps ? 'DOES overlap' : 'does not overlap'} [${q.low}, ${q.high}].`,
+            why: 'The overlap test is two comparisons; failing it still leaves both children as candidates unless pruning proves otherwise.',
+            whatNext: 'Check whether the left subtree can be pruned.',
+          },
         }
       );
 
@@ -372,7 +416,12 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
           {
             action: 'BRANCH_LEFT',
             variables: { leftMaxHigh: curr.left.maxHigh, qLow: q.low },
-            callStack: [{ name: 'branchLeft', params: { leftMax: curr.left.maxHigh } }],
+            callStack: [{ name: 'branchLeft', params: { leftMax: curr.left.maxHigh }, line: 16, isCurrent: true }],
+            pedagogy: {
+              what: `Left subtree maxHigh ${curr.left.maxHigh} >= query.low ${q.low}, so that subtree can still contain an overlap.`,
+              why: 'Some interval on the left ends at or after the query starts — the interval-tree enabler for descending left.',
+              whatNext: 'Inspect the left child.',
+            },
           }
         );
         curr = curr.left;
@@ -392,15 +441,34 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
           {
             action: 'PRUNE_LEFT',
             variables: { qLow: q.low },
-            callStack: [{ name: 'branchRight', params: { qLow: q.low } }],
+            callStack: [{ name: 'branchRight', params: { qLow: q.low }, line: 18, isCurrent: true }],
+            pedagogy: {
+              what: `The left child is null or its maxHigh (${curr.left?.maxHigh ?? '—'}) is below query.low ${q.low}; the whole left subtree is skipped.`,
+              why: 'If every interval on the left ends before the query starts, none of them can overlap — the maxHigh bound proves it in O(1).',
+              whatNext: 'Advance to the right child.',
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'interval-maxhigh-prune',
+                  question: 'Why does maxHigh allow pruning a whole subtree?',
+                  options: [
+                    'If the largest interval end in the left subtree still lies below the query start, no interval there can reach the query — the entire subtree is skipped in O(1)',
+                    'Because intervals are sorted by maxHigh instead of by low endpoint',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Nodes are ordered by low endpoint, but each subtree also tracks the maximum high. Comparing that bound with query.low decides in constant time whether the subtree can contain any overlap.',
+                }
+              : undefined,
           }
         );
+        checkpointAdded = true;
         curr = curr.right;
       }
     }
 
     addFrame(
-      22,
+      21,
       `Overlap search complete. Found ${found.length} overlapping interval(s).`,
       {
         intervals: items,
@@ -414,7 +482,12 @@ boolean doOverlap(int l1, int h1, int l2, int h2) {
       {
         action: 'SEARCH_COMPLETE',
         variables: { foundCount: found.length },
-        callStack: [{ name: 'finish', params: { foundCount: found.length } }],
+        callStack: [{ name: 'finish', params: { foundCount: found.length }, line: 21, isCurrent: true }],
+        pedagogy: {
+          what: `return found: ${found.length} interval(s) overlap [${q.low}, ${q.high}].`,
+          why: 'Every visited node passed the overlap test, and pruned subtrees were provably empty of overlaps, so the result is exact.',
+          whatNext: 'The same maxHigh pruning generalizes to stabbing queries and calendar-style conflict checks.',
+        },
       }
     );
 

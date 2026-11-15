@@ -2704,6 +2704,51 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
   });
 
+  it('interval tree gathers every overlap and prunes left subtrees via maxHigh', () => {
+    const mod = moduleById('interval-tree');
+    const meeting = {
+      intervals: [
+        { low: 8, high: 11 },
+        { low: 9, high: 10 },
+        { low: 13, high: 16 },
+        { low: 15, high: 18 },
+        { low: 17, high: 21 },
+      ],
+      query: { low: 10, high: 14 },
+    };
+    const timeline = mod.generateTimeline(meeting as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'interval-maxhigh-prune').length).toBe(1);
+
+    // Every node is inspected once; the chain has no left children so all five prune.
+    const inspects = timeline.filter((f) => f.action === 'TEST_OVERLAP');
+    expect(inspects.length).toBe(5);
+    expect(inspects.map((f) => f.variables?.overlaps)).toEqual([true, true, true, false, false]);
+    expect(timeline.filter((f) => f.action === 'PRUNE_LEFT').length).toBe(5);
+    expect(timeline.filter((f) => f.action === 'BRANCH_LEFT').length).toBe(0);
+    expect(timeline[timeline.length - 1].variables?.foundCount).toBe(3);
+
+    // A left subtree whose maxHigh reaches query.low must be explored.
+    const lefty = mod.generateTimeline({
+      intervals: [
+        { low: 8, high: 11 },
+        { low: 4, high: 6 },
+        { low: 9, high: 12 },
+      ],
+      query: { low: 5, high: 7 },
+    } as any);
+    expect(lefty.filter((f) => f.action === 'BRANCH_LEFT').length).toBe(1);
+    expect(lefty[lefty.length - 1].variables?.foundCount).toBe(1);
+
+    // Fully disjoint intervals: no overlaps found.
+    const disjoint = mod.generateTimeline(mod.presets[1].data as any);
+    expect(disjoint[disjoint.length - 1].variables?.foundCount).toBe(0);
+
+    expect(auditTimeline(mod, meeting as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
