@@ -28,6 +28,7 @@ function snap(
   nodes: TwoThreeNode[], rootIdx: number, step: number, total: number,
   codeLine: number, explanation: string, action: string, phase: string,
   insertedKey?: number,
+  extra?: { pedagogy?: ExecutionFrame<TTState>['pedagogy']; checkpoint?: ExecutionFrame<TTState>['checkpoint'] },
 ): ExecutionFrame<TTState> {
   const isMilestone = action === 'init' || action === 'complete' || action === 'split' || action === 'create-root';
   return {
@@ -42,6 +43,8 @@ function snap(
     variables: { rootIdx, key: insertedKey ?? null, totalNodes: nodes.length, phase },
     callStack: [{ name: 'twoThreeTree.step', params: { phase, key: insertedKey ?? null }, line: codeLine, isCurrent: true }],
     conditionEval: { expr: `rootIdx >= 0`, result: rootIdx >= 0 },
+    pedagogy: extra?.pedagogy,
+    checkpoint: extra?.checkpoint,
     state: { nodes: cloneNodes(nodes), rootIdx, message: explanation, phase, insertedKey },
   };
 }
@@ -53,6 +56,7 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
   let rootIdx = -1;
   let nextId = 0;
   let step = 0;
+  let checkpointAdded = false;
 
   function makeNode(keys: number[], children: number[] = []): number {
     const id = nextId++;
@@ -69,8 +73,14 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
     if (rootIdx === -1) {
       rootIdx = makeNode([key]);
       nodes[rootIdx].highlight = 'done';
-      frames.push(snap(nodes, rootIdx, step++, 0, 1,
-        `Create root with key ${key}`, 'create-root', 'insert', key));
+      frames.push(snap(nodes, rootIdx, step++, 0, 2,
+        `Create root with key ${key}`, 'create-root', 'insert', key, {
+          pedagogy: {
+            what: `The empty tree becomes a single 2-node holding ${key}.`,
+            why: 'A 2-node is the atomic 2-3 building block: one key, two children (none yet).',
+            whatNext: `Insert the next key by comparing against ${key} at the root.`,
+          },
+        }));
       return;
     }
 
@@ -81,7 +91,13 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
       nodes[cur].highlight = 'active';
       path.push(cur);
       frames.push(snap(nodes, rootIdx, step++, 0, 3,
-        `Traverse node [${nodes[cur].keys}] looking for position of ${key}`, 'traverse', 'search', key));
+        `Traverse node [${nodes[cur].keys}] looking for position of ${key}`, 'traverse', 'search', key, {
+          pedagogy: {
+            what: `At node [${nodes[cur].keys}], key ${key} picks one of the ${nodes[cur].children.length} key ranges.`,
+            why: 'Key ranges of the children are disjoint and ordered, so one comparison chain finds the single leaf that must receive the key.',
+            whatNext: 'Descend into the chosen child.',
+          },
+        }));
       const n = nodes[cur];
       if (key < n.keys[0]) cur = n.children[0];
       else if (n.keys.length === 1 || key < n.keys[1]) cur = n.children[1];
@@ -91,7 +107,13 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
     path.push(cur);
     nodes[cur].highlight = 'active';
     frames.push(snap(nodes, rootIdx, step++, 0, 5,
-      `Reached leaf [${nodes[cur].keys}], insert ${key}`, 'reach-leaf', 'insert', key));
+      `Reached leaf [${nodes[cur].keys}], insert ${key}`, 'reach-leaf', 'insert', key, {
+        pedagogy: {
+          what: `Leaf [${nodes[cur].keys}] is the destination for ${key}.`,
+          why: 'All insertions happen at the leaf level, which is what keeps every leaf exactly at the same depth.',
+          whatNext: `Add ${key} in sorted position and check for overflow.`,
+        },
+      }));
 
     // insert into leaf
     nodes[cur].keys.push(key);
@@ -100,7 +122,13 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
     if (nodes[cur].keys.length <= 2) {
       nodes[cur].highlight = 'done';
       frames.push(snap(nodes, rootIdx, step++, 0, 6,
-        `Key ${key} fits in node → [${nodes[cur].keys}]`, 'insert-fit', 'done', key));
+        `Key ${key} fits in node → [${nodes[cur].keys}]`, 'insert-fit', 'done', key, {
+          pedagogy: {
+            what: `The node now holds [${nodes[cur].keys.join(', ')}] — one or two keys, so it remains a legal 2-node or 3-node.`,
+            why: 'Only a third key would overflow capacity; no restructuring is needed this time.',
+            whatNext: 'Insertion complete for this key.',
+          },
+        }));
       return;
     }
 
@@ -116,7 +144,27 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
 
       nd.highlight = 'split';
       frames.push(snap(nodes, rootIdx, step++, 0, 8,
-        `Node [${nd.keys}] overflows → split, push ${midKey} up`, 'split', 'split', key));
+        `Node [${nd.keys}] overflows → split around median ${midKey}`, 'split', 'split', key, {
+          pedagogy: {
+            what: `[${nd.keys.join(', ')}] temporarily holds three keys; the middle key ${midKey} is promoted and the rest become two nodes.`,
+            why: 'Cutting around the median keeps both halves non-empty and perfectly balanced — this is what replaces rotations in 2-3 trees.',
+            whatNext: `Push ${midKey} into the parent (or grow a new root if this was the root).`,
+          },
+          checkpoint: !checkpointAdded
+            ? {
+                id: 'two-three-mean-split',
+                question: 'Why split around the median key (keys[1]) rather than the smallest or largest?',
+                options: [
+                  'The median keeps both halves legal single-key nodes and its promotion preserves the search ordering in the parent',
+                  'Because the middle key is the newest insertion, so it must move up',
+                ],
+                correctIndex: 0,
+                explanation:
+                  'Ordering demands the promoted key sit between the left and right halves in the parent. Taking any other key would break range ordering; the median also balances the two halves.',
+              }
+            : undefined,
+        }));
+      checkpointAdded = true;
 
       const leftChildren = nd.children.length > 0 ? nd.children.slice(0, 2) : [];
       const rightChildren = nd.children.length > 0 ? nd.children.slice(2, 4) : [];
@@ -135,7 +183,13 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
         rootIdx = newRoot;
         nodes[newRoot].highlight = 'done';
         frames.push(snap(nodes, rootIdx, step++, 0, 10,
-          `New root created with key ${midKey}`, 'new-root', 'done', key));
+          `New root created with key ${midKey}`, 'new-root', 'done', key, {
+            pedagogy: {
+              what: `The root itself split, so a new root [${midKey}] is created above the two halves.`,
+              why: 'A 2-3 tree grows only at the root — height increases uniformly for every leaf, preserving the perfect balance.',
+              whatNext: 'Insertion finished; one level taller but still balanced.',
+            },
+          }));
         break;
       } else {
         // push midKey into parent
@@ -146,7 +200,13 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
         parent.children.splice(childPos + 1, 0, rightIdx);
         parent.highlight = 'active';
         frames.push(snap(nodes, rootIdx, step++, 0, 12,
-          `Push ${midKey} into parent [${parent.keys}]`, 'push-up', 'split', key));
+          `Push ${midKey} into parent [${parent.keys}]`, 'push-up', 'split', key, {
+            pedagogy: {
+              what: `Median ${midKey} rises into parent [${parent.keys.join(', ')}] and the new right node becomes its neighbor child.`,
+              why: 'The parent now separates the two halves by key range; if it overflows too, the same split repeats one level up.',
+              whatNext: parent.keys.length > 2 ? 'Parent has 3 keys — split it as well.' : 'Cascade finished; insertions complete.',
+            },
+          }));
         splitIdx = parentIdx;
       }
     }
@@ -154,7 +214,13 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
   }
 
   frames.push(snap(nodes, rootIdx, step++, 0, 1,
-    'Begin 2-3 Tree construction', 'init', 'init'));
+    'Begin 2-3 Tree construction', 'init', 'init', undefined, {
+      pedagogy: {
+        what: `Insert ${input.keys.length} key(s) [${input.keys.join(', ')}] into an empty 2-3 tree.`,
+        why: '2-nodes hold 1 key and 3-nodes hold 2; overflow splits around the median instead of rotating.',
+        whatNext: 'Insert the first key to create the root.',
+      },
+    }));
 
   for (const key of input.keys) {
     insertKey(key);
@@ -162,7 +228,13 @@ function generateTimeline(input: TTInput): ExecutionFrame<TTState>[] {
 
   clearHighlights();
   frames.push(snap(nodes, rootIdx, step++, 0, 14,
-    '2-3 Tree construction complete', 'complete', 'complete'));
+    '2-3 Tree construction complete', 'complete', 'complete', undefined, {
+      pedagogy: {
+        what: `return root: all ${input.keys.length} keys are stored with every node holding 1–2 keys.`,
+        why: 'Each overflow was split around its median, cascading upward only while parents overflowed; height grew only at the root.',
+        whatNext: 'Search operations follow the same key-range descent, guaranteed O(log n) because the tree is perfectly balanced.',
+      },
+    }));
 
   const total = frames.length;
   frames.forEach((f, i) => { f.stepIndex = i; f.totalSteps = total; });
@@ -271,15 +343,19 @@ export const twoThreeTreeModule: AlgorithmModule<TTInput, TTState> = {
   },
   codeSnippets: {
     pseudocode: `function insert(tree, key):
-  leaf = findLeaf(tree, key)
-  add key to leaf
-  while leaf has 3 keys:     // overflow
-    mid = leaf.keys[1]
-    split leaf into left, right
-    push mid into parent
-    leaf = parent
-  if root was split:
-    create new root with mid`,
+    if tree is empty: return new Node([key])
+    descend from the root, comparing key with each node's keys
+        (choose child 0, 1 or 2 by the key ranges)
+    leaf = the node reached
+    add key into leaf, keeping keys sorted
+    while node has 3 keys:               # overflow
+        mid = node.keys[1]; split node around mid into left and right
+        # push mid into the parent, or grow a new root
+        if node was the root: create new root with mid and both halves
+        else:
+            parent.keys.insert(mid), parent.children.insert(right)
+            node = parent
+    return root    # all leaves remain at the same depth`,
     python: `class Node:
     def __init__(self, keys=None, children=None):
         self.keys = keys or []

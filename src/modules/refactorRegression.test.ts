@@ -2536,6 +2536,35 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('2-3 tree promotes median keys on overflow and grows only at the root', () => {
+    const mod = moduleById('two-three-tree');
+    const input = { keys: [10, 20, 5, 15, 25, 30] };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'two-three-mean-split').length).toBe(1);
+
+    // One root creation, five leaf arrivals, three descents and three fit-inserts.
+    expect(timeline.filter((f) => f.action === 'create-root').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'reach-leaf').length).toBe(5);
+    expect(timeline.filter((f) => f.action === 'traverse').length).toBe(3);
+    expect(timeline.filter((f) => f.action === 'insert-fit').length).toBe(3);
+
+    // Two splits (the 5-key leaf and the [15,20,25] leaf); the first grows a new root.
+    expect(timeline.filter((f) => f.action === 'split').length).toBe(2);
+    expect(timeline.filter((f) => f.action === 'new-root').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'push-up').length).toBe(1);
+
+    // Final tree: root [10,20] with leaves [5], [15], [25,30].
+    const final = timeline[timeline.length - 1];
+    const nodes = final.state.nodes;
+    const root = nodes[final.state.rootIdx];
+    expect(root.keys).toEqual([10, 20]);
+    expect(root.children.map((idx) => nodes[idx].keys)).toEqual([[5], [15], [25, 30]]);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[2].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
