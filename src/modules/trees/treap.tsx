@@ -220,10 +220,12 @@ TreapNode insert(TreapNode root, int key, int priority) {
     const frames: ExecutionFrame<TreapState>[] = [];
     let root: TreapNode | null = null;
 
+    let checkpointAdded = false;
+
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 2,
+      codeLine: 1,
       action: 'INIT',
       state: {
         tree: null,
@@ -232,8 +234,13 @@ TreapNode insert(TreapNode root, int key, int priority) {
         insertedKey: null,
         insertedPriority: null,
       },
-      callStack: [{ name: 'treapInit', params: { totalKeys: rawKeys.length } }],
+      callStack: [{ name: 'treapInit', params: { totalKeys: rawKeys.length }, line: 1, isCurrent: true }],
       variables: { totalNodesToInsert: rawKeys.length, status: 'Empty tree' },
+      pedagogy: {
+        what: `A treap is simultaneously a BST on keys and a max-heap on random priorities.`,
+        why: 'Random priorities make the shape behave like a random BST (expected O(log n)) without any explicit balancing bookkeeping.',
+        whatNext: `Insert each (key, priority) pair of [${rawKeys.map((k) => `(${k.key},${k.priority})`).join(', ')}].`,
+      },
       explanation: `Initialized empty Treap. Will sequentially insert ${rawKeys.length} Cartesian (key, priority) nodes.`,
     });
 
@@ -262,7 +269,7 @@ TreapNode insert(TreapNode root, int key, int priority) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 24,
+            codeLine: 6,
             action: 'ROTATE_RIGHT',
             state: {
               tree: cloneTreap(root),
@@ -271,7 +278,7 @@ TreapNode insert(TreapNode root, int key, int priority) {
               insertedKey: key,
               insertedPriority: priority,
             },
-            callStack: [{ name: 'rotateRight', params: { pivotNode: current.key, childKey: current.left.key } }],
+            callStack: [{ name: 'rotateRight', params: { pivotNode: current.key, childKey: current.left.key }, line: 6, isCurrent: true }],
             variables: {
               pivot: current.key,
               child: current.left.key,
@@ -279,8 +286,27 @@ TreapNode insert(TreapNode root, int key, int priority) {
               parentPriority: current.priority,
               rule: 'Child priority > parent priority violates Max-Heap',
             },
+            pedagogy: {
+              what: `The left child (${current.left.key}, p=${current.left.priority}) outranks the parent (${current.key}, p=${current.priority}), so a right rotation lifts it.`,
+              why: 'Keys stay ordered because the child median moves above its parent; only priorities decide who goes up — the heap rule.',
+              whatNext: 'After the rotation the pair is fixed; the recursion continues upward checking its own pair.',
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'treap-heap-rotation',
+                  question: 'Why does a single rotation fix a priority violation but not a key-ordering problem?',
+                  options: [
+                    'The rotation preserves the BST order of keys and swaps the parent/child heap roles, so it repairs exactly the priority violation that triggered it',
+                    'Because rotations sort both keys and priorities into ascending order',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Rotations are key-order-preserving by construction. Treaps remain valid BSTs throughout; the priority heap property is the only thing being repaired, and it can only be violated along the insertion path.',
+                }
+              : undefined,
             explanation: `Child priority (${current.left.priority}) > parent (${current.priority}). Right rotate around key ${current.key}.`,
           });
+          checkpointAdded = true;
           current = rightRotate(current);
         }
       } else {
@@ -289,7 +315,7 @@ TreapNode insert(TreapNode root, int key, int priority) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 28,
+            codeLine: 10,
             action: 'ROTATE_LEFT',
             state: {
               tree: cloneTreap(root),
@@ -298,7 +324,7 @@ TreapNode insert(TreapNode root, int key, int priority) {
               insertedKey: key,
               insertedPriority: priority,
             },
-            callStack: [{ name: 'rotateLeft', params: { pivotNode: current.key, childKey: current.right.key } }],
+            callStack: [{ name: 'rotateLeft', params: { pivotNode: current.key, childKey: current.right.key }, line: 10, isCurrent: true }],
             variables: {
               pivot: current.key,
               child: current.right.key,
@@ -306,8 +332,27 @@ TreapNode insert(TreapNode root, int key, int priority) {
               parentPriority: current.priority,
               rule: 'Child priority > parent priority violates Max-Heap',
             },
+            pedagogy: {
+              what: `The right child (${current.right.key}, p=${current.right.priority}) outranks the parent (${current.key}, p=${current.priority}), so a left rotation lifts it.`,
+              why: 'Mirror of the previous case: the same BST ordering is preserved while the higher-priority node bubbles up.',
+              whatNext: 'The recursion climbs and re-checks the next ancestor pair.',
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'treap-heap-rotation',
+                  question: 'Why does a single rotation fix a priority violation but not a key-ordering problem?',
+                  options: [
+                    'The rotation preserves the BST order of keys and swaps the parent/child heap roles, so it repairs exactly the priority violation that triggered it',
+                    'Because rotations sort both keys and priorities into ascending order',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Rotations are key-order-preserving by construction. Treaps remain valid BSTs throughout; the priority heap property is the only thing being repaired, and it can only be violated along the insertion path.',
+                }
+              : undefined,
             explanation: `Child priority (${current.right.priority}) > parent (${current.priority}). Left rotate around key ${current.key}.`,
           });
+          checkpointAdded = true;
           current = leftRotate(current);
         }
       }
@@ -319,7 +364,7 @@ TreapNode insert(TreapNode root, int key, int priority) {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 20,
+        codeLine: 2,
         action: 'START_INSERT',
         state: {
           tree: cloneTreap(root),
@@ -328,8 +373,13 @@ TreapNode insert(TreapNode root, int key, int priority) {
           insertedKey: item.key,
           insertedPriority: item.priority,
         },
-        callStack: [{ name: 'insert', params: { key: item.key, priority: item.priority } }],
+        callStack: [{ name: 'insert', params: { key: item.key, priority: item.priority }, line: 2, isCurrent: true }],
         variables: { key: item.key, priority: item.priority },
+        pedagogy: {
+          what: `Insert (key=${item.key}, priority=${item.priority}): descend by key comparisons and attach as a new leaf.`,
+          why: 'The BST descent is identical to plain BST insertion; the priority is only consulted while climbing back up.',
+          whatNext: 'On the way up, check whether the new child outranks its parent.',
+        },
         explanation: `Insert node with Key = ${item.key} and Priority = ${item.priority} as standard BST leaf.`,
       });
 
@@ -338,7 +388,7 @@ TreapNode insert(TreapNode root, int key, int priority) {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 32,
+        codeLine: 11,
         action: 'INSERT_COMPLETE',
         state: {
           tree: cloneTreap(root),
@@ -347,8 +397,13 @@ TreapNode insert(TreapNode root, int key, int priority) {
           insertedKey: item.key,
           insertedPriority: item.priority,
         },
-        callStack: [{ name: 'insert', params: { key: item.key, status: 'BALANCED' } }],
+        callStack: [{ name: 'insert', params: { key: item.key, status: 'BALANCED' }, line: 11, isCurrent: true }],
         variables: { rootKey: root ? root.key : 'null', rootPriority: root ? root.priority : 0 },
+        pedagogy: {
+          what: `return root: (${item.key}, p=${item.priority}) is placed and every ancestor pair satisfies the max-heap order again.`,
+          why: 'Each rotation fixed one violating pair permanently; a violation can only exist once on the insertion path.',
+          whatNext: 'Continue with the next (key, priority) pair.',
+        },
         explanation: `Node (${item.key}, p=${item.priority}) positioned and both BST + Heap invariants restored.`,
       });
     }

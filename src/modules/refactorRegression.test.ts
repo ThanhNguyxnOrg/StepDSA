@@ -2433,6 +2433,42 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('treap rotations bubble high priorities up while preserving the BST key order', () => {
+    const mod = moduleById('treap');
+    const input = {
+      keys: [
+        { key: 30, priority: 70 },
+        { key: 10, priority: 90 },
+        { key: 50, priority: 40 },
+        { key: 20, priority: 85 },
+        { key: 40, priority: 95 },
+      ],
+    };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'treap-heap-rotation').length).toBe(1);
+
+    // Five insertions, each bracketed by start/complete frames.
+    expect(timeline.filter((f) => f.action === 'START_INSERT').length).toBe(5);
+    expect(timeline.filter((f) => f.action === 'INSERT_COMPLETE').length).toBe(5);
+
+    // Three right rotations (pivots 30, 30, 50) and three left rotations (30, 20, 10).
+    const rights = timeline.filter((f) => f.action === 'ROTATE_RIGHT');
+    const lefts = timeline.filter((f) => f.action === 'ROTATE_LEFT');
+    expect(rights.map((f) => f.variables?.pivot)).toEqual([30, 30, 50]);
+    expect(lefts.map((f) => f.variables?.pivot)).toEqual([30, 20, 10]);
+
+    // Priority 95 climbs to the root while keys stay ordered.
+    const final = timeline[timeline.length - 1];
+    expect(final.state.tree.key).toBe(40);
+    expect(final.state.tree.priority).toBe(95);
+    expect(final.state.tree.left.key).toBe(10);
+    expect(final.state.tree.left.right.key).toBe(20);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
