@@ -168,12 +168,29 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
     }
 }`,
     pseudocode: `function insert(root, key, M):
-    if root is full:
+    insertNonFull(root, key, M)
+    if root overflows:                     # more than M-1 keys
         newRoot = new Node(leaf=false)
         newRoot.children.append(root)
         splitChild(newRoot, 0, root)
         root = newRoot
-    insertNonFull(root, key, M)`,
+    return root
+function insertNonFull(node, key, M):
+    if node is leaf:
+        insert key into node, keeping keys sorted
+    else:
+        find child index i where key belongs between keys
+        insertNonFull(node.children[i], key, M)
+        if node.children[i] overflows:
+            splitChild(node, i, node.children[i])
+function splitChild(parent, index, child):
+    median = child.keys[mid]
+    rightNode = new Node(leaf=child.isLeaf)
+    rightNode.keys = keys right of median
+    child.keys = keys left of median
+    if child not leaf: move right half of children
+    parent.children.insert(index + 1, rightNode)
+    parent.keys.insert(index, median)`,
   },
   generateTimeline: (input: {
     keys: number[];
@@ -213,6 +230,8 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
       explanation: `Initialized empty B-Tree of Order ${order} (each node can hold max ${maxKeys} keys).`,
     });
 
+    let checkpointAdded = false;
+
     function splitChild(parent: BTreeNodeData, index: number, child: BTreeNodeData) {
       const midIdx = Math.floor(child.keys.length / 2);
       const medianKey = child.keys[midIdx];
@@ -232,8 +251,10 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
       frames.push({
         stepIndex: frames.length,
         totalSteps: frames.length + 1,
-        codeLine: 18,
+        codeLine: 25,
         action: 'SPLIT',
+        isMilestone: true,
+        milestoneTitle: `Split: median ${medianKey} moved up`,
         state: {
           root: cloneBTree(root),
           activeKey: medianKey,
@@ -241,10 +262,29 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
           splitNodeId: child.id,
           order,
         },
-        callStack: [{ name: 'splitChild', params: { medianKey, parentId: parent.id } }],
+        callStack: [{ name: 'splitChild', params: { medianKey, parentId: parent.id }, line: 25, isCurrent: true }],
         variables: { medianPushed: medianKey, newChildId: rightNode.id },
+        pedagogy: {
+          what: `The overflowing node (${child.keys.length + 1} keys before split) is cut around its median ${medianKey}; ${medianKey} rises into parent [${parent.keys.join(', ')}] and the rest become two legal nodes.`,
+          why: 'B-trees split around the median so both halves keep at least ⌈M/2⌉−1 keys — that is what keeps the tree perfectly balanced without rotations.',
+          whatNext: parent.keys.length > maxKeys ? 'The parent now overflows too; its own parent (or a new root) will split it next.' : 'Insertion is repaired.',
+        },
+        checkpoint: !checkpointAdded
+          ? {
+              id: 'btree-overflow-split',
+              question: 'Why does this 2-3 B-tree split a node only after it overflows to 3 keys?',
+              options: [
+                'Splitting around the median of the overflowed 3 keys leaves two legal 1-key nodes; doing it bottom-up repairs the whole path with at most one split per level',
+                'Because a node with 2 keys is already full, so it must never receive another key',
+              ],
+              correctIndex: 0,
+              explanation:
+                'With order 3 the capacity is 2 keys, but the split needs an odd count to cut symmetrically. The brief 3-key overflow provides exactly that median, so leaves legally hold 1–2 keys at rest.',
+            }
+          : undefined,
         explanation: `Node capacity exceeded. Pushed median key ${medianKey} up into parent [${parent.keys.join(', ')}].`,
       });
+      checkpointAdded = true;
     }
 
     function insertNonFull(node: BTreeNodeData, key: number) {
@@ -255,7 +295,7 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
         frames.push({
           stepIndex: frames.length,
           totalSteps: frames.length + 1,
-          codeLine: 24,
+          codeLine: 11,
           action: 'INSERT_KEY',
           state: {
             root: cloneBTree(root),
@@ -264,8 +304,13 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
             splitNodeId: null,
             order,
           },
-          callStack: [{ name: 'insertNonFull', params: { key, nodeId: node.id } }],
+          callStack: [{ name: 'insertNonFull', params: { key, nodeId: node.id }, line: 11, isCurrent: true }],
           variables: { insertedKey: key, nodeKeys: node.keys.join(',') },
+          pedagogy: {
+            what: `Key ${key} is inserted into leaf [${node.keys.join(', ')}] in sorted position.`,
+            why: 'Leaf insertion is the only place data appears; overflow is handled afterwards.',
+            whatNext: node.keys.length > maxKeys ? 'Capacity exceeded — split this node around its median.' : 'The node still fits; insertion done.',
+          },
           explanation: `Inserted key ${key} into leaf node [${node.keys.join(', ')}].`,
         });
       } else {
@@ -278,7 +323,7 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
         frames.push({
           stepIndex: frames.length,
           totalSteps: frames.length + 1,
-          codeLine: 12,
+          codeLine: 13,
           action: 'TRAVERSE',
           state: {
             root: cloneBTree(root),
@@ -287,18 +332,29 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
             splitNodeId: null,
             order,
           },
-          callStack: [{ name: 'traverseChild', params: { key, childIndex: i } }],
+          callStack: [{ name: 'traverseChild', params: { key, childIndex: i }, line: 13, isCurrent: true }],
           variables: { targetChildIndex: i, childNodeId: node.children[i].id },
+          pedagogy: {
+            what: `Key ${key} belongs in child index ${i} (node keys [${node.keys.join(', ')}]).`,
+            why: 'The key ranges of children are disjoint and ordered, so one comparison chain finds the single leaf that must receive the key.',
+            whatNext: 'Recurse into that child; splits happen while unwinding back up.',
+          },
           explanation: `Navigating down child index ${i} for key ${key}.`,
         });
+      }
 
-        if (node.children[i].keys.length >= order) {
-          splitChild(node, i, node.children[i]);
-          if (key > node.keys[i]) {
-            i++;
-          }
+      // Bottom-up repair: after descending, split the child if it overflowed.
+      if (!node.isLeaf) {
+        let i = node.keys.length - 1;
+        while (i >= 0 && key < node.keys[i]) {
+          i--;
         }
+        i++;
         insertNonFull(node.children[i], key);
+
+        if (node.children[i].keys.length > maxKeys) {
+          splitChild(node, i, node.children[i]);
+        }
       }
     }
 
@@ -306,7 +362,7 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
       frames.push({
         stepIndex: frames.length,
         totalSteps: frames.length + 1,
-        codeLine: 5,
+        codeLine: 2,
         action: 'START_INSERT',
         state: {
           root: cloneBTree(root),
@@ -315,25 +371,80 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
           splitNodeId: null,
           order,
         },
-        callStack: [{ name: 'insert', params: { key } }],
+        callStack: [{ name: 'insert', params: { key }, line: 2, isCurrent: true }],
         variables: { incomingKey: key },
+        pedagogy: {
+          what: `Insert ${key}: descend to a leaf, insert, then repair any overflow on the way back up.`,
+          why: 'Bottom-up repair handles the cascade: one insertion can overflow at most one node per level.',
+          whatNext: 'Walk down by key comparisons.',
+        },
         explanation: `Starting insertion for key ${key} into B-Tree.`,
       });
 
-      if (root.keys.length >= order) {
+      insertNonFull(root, key);
+
+      if (root.keys.length > maxKeys) {
+        const oldRoot = root;
         const newRoot = makeNode(false);
-        newRoot.children.push(root);
-        splitChild(newRoot, 0, root);
+        newRoot.children.push(oldRoot);
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: frames.length + 1,
+          codeLine: 4,
+          action: 'NEW_ROOT',
+          state: {
+            root: cloneBTree(root),
+            activeKey: null,
+            activeNodeId: newRoot.id,
+            splitNodeId: null,
+            order,
+          },
+          callStack: [{ name: 'growRoot', params: { key }, line: 4, isCurrent: true }],
+          variables: { overflowingRoot: oldRoot.keys.join(', '), newRootId: newRoot.id },
+          pedagogy: {
+            what: `The root overflowed (${oldRoot.keys.join(', ')}), so a new empty root is created above it.`,
+            why: 'A B-tree grows only at the root — this single mechanism keeps every leaf at the same depth.',
+            whatNext: 'Adopt the old root as the new root\'s first child, then split it.',
+          },
+          explanation: `Root capacity exceeded: creating a new root above [${oldRoot.keys.join(', ')}].`,
+        });
+
+        splitChild(newRoot, 0, oldRoot);
+
+        frames.push({
+          stepIndex: frames.length,
+          totalSteps: frames.length + 1,
+          codeLine: 7,
+          action: 'ROOT_REPLACED',
+          state: {
+            root: cloneBTree(newRoot),
+            activeKey: null,
+            activeNodeId: newRoot.id,
+            splitNodeId: null,
+            order,
+          },
+          callStack: [{ name: 'growRoot', params: { newRoot: newRoot.keys.join(', ') }, line: 7, isCurrent: true }],
+          variables: { rootKeys: newRoot.keys.join(', ') },
+          pedagogy: {
+            what: `root = newRoot: the tree is one level taller with root [${newRoot.keys.join(', ')}].`,
+            why: 'Height grows uniformly at the top, so the B-tree stays perfectly balanced for every leaf.',
+            whatNext: 'Continue with the next key.',
+          },
+          explanation: `New root [${newRoot.keys.join(', ')}] now tops the tree; height increased by one.`,
+        });
+
         root = newRoot;
       }
-      insertNonFull(root, key);
     }
 
     frames.push({
       stepIndex: frames.length,
       totalSteps: frames.length + 1,
-      codeLine: 30,
+      codeLine: 8,
       action: 'COMPLETE',
+      isMilestone: true,
+      milestoneTitle: 'B-Tree Complete',
       state: {
         root: cloneBTree(root),
         activeKey: null,
@@ -341,8 +452,13 @@ function insertNonFull(node: BTreeNode, k: number, M: number): void {
         splitNodeId: null,
         order,
       },
-      callStack: [{ name: 'bTreeComplete', params: { totalInserted: rawKeys.length } }],
+      callStack: [{ name: 'bTreeComplete', params: { totalInserted: rawKeys.length }, line: 8, isCurrent: true }],
       variables: { completed: true, totalKeysInserted: rawKeys.length },
+      pedagogy: {
+        what: `return root: all ${rawKeys.length} keys are stored in a balanced B-tree; every node holds between 1 and ${maxKeys} keys.`,
+        why: 'Every overflow was split around its median bottom-up, so no node exceeds capacity and all leaves share one depth.',
+        whatNext: 'This is the disk-friendly structure behind database indexes and file systems.',
+      },
       explanation: `All ${rawKeys.length} keys successfully inserted into balanced B-Tree of Order ${order}.`,
     });
 

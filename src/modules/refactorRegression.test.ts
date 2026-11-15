@@ -2501,6 +2501,41 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('2-3 B-tree splits overflowing nodes bottom-up and never exceeds capacity', () => {
+    const mod = moduleById('b-tree');
+    const input = { keys: [10, 20, 5, 6, 12, 30, 7, 17], order: 3 };
+    const timeline = mod.generateTimeline(input as any);
+
+    expect(timeline.filter((f) => f.checkpoint?.id === 'btree-overflow-split').length).toBe(1);
+
+    // Eight insertions; six descents; four splits, two of which grow the root.
+    expect(timeline.filter((f) => f.action === 'START_INSERT').length).toBe(8);
+    expect(timeline.filter((f) => f.action === 'INSERT_KEY').length).toBe(8);
+    expect(timeline.filter((f) => f.action === 'TRAVERSE').length).toBe(6);
+    expect(timeline.filter((f) => f.action === 'SPLIT').length).toBe(4);
+    expect(timeline.filter((f) => f.action === 'NEW_ROOT').length).toBe(2);
+    expect(timeline.filter((f) => f.action === 'ROOT_REPLACED').length).toBe(2);
+
+    // Final 2-3 tree: root [10]; children [6] (5,7) and [20] (12,17 & 30).
+    interface N { keys: number[]; children: N[] }
+    const root = timeline[timeline.length - 1].state.root as N;
+    expect(root.keys).toEqual([10]);
+    expect(root.children[0].keys).toEqual([6]);
+    expect(root.children[0].children.map((c) => c.keys)).toEqual([[5], [7]]);
+    expect(root.children[1].keys).toEqual([20]);
+    expect(root.children[1].children.map((c) => c.keys)).toEqual([[12, 17], [30]]);
+
+    // Capacity invariant: no node ever exceeds order-1 = 2 keys at rest.
+    const walk = (n: N): void => {
+      expect(n.keys.length).toBeLessThanOrEqual(2);
+      n.children.forEach(walk);
+    };
+    walk(root);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 
