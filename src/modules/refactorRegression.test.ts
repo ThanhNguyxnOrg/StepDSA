@@ -2469,6 +2469,38 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('splay applies zig-zig then zig to hoist the target and covers the zig-zag shape too', () => {
+    const mod = moduleById('splay-tree');
+
+    // Left chain [50,30,20,10], search 10.
+    const timeline = mod.generateTimeline({ keys: [50, 30, 20, 10], searchKey: 10 } as any);
+    expect(timeline.filter((f) => f.checkpoint?.id === 'splay-access-path').length).toBe(1);
+
+    // Four search steps down the chain.
+    expect(timeline.filter((f) => f.action === 'SEARCH').length).toBe(4);
+
+    // Zig-zig on (30,20,10) uses identify/part1/part2, then a single zig at the root.
+    const zigzig = timeline.filter((f) => f.action === 'ZIG_ZIG');
+    expect(zigzig.map((f) => f.codeLine)).toEqual([15, 16, 18]);
+    const zig = timeline.filter((f) => f.action === 'ZIG');
+    expect(zig.length).toBe(1);
+    expect(zig[0].milestoneTitle).toBe('Zig (Right Rotate) Root 50');
+
+    const final = timeline[timeline.length - 1];
+    expect(final.milestoneTitle).toBe('Splay Success: 10 is at Root');
+    expect(final.state.tree.key).toBe(10);
+    expect(final.state.tree.right.key).toBe(50);
+
+    // Zig-zag shape: [30,10,20], search 20 exercises the LR double rotation.
+    const zigzag = mod.generateTimeline({ keys: [30, 10, 20], searchKey: 20 } as any);
+    const zzFrames = zigzag.filter((f) => f.action === 'ZIG_ZAG');
+    expect(zzFrames.map((f) => f.codeLine)).toEqual([28, 30, 32]);
+    expect(zigzag[zigzag.length - 1].state.tree.key).toBe(20);
+
+    expect(auditTimeline(mod, { keys: [50, 30, 20, 10], searchKey: 10 } as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

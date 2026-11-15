@@ -203,19 +203,45 @@ SplayNode splay(SplayNode root, int key) {
     }
 }`,
     pseudocode: `function splay(root, key):
-    if root is null or root.key == key: return root
-    if key < root.key:
-        if root.left is null: return root
-        if key < root.left.key: // Zig-Zig
-            root.left.left = splay(root.left.left, key)
-            root = rightRotate(root)
-        else if key > root.left.key: // Zig-Zag
-            root.left.right = splay(root.left.right, key)
-            if root.left.right: root.left = leftRotate(root.left)
-        return rightRotate(root) if root.left else root
+    if root is null: return null
+    # Phase 1 — search to build the access path
+    path = []; curr = root
+    while curr and curr.key != key:
+        path.append(curr); curr = key < curr.key ? curr.left : curr.right
+    # curr is the target node (or null when absent)
+    # Phase 2 — bottom-up splay, two levels per iteration
+    # --- Case Zig / Zag: parent is the root ---
+    if parent.left == curr: root = rightRotate(parent)     # Zig
     else:
-        // Symmetric right subtree splay
-        ...`,
+        root = leftRotate(parent)                          # Zag
+    # --- Case Zig-Zig: grandparent, parent, node all on the left spine ---
+    # Bottom-up order: rotate the grandparent first, then the parent
+    # (identify the LL configuration on the access path)
+    newG = rightRotate(grandparent)                        # part 1
+    attach(greatGrandparent, grandparent, newG)
+    newP = rightRotate(newG)                               # part 2
+    attach(greatGrandparent, newG, newP)
+    # node ascended two levels; continue from its new parent
+    # --- Case Zag-Zag: mirrored (right-right) ---
+    newG = leftRotate(grandparent)                         # part 1
+    attach(greatGrandparent, grandparent, newG)
+    newP = leftRotate(newG)                                # part 2
+    attach(greatGrandparent, newG, newP)
+    # node ascended two levels
+    # --- Case Zig-Zag: grandparent left, node right ---
+    # (identify the LR configuration)
+    # Inner rotation converts the zig-zag into a straight line
+    newP = leftRotate(parent); grandparent.left = newP     # inner rotation
+    # now straight left-left; outer rotation follows
+    newG = rightRotate(grandparent); attach(greatGrandparent, grandparent, newG)  # outer rotation
+    # --- Case Zag-Zig: mirrored (right-left) ---
+    # (identify the RL configuration)
+    # Inner rotation on the parent straightens the chain
+    newP = rightRotate(parent); grandparent.right = newP   # inner rotation
+    # now straight right-right; outer rotation follows
+    newG = leftRotate(grandparent); attach(greatGrandparent, grandparent, newG)   # outer rotation
+    # loop while the path still has two or more ancestors
+    return root   # the splayed key is now at the root`,
   },
   generateTimeline: (input: {
     keys: number[];
@@ -240,10 +266,12 @@ SplayNode splay(SplayNode root, int key) {
     }
     const initialRootVal = root ? (root as SplayNode).key : -1;
 
+    let checkpointAdded = false;
+
     frames.push({
       stepIndex: 0,
       totalSteps: 1,
-      codeLine: 2,
+      codeLine: 3,
       action: 'INIT',
       state: {
         tree: cloneSplay(root),
@@ -251,8 +279,13 @@ SplayNode splay(SplayNode root, int key) {
         operation: 'NONE',
         description: `BST constructed from keys [${rawKeys.join(', ')}]`,
       },
-      callStack: [{ name: 'initSplay', params: { searchKey: targetKey, totalNodes: rawKeys.length } }],
+      callStack: [{ name: 'initSplay', params: { searchKey: targetKey, totalNodes: rawKeys.length }, line: 3, isCurrent: true }],
       variables: { searchKey: targetKey, initialRoot: initialRootVal, totalKeys: rawKeys.length },
+      pedagogy: {
+        what: `Splay search first records the access path, then rebalances bottom-up until the target sits at the root.`,
+        why: 'Recently accessed keys become cheap (O(1) at the root); the rebalancing cost amortizes to O(log n) per operation without storing heights.',
+        whatNext: `Search for ${targetKey} while collecting every node on the path.`,
+      },
       explanation: `Initialized BST with keys [${rawKeys.join(', ')}]. Beginning search and splay for target key ${targetKey}.`,
     });
 
@@ -267,7 +300,7 @@ SplayNode splay(SplayNode root, int key) {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 4,
+        codeLine: 5,
         action: 'SEARCH',
         state: {
           tree: cloneSplay(root),
@@ -275,11 +308,18 @@ SplayNode splay(SplayNode root, int key) {
           operation: 'SEARCH',
           description: `Inspecting node ${searchCurr.key} (searching for ${targetKey})`,
         },
-        callStack: [{ name: 'splaySearch', params: { current: searchCurr.key, target: targetKey } }],
+        callStack: [{ name: 'splaySearch', params: { current: searchCurr.key, target: targetKey }, line: 5, isCurrent: true }],
         variables: { currentNode: searchCurr.key, targetKey, pathLength: path.length },
         conditionEval: {
           expr: `${targetKey} === ${searchCurr.key}`,
           result: isTarget,
+        },
+        pedagogy: {
+          what: isTarget
+            ? `${targetKey} found — the access path has ${path.length} node(s).`
+            : `${targetKey} is ${targetKey < searchCurr.key ? 'smaller' : 'larger'} than ${searchCurr.key}, so the walk continues ${targetKey < searchCurr.key ? 'left' : 'right'}.`,
+          why: 'The whole path is remembered: splay rotations need the parent and grandparent of every node on it.',
+          whatNext: isTarget ? 'Start bottom-up rotations from the deepest pair.' : 'Inspect the next node and append it to the path.',
         },
         explanation: isTarget
           ? `🎯 Located target key ${targetKey}! Ready to commence bottom-up splay rotations.`
@@ -297,7 +337,7 @@ SplayNode splay(SplayNode root, int key) {
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 6,
+        codeLine: 7,
         action: 'SEARCH',
         state: {
           tree: cloneSplay(root),
@@ -305,8 +345,13 @@ SplayNode splay(SplayNode root, int key) {
           operation: 'NONE',
           description: `Key ${targetKey} not found in tree`,
         },
-        callStack: [{ name: 'splaySearch', params: { status: 'NOT_FOUND' } }],
+        callStack: [{ name: 'splaySearch', params: { status: 'NOT_FOUND' }, line: 7, isCurrent: true }],
         variables: { targetKey, found: false },
+        pedagogy: {
+          what: `The search fell off a null child: ${targetKey} is not in the tree.`,
+          why: 'Splay trees still splay the last accessed node — the one the failed search inspected most deeply.',
+          whatNext: 'Apply the same bottom-up rotation cases to that last node.',
+        },
         explanation: `Key ${targetKey} does not exist in BST. Splaying last accessed node to root.`,
       });
     }
@@ -358,10 +403,29 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG',
               description: `Zig (right rotation) around root ${parent.key}`,
             },
-            callStack: [{ name: 'zig', params: { root: parent.key, child: curr.key } }],
+            callStack: [{ name: 'zig', params: { root: parent.key, child: curr.key }, line: 10, isCurrent: true }],
             variables: { step: 'Zig', newRoot: root.key },
+            pedagogy: {
+              what: `Zig: one right rotation at the root ${parent.key} lifts ${curr.key} to the top.`,
+              why: 'The target is exactly one level below the root, so a single rotation completes the splay.',
+              whatNext: 'The access path is exhausted — splay is done.',
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'splay-access-path',
+                  question: 'Why does splay move the accessed node to the root instead of just balancing locally?',
+                  options: [
+                    'Deep nodes are expensive to reach repeatedly; hoisting the accessed node shortens the whole path, which amortizes to O(log n) per operation',
+                    'Because it keeps the height perfectly balanced like an AVL tree',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Splay trees trade exact balance for adaptivity: every access restructures the tree along its own path. The potential argument shows total cost O((m+n) log n) over m operations, even though a single search can be linear.',
+                }
+              : undefined,
             explanation: `Zig (single right rotation) applied on root ${parent.key}. Target ${curr.key} is now at root!`,
           });
+          checkpointAdded = true;
         } else {
           root = leftRotate(parent);
           frames.push({
@@ -377,8 +441,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG',
               description: `Zag (left rotation) around root ${parent.key}`,
             },
-            callStack: [{ name: 'zag', params: { root: parent.key, child: curr.key } }],
+            callStack: [{ name: 'zag', params: { root: parent.key, child: curr.key }, line: 12, isCurrent: true }],
             variables: { step: 'Zag', newRoot: root.key },
+            pedagogy: {
+              what: `Zag: mirror of the zig case — one left rotation at the root ${parent.key}.`,
+              why: 'Mirror cases share the same logic with left/right swapped throughout.',
+              whatNext: 'Splay complete for this access.',
+            },
             explanation: `Zag (single left rotation) applied on root ${parent.key}. Target ${curr.key} is now at root!`,
           });
         }
@@ -397,7 +466,7 @@ SplayNode splay(SplayNode root, int key) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 16,
+            codeLine: 15,
             action: 'ZIG_ZIG',
             state: {
               tree: cloneSplay(root),
@@ -405,10 +474,29 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZIG',
               description: `Identified Zig-Zig (Left-Left) on G=${grandparent.key}, P=${parent.key}, N=${curr.key}`,
             },
-            callStack: [{ name: 'splayZigZig', params: { G: grandparent.key, P: parent.key, N: curr.key } }],
+            callStack: [{ name: 'splayZigZig', params: { G: grandparent.key, P: parent.key, N: curr.key }, line: 15, isCurrent: true }],
             variables: { case: 'Zig-Zig (LL)', grandparent: grandparent.key, parent: parent.key, node: curr.key },
+            pedagogy: {
+              what: `All three nodes lie on the left spine (G=${grandparent.key}, P=${parent.key}, N=${curr.key}).`,
+              why: 'For zig-zig the bottom-up order matters: rotating G first avoids creating a temporary zig-zag. The result halves the depth of N and much of its path — the core of splay\'s amortized guarantee.',
+              whatNext: `Rotate grandparent ${grandparent.key} right first.`,
+            },
+            checkpoint: !checkpointAdded
+              ? {
+                  id: 'splay-access-path',
+                  question: 'Why does splay move the accessed node to the root instead of just balancing locally?',
+                  options: [
+                    'Deep nodes are expensive to reach repeatedly; hoisting the accessed node shortens the whole path, which amortizes to O(log n) per operation',
+                    'Because it keeps the height perfectly balanced like an AVL tree',
+                  ],
+                  correctIndex: 0,
+                  explanation:
+                    'Splay trees trade exact balance for adaptivity: every access restructures the tree along its own path. The potential argument shows total cost O((m+n) log n) over m operations, even though a single search can be linear.',
+                }
+              : undefined,
             explanation: `Identified Zig-Zig (Left-Left). Rule: rotate Grandparent ${grandparent.key} right FIRST, then rotate Parent ${parent.key} right.`,
           });
+          checkpointAdded = true;
 
           // Step 1: Rotate grandparent right
           const newGSub = rightRotate(grandparent);
@@ -417,7 +505,7 @@ SplayNode splay(SplayNode root, int key) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 18,
+            codeLine: 16,
             action: 'ZIG_ZIG',
             state: {
               tree: cloneSplay(root),
@@ -425,8 +513,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZIG',
               description: `Zig-Zig Part 1: Right rotated Grandparent ${grandparent.key}`,
             },
-            callStack: [{ name: 'rotateG', params: { rotated: grandparent.key, newSubRoot: newGSub.key } }],
+            callStack: [{ name: 'rotateG', params: { rotated: grandparent.key, newSubRoot: newGSub.key }, line: 16, isCurrent: true }],
             variables: { step: 'Zig-Zig Part 1', newSubRoot: newGSub.key },
+            pedagogy: {
+              what: `Part 1: grandparent ${grandparent.key} rotated right; ${newGSub.key} roots the intermediate subtree.`,
+              why: 'Bottom-up rotation keeps the key order valid at every intermediate state — there is never a broken BST.',
+              whatNext: `Rotate the intermediate root right (part 2).`,
+            },
             explanation: `Zig-Zig Part 1 complete: Grandparent ${grandparent.key} right-rotated around ${newGSub.key}.`,
           });
 
@@ -437,7 +530,7 @@ SplayNode splay(SplayNode root, int key) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 20,
+            codeLine: 18,
             action: 'ZIG_ZIG',
             isMilestone: true,
             milestoneTitle: `Zig-Zig Complete -> Subtree Root ${finalSub.key}`,
@@ -447,8 +540,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZIG',
               description: `Zig-Zig Part 2: Right rotated Parent ${parent.key}`,
             },
-            callStack: [{ name: 'rotateP', params: { rotated: parent.key, newSubRoot: finalSub.key } }],
+            callStack: [{ name: 'rotateP', params: { rotated: parent.key, newSubRoot: finalSub.key }, line: 18, isCurrent: true }],
             variables: { step: 'Zig-Zig Part 2', subtreeRoot: finalSub.key },
+            pedagogy: {
+              what: `Part 2: the second right rotation puts ${curr.key} on top of this subtree.`,
+              why: 'Two rotations moved the node up two levels — the amortized potential drop funds the whole operation.',
+              whatNext: 'Continue splaying from the node\'s new parent.',
+            },
             explanation: `Zig-Zig Part 2 complete: Parent right-rotated. Node ${curr.key} ascended 2 levels closer to root!`,
           });
         } else if (!isParentLeft && !isCurrLeft) {
@@ -456,7 +554,7 @@ SplayNode splay(SplayNode root, int key) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 22,
+            codeLine: 21,
             action: 'ZIG_ZIG',
             state: {
               tree: cloneSplay(root),
@@ -464,8 +562,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZIG',
               description: `Identified Zag-Zag (Right-Right) on G=${grandparent.key}, P=${parent.key}, N=${curr.key}`,
             },
-            callStack: [{ name: 'splayZagZag', params: { G: grandparent.key, P: parent.key, N: curr.key } }],
+            callStack: [{ name: 'splayZagZag', params: { G: grandparent.key, P: parent.key, N: curr.key }, line: 21, isCurrent: true }],
             variables: { case: 'Zag-Zag (RR)', grandparent: grandparent.key, parent: parent.key, node: curr.key },
+            pedagogy: {
+              what: `Mirror case: G=${grandparent.key}, P=${parent.key}, N=${curr.key} all on the right spine.`,
+              why: 'Same bottom-up order with left/right swapped; correctness carries over by symmetry.',
+              whatNext: `Rotate grandparent ${grandparent.key} left first.`,
+            },
             explanation: `Identified Zag-Zag (Right-Right). Rule: rotate Grandparent ${grandparent.key} left FIRST, then rotate Parent ${parent.key} left.`,
           });
 
@@ -475,7 +578,7 @@ SplayNode splay(SplayNode root, int key) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 24,
+            codeLine: 22,
             action: 'ZIG_ZIG',
             state: {
               tree: cloneSplay(root),
@@ -483,8 +586,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZIG',
               description: `Zag-Zag Part 1: Left rotated Grandparent ${grandparent.key}`,
             },
-            callStack: [{ name: 'rotateG', params: { rotated: grandparent.key, newSubRoot: newGSub.key } }],
+            callStack: [{ name: 'rotateG', params: { rotated: grandparent.key, newSubRoot: newGSub.key }, line: 22, isCurrent: true }],
             variables: { step: 'Zag-Zag Part 1', newSubRoot: newGSub.key },
+            pedagogy: {
+              what: `Part 1: grandparent ${grandparent.key} rotated left.`,
+              why: 'Identical mechanics to zig-zig part 1, mirrored.',
+              whatNext: 'Rotate the intermediate root left (part 2).',
+            },
             explanation: `Zag-Zag Part 1 complete: Grandparent ${grandparent.key} left-rotated around ${newGSub.key}.`,
           });
 
@@ -494,7 +602,7 @@ SplayNode splay(SplayNode root, int key) {
           frames.push({
             stepIndex: frames.length,
             totalSteps: 1,
-            codeLine: 26,
+            codeLine: 24,
             action: 'ZIG_ZIG',
             isMilestone: true,
             milestoneTitle: `Zag-Zag Complete -> Subtree Root ${finalSub.key}`,
@@ -504,8 +612,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZIG',
               description: `Zag-Zag Part 2: Left rotated Parent ${parent.key}`,
             },
-            callStack: [{ name: 'rotateP', params: { rotated: parent.key, newSubRoot: finalSub.key } }],
+            callStack: [{ name: 'rotateP', params: { rotated: parent.key, newSubRoot: finalSub.key }, line: 24, isCurrent: true }],
             variables: { step: 'Zag-Zag Part 2', subtreeRoot: finalSub.key },
+            pedagogy: {
+              what: `Part 2 lifts ${curr.key} two levels up.`,
+              why: 'Both rotations are required — stopping after part 1 would leave the grandparent as the subtree root and the node only one level higher.',
+              whatNext: 'Continue the splay loop from the new parent.',
+            },
             explanation: `Zag-Zag Part 2 complete: Parent left-rotated. Node ${curr.key} ascended 2 levels closer to root!`,
           });
         } else if (isParentLeft && !isCurrLeft) {
@@ -521,8 +634,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZAG',
               description: `Identified Zig-Zag (Left-Right) on G=${grandparent.key}, P=${parent.key}, N=${curr.key}`,
             },
-            callStack: [{ name: 'splayZigZag', params: { G: grandparent.key, P: parent.key, N: curr.key } }],
+            callStack: [{ name: 'splayZigZag', params: { G: grandparent.key, P: parent.key, N: curr.key }, line: 28, isCurrent: true }],
             variables: { case: 'Zig-Zag (LR)', grandparent: grandparent.key, parent: parent.key, node: curr.key },
+            pedagogy: {
+              what: `The path bends: N=${curr.key} is the right child of P=${parent.key}, which is the left child of G=${grandparent.key}.`,
+              why: 'Zig-zig rotations would not fix a zig-zag; the chain must first be straightened into left-left.',
+              whatNext: `Inner rotation: left-rotate parent ${parent.key}.`,
+            },
             explanation: `Identified Zig-Zag (Left-Right). Rule: rotate Parent ${parent.key} left FIRST, then rotate Grandparent ${grandparent.key} right.`,
           });
 
@@ -540,8 +658,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZAG',
               description: `Zig-Zag Part 1: Left rotated Parent ${parent.key}`,
             },
-            callStack: [{ name: 'innerRotate', params: { rotated: parent.key, child: newPSub.key } }],
+            callStack: [{ name: 'innerRotate', params: { rotated: parent.key, child: newPSub.key }, line: 30, isCurrent: true }],
             variables: { step: 'Zig-Zag Part 1', child: newPSub.key },
+            pedagogy: {
+              what: `Inner rotation: ${parent.key} rotated left, so ${newPSub.key} takes its place and the chain becomes left-left.`,
+              why: 'Straightening first means the outer rotation can reuse the same geometry as zig-zig.',
+              whatNext: `Outer rotation: right-rotate grandparent ${grandparent.key}.`,
+            },
             explanation: `Zig-Zag Part 1: Inner left-rotation on Parent ${parent.key} straightened chain into Left-Left.`,
           });
 
@@ -561,8 +684,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZAG',
               description: `Zig-Zag Part 2: Right rotated Grandparent ${grandparent.key}`,
             },
-            callStack: [{ name: 'outerRotate', params: { rotated: grandparent.key, root: finalSub.key } }],
+            callStack: [{ name: 'outerRotate', params: { rotated: grandparent.key, root: finalSub.key }, line: 32, isCurrent: true }],
             variables: { step: 'Zig-Zag Part 2', subtreeRoot: finalSub.key },
+            pedagogy: {
+              what: `Outer rotation completes the double rotation; ${curr.key} is now this subtree's root.`,
+              why: 'Two opposite rotations move the node up two levels — the same amortized progress as zig-zig.',
+              whatNext: 'Continue splaying from the node\'s new parent.',
+            },
             explanation: `Zig-Zag Part 2: Outer right-rotation on Grandparent ${grandparent.key} completed. Node ${curr.key} is now subtree root!`,
           });
         } else {
@@ -578,8 +706,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZAG',
               description: `Identified Zag-Zig (Right-Left) on G=${grandparent.key}, P=${parent.key}, N=${curr.key}`,
             },
-            callStack: [{ name: 'splayZagZig', params: { G: grandparent.key, P: parent.key, N: curr.key } }],
+            callStack: [{ name: 'splayZagZig', params: { G: grandparent.key, P: parent.key, N: curr.key }, line: 34, isCurrent: true }],
             variables: { case: 'Zag-Zig (RL)', grandparent: grandparent.key, parent: parent.key, node: curr.key },
+            pedagogy: {
+              what: `Mirror zig-zag: N=${curr.key} is the left child of P=${parent.key}, the right child of G=${grandparent.key}.`,
+              why: 'The inner rotation straightens the bend; the outer rotation then applies the zag-zag geometry.',
+              whatNext: `Inner rotation: right-rotate parent ${parent.key}.`,
+            },
             explanation: `Identified Zag-Zig (Right-Left). Rule: rotate Parent ${parent.key} right FIRST, then rotate Grandparent ${grandparent.key} left.`,
           });
 
@@ -597,8 +730,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZAG',
               description: `Zag-Zig Part 1: Right rotated Parent ${parent.key}`,
             },
-            callStack: [{ name: 'innerRotate', params: { rotated: parent.key, child: newPSub.key } }],
+            callStack: [{ name: 'innerRotate', params: { rotated: parent.key, child: newPSub.key }, line: 36, isCurrent: true }],
             variables: { step: 'Zag-Zig Part 1', child: newPSub.key },
+            pedagogy: {
+              what: `Inner rotation makes the chain right-right around ${newPSub.key}.`,
+              why: 'Same two-step recipe, mirrored left/right.',
+              whatNext: `Outer rotation: left-rotate grandparent ${grandparent.key}.`,
+            },
             explanation: `Zag-Zig Part 1: Inner right-rotation on Parent ${parent.key} straightened chain into Right-Right.`,
           });
 
@@ -618,8 +756,13 @@ SplayNode splay(SplayNode root, int key) {
               operation: 'ZIG_ZAG',
               description: `Zag-Zig Part 2: Left rotated Grandparent ${grandparent.key}`,
             },
-            callStack: [{ name: 'outerRotate', params: { rotated: grandparent.key, root: finalSub.key } }],
+            callStack: [{ name: 'outerRotate', params: { rotated: grandparent.key, root: finalSub.key }, line: 38, isCurrent: true }],
             variables: { step: 'Zag-Zig Part 2', subtreeRoot: finalSub.key },
+            pedagogy: {
+              what: `Outer rotation completes the pair; ${curr.key} roots the subtree.`,
+              why: 'All four double-rotation shapes are now covered — every two-level splay step uses exactly one of them.',
+              whatNext: 'Loop continues until the node reaches the root.',
+            },
             explanation: `Zag-Zig Part 2: Outer left-rotation on Grandparent completed. Node ${curr.key} is now subtree root!`,
           });
         }
@@ -644,8 +787,13 @@ SplayNode splay(SplayNode root, int key) {
         operation: 'NONE',
         description: `Key ${targetKey} successfully splayed to tree root`,
       },
-      callStack: [{ name: 'splay', params: { status: 'DONE', root: root ? root.key : 'null' } }],
+      callStack: [{ name: 'splay', params: { status: 'DONE', root: root ? root.key : 'null' }, line: 40, isCurrent: true }],
       variables: { targetKey, newRoot: root ? root.key : 'null', finalDepth: 0 },
+      pedagogy: {
+        what: `return root: ${targetKey} is the new tree root.`,
+        why: 'Every rotation pair moved the node two levels up, and the access path shortened as a whole — future searches for hot keys get faster, which is the adaptivity splay trees are known for.',
+        whatNext: 'Compare with AVL/red-black: those guarantee worst-case height, splay optimizes amortized access.',
+      },
       explanation: `🎉 Splay complete! Target key ${targetKey} is now the root of the tree. Subsequent lookups for this key will now take O(1) time.`,
     });
 
