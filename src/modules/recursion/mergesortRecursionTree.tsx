@@ -252,6 +252,11 @@ export const mergesortRecursionTreeModule: AlgorithmModule<MRTInput, MRTState> =
   title: 'Mergesort Recursion Call Tree',
   category: 'sorting',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'recursion-trees', label: 'Recursion Trees & Memoisation' },
+    { id: 'quicksort-partition-tree', label: 'Quicksort Partition Tree' },
+    { id: 'mergesort', label: 'Mergesort' },
+  ],
   complexity: {
     timeBest: 'O(N log N)',
     timeAverage: 'O(N log N)',

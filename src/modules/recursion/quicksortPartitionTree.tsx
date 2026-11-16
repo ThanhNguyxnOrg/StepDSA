@@ -261,6 +261,11 @@ export const quicksortPartitionTreeModule: AlgorithmModule<QPTInput, QPTState> =
   title: 'Quicksort Partition Tree (Pivot-Selection Tree Topology)',
   category: 'sorting',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'recursion-trees', label: 'Recursion Trees & Memoisation' },
+    { id: 'mergesort-recursion-tree', label: 'Mergesort Call Tree' },
+    { id: 'quicksort', label: 'Quicksort' },
+  ],
   complexity: {
     timeBest: 'O(N log N)',
     timeAverage: 'O(N log N)',

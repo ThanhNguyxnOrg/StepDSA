@@ -282,6 +282,11 @@ export const backtrackingDecisionTreeModule: AlgorithmModule<BDTInput, BDTState>
   title: 'Backtracking State-Space Decision Tree',
   category: 'sorting',
   difficulty: 'Advanced',
+  relatedModules: [
+    { id: 'recursion-trees', label: 'Recursion Trees & Memoisation' },
+    { id: 'n-queens', label: 'N-Queens' },
+    { id: 'word-search', label: 'Word Search' },
+  ],
   complexity: {
     timeBest: 'O(2^N)',
     timeAverage: 'O(2^N)',

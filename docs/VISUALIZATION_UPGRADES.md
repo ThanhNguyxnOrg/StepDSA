@@ -52,7 +52,8 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 
 ### Trees (26)
 avl-tree ✅ · bst ✅ · bst-delete ✅ · tree-traversals ✅ · level-order-traversal ✅ · binary-heap ✅ · max-heap ✅ · trie ✅ · ternary-search-tree ✅ · segment-tree ✅ · fenwick-tree ✅ · red-black-tree ✅ · treap ✅ · splay-tree ✅ · b-tree ✅ · two-three-tree ✅ · two-three-four-tree ✅ · skip-list ✅ · tree-map ✅ · kd-tree ✅ · interval-tree ✅ · radix-tree ✅ · octree-3d ✅ · suffix-tree ✅
-recursion-trees → ⬜
+All 26 tree modules are done. `recursion-trees` moved to the DP batch (category
+`dynamic-programming`) — it is now the recursion-tree vs memo-DAG module.
 
 Octree notes: real capacity-1 / max-depth-6 insertion (reject outside, overflow →
 subdivide → redistribute → route), explicit depth-cap frame for coincident points,
@@ -69,10 +70,24 @@ and `suffix-tree-first-split`, lexicographic child order, suffix-link arcs on th
 bfs ✅ · dijkstra ✅ · dfs ✅ · bellman-ford ✅ · floyd-warshall ✅ · a-star ✅ · zero-one-bfs ✅ · topological-sort ✅ · topological-sort-dfs ✅ · kruskal ✅ · prim ✅ · boruvka ✅ · dsu ✅ · tarjan-scc ✅ · kosaraju ✅ · articulation-points ✅ · bridge-finding ✅ · bipartite-check ✅ · edmonds-karp ✅ · dinic ✅ · hopcroft-karp ✅ · hierholzer ✅ · hamiltonian-path ✅ · transitive-closure ✅ · graph-coloring ✅ · flood-fill ✅ · graph-representations ✅ /
 line-intersection → ⬜ (module is category math; covered in the M1 geometry batch)
 
-### DP (17)
-coin-change ✅ · lcs / lis / edit-distance / knapsack / unbounded-knapsack / subset-sum /
-matrix-chain / house-robber / climbing-stairs / unique-paths / jump-game / kadane /
-lps / manacher / tsp-held-karp / burst-balloons / longest-palindromic-substring → ⬜
+### DP (17 + recursion-trees)
+coin-change ✅ · recursion-trees ✅ / lcs / lis / edit-distance / knapsack /
+unbounded-knapsack / subset-sum / matrix-chain / house-robber / climbing-stairs /
+unique-paths / jump-game / kadane / lps / manacher / tsp-held-karp / burst-balloons /
+longest-palindromic-substring → ⬜
+
+Recursion-trees notes (VisuAlgo-inspired, rebuilt from scratch): the old module ran
+mergesort code in "quicksort" mode and emitted no frames at all while building the
+backtracking tree. It is now the *overlapping subproblems → memoisation* hub:
+node = (argument tuple, returned value), colours for computing / returned / base case /
+**repeat** (plain recursion) / **memo reuse** (DAG), memo-table chip row, live stats
+(calls, distinct subproblems, repeated, base visits, memo hits, calls avoided),
+`fib(5)` naive reports the reference 15 calls / 3 repeated / 8 base visits and
+memoised `fib(6)` reports 7 distinct / 0 repeated / 2 base visits / 4 hits / 18 calls
+avoided; checkpoints `recursion-trees-first-repeat`, `-memo-miss`, `-memo-hit`;
+presets fib(5)/fib(6)/fib(6)+memo/C(5,3)/C(6,3)+memo/paths(3,3)+memo; category moved to
+`dynamic-programming`. The mergesort/quicksort/backtracking recursion specialisations
+live in their own modules and now cross-link through `relatedModules`.
 
 ### Linked lists (9)
 reverse-linked-list ✅ · singly / doubly / circular / middle / merge-two-lists /
@@ -97,7 +112,7 @@ binary-tree-topologies) → ⬜
 sieve / euclidean-gcd / extended-gcd / tower-of-hanoi / n-queens /
 binary-exponentiation / bitwise-operations / count-set-bits / single-number /
 prime-factorization / strassen-matrix / convex-hull / closest-pair / point-in-polygon /
-sweep-line-intersections / recursion-trees / lps → ⬜
+sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batch above)
 
 ## Cross-module navigation (2026-11-16)
 
@@ -128,7 +143,8 @@ sweep-line-intersections / recursion-trees / lps → ⬜
    flood-fill, graph-representations. `line-intersection` is category math → M1.
 5. **T1 — balanced trees:** red-black, treap, splay (rotation animations).
 6. **T2 — specialized trees:** segment, fenwick, b-tree family, trie family, kd/interval.
-7. **DP1 — table DP:** lcs, lis, edit-distance, knapsack family, matrix-chain.
+7. **DP1 — table DP:** recursion-trees ✅ (tree vs memo DAG), lcs, lis, edit-distance,
+   knapsack family, matrix-chain.
 8. **DP2 — grid/sequence DP + backtracking:** unique-paths, house-robber, n-queens,
    sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.

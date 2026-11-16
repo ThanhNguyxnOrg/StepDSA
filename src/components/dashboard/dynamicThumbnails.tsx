@@ -1405,15 +1405,19 @@ export function renderExtraThumbnail(moduleId: string, _category?: string): Reac
       return (
         <div className="w-full h-40 bg-gradient-to-b from-[#059669] to-[#047857] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
           <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
-            <span>Recursion Topology Hub</span>
+            <span>Tree → Memo DAG</span>
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           </div>
           <div className="flex flex-col items-center justify-center gap-1 h-24 font-mono text-xs">
-            <div className="px-2 py-0.5 rounded bg-emerald-400 text-emerald-950 font-bold text-[9px]">T(N)</div>
+            <div className="px-2 py-0.5 rounded bg-emerald-400 text-emerald-950 font-bold text-[9px]">fib(5)</div>
             <div className="w-24 h-1.5 border-t-2 border-l-2 border-r-2 border-emerald-300/60 rounded-t" />
             <div className="flex justify-between w-28 text-[8px]">
-              <div className="px-1.5 py-0.5 rounded bg-white text-emerald-950 font-bold shadow">T(N/2)</div>
-              <div className="px-1.5 py-0.5 rounded bg-amber-300 text-emerald-950 font-bold shadow animate-pulse">T(N/2)</div>
+              <div className="px-1.5 py-0.5 rounded bg-rose-300 text-rose-950 font-bold shadow">fib(4) repeat</div>
+              <div className="px-1.5 py-0.5 rounded bg-white text-emerald-950 font-bold shadow">fib(3) = 2</div>
+            </div>
+            <div className="flex items-center gap-1 text-[8px] text-violet-100">
+              <span className="px-1.5 py-0.5 rounded border border-dashed border-violet-200 bg-violet-500/30 font-bold">memo[fib(3)] = 2</span>
+              <span className="text-violet-200">← reuse</span>
             </div>
           </div>
         </div>

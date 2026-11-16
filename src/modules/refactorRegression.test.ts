@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getModuleById } from './registry';
 import { auditTimeline } from '../core/timelineAudit';
+import { resolveActiveCodeLine } from '../utils/codeLineResolver';
 
 function moduleById(id: string) {
   const mod = getModuleById(id);
@@ -3816,5 +3817,277 @@ describe('suffix tree (Ukkonen) regressions', () => {
     for (const preset of mod.presets) {
       expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
     }
+  });
+});
+
+describe('recursion trees & memoisation regressions', () => {
+  const mod = () => moduleById('recursion-trees');
+
+  function structuralProblems(state: any): string[] {
+    const problems: string[] = [];
+    const ids = new Set(state.nodes.map((n: any) => n.id));
+    const childSeen = new Set<string>();
+
+    for (const node of state.nodes) {
+      if (node.parentId !== null && !ids.has(node.parentId)) {
+        problems.push(`node ${node.id} has unknown parent ${node.parentId}`);
+      }
+      if (node.status === 'done' && node.value === undefined) {
+        problems.push(`node ${node.id} is done without a value`);
+      }
+      if (node.base && node.childIds.length > 0) {
+        problems.push(`base node ${node.id} has children`);
+      }
+      if (node.repeated && state.memoOn) {
+        problems.push(`memo mode must not mark ${node.id} as repeated`);
+      }
+      for (const childId of node.childIds) {
+        if (!ids.has(childId)) problems.push(`node ${node.id} points at missing child ${childId}`);
+        if (childSeen.has(childId)) problems.push(`child ${childId} has two parents`);
+        childSeen.add(childId);
+        const child = state.nodes.find((n: any) => n.id === childId);
+        if (child && child.parentId !== node.id) {
+          problems.push(`child ${childId} disagrees about its parent`);
+        }
+        if (child && child.depth !== node.depth + 1) {
+          problems.push(`child ${childId} depth ${child.depth} should be ${node.depth + 1}`);
+        }
+      }
+      // Stack unwinding: a non-base frame is only finished once every child is.
+      if (node.status === 'done' && !node.base) {
+        for (const childId of node.childIds) {
+          const child = state.nodes.find((n: any) => n.id === childId);
+          if (!child || child.status !== 'done') {
+            problems.push(`node ${node.id} finished before child ${childId}`);
+          }
+        }
+      }
+      if (node.reusedFrom !== undefined && node.childIds.length > 0) {
+        problems.push(`memo reuse node ${node.id} should not expand children`);
+      }
+    }
+
+    // pathIds must be the ancestor chain of the active frame.
+    const nodeMap = new Map(state.nodes.map((n: any) => [n.id, n]));
+    state.pathIds.forEach((id: string, index: number) => {
+      const node = nodeMap.get(id) as any;
+      if (!node) {
+        problems.push(`path id ${id} is not in the tree`);
+        return;
+      }
+      if (node.depth !== index) problems.push(`path id ${id} has depth ${node.depth} at index ${index}`);
+      const prevId = state.pathIds[index - 1];
+      if (index > 0 && node.parentId !== prevId) {
+        problems.push(`path id ${id} parent ${node.parentId} != previous ${prevId}`);
+      }
+    });
+    if (state.pathIds.length > 0 && state.activeNodeId !== state.pathIds[state.pathIds.length - 1]) {
+      problems.push('activeNodeId is not the innermost open frame');
+    }
+    if (state.pathIds.length === 0 && state.activeNodeId !== null && state.nodes.length > 0) {
+      const active = nodeMap.get(state.activeNodeId) as any;
+      if (active && active.status !== 'done') problems.push('activeNodeId points at an unfinished node with an empty stack');
+    }
+    // Ancestors are still computing; the innermost frame may already carry its
+    // returned value (base case reached or value combined, pop happens next).
+    state.pathIds.forEach((id: string, index: number) => {
+      const node = nodeMap.get(id) as any;
+      const isInner = index === state.pathIds.length - 1;
+      if (!isInner && node?.status !== 'computing') {
+        problems.push(`ancestor ${id} on the stack is not computing`);
+      }
+    });
+    return problems;
+  }
+
+  it('matches the reference counts for fib(5) naive and fib(6) memoised', () => {
+    const module = mod();
+    const naive = module.generateTimeline({ fn: 'fib', n: 5, memo: false } as any);
+    const naiveLast = naive[naive.length - 1];
+    expect(naiveLast.state.stats).toMatchObject({
+      calls: 15,
+      distinct: 6,
+      repeated: 3,
+      baseVisits: 8,
+      memoHits: 0,
+    });
+    expect(naiveLast.state.nodes.filter((n: any) => n.repeated).length).toBe(3);
+
+    const memo = module.generateTimeline({ fn: 'fib', n: 6, memo: true } as any);
+    const memoLast = memo[memo.length - 1];
+    expect(memoLast.state.stats).toMatchObject({
+      calls: 11,
+      distinct: 7,
+      repeated: 0,
+      baseVisits: 2,
+      memoHits: 4,
+      memoEntries: 7,
+      callsAvoided: 18,
+    });
+    expect(memoLast.state.memoTable.map((e: any) => e.key)).toEqual([
+      'fib(1)',
+      'fib(0)',
+      'fib(2)',
+      'fib(3)',
+      'fib(4)',
+      'fib(5)',
+      'fib(6)',
+    ]);
+    expect(memoLast.state.nodes.filter((n: any) => n.reusedFrom).length).toBe(4);
+
+    // Every invocation is either an expansion, a base visit or a table hit.
+    // The classification of an invocation lands one frame after its CALL frame,
+    // so the accounting identity is checked on every settled frame.
+    for (const frame of memo) {
+      const s = frame.state.stats;
+      const delta = s.calls - (s.distinct + s.memoHits);
+      if (frame.action === 'CALL') {
+        expect([0, 1]).toContain(delta);
+      } else {
+        expect(delta, `memo accounting on ${frame.action} frame ${frame.stepIndex}`).toBe(0);
+      }
+      expect(s.repeated).toBe(0);
+    }
+    for (const frame of naive) {
+      const s = frame.state.stats;
+      const distinctBaseArgs = new Set(
+        frame.state.nodes.filter((n: any) => n.base).map((n: any) => n.argsKey)
+      ).size;
+      const accounted = s.distinct + s.repeated + (s.baseVisits - distinctBaseArgs);
+      if (frame.action === 'CALL') {
+        expect([0, 1]).toContain(s.calls - accounted);
+      } else {
+        expect(accounted, `naive accounting on ${frame.action} frame ${frame.stepIndex}`).toBe(s.calls);
+      }
+      expect(s.memoHits).toBe(0);
+      expect(s.memoEntries).toBe(0);
+    }
+  });
+
+  it('keeps every frame a valid call tree with consistent stack depth', () => {
+    const module = mod();
+    for (const data of [
+      { fn: 'fib', n: 6, memo: false },
+      { fn: 'fib', n: 6, memo: true },
+      { fn: 'binomial', n: 5, k: 3, memo: false },
+      { fn: 'binomial', n: 6, k: 3, memo: true },
+      { fn: 'grid-paths', n: 3, k: 3, memo: true },
+    ]) {
+      const timeline = module.generateTimeline(data as any);
+      expect(timeline.length).toBeGreaterThan(10);
+      for (const frame of timeline) {
+        expect(structuralProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      expect(auditTimeline(module, data as any).errorCount).toBe(0);
+      expect(auditTimeline(module, data as any).warningCount).toBe(0);
+    }
+  });
+
+  it('maps every action to an honest line in all five snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline({ fn: 'fib', n: 5, memo: true } as any);
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [1],
+      CALL: [1, 5, 6],
+      ASSIGN: [5, 6],
+      MEMO_MISS: [2],
+      MEMO_HIT: [2],
+      BASE_CASE: [3],
+      COMBINE: [7],
+      MEMO_STORE: [8],
+      RETURN: [9],
+      DONE: [9],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+
+    const lineMatchers: Record<number, RegExp> = {
+      1: /solve\(/,
+      2: /table/,
+      3: /(is_base|isBase)/,
+      5: /solve\(next/,
+      6: /solve\(next/,
+      7: /combine/,
+      8: /table/,
+      9: /return value/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} out of range on ${frame.action}`).toBeGreaterThanOrEqual(1);
+        expect(line).toBeLessThanOrEqual(lines.length);
+        // The authored line number must land on the matching statement in every language.
+        expect(line, `${lang} ${frame.action}: line ${line} = ${lines[line - 1]}`).toBe(frame.codeLine);
+        expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+      }
+    }
+  });
+
+  it('asks for a prediction at the first repeat and at the first memo lookup', () => {
+    const module = mod();
+    const naive = module.generateTimeline({ fn: 'fib', n: 5, memo: false } as any);
+    const repeatCheckpoints = naive.filter((f) => f.checkpoint);
+    expect(repeatCheckpoints).toHaveLength(1);
+    expect(repeatCheckpoints[0].checkpoint?.id).toBe('recursion-trees-first-repeat');
+    expect(repeatCheckpoints[0].checkpoint?.correctIndex).toBe(1);
+    expect(repeatCheckpoints[0].action).toBe('CALL');
+    expect(repeatCheckpoints[0].state.nodes.some((n: any) => n.repeated)).toBe(true);
+
+    const memo = module.generateTimeline({ fn: 'fib', n: 6, memo: true } as any);
+    const memoCheckpoints = memo.filter((f) => f.checkpoint);
+    expect(memoCheckpoints.map((f) => f.checkpoint?.id)).toEqual([
+      'recursion-trees-memo-miss',
+      'recursion-trees-memo-hit',
+    ]);
+    expect(memoCheckpoints[0].action).toBe('MEMO_MISS');
+    expect(memoCheckpoints[0].state.memoTable).toHaveLength(0);
+    expect(memoCheckpoints[1].action).toBe('MEMO_HIT');
+    expect(memoCheckpoints[1].state.memoTable.length).toBeGreaterThan(0);
+    expect(memoCheckpoints[1].state.reuseEdge).toBeTruthy();
+
+    // Every checkpoint frame is answerable from its own state.
+    for (const frame of [...repeatCheckpoints, ...memoCheckpoints]) {
+      expect(frame.checkpoint!.correctIndex).toBeGreaterThanOrEqual(0);
+      expect(frame.checkpoint!.correctIndex).toBeLessThan(frame.checkpoint!.options.length);
+      expect(frame.checkpoint!.explanation.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('renders the stage for every phase and clamps oversized input honestly', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+      expect(auditTimeline(module, preset.data as any).errorCount).toBe(0);
+    }
+
+    const clamped = module.generateTimeline({ fn: 'binomial', n: 99, k: 99, memo: true } as any);
+    expect(clamped[0].variables?.n).toBe(6);
+    expect(clamped[0].variables?.k).toBe(6);
+    expect(clamped[0].explanation).toContain('clamped');
+    expect(auditTimeline(module, { fn: 'binomial', n: 99, k: 99, memo: true } as any).errorCount).toBe(0);
+
+    // Unknown/legacy input falls back to the documented default.
+    const fallback = module.generateTimeline({} as any);
+    expect(fallback[0].variables?.root).toBe('fib(5)');
+    const legacy = module.generateTimeline({ mode: 'mergesort', inputData: [8, 3, 5, 1] } as any);
+    expect(legacy[0].variables?.root).toBe('fib(5)');
+    expect(legacy[legacy.length - 1].variables?.rootValue).toBe(5);
+
+    const rootIsBase = module.generateTimeline({ fn: 'fib', n: 0, memo: false } as any);
+    expect(rootIsBase[rootIsBase.length - 1].variables?.rootValue).toBe(0);
+    expect(rootIsBase.every((f) => f.pedagogy)).toBe(true);
   });
 });
