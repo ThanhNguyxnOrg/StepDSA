@@ -70,11 +70,21 @@ and `suffix-tree-first-split`, lexicographic child order, suffix-link arcs on th
 bfs ✅ · dijkstra ✅ · dfs ✅ · bellman-ford ✅ · floyd-warshall ✅ · a-star ✅ · zero-one-bfs ✅ · topological-sort ✅ · topological-sort-dfs ✅ · kruskal ✅ · prim ✅ · boruvka ✅ · dsu ✅ · tarjan-scc ✅ · kosaraju ✅ · articulation-points ✅ · bridge-finding ✅ · bipartite-check ✅ · edmonds-karp ✅ · dinic ✅ · hopcroft-karp ✅ · hierholzer ✅ · hamiltonian-path ✅ · transitive-closure ✅ · graph-coloring ✅ · flood-fill ✅ · graph-representations ✅ /
 line-intersection → ⬜ (module is category math; covered in the M1 geometry batch)
 
-### DP (17 + recursion-trees)
-coin-change ✅ · recursion-trees ✅ / lcs / lis / edit-distance / knapsack /
-unbounded-knapsack / subset-sum / matrix-chain / house-robber / climbing-stairs /
-unique-paths / jump-game / kadane / lps / manacher / tsp-held-karp / burst-balloons /
-longest-palindromic-substring → ⬜
+### DP (18)
+coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ /
+lis / edit-distance / knapsack / unbounded-knapsack / subset-sum / matrix-chain /
+house-robber / climbing-stairs / unique-paths / kadane / lps / tsp-held-karp /
+burst-balloons / longest-palindromic-substring / tree-diameter-dp → ⬜
+
+LCS notes: the table fill keeps one frame per cell but now carries the exact
+dependencies (diagonal on a match, top+left on a max) plus WHAT/WHY/WHAT-NEXT with
+the real values; the reconstruction — previously a single hidden step — is one frame
+per move (`BT_TAKE` on a match, `BT_MOVE` with the up/left decision and its
+conditionEval), the taken stack grows visibly, `lcs-max-choice` /
+`lcs-backtrack-first-step` checkpoints, milestones First Match / Table Complete /
+LCS Reconstructed. All 5 snippets were re-aligned so every action's codeLine lands on
+the same statement in pseudocode, Python, TS, C++ and Java (verified in tests);
+empty/cleaned/oversized inputs are normalised with the adjustment reported.
 
 Recursion-trees notes (VisuAlgo-inspired, rebuilt from scratch): the old module ran
 mergesort code in "quicksort" mode and emitted no frames at all while building the
@@ -143,8 +153,8 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
    flood-fill, graph-representations. `line-intersection` is category math → M1.
 5. **T1 — balanced trees:** red-black, treap, splay (rotation animations).
 6. **T2 — specialized trees:** segment, fenwick, b-tree family, trie family, kd/interval.
-7. **DP1 — table DP:** recursion-trees ✅ (tree vs memo DAG), lcs, lis, edit-distance,
-   knapsack family, matrix-chain.
+7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅, lis,
+   edit-distance, knapsack family, matrix-chain.
 8. **DP2 — grid/sequence DP + backtracking:** unique-paths, house-robber, n-queens,
    sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.

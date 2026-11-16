@@ -4091,3 +4091,225 @@ describe('recursion trees & memoisation regressions', () => {
     expect(rootIsBase.every((f) => f.pedagogy)).toBe(true);
   });
 });
+
+describe('LCS 2D DP regressions', () => {
+  const mod = () => moduleById('longest-common-subsequence');
+
+  function tableProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { str1, str2, table } = state;
+    if (table.length !== str1.length + 1) problems.push(`rows ${table.length} != ${str1.length + 1}`);
+    for (const row of table) {
+      if (row.length !== str2.length + 1) problems.push(`row width ${row.length} != ${str2.length + 1}`);
+    }
+    for (let j = 0; j <= str2.length; j++) {
+      if (table[0][j] !== 0) problems.push(`base cell dp[0][${j}] = ${table[0][j]}`);
+    }
+    for (let i = 0; i <= str1.length; i++) {
+      if (table[i][0] !== 0) problems.push(`base cell dp[${i}][0] = ${table[i][0]}`);
+    }
+    // Only cells that are already finished (row-major order) may be checked
+    // against the recurrence; later cells still hold their initial value.
+    const filledCells = state.stats?.filled ?? 0;
+    let seen = 0;
+    for (let i = 1; i <= str1.length; i++) {
+      for (let j = 1; j <= str2.length; j++) {
+        if (seen >= filledCells) break;
+        seen++;
+        const expected =
+          str1[i - 1] === str2[j - 1]
+            ? table[i - 1][j - 1] + 1
+            : Math.max(table[i - 1][j], table[i][j - 1]);
+        if (table[i][j] !== expected) {
+          problems.push(`dp[${i}][${j}] = ${table[i][j]} but the recurrence gives ${expected}`);
+        }
+      }
+    }
+    // The active cell's dependencies must explain its value.
+    const candidate = state.candidate;
+    if (candidate) {
+      const value = candidate.kind === 'match' ? candidate.diag + 1 : Math.max(candidate.top, candidate.left);
+      if (candidate.value !== value) problems.push(`candidate value ${candidate.value} != ${value}`);
+      const sources = state.sourceCells.map(([i, j]: [number, number]) => `${i}:${j}`).sort();
+      const expectedSources = (
+        candidate.kind === 'match'
+          ? [`${candidate.i - 1}:${candidate.j - 1}`]
+          : [`${candidate.i - 1}:${candidate.j}`, `${candidate.i}:${candidate.j - 1}`]
+      ).sort();
+      if (JSON.stringify(sources) !== JSON.stringify(expectedSources)) {
+        problems.push(`sourceCells ${JSON.stringify(sources)} != ${JSON.stringify(expectedSources)}`);
+      }
+      if (table[candidate.i][candidate.j] !== candidate.value) problems.push('candidate disagrees with the table');
+    }
+    // The reconstruction must follow the dependency of every visited cell.
+    const path: [number, number][] = state.backtrackPath;
+    for (let k = 1; k < path.length; k++) {
+      const [pi, pj] = path[k - 1];
+      const [ci, cj] = path[k];
+      const di = pi - ci;
+      const dj = pj - cj;
+      if (pi > 0 && pj > 0) {
+        const isMatch = str1[pi - 1] === str2[pj - 1];
+        const valid = isMatch
+          ? di === 1 && dj === 1
+          : (table[pi - 1][pj] >= table[pi][pj - 1] ? di === 1 && dj === 0 : di === 0 && dj === 1);
+        if (!valid) problems.push(`walk ${pi},${pj} -> ${ci},${cj} does not follow the dependency`);
+      } else if (di !== 0 || dj !== 0) {
+        problems.push(`walk left a zero border from ${pi},${pj}`);
+      }
+    }
+    if (state.phase === 'done' && path.length > 0) {
+      const [lastI, lastJ] = path[path.length - 1];
+      if (lastI !== 0 && lastJ !== 0) problems.push(`walk ended at (${lastI}, ${lastJ}) instead of a zero border`);
+    }
+    for (const [i, j] of path) {
+      if (i < 0 || i > str1.length || j < 0 || j > str2.length) problems.push(`walk visited (${i}, ${j}) outside the table`);
+    }
+    return problems;
+  }
+
+  it('reconstructs the exact LCS for every preset and keeps the walk honest', () => {
+    const module = mod();
+    const expected: Record<string, string> = {
+      'stone-longest': 'ONE',
+      'dna-match': 'GTAB',
+      identical: 'ABCDE',
+      disjoint: '',
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const want = expected[preset.id];
+      expect(last.state.lcsString, `preset ${preset.id}`).toBe(want);
+      expect(last.state.isComplete).toBe(true);
+      expect(last.state.takenChars).toEqual([...want].reverse());
+
+      for (const frame of timeline) {
+        expect(tableProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+
+      // The reconstructed length always equals the bottom-right cell.
+      const m = last.state.str1.length;
+      const n = last.state.str2.length;
+      expect(last.state.lcsString.length).toBe(last.state.table[m][n]);
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('fills the table one cell per frame with a genuine max() prediction', () => {
+    const module = mod();
+    const timeline = module.generateTimeline({ str1: 'STONE', str2: 'LONGEST' } as any);
+
+    expect(timeline[0].action).toBe('INIT');
+    expect(timeline.filter((f) => f.action === 'ROW_START')).toHaveLength(5);
+    // Every character of STONE occurs in LONGEST, so exactly one cell per row matches.
+    expect(timeline.filter((f) => f.action === 'CELL_MATCH')).toHaveLength(5);
+    expect(timeline.filter((f) => f.action === 'CELL_MISMATCH')).toHaveLength(5 * 7 - 5);
+    expect(timeline.filter((f) => f.action === 'TABLE_COMPLETE')).toHaveLength(1);
+
+    const cellFrames = timeline.filter((f) => (f.action ?? '').startsWith('CELL_'));
+    const expectedLines: Record<string, number[]> = {
+      INIT: [3],
+      ROW_START: [4],
+      CELL_MATCH: [7],
+      CELL_MISMATCH: [9],
+      TABLE_COMPLETE: [7, 9],
+      BACKTRACK_START: [10],
+      BT_TAKE: [13],
+      BT_MOVE: [14, 16, 18],
+      DONE: [19],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+    for (const frame of cellFrames) {
+      const label = frame.variables ?? {};
+      const stats = frame.state.stats;
+      expect(stats.matches + stats.mismatches).toBe(stats.filled);
+      if (frame.action === 'CELL_MATCH') expect(frame.conditionEval?.result).toBe(true);
+      else expect(frame.conditionEval?.result).toBe(label['dp[i][j]']);
+    }
+
+    const maxCheckpoint = timeline.find((f) => f.checkpoint?.id === 'lcs-max-choice');
+    expect(maxCheckpoint).toBeDefined();
+    expect(maxCheckpoint?.action).toBe('CELL_MISMATCH');
+    expect(maxCheckpoint?.variables?.top).not.toBe(maxCheckpoint?.variables?.left);
+    expect(maxCheckpoint?.checkpoint?.correctIndex).toBe(1);
+    expect(maxCheckpoint?.checkpoint?.options[1]).toContain(String(maxCheckpoint?.variables?.['dp[i][j]']));
+
+    const backtrackCheckpoint = timeline.find((f) => f.checkpoint?.id === 'lcs-backtrack-first-step');
+    expect(backtrackCheckpoint).toBeDefined();
+    expect(['BT_TAKE', 'BT_MOVE']).toContain(backtrackCheckpoint?.action);
+    expect(backtrackCheckpoint?.checkpoint?.correctIndex).toBe(0);
+
+    // Splitting the backtrack into one frame per move is what the old module hid.
+    expect(timeline.filter((f) => f.action === 'BT_TAKE').length).toBe(3);
+    expect(timeline.filter((f) => f.action === 'BT_MOVE').length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('maps every action to an exact line in all five language snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline({ str1: 'AGGTAB', str2: 'GXTXAYB' } as any);
+    const lineMatchers: Record<number, RegExp> = {
+      3: /dp/,
+      4: /for /,
+      7: /dp\[i\]\[j\]|dp\[i - 1\]\[j - 1\]/,
+      9: /max|Math\.max/,
+      10: /i\s*=\s*m|i, j|chars/,
+      13: /push|append|\+=/,
+      14: /i--|i = i - 1|i, j =/,
+      16: /i--|i = i - 1/,
+      18: /j--|j = j - 1/,
+      19: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        expect(lines[line - 1]).not.toBeUndefined();
+        expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+      }
+    }
+  });
+
+  it('handles empty, cleaned and oversized inputs without lying about the table', () => {
+    const module = mod();
+    const empty = module.generateTimeline({ str1: '', str2: 'ABC' } as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[empty.length - 1].state.lcsString).toBe('');
+    expect(auditTimeline(module, { str1: '', str2: 'ABC' } as any).errorCount).toBe(0);
+
+    const cleaned = module.generateTimeline({ str1: 'a-b!', str2: 'AB' } as any);
+    expect(cleaned[0].state.str1).toBe('AB');
+    expect(cleaned[0].explanation).toMatch(/removed non-alphanumeric/);
+    expect(cleaned[cleaned.length - 1].state.lcsString).toBe('AB');
+
+    const long = module.generateTimeline({ str1: 'ABCDEFGHIJKL', str2: 'WXYZABCDE' } as any);
+    expect(long[0].state.str1).toBe('ABCDEFGH');
+    expect(long[0].state.str2).toBe('WXYZABCD');
+    expect(long[0].explanation).toMatch(/truncated/);
+    // 'ABCDEFGH' vs 'WXYZABCD' keeps A B C D (E is beyond the truncated column side).
+    expect(long[long.length - 1].state.lcsString).toBe('ABCD');
+
+    const fallback = module.generateTimeline({} as any);
+    expect(fallback[0].state.str1).toBe('STONE');
+    expect(auditTimeline(module, {} as any).errorCount).toBe(0);
+
+    for (const data of [{ str1: 'STONE', str2: 'LONGEST' }, { str1: 'XYZ', str2: 'ABC' }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});
