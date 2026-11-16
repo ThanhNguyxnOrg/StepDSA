@@ -13,6 +13,8 @@ import {
   Zap,
   Sparkles,
   Keyboard,
+  Link2,
+  Check,
 } from 'lucide-react';
 import { PlaybackController, ExecutionFrame } from '../../core/types';
 import { usePlatformShortcuts } from '../../utils/platformShortcuts';
@@ -22,6 +24,10 @@ export interface StepperControlsProps {
   currentFrame: ExecutionFrame | null;
   timeline?: ExecutionFrame[];
   onOpenShortcuts?: () => void;
+  /** Copy a shareable permalink to the current module + step (deep link). */
+  onCopyLink?: () => void;
+  /** Transient confirmation state for the copy-link action. */
+  linkCopied?: boolean;
 }
 
 export const StepperControls: React.FC<StepperControlsProps> = ({
@@ -29,6 +35,8 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
   currentFrame,
   timeline,
   onOpenShortcuts,
+  onCopyLink,
+  linkCopied = false,
 }) => {
   const {
     currentStep,
@@ -289,6 +297,27 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
           <FastForward className="w-3 h-3 text-[#06B6D4]" />
           <span>{speed}x</span>
         </button>
+
+        {onCopyLink && (
+          <button
+            type="button"
+            onClick={onCopyLink}
+            title="Copy link to this step (permalink)"
+            aria-label="Copy link to this step"
+            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+              linkCopied
+                ? 'bg-emerald-500/15 text-emerald-300'
+                : 'bg-[#1F2937] text-slate-300 hover:text-white hover:bg-[#374151]'
+            }`}
+          >
+            {linkCopied ? (
+              <Check className="w-3 h-3 text-emerald-400" />
+            ) : (
+              <Link2 className="w-3 h-3 text-[#06B6D4]" />
+            )}
+            <span className="hidden xl:inline">{linkCopied ? 'Copied!' : 'Link'}</span>
+          </button>
+        )}
 
         {onOpenShortcuts && (
           <button

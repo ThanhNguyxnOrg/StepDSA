@@ -155,7 +155,7 @@
 
 ## 8. Roadmap cập nhật (thay thế §7 trong RESEARCH_LANDSCAPE)
 
-- **P1 (ngắn hạn):** (1) Quiz mini 3–5 câu/module (sinh theo module+difficulty, dạng số/MCQ/MSQ, chấm tại chỗ) — học VisuAlgo Training; (2) Permalink "Copy link to step" (module+frame+input) — học PT/algorithm-visualizer; (3) Preset input theo nhóm cho sorting modules (random/sorted/nearly-sorted/duplicates/user-defined) — học VisuAlgo/SoS; (4) i18n vi/en.
+- **P1 (ngắn hạn):** (1) Quiz mini 3–5 câu/module (sinh theo module+difficulty, dạng số/MCQ/MSQ, chấm tại chỗ) — học VisuAlgo Training; (2) **Permalink "Copy link to step" ✅ đã triển khai 2026-11-16** — sync `?module=&step=` (debounce 250ms) + nút Copy Link trong StepperControls, helper `src/utils/permalink.ts` + test (học PT/algorithm-visualizer); (3) Preset input theo nhóm cho sorting modules (random/sorted/nearly-sorted/duplicates/user-defined) — học VisuAlgo/SoS; (4) i18n vi/en.
 - **P2:** e-Lecture auto-play theo milestones + narration (VisuAlgo); grid editor kéo thả start/goal/wall/weight cho A* (Clement); audibilization Web Audio (SoS); split view so sánh 2 module (Toptal/VisuAlgo).
 - **P3:** Recursion tool tùy biến (worker + wrapper; time-slice model; stats) — brpapa + VisuAlgo + recursionvisualizer; proficiency exercises + fix/model answer (OpenDSA) cho 10 module trọng tâm; gradeable steps.
 - **P4 (dài hạn):** tracer đa ngôn ngữ (algorithm-visualizer); embed LMS/iframe (PT embed, SPLICE); mobile/PWA (VisuAlgo mobile lite); sách PDF/EPUB song song (hello-algo).

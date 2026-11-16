@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import LZString from 'lz-string';
 import { allModules, defaultModule } from './modules/registry';
@@ -35,6 +35,7 @@ import { useOperationalMetrics } from './core/useOperationalMetrics';
 import { OperationalMetricsBar } from './components/stage/OperationalMetricsBar';
 import { usePlatformShortcuts } from './utils/platformShortcuts';
 import { useAppTheme, APP_THEMES } from './utils/themeEngine';
+import { buildPermalink, clampFrameIndex, parsePermalinkStep } from './utils/permalink';
 
 const CATEGORY_LABELS: Record<string, string> = {
   sorting: 'Sorting',
@@ -146,16 +147,55 @@ export default function App() {
     reset,
   } = controller;
 
-  // Seek to ?step=<n> if provided in URL
+  // Seek to ?step=<n> if provided in URL (0-based frame index, clamped to timeline bounds).
+  // Kế thừa từ Python Tutor/VisuAlgo: mọi bước đều có link chia sẻ được (utils/permalink.ts).
   useEffect(() => {
-    const stepParam = initialUrlParams.get('step');
-    if (stepParam !== null) {
-      const parsed = parseInt(stepParam, 10);
-      if (!isNaN(parsed) && parsed >= 0 && parsed < timeline.length) {
-        seekTo(parsed);
-      }
+    const target = parsePermalinkStep(window.location.search);
+    if (target !== null) {
+      seekTo(clampFrameIndex(target, timeline.length));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the address bar in sync with module + step (debounced) so the current
+  // view can always be shared by copying the URL. Skipped for CLI trace sessions,
+  // which carry their own #trace= payload.
+  useEffect(() => {
+    if (currentView !== 'visualizer' || cliSession) return;
+    const handle = window.setTimeout(() => {
+      const built = new URL(buildPermalink({ moduleId: currentModule.id, step: currentStep }));
+      window.history.replaceState(null, '', built.pathname + built.search);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [currentView, currentModule.id, currentStep, cliSession]);
+
+  // Copy-link-to-step (permalink) with a transient "Copied!" confirmation.
+  const [linkCopied, setLinkCopied] = useState(false);
+  const linkCopiedTimer = useRef<number | null>(null);
+  const handleCopyStepLink = useCallback(() => {
+    const shareUrl = buildPermalink({ moduleId: currentModule.id, step: currentStep });
+    const showCopied = () => {
+      setLinkCopied(true);
+      if (linkCopiedTimer.current) window.clearTimeout(linkCopiedTimer.current);
+      linkCopiedTimer.current = window.setTimeout(() => setLinkCopied(false), 1600);
+    };
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(showCopied)
+        .catch(() => {
+          window.prompt('Copy link to this step:', shareUrl);
+        });
+    } else if (typeof window !== 'undefined') {
+      window.prompt('Copy link to this step:', shareUrl);
+    }
+  }, [currentModule.id, currentStep]);
+
+  // Clear the copied-feedback timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (linkCopiedTimer.current) window.clearTimeout(linkCopiedTimer.current);
+    };
   }, []);
 
   // Enrich currentFrame so state always carries conditionEval and action for stage components
@@ -876,6 +916,8 @@ export default function App() {
                   currentFrame={enrichedFrame}
                   timeline={timeline}
                   onOpenShortcuts={() => setShortcutsOpen(true)}
+                  onCopyLink={handleCopyStepLink}
+                  linkCopied={linkCopied}
                 />
               </div>
             </main>

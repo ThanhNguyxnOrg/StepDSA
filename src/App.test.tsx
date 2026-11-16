@@ -1,8 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import App from './App';
 
 describe('App Full Integration Smoke Test', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
   it('renders StepDSA Dashboard with curriculum cards and metrics', () => {
     render(<App />);
     expect(screen.getByText(/Deterministic Time-Travel Debugger/i)).toBeInTheDocument();
@@ -73,5 +77,19 @@ describe('App Full Integration Smoke Test', () => {
     }, { timeout: 8000 });
     expect(screen.getByTitle('Play (Space)')).toBeInTheDocument();
     expect(screen.getAllByText(/Step 1\//i)[0]).toBeInTheDocument();
+  }, 20000);
+
+  it('deep-links via ?module=&step= and exposes the copy-link action', async () => {
+    window.history.replaceState(null, '', '/?module=bubble-sort&step=4');
+    render(<App />);
+
+    await waitFor(() => {
+      const scrubber = screen.getByLabelText('Timeline step scrubber') as HTMLInputElement;
+      expect(scrubber.value).toBe('4');
+    });
+
+    expect(
+      screen.getByRole('button', { name: /Copy link to this step/i })
+    ).toBeInTheDocument();
   }, 20000);
 });
