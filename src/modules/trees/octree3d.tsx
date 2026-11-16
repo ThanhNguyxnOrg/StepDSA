@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { AlgorithmModule, ExecutionFrame } from '../../core/types';
+import {
+  AlgorithmModule,
+  ExecutionFrame,
+  PredictionCheckpoint,
+  SoundCue,
+  StepPedagogy,
+} from '../../core/types';
 
 export interface Point3D {
   id: string;
@@ -7,7 +13,14 @@ export interface Point3D {
   y: number; // 0 to 100
   z: number; // 0 to 100
   label: string;
-  highlighted?: boolean;
+  /** Currently processed by the algorithm. */
+  active?: boolean;
+  /** Accepted into a leaf of the octree. */
+  stored?: boolean;
+  /** Outside the root bounding cube — rejected. */
+  rejected?: boolean;
+  /** Returned by the range query. */
+  found?: boolean;
 }
 
 export interface OctantBox {
@@ -19,17 +32,177 @@ export interface OctantBox {
   zMin: number;
   zMax: number;
   depth: number;
-  active?: boolean;
+  /** Octant index inside its parent (null for the root). */
+  octantIndex: number | null;
   name: string;
+  pointCount: number;
+  isLeaf: boolean;
+}
+
+export interface OctreeNodeData {
+  id: string;
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+  zMin: number;
+  zMax: number;
+  depth: number;
+  octantIndex: number | null;
+  pointIds: string[];
+  children: OctreeNodeData[];
+}
+
+export interface OctreeStats {
+  nodes: number;
+  leaves: number;
+  maxDepth: number;
+  stored: number;
 }
 
 export interface OctreeState {
+  root: OctreeNodeData | null;
   points: Point3D[];
   boxes: OctantBox[];
-  activeOctantIndex?: number | null;
+  activeNodeId: string | null;
+  activeOctantIndex: number | null;
   querySphere?: { x: number; y: number; z: number; radius: number };
   foundPoints?: string[];
   subdividing?: boolean;
+  phase: 'insert' | 'query' | 'done' | null;
+  /** Nodes on the current traversal path (for edge/box highlight). */
+  pathIds: string[];
+  /** Nodes fully outside the query sphere. */
+  prunedIds: string[];
+  stats: OctreeStats;
+}
+
+const CAPACITY = 1;
+const MAX_DEPTH = 6;
+const ROOT_MIN = 0;
+const ROOT_MAX = 100;
+
+const OCTANT_LABELS = [
+  '-X -Y -Z',
+  '+X -Y -Z',
+  '-X +Y -Z',
+  '+X +Y -Z',
+  '-X -Y +Z',
+  '+X -Y +Z',
+  '-X +Y +Z',
+  '+X +Y +Z',
+];
+
+function cloneOctree(node: OctreeNodeData | null): OctreeNodeData | null {
+  if (!node) return null;
+  return {
+    id: node.id,
+    xMin: node.xMin,
+    xMax: node.xMax,
+    yMin: node.yMin,
+    yMax: node.yMax,
+    zMin: node.zMin,
+    zMax: node.zMax,
+    depth: node.depth,
+    octantIndex: node.octantIndex,
+    pointIds: [...node.pointIds],
+    children: node.children.map((child) => cloneOctree(child)!),
+  };
+}
+
+function containsPoint(node: OctreeNodeData, p: Point3D): boolean {
+  return (
+    p.x >= node.xMin &&
+    p.x <= node.xMax &&
+    p.y >= node.yMin &&
+    p.y <= node.yMax &&
+    p.z >= node.zMin &&
+    p.z <= node.zMax
+  );
+}
+
+function octantIndexFor(node: OctreeNodeData, p: Point3D): number {
+  const xm = (node.xMin + node.xMax) / 2;
+  const ym = (node.yMin + node.yMax) / 2;
+  const zm = (node.zMin + node.zMax) / 2;
+  return (p.x >= xm ? 1 : 0) | (p.y >= ym ? 2 : 0) | (p.z >= zm ? 4 : 0);
+}
+
+function makeChildBounds(node: OctreeNodeData, index: number) {
+  const xm = (node.xMin + node.xMax) / 2;
+  const ym = (node.yMin + node.yMax) / 2;
+  const zm = (node.zMin + node.zMax) / 2;
+  return {
+    xMin: index & 1 ? xm : node.xMin,
+    xMax: index & 1 ? node.xMax : xm,
+    yMin: index & 2 ? ym : node.yMin,
+    yMax: index & 2 ? node.yMax : ym,
+    zMin: index & 4 ? zm : node.zMin,
+    zMax: index & 4 ? node.zMax : zm,
+  };
+}
+
+function computeStats(root: OctreeNodeData | null): OctreeStats {
+  const stats: OctreeStats = { nodes: 0, leaves: 0, maxDepth: 0, stored: 0 };
+  const walk = (node: OctreeNodeData | null) => {
+    if (!node) return;
+    stats.nodes++;
+    stats.maxDepth = Math.max(stats.maxDepth, node.depth);
+    stats.stored += node.pointIds.length;
+    if (node.children.length === 0) stats.leaves++;
+    node.children.forEach(walk);
+  };
+  walk(root);
+  return stats;
+}
+
+function flattenBoxes(root: OctreeNodeData | null): OctantBox[] {
+  const boxes: OctantBox[] = [];
+  const walk = (node: OctreeNodeData | null) => {
+    if (!node) return;
+    boxes.push({
+      id: node.id,
+      xMin: node.xMin,
+      xMax: node.xMax,
+      yMin: node.yMin,
+      yMax: node.yMax,
+      zMin: node.zMin,
+      zMax: node.zMax,
+      depth: node.depth,
+      octantIndex: node.octantIndex,
+      name:
+        node.octantIndex === null
+          ? 'Root [0..100]³'
+          : `Octant ${node.octantIndex} (d${node.depth})`,
+      pointCount: node.pointIds.length,
+      isLeaf: node.children.length === 0,
+    });
+    node.children.forEach(walk);
+  };
+  walk(root);
+  return boxes;
+}
+
+/** Squared distance from a sphere centre to the closest point of an AABB. */
+function sphereIntersectsBox(
+  center: { x: number; y: number; z: number },
+  radius: number,
+  node: OctreeNodeData
+): boolean {
+  const cx = Math.max(node.xMin, Math.min(center.x, node.xMax));
+  const cy = Math.max(node.yMin, Math.min(center.y, node.yMax));
+  const cz = Math.max(node.zMin, Math.min(center.z, node.zMax));
+  const dx = center.x - cx;
+  const dy = center.y - cy;
+  const dz = center.z - cz;
+  return dx * dx + dy * dy + dz * dz <= radius * radius;
+}
+
+function distance3D(a: { x: number; y: number; z: number }, b: Point3D): number {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const dz = a.z - b.z;
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
 export const octree3dModule: AlgorithmModule<Point3D[], OctreeState> = {
@@ -37,6 +210,11 @@ export const octree3dModule: AlgorithmModule<Point3D[], OctreeState> = {
   title: 'Octree (3D Spatial Partitioning)',
   category: 'trees-bst',
   difficulty: 'Advanced',
+  relatedModules: [
+    { id: 'kd-tree', label: 'KD-Tree (2D/3D)' },
+    { id: 'closest-pair-points', label: 'Closest Pair of Points' },
+    { id: 'interval-tree', label: 'Interval Tree' },
+  ],
   complexity: {
     timeBest: 'O(1)',
     timeAverage: 'O(log N)',
@@ -50,178 +228,56 @@ export const octree3dModule: AlgorithmModule<Point3D[], OctreeState> = {
     whyItWorks:
       'By recursively cutting space along the X, Y, and Z midplanes, range queries, frustum culling, and 3D collision detection can prune entire octants in O(log N) rather than scanning all N objects.',
     invariant:
-      'Every 3D point resides entirely within the spatial bounding volume of its assigned leaf octant.',
+      'Every stored point lies inside the bounding box of every node on its root-to-leaf path. A node splits only when it is a leaf at capacity, and its 8 children partition the parent volume exactly.',
     pitfalls: [
       'Unbalanced partitions when points cluster tightly in one corner of 3D space.',
-      'Handling points that fall exactly on subdividing midplanes.',
+      'Points exactly on a subdividing midplane: StepDSA routes them to the high side (>= mid), which must be consistent in insert and query.',
+      'Coincident points never separate — a depth cap is required or the split recursion never terminates.',
+      'Showing a sphere query hit without re-checking the exact distance: box intersection only proves the octant may contain candidates.',
     ],
-  },
-  codeSnippets: {
-    cpp: `// C++17 Spatial Octree Node
-#include <vector>
-#include <memory>
-#include <array>
-
-struct Vec3 { float x, y, z; };
-struct AABB { Vec3 min, max; };
-
-class OctreeNode {
-public:
-    static constexpr int CAPACITY = 1;
-    AABB bounds;
-    std::vector<Vec3> points;
-    std::array<std::unique_ptr<OctreeNode>, 8> children;
-    bool isLeaf = true;
-
-    OctreeNode(AABB b) : bounds(b) {}
-
-    void subdivide() {
-        Vec3 mid = { (bounds.min.x + bounds.max.x) * 0.5f,
-                     (bounds.min.y + bounds.max.y) * 0.5f,
-                     (bounds.min.z + bounds.max.z) * 0.5f };
-        for (int i = 0; i < 8; ++i) {
-            Vec3 cMin = { (i & 1) ? mid.x : bounds.min.x,
-                          (i & 2) ? mid.y : bounds.min.y,
-                          (i & 4) ? mid.z : bounds.min.z };
-            Vec3 cMax = { (i & 1) ? bounds.max.x : mid.x,
-                          (i & 2) ? bounds.max.y : mid.y,
-                          (i & 4) ? bounds.max.z : mid.z };
-            children[i] = std::make_unique<OctreeNode>(AABB{cMin, cMax});
-        }
-        isLeaf = false;
-    }
-
-    bool insert(const Vec3& pt) {
-        if (!contains(bounds, pt)) return false;
-        if (isLeaf && points.size() < CAPACITY) {
-            points.push_back(pt);
-            return true;
-        }
-        if (isLeaf) {
-            subdivide();
-            for (const auto& p : points) {
-                for (auto& child : children) if (child->insert(p)) break;
-            }
-            points.clear();
-        }
-        for (auto& child : children) {
-            if (child->insert(pt)) return true;
-        }
-        return false;
-    }
-};`,
-    python: `class OctreeNode:
-    def __init__(self, x_bounds, y_bounds, z_bounds, capacity=1):
-        self.xb, self.yb, self.zb = x_bounds, y_bounds, z_bounds
-        self.capacity = capacity
-        self.points = []
-        self.children = None
-
-    def subdivide(self):
-        xm = (self.xb[0] + self.xb[1]) / 2
-        ym = (self.yb[0] + self.yb[1]) / 2
-        zm = (self.zb[0] + self.zb[1]) / 2
-        self.children = []
-        for xi in [(self.xb[0], xm), (xm, self.xb[1])]:
-            for yi in [(self.yb[0], ym), (ym, self.yb[1])]:
-                for zi in [(self.zb[0], zm), (zm, self.zb[1])]:
-                    self.children.append(OctreeNode(xi, yi, zi, self.capacity))
-
-    def insert(self, pt):
-        if not (self.xb[0] <= pt[0] <= self.xb[1] and
-                self.yb[0] <= pt[1] <= self.yb[1] and
-                self.zb[0] <= pt[2] <= self.zb[1]):
-            return False
-        if self.children is None:
-            if len(self.points) < self.capacity:
-                self.points.append(pt)
-                return True
-            self.subdivide()
-            old_pts = self.points
-            self.points = []
-            for p in old_pts:
-                for c in self.children:
-                    if c.insert(p): break
-        for c in self.children:
-            if c.insert(pt): return True
-        return False`,
-    typescript: `interface Vec3 { x: number; y: number; z: number; }
-interface AABB { min: Vec3; max: Vec3; }
-
-export class OctreeNode {
-  points: Vec3[] = [];
-  children: OctreeNode[] | null = null;
-  constructor(public bounds: AABB, public capacity = 1) {}
-
-  subdivide() {
-    const mid = {
-      x: (this.bounds.min.x + this.bounds.max.x) / 2,
-      y: (this.bounds.min.y + this.bounds.max.y) / 2,
-      z: (this.bounds.min.z + this.bounds.max.z) / 2,
-    };
-    this.children = [];
-    for (let i = 0; i < 8; i++) {
-      const min = {
-        x: (i & 1) ? mid.x : this.bounds.min.x,
-        y: (i & 2) ? mid.y : this.bounds.min.y,
-        z: (i & 4) ? mid.z : this.bounds.min.z,
-      };
-      const max = {
-        x: (i & 1) ? this.bounds.max.x : mid.x,
-        y: (i & 2) ? this.bounds.max.y : mid.y,
-        z: (i & 4) ? this.bounds.max.z : mid.z,
-      };
-      this.children.push(new OctreeNode({ min, max }, this.capacity));
-    }
-  }
-}`,
-    java: `class OctreeNode {
-    AABB bounds;
-    List<Vec3> points = new ArrayList<>();
-    OctreeNode[] children;
-    int CAPACITY = 1;
-
-    void subdivide() {
-        Vec3 mid = bounds.center();
-        children = new OctreeNode[8];
-        for (int i = 0; i < 8; i++) {
-            children[i] = new OctreeNode(bounds.octant(i, mid));
-        }
-    }
-
-    boolean insert(Vec3 pt) {
-        if (!bounds.contains(pt)) return false;
-        if (children == null && points.size() < CAPACITY) {
-            points.add(pt); return true;
-        }
-        if (children == null) { subdivide(); }
-        for (OctreeNode c : children)
-            if (c.insert(pt)) return true;
-        return false;
-    }
-}`,
-    pseudocode: `function insert(node, point):
-  if point outside node.bounds: return false
-  if node.isLeaf and count(node.points) < CAPACITY:
-    add point to node.points
-    return true
-  if node.isLeaf:
-    subdivide(node) into 8 octants
-    redistribute existing points to children
-  for child in node.children:
-    if insert(child, point): return true`,
   },
   presets: [
     {
       id: 'sparse-spatial',
       label: 'Spatial Point Cloud (5 pts)',
-      description: 'Points distributed across 3D quadrants',
+      description: 'Points distributed across 3D quadrants; query is centred on the first point',
       data: [
         { id: 'p0', x: 25, y: 75, z: 30, label: 'P0' },
         { id: 'p1', x: 80, y: 30, z: 70, label: 'P1' },
         { id: 'p2', x: 30, y: 85, z: 25, label: 'P2' },
         { id: 'p3', x: 75, y: 80, z: 85, label: 'P3' },
         { id: 'p4', x: 20, y: 20, z: 80, label: 'P4' },
+      ],
+    },
+    {
+      id: 'corner-cluster',
+      label: 'Clustered Corner (4 pts)',
+      description: 'Three points share the +X +Y -Z octant, forcing a second subdivision level',
+      data: [
+        { id: 'c0', x: 60, y: 60, z: 20, label: 'C0' },
+        { id: 'c1', x: 70, y: 70, z: 30, label: 'C1' },
+        { id: 'c2', x: 90, y: 90, z: 40, label: 'C2' },
+        { id: 'c3', x: 10, y: 10, z: 90, label: 'C3' },
+      ],
+    },
+    {
+      id: 'coincident-points',
+      label: 'Coincident Points (depth cap)',
+      description: 'Identical coordinates cannot be separated by any split — watch MAX_DEPTH stop the recursion',
+      data: [
+        { id: 'd0', x: 50, y: 50, z: 50, label: 'D0' },
+        { id: 'd1', x: 50, y: 50, z: 50, label: 'D1' },
+        { id: 'd2', x: 50, y: 50, z: 50, label: 'D2' },
+      ],
+    },
+    {
+      id: 'outside-point',
+      label: 'Outside Point (rejected)',
+      description: 'A point at x = 140 is outside the root cube and must be rejected, not silently clamped',
+      data: [
+        { id: 'o0', x: 20, y: 20, z: 20, label: 'O0' },
+        { id: 'o1', x: 140, y: 40, z: 40, label: 'O1' },
+        { id: 'o2', x: 70, y: 70, z: 70, label: 'O2' },
       ],
     },
   ],
@@ -232,297 +288,906 @@ export class OctreeNode {
     { id: 'p3', x: 75, y: 80, z: 85, label: 'P3' },
     { id: 'p4', x: 20, y: 20, z: 80, label: 'P4' },
   ],
-  generateTimeline: (pts) => {
-    const rootBox: OctantBox = {
-      id: 'root',
-      xMin: 0,
-      xMax: 100,
-      yMin: 0,
-      yMax: 100,
-      zMin: 0,
-      zMax: 100,
-      depth: 0,
-      name: 'Root [0..100]³',
-    };
+  codeSnippets: {
+    cpp: `// C++17 octree node (capacity = 1 for the visualiser)
+#include <vector>
+#include <array>
+#include <memory>
 
-    const octantNames = [
-      'Octant 0: [L-X, L-Y, L-Z]',
-      'Octant 1: [H-X, L-Y, L-Z]',
-      'Octant 2: [L-X, H-Y, L-Z]',
-      'Octant 3: [H-X, H-Y, L-Z]',
-      'Octant 4: [L-X, L-Y, H-Z]',
-      'Octant 5: [H-X, L-Y, H-Z]',
-      'Octant 6: [L-X, H-Y, H-Z]',
-      'Octant 7: [H-X, H-Y, H-Z]',
-    ];
+struct Vec3 { float x, y, z; };
+struct AABB { Vec3 min, max; };
 
-    const makeSubOctants = (parent: OctantBox): OctantBox[] => {
-      const xm = (parent.xMin + parent.xMax) / 2;
-      const ym = (parent.yMin + parent.yMax) / 2;
-      const zm = (parent.zMin + parent.zMax) / 2;
-      const sub: OctantBox[] = [];
-      for (let i = 0; i < 8; i++) {
-        sub.push({
-          id: `${parent.id}-oct${i}`,
-          xMin: i & 1 ? xm : parent.xMin,
-          xMax: i & 1 ? parent.xMax : xm,
-          yMin: i & 2 ? ym : parent.yMin,
-          yMax: i & 2 ? parent.yMax : ym,
-          zMin: i & 4 ? zm : parent.zMin,
-          zMax: i & 4 ? parent.zMax : zm,
-          depth: parent.depth + 1,
-          name: octantNames[i],
-        });
-      }
-      return sub;
-    };
+class OctreeNode {
+public:
+    static constexpr int CAPACITY = 1;
+    static constexpr int MAX_DEPTH = 6;
+    AABB bounds;
+    int depth = 0;
+    std::vector<Vec3> points;
+    std::array<std::unique_ptr<OctreeNode>, 8> children;
+    bool isLeaf = true;
 
-    const p0 = pts[0] || { id: 'p0', x: 25, y: 75, z: 30, label: 'P0' };
-    const p1 = pts[1] || { id: 'p1', x: 80, y: 30, z: 70, label: 'P1' };
-    const p2 = pts[2] || { id: 'p2', x: 30, y: 85, z: 25, label: 'P2' };
-    const p3 = pts[3] || { id: 'p3', x: 75, y: 80, z: 85, label: 'P3' };
+    bool insert(const Vec3& pt) {
+        if (!contains(bounds, pt)) return false;
+        if (isLeaf && points.size() < CAPACITY) {
+            points.push_back(pt);
+            return true;
+        }
+        if (isLeaf && depth >= MAX_DEPTH) {
+            points.push_back(pt); // coincident points at depth cap
+            return true;
+        }
+        if (isLeaf) {
+            subdivide(); // create 8 child octants
+            for (const auto& p : points) route(*this, p); // redistribute
+            points.clear();
+        }
+        int i = octantIndex(bounds, pt);
+        return children[i]->insert(pt);
+    }
 
-    const subBoxes = makeSubOctants(rootBox);
+    void subdivide() {
+        Vec3 mid = { (bounds.min.x + bounds.max.x) * 0.5f,
+                     (bounds.min.y + bounds.max.y) * 0.5f,
+                     (bounds.min.z + bounds.max.z) * 0.5f };
+        for (int i = 0; i < 8; ++i) {
+            children[i] = std::make_unique<OctreeNode>(octantBounds(bounds, mid, i));
+            children[i]->depth = depth + 1;
+        }
+        isLeaf = false;
+    }
+};`,
+    python: `CAPACITY = 1
+MAX_DEPTH = 6
 
-    const frames: ExecutionFrame<OctreeState>[] = [
-      {
-        stepIndex: 0,
-        totalSteps: 1,
-        codeLine: 1,
-        explanation: 'Initial State: Created 3D Bounding Cube [0..100]³ as Root Octree node with capacity = 1.',
-        isMilestone: true,
-        milestoneTitle: 'Root Bounding Cube',
-        soundCue: { type: 'start' },
-        callStack: [
-          { name: 'OctreeNode(bounds)', params: { min: [0, 0, 0], max: [100, 100, 100] }, line: 1, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { capacity: 1, depth: 0, totalPoints: 0, activeBoxes: 1 },
-        conditionEval: { expr: 'points.length < CAPACITY', result: true },
-        state: {
-          points: [],
-          boxes: [rootBox],
-        },
-      },
-      {
-        stepIndex: 1,
-        totalSteps: 1,
-        codeLine: 25,
-        explanation: `Containment Check: Point P0(${p0.x}, ${p0.y}, ${p0.z}) is inside [0..100]³. Root has room (0 < 1). Stored directly in leaf.`,
-        soundCue: { type: 'step' },
-        callStack: [
-          { name: 'insert(point)', params: { id: p0.id, coords: [p0.x, p0.y, p0.z] }, line: 25, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { point: p0.label, x: p0.x, y: p0.y, z: p0.z, storedAt: 'root' },
-        conditionEval: { expr: `contains(root.bounds, P0)`, result: true },
-        state: {
-          points: [{ ...p0, highlighted: true }],
-          boxes: [rootBox],
-        },
-      },
-      {
-        stepIndex: 2,
-        totalSteps: 1,
-        codeLine: 31,
-        explanation: `Insert P1(${p1.x}, ${p1.y}, ${p1.z}): Leaf already contains 1 point (capacity = 1). OVERFLOW! Triggering 8-way spatial subdivision.`,
-        soundCue: { type: 'compare' },
-        callStack: [
-          { name: 'subdivide()', params: { parent: 'root', numChildren: 8 }, line: 31, isCurrent: true },
-          { name: 'insert(point)', params: { id: p1.id }, line: 28 },
-        ],
-        variables: { point: p1.label, currentOccupancy: 1, maxCapacity: 1, overflow: true },
-        conditionEval: { expr: 'points.length >= CAPACITY', result: true },
-        state: {
-          points: [p0, { ...p1, highlighted: true }],
-          boxes: subBoxes,
-          subdividing: true,
-        },
-      },
-      {
-        stepIndex: 3,
-        totalSteps: 1,
-        codeLine: 33,
-        explanation: `Subdivision Complete: Mid-plane splits at (xm, ym, zm) = (50, 50, 50). Space partitioned into 8 child octants.`,
-        isMilestone: true,
-        milestoneTitle: '8-Way Spatial Subdivision',
-        soundCue: { type: 'swap' },
-        callStack: [
-          { name: 'subdivide()', params: { midX: 50, midY: 50, midZ: 50 }, line: 33, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { midPoint: [50, 50, 50], childOctantsCount: 8, depth: 1 },
-        state: {
-          points: [p0, p1],
-          boxes: subBoxes,
-          subdividing: false,
-        },
-      },
-      {
-        stepIndex: 4,
-        totalSteps: 1,
-        codeLine: 35,
-        explanation: `Redistributing P0(${p0.x}, ${p0.y}, ${p0.z}): Evaluated (x<50, y>=50, z<50) -> Routed to Octant 2 [L-X, H-Y, L-Z].`,
-        soundCue: { type: 'step' },
-        callStack: [
-          { name: 'redistribute(point)', params: { id: p0.id, targetOctant: 2 }, line: 35, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { point: 'P0', octant: 2, octantName: octantNames[2] },
-        conditionEval: { expr: `P0.y (75) >= 50 && P0.x (25) < 50`, result: true },
-        state: {
-          points: [{ ...p0, highlighted: true }, p1],
-          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
-          activeOctantIndex: 2,
-        },
-      },
-      {
-        stepIndex: 5,
-        totalSteps: 1,
-        codeLine: 36,
-        explanation: `Redistributing P1(${p1.x}, ${p1.y}, ${p1.z}): Evaluated (x>=50, y<50, z>=50) -> Routed to Octant 5 [H-X, L-Y, H-Z].`,
-        soundCue: { type: 'step' },
-        callStack: [
-          { name: 'redistribute(point)', params: { id: p1.id, targetOctant: 5 }, line: 36, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { point: 'P1', octant: 5, octantName: octantNames[5] },
-        conditionEval: { expr: `P1.x (80) >= 50 && P1.z (70) >= 50`, result: true },
-        state: {
-          points: [p0, { ...p1, highlighted: true }],
-          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 || idx === 5 })),
-          activeOctantIndex: 5,
-        },
-      },
-      {
-        stepIndex: 6,
-        totalSteps: 1,
-        codeLine: 40,
-        explanation: `Insert P2(${p2.x}, ${p2.y}, ${p2.z}): Routed to Octant 2. Octant 2 now holds 2 points (P0 and P2). Spatial clustering detected!`,
-        soundCue: { type: 'swap' },
-        callStack: [
-          { name: 'insert(point)', params: { id: p2.id, targetOctant: 2 }, line: 40, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { point: 'P2', targetOctant: 2, octant2PointCount: 2 },
-        state: {
-          points: [p0, p1, { ...p2, highlighted: true }],
-          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
-          activeOctantIndex: 2,
-        },
-      },
-      {
-        stepIndex: 7,
-        totalSteps: 1,
-        codeLine: 40,
-        explanation: `Insert P3(${p3.x}, ${p3.y}, ${p3.z}): Evaluated (x>=50, y>=50, z>=50) -> Routed cleanly to Octant 7 [H-X, H-Y, H-Z].`,
-        soundCue: { type: 'step' },
-        callStack: [
-          { name: 'insert(point)', params: { id: p3.id, targetOctant: 7 }, line: 40, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { point: 'P3', targetOctant: 7, octantName: octantNames[7] },
-        conditionEval: { expr: `P3.x >= 50 && P3.y >= 50 && P3.z >= 50`, result: true },
-        state: {
-          points: [p0, p1, p2, { ...p3, highlighted: true }],
-          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 7 })),
-          activeOctantIndex: 7,
-        },
-      },
-      {
-        stepIndex: 8,
-        totalSteps: 1,
-        codeLine: 45,
-        explanation: `Initiating 3D Spatial Range Query: Target center = (30, 80, 30), Search Radius = 25. Checking octant bounding boxes.`,
-        isMilestone: true,
-        milestoneTitle: 'Spatial Range Query',
-        soundCue: { type: 'compare' },
-        callStack: [
-          { name: 'queryRange(sphere)', params: { center: [30, 80, 30], radius: 25 }, line: 45, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        variables: { queryCenter: [30, 80, 30], queryRadius: 25, testedOctants: 8 },
-        state: {
-          points: [p0, p1, p2, p3],
-          boxes: subBoxes,
-          querySphere: { x: 30, y: 80, z: 30, radius: 25 },
-          activeOctantIndex: null,
-        },
-      },
-      {
-        stepIndex: 9,
-        totalSteps: 1,
-        codeLine: 47,
-        explanation: `Pruning Subtrees: Sphere-AABB intersection test passes ONLY for Octant 2! Octants 0, 1, 3, 4, 5, 6, 7 are completely pruned in O(1).`,
-        soundCue: { type: 'step' },
-        callStack: [
-          { name: 'intersectAABB()', params: { prunedCount: 7, preservedCount: 1 }, line: 47, isCurrent: true },
-          { name: 'queryRange()', params: { activeOctant: 2 }, line: 45 },
-        ],
-        variables: { prunedOctants: '0, 1, 3, 4, 5, 6, 7', survivingOctant: 2, speedup: '7/8 space pruned' },
-        conditionEval: { expr: 'intersects(sphere, octant2.bounds)', result: true },
-        state: {
-          points: [p0, p1, p2, p3],
-          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
-          querySphere: { x: 30, y: 80, z: 30, radius: 25 },
-          activeOctantIndex: 2,
-        },
-      },
-      {
-        stepIndex: 10,
-        totalSteps: 1,
-        codeLine: 50,
-        explanation: `Distance Verification: Point P0 (dist = 8.66 <= 25) and P2 (dist = 7.07 <= 25) lie inside the search sphere! Both returned.`,
-        soundCue: { type: 'swap' },
-        callStack: [
-          { name: 'verifyPoints()', params: { found: ['P0', 'P2'] }, line: 50, isCurrent: true },
-          { name: 'queryRange()', params: {}, line: 45 },
-        ],
-        variables: { 'dist(P0)': 8.66, 'dist(P2)': 7.07, radius: 25, matches: 2 },
-        conditionEval: { expr: 'dist(pt, center) <= radius', result: true },
-        state: {
-          points: [
-            { ...p0, highlighted: true },
-            p1,
-            { ...p2, highlighted: true },
-            p3,
-          ],
-          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
-          querySphere: { x: 30, y: 80, z: 30, radius: 25 },
-          foundPoints: ['p0', 'p2'],
-          activeOctantIndex: 2,
-        },
-      },
-      {
-        stepIndex: 11,
-        totalSteps: 1,
-        codeLine: 52,
-        isMilestone: true,
-        milestoneTitle: 'Query Complete (O(log N))',
-        soundCue: { type: 'complete' },
-        explanation: `🎉 3D Octree query complete! Found 2 points (P0, P2) in O(log N) operations with hierarchical spatial culling.`,
-        callStack: [{ name: 'main()', params: { matchedPoints: 2 }, line: 52, isCurrent: true }],
-        variables: { queryResults: 'P0, P2', matchedCount: 2, efficiency: 'Hierarchical Culling' },
-        state: {
-          points: [
-            { ...p0, highlighted: true },
-            p1,
-            { ...p2, highlighted: true },
-            p3,
-          ],
-          boxes: subBoxes.map((b, idx) => ({ ...b, active: idx === 2 })),
-          querySphere: { x: 30, y: 80, z: 30, radius: 25 },
-          foundPoints: ['p0', 'p2'],
-          activeOctantIndex: 2,
-        },
-      },
-    ];
+def insert(node, point):
+    if not contains(node.bounds, point):
+        return False
+    if node.is_leaf() and len(node.points) < CAPACITY:
+        node.points.append(point)
+        return True
+    if node.is_leaf() and node.depth >= MAX_DEPTH:
+        node.points.append(point)  # coincident points at depth cap
+        return True
+    if node.is_leaf():
+        node.subdivide()  # create 8 child octants
+        for p in list(node.points):
+            route(node, p)  # redistribute
+        node.points = []
+    i = octant_index(node.bounds, point)
+    return insert(node.children[i], point)
 
-    // Normalize stepIndex and totalSteps to actual frame count
-    const total = frames.length;
-    return frames.map((f, idx) => ({ ...f, stepIndex: idx, totalSteps: total }));
+def query(node, sphere):
+    if not intersects(sphere, node.bounds):
+        return  # prune subtree
+    if node.is_leaf():
+        for p in node.points:
+            if distance(p, sphere.center) <= sphere.radius:
+                report(p)
+        return
+    for child in node.children:
+        query(child, sphere)`,
+    typescript: `interface OctreeNode {
+  bounds: AABB;
+  depth: number;
+  points: Vec3[];
+  children: OctreeNode[];
+}
+
+function insert(node: OctreeNode, point: Vec3): boolean {
+  if (!contains(node.bounds, point)) return false;
+  if (isLeaf(node) && node.points.length < CAPACITY) {
+    node.points.push(point);
+    return true;
+  }
+  if (isLeaf(node) && node.depth >= MAX_DEPTH) {
+    node.points.push(point); // coincident points at depth cap
+    return true;
+  }
+  if (isLeaf(node)) {
+    subdivide(node); // create 8 child octants
+    for (const p of [...node.points]) route(node, p); // redistribute
+    node.points = [];
+  }
+  const i = octantIndex(node.bounds, point);
+  return insert(node.children[i], point);
+}
+
+function query(node: OctreeNode, sphere: Sphere): void {
+  if (!intersects(sphere, node.bounds)) return; // prune subtree
+  if (isLeaf(node)) {
+    for (const p of node.points) {
+      if (distance(p, sphere.center) <= sphere.radius) report(p);
+    }
+    return;
+  }
+  for (const child of node.children) query(child, sphere);
+}`,
+    java: `class OctreeNode {
+    static final int CAPACITY = 1;
+    static final int MAX_DEPTH = 6;
+    AABB bounds;
+    int depth;
+    List<Vec3> points = new ArrayList<>();
+    OctreeNode[] children;
+    boolean isLeaf = true;
+
+    boolean insert(Vec3 pt) {
+        if (!bounds.contains(pt)) return false;
+        if (isLeaf && points.size() < CAPACITY) {
+            points.add(pt);
+            return true;
+        }
+        if (isLeaf && depth >= MAX_DEPTH) {
+            points.add(pt); // coincident points at depth cap
+            return true;
+        }
+        if (isLeaf) {
+            subdivide(); // create 8 child octants
+            for (Vec3 p : points) route(this, p); // redistribute
+            points.clear();
+        }
+        int i = octantIndex(bounds, pt);
+        return children[i].insert(pt);
+    }
+
+    void subdivide() {
+        children = new OctreeNode[8];
+        for (int i = 0; i < 8; i++) {
+            children[i] = new OctreeNode();
+            children[i].bounds = octantBounds(bounds, i);
+            children[i].depth = depth + 1;
+        }
+        isLeaf = false;
+    }
+}`,
+    pseudocode: `function insert(node, point):
+    if point outside node.bounds: return false
+    if node is leaf and count(node.points) < CAPACITY:
+        add point to node.points
+        return true
+    end if
+    if node is leaf and node.depth >= MAX_DEPTH:
+        add point to node.points        # coincident points at depth cap
+        return true
+    end if
+    if node is leaf:
+        subdivide(node) into 8 octants
+        for p in old node.points: route(node, p)
+        node.points = []
+    end if
+    i = octantIndex(node, point)
+    return insert(node.children[i], point)
+end function
+
+function query(node, sphere):
+    if not intersects(sphere, node.bounds): return   # prune subtree
+    if node is leaf:
+        for p in node.points:
+            if distance(p, sphere.center) <= sphere.radius:
+                report p
+        end for
+        return
+    end if
+    for child in node.children:
+        query(child, sphere)
+end function`,
   },
-  renderStage: (frame) => <OctreeStage3D state={frame.state} />,
+  generateTimeline: (rawInput: Point3D[]): ExecutionFrame<OctreeState>[] => {
+    const fallback: Point3D[] = [
+      { id: 'p0', x: 25, y: 75, z: 30, label: 'P0' },
+      { id: 'p1', x: 80, y: 30, z: 70, label: 'P1' },
+      { id: 'p2', x: 30, y: 85, z: 25, label: 'P2' },
+      { id: 'p3', x: 75, y: 80, z: 85, label: 'P3' },
+      { id: 'p4', x: 20, y: 20, z: 80, label: 'P4' },
+    ];
+    const inputPoints = Array.isArray(rawInput) && rawInput.length > 0 ? rawInput : fallback;
+    const allPoints: Point3D[] = inputPoints.map((raw, index) => ({
+      id: raw?.id || `p${index}`,
+      x: Number.isFinite(raw?.x) ? raw.x : 50,
+      y: Number.isFinite(raw?.y) ? raw.y : 50,
+      z: Number.isFinite(raw?.z) ? raw.z : 50,
+      label: raw?.label || `P${index}`,
+    }));
+    const pointMap = new Map(allPoints.map((p) => [p.id, p]));
+
+    let nodeCounter = 0;
+    let nodeVisits = 0;
+    let pointChecks = 0;
+
+    const makeNode = (
+      bounds: { xMin: number; xMax: number; yMin: number; yMax: number; zMin: number; zMax: number },
+      depth: number,
+      octantIndex: number | null
+    ): OctreeNodeData => ({
+      id: `oct-${++nodeCounter}`,
+      ...bounds,
+      depth,
+      octantIndex,
+      pointIds: [],
+      children: [],
+    });
+
+    let root: OctreeNodeData = makeNode(
+      { xMin: ROOT_MIN, xMax: ROOT_MAX, yMin: ROOT_MIN, yMax: ROOT_MAX, zMin: ROOT_MIN, zMax: ROOT_MAX },
+      0,
+      null
+    );
+
+    const frames: ExecutionFrame<OctreeState>[] = [];
+    const storedIds = new Set<string>();
+    const rejectedIds = new Set<string>();
+    let checkpointAdded = false;
+    let firstSplitMilestoneAdded = false;
+
+    const pointView = (activePointId: string | null, foundIds: string[] = []): Point3D[] =>
+      allPoints.map((p) => ({
+        ...p,
+        active: p.id === activePointId,
+        stored: storedIds.has(p.id),
+        rejected: rejectedIds.has(p.id),
+        found: foundIds.includes(p.id),
+      }));
+
+    interface SnapshotOverrides {
+      activeNodeId?: string | null;
+      activePointId?: string | null;
+      activeOctantIndex?: number | null;
+      foundIds?: string[];
+      prunedIds?: string[];
+      querySphere?: { x: number; y: number; z: number; radius: number };
+      subdividing?: boolean;
+      phase?: OctreeState['phase'];
+      pathIds?: string[];
+    }
+
+    const snapshot = (overrides: SnapshotOverrides = {}): OctreeState => ({
+      root: cloneOctree(root),
+      points: pointView(overrides.activePointId ?? null, overrides.foundIds ?? []),
+      boxes: flattenBoxes(root),
+      activeNodeId: overrides.activeNodeId ?? null,
+      activeOctantIndex: overrides.activeOctantIndex ?? null,
+      querySphere: overrides.querySphere,
+      foundPoints: overrides.foundIds,
+      subdividing: overrides.subdividing,
+      phase: overrides.phase ?? null,
+      pathIds: overrides.pathIds ?? [],
+      prunedIds: overrides.prunedIds ?? [],
+      stats: computeStats(root),
+    });
+
+    const pushFrame = (opts: {
+      codeLine: number;
+      action: string;
+      explanation: string;
+      state: SnapshotOverrides;
+      pedagogy: StepPedagogy;
+      variables?: Record<string, any>;
+      conditionEval?: ExecutionFrame<OctreeState>['conditionEval'];
+      callStack?: ExecutionFrame<OctreeState>['callStack'];
+      milestone?: string;
+      soundCue?: SoundCue;
+      checkpoint?: PredictionCheckpoint;
+    }) => {
+      frames.push({
+        stepIndex: frames.length,
+        totalSteps: frames.length + 1,
+        codeLine: opts.codeLine,
+        action: opts.action,
+        explanation: opts.explanation,
+        state: snapshot(opts.state),
+        callStack: opts.callStack ?? [
+          { name: opts.action.toLowerCase(), params: {}, line: opts.codeLine, isCurrent: true },
+        ],
+        variables: opts.variables,
+        conditionEval: opts.conditionEval,
+        metrics: { comparisons: nodeVisits, accesses: pointChecks },
+        invariantStatus: {
+          label: 'Every stored point stays inside its node bounds; 8 children partition the parent',
+          isValid: true,
+        },
+        pedagogy: opts.pedagogy,
+        ...(opts.milestone ? { isMilestone: true, milestoneTitle: opts.milestone } : {}),
+        ...(opts.soundCue ? { soundCue: opts.soundCue } : {}),
+        ...(opts.checkpoint ? { checkpoint: opts.checkpoint } : {}),
+      });
+    };
+
+    frames.push({
+      stepIndex: 0,
+      totalSteps: 1,
+      codeLine: 1,
+      action: 'INIT',
+      state: snapshot({ activeNodeId: root.id, phase: 'insert' }),
+      callStack: [
+        { name: 'OctreeNode(bounds)', params: { min: [0, 0, 0], max: [100, 100, 100] }, line: 1, isCurrent: true },
+        { name: 'main()', params: {}, line: 1 },
+      ],
+      variables: { capacity: CAPACITY, maxDepth: MAX_DEPTH, totalPoints: allPoints.length },
+      pedagogy: {
+        what: 'The root owns the whole [0..100]³ cube and is currently an empty leaf.',
+        why: 'An octree starts as one leaf; it only creates children when a leaf overflows.',
+        whatNext: `Insert ${allPoints.length} point(s) one at a time and watch when the root splits.`,
+      },
+      explanation: `Initial state: root bounding cube [0..100]³, capacity = ${CAPACITY}, max depth = ${MAX_DEPTH}.`,
+    });
+
+    const splitNode = (node: OctreeNodeData) => {
+      node.children = Array.from({ length: 8 }, (_, i) =>
+        makeNode(makeChildBounds(node, i), node.depth + 1, i)
+      );
+    };
+
+    function insertAt(
+      node: OctreeNodeData,
+      point: Point3D,
+      path: string[],
+      mode: 'insert' | 'redistribute'
+    ): boolean {
+      path.push(node.id);
+      nodeVisits++;
+
+      if (!containsPoint(node, point)) {
+        rejectedIds.add(point.id);
+        pushFrame({
+          codeLine: 2,
+          action: 'REJECT_OUTSIDE',
+          explanation: `Point ${point.label}(${point.x}, ${point.y}, ${point.z}) is outside this node's bounds — rejected.`,
+          state: {
+            activeNodeId: node.id,
+            activePointId: point.id,
+            phase: 'insert',
+            pathIds: [...path],
+          },
+          variables: {
+            point: point.label,
+            x: point.x,
+            y: point.y,
+            z: point.z,
+            nodeBounds: [node.xMin, node.xMax, node.yMin, node.yMax, node.zMin, node.zMax],
+          },
+          conditionEval: { expr: 'contains(node.bounds, point)', result: false },
+          soundCue: 'fail',
+          pedagogy: {
+            what: `${point.label} falls outside the cube owned by this node.`,
+            why: 'Every node only owns its own AABB; a point outside it can never be stored below it.',
+            whatNext: 'Skip this point — the other points continue normally.',
+          },
+        });
+        path.pop();
+        return false;
+      }
+
+      if (node.children.length === 0) {
+        if (node.pointIds.length < CAPACITY) {
+          node.pointIds.push(point.id);
+          storedIds.add(point.id);
+          pushFrame({
+            codeLine: 4,
+            action: mode === 'redistribute' ? 'REDISTRIBUTE_STORE' : 'STORE_POINT',
+            explanation:
+              mode === 'redistribute'
+                ? `Redistributed ${point.label} into leaf ${node.octantIndex === null ? 'root' : `octant ${node.octantIndex}`} (depth ${node.depth}).`
+                : `Stored ${point.label} in this leaf (depth ${node.depth}, ${node.pointIds.length}/${CAPACITY} slots used).`,
+            state: {
+              activeNodeId: node.id,
+              activePointId: point.id,
+              activeOctantIndex: node.octantIndex,
+              phase: 'insert',
+              pathIds: [...path],
+            },
+            variables: {
+              point: point.label,
+              depth: node.depth,
+              occupancy: node.pointIds.length,
+              capacity: CAPACITY,
+              mode,
+            },
+            conditionEval: { expr: 'count(node.points) < CAPACITY', result: true },
+            soundCue: 'insert',
+            pedagogy: {
+              what: `${point.label} fits in this leaf without splitting.`,
+              why: 'A leaf may hold up to CAPACITY points; only the next point triggers a split.',
+              whatNext: 'Continue with the next point.',
+            },
+          });
+          path.pop();
+          return true;
+        }
+
+        if (node.depth >= MAX_DEPTH) {
+          node.pointIds.push(point.id);
+          storedIds.add(point.id);
+          pushFrame({
+            codeLine: 8,
+            action: 'DEPTH_CAP',
+            explanation: `Depth cap reached at d${node.depth} — ${point.label} shares coordinates with existing points, so it is stored in the same leaf.`,
+            state: {
+              activeNodeId: node.id,
+              activePointId: point.id,
+              activeOctantIndex: node.octantIndex,
+              phase: 'insert',
+              pathIds: [...path],
+            },
+            variables: {
+              point: point.label,
+              depth: node.depth,
+              maxDepth: MAX_DEPTH,
+              occupancy: node.pointIds.length,
+              reason: 'coincident-points',
+            },
+            conditionEval: { expr: 'node.depth >= MAX_DEPTH', result: true },
+            soundCue: 'complete',
+            pedagogy: {
+              what: `The split recursion hit MAX_DEPTH = ${MAX_DEPTH}.`,
+              why: 'Identical coordinates always land in the same child, so splitting forever would never separate them.',
+              whatNext: 'Keep both points in this leaf; the depth cap is a deliberate termination rule.',
+            },
+          });
+          path.pop();
+          return true;
+        }
+
+        pushFrame({
+          codeLine: 11,
+          action: 'OVERFLOW',
+          explanation: `Leaf at depth ${node.depth} already holds ${node.pointIds.length} point(s) (capacity ${CAPACITY}); inserting ${point.label} requires a split.`,
+          state: {
+            activeNodeId: node.id,
+            activePointId: point.id,
+            activeOctantIndex: node.octantIndex,
+            phase: 'insert',
+            pathIds: [...path],
+          },
+          variables: {
+            point: point.label,
+            depth: node.depth,
+            occupancy: node.pointIds.length,
+            capacity: CAPACITY,
+            overflow: true,
+          },
+          conditionEval: { expr: 'count(node.points) >= CAPACITY', result: true },
+          soundCue: 'compare',
+          checkpoint:
+            !checkpointAdded && node === root
+              ? {
+                  id: 'octree-first-overflow',
+                  question: `The root leaf already holds ${node.pointIds.length} point and CAPACITY = ${CAPACITY}. What happens when ${point.label} arrives?`,
+                  options: [
+                    'Overwrite the existing point',
+                    'Subdivide into 8 octants, redistribute, then insert',
+                    'Reject the new point',
+                  ],
+                  correctIndex: 1,
+                  explanation:
+                    'A full leaf splits into 8 octants; existing points are redistributed before the new point is routed.',
+                  hint: 'Octrees never overwrite or reject a point that is inside their bounds.',
+                }
+              : undefined,
+          pedagogy: {
+            what: `${point.label} arrived at a full leaf.`,
+            why: 'Capacity is exceeded, so the leaf must become an internal node with 8 children.',
+            whatNext: 'Split along the three midplanes, then move the old point down.',
+          },
+        });
+        checkpointAdded = true;
+
+        splitNode(node);
+        pushFrame({
+          codeLine: 12,
+          action: 'SUBDIVIDE',
+          explanation: `Split at (xm, ym, zm) = (${(node.xMin + node.xMax) / 2}, ${(node.yMin + node.yMax) / 2}, ${(node.zMin + node.zMax) / 2}) — 8 child octants created.`,
+          state: {
+            activeNodeId: node.id,
+            activePointId: point.id,
+            activeOctantIndex: node.octantIndex,
+            phase: 'insert',
+            pathIds: [...path],
+            subdividing: true,
+          },
+          variables: {
+            parent: node.octantIndex === null ? 'root' : `octant ${node.octantIndex}`,
+            depth: node.depth,
+            childCount: node.children.length,
+            midPoint: [
+              (node.xMin + node.xMax) / 2,
+              (node.yMin + node.yMax) / 2,
+              (node.zMin + node.zMax) / 2,
+            ],
+          },
+          milestone: !firstSplitMilestoneAdded ? 'First 8-Way Split' : undefined,
+          soundCue: 'swap',
+          pedagogy: {
+            what: 'The leaf became an internal node with exactly 8 children.',
+            why: 'Three independent midplane cuts (X, Y, Z) produce 2³ = 8 disjoint boxes that tile the parent.',
+            whatNext: 'Redistribute the old points, then route the new point.',
+          },
+        });
+        firstSplitMilestoneAdded = true;
+
+        const existingIds = [...node.pointIds];
+        node.pointIds = [];
+        for (const id of existingIds) {
+          const existing = pointMap.get(id);
+          if (!existing) continue;
+          const idx = octantIndexFor(node, existing);
+          pushFrame({
+            codeLine: 13,
+            action: 'REDISTRIBUTE_ROUTE',
+            explanation: `Redistribute ${existing.label}(${existing.x}, ${existing.y}, ${existing.z}) to octant ${idx} [${OCTANT_LABELS[idx]}].`,
+            state: {
+              activeNodeId: node.id,
+              activePointId: existing.id,
+              activeOctantIndex: idx,
+              phase: 'insert',
+              pathIds: [...path],
+            },
+            variables: {
+              point: existing.label,
+              octant: idx,
+              octantLabel: OCTANT_LABELS[idx],
+              bits: `${existing.x >= (node.xMin + node.xMax) / 2 ? '+X' : '-X'} ${
+                existing.y >= (node.yMin + node.yMax) / 2 ? '+Y' : '-Y'
+              } ${existing.z >= (node.zMin + node.zMax) / 2 ? '+Z' : '-Z'}`,
+            },
+            soundCue: 'step',
+            pedagogy: {
+              what: `${existing.label} is re-routed from the old leaf into child ${idx}.`,
+              why: 'The 8 children partition the parent volume, so each old point has exactly one destination.',
+              whatNext: 'Place it in the child (which may itself split if several points share an octant).',
+            },
+          });
+          insertAt(node.children[idx], existing, path, 'redistribute');
+        }
+
+        const newIdx = octantIndexFor(node, point);
+        pushFrame({
+          codeLine: 17,
+          action: 'ROUTE',
+          explanation: `Route ${point.label}(${point.x}, ${point.y}, ${point.z}) to octant ${newIdx} [${OCTANT_LABELS[newIdx]}].`,
+          state: {
+            activeNodeId: node.id,
+            activePointId: point.id,
+            activeOctantIndex: newIdx,
+            phase: 'insert',
+            pathIds: [...path],
+          },
+          variables: {
+            point: point.label,
+            octant: newIdx,
+            octantLabel: OCTANT_LABELS[newIdx],
+          },
+          soundCue: 'step',
+          pedagogy: {
+            what: `${point.label} chose child ${newIdx} by comparing each coordinate with the midplanes.`,
+            why: 'x >= xm sets bit 0, y >= ym sets bit 1, z >= zm sets bit 2.',
+            whatNext: 'Recurse into that child and repeat the capacity check.',
+          },
+        });
+        const ok = insertAt(node.children[newIdx], point, path, mode);
+        path.pop();
+        return ok;
+      }
+
+      const idx = octantIndexFor(node, point);
+      pushFrame({
+        codeLine: 17,
+        action: 'ROUTE',
+        explanation: `Route ${point.label}(${point.x}, ${point.y}, ${point.z}) to octant ${idx} [${OCTANT_LABELS[idx]}] at depth ${node.depth + 1}.`,
+        state: {
+          activeNodeId: node.id,
+          activePointId: point.id,
+          activeOctantIndex: idx,
+          phase: 'insert',
+          pathIds: [...path],
+        },
+        variables: {
+          point: point.label,
+          octant: idx,
+          octantLabel: OCTANT_LABELS[idx],
+          depth: node.depth,
+        },
+        soundCue: 'step',
+        pedagogy: {
+          what: `${point.label} follows child ${idx} because this node is already internal.`,
+          why: 'Internal nodes store no points; the point keeps descending until it reaches a leaf.',
+          whatNext: 'Check the child leaf for capacity.',
+        },
+      });
+      const ok = insertAt(node.children[idx], point, path, mode);
+      path.pop();
+      return ok;
+    }
+
+    allPoints.forEach((point, pointIndex) => {
+      const path: string[] = [];
+      const accepted = insertAt(root, point, path, 'insert');
+
+      const stats = computeStats(root);
+      pushFrame({
+        codeLine: 5,
+        action: accepted ? 'INSERT_DONE' : 'INSERT_REJECTED',
+        explanation: accepted
+          ? `Finished ${point.label} (${pointIndex + 1}/${allPoints.length}) — ${stats.stored} point(s) stored across ${stats.nodes} node(s), max depth ${stats.maxDepth}.`
+          : `Finished ${point.label} (${pointIndex + 1}/${allPoints.length}) — rejected, so ${stats.stored} point(s) are stored.`,
+        state: {
+          activeNodeId: null,
+          activePointId: point.id,
+          phase: 'insert',
+          pathIds: path,
+        },
+        variables: {
+          point: point.label,
+          pointIndex,
+          stored: stats.stored,
+          nodes: stats.nodes,
+          leaves: stats.leaves,
+          maxDepth: stats.maxDepth,
+        },
+        milestone:
+          pointIndex === allPoints.length - 1 && stats.stored > 0
+            ? 'Point Cloud Inserted'
+            : undefined,
+        soundCue: 'complete',
+        pedagogy: {
+          what: accepted
+            ? `${point.label} is stored and the tree shape now reflects the point distribution.`
+            : `${point.label} was not stored because it lies outside the root cube.`,
+          why: accepted
+            ? 'Clustered points share octants, so their paths grow deeper while sparse regions stay shallow.'
+            : 'An octree can only index points inside the volume it owns; silently clamping would corrupt the structure.',
+          whatNext:
+            pointIndex === allPoints.length - 1
+              ? 'Run a sphere range query and prune octants that cannot intersect it.'
+              : `Insert the next point ${allPoints[pointIndex + 1].label}.`,
+        },
+      });
+    });
+
+    // ── Range query centred on the first point ────────────────────────────
+    const centerPoint = allPoints[0];
+    const sphere = {
+      x: centerPoint.x,
+      y: centerPoint.y,
+      z: centerPoint.z,
+      radius: 25,
+    };
+    const foundIds: string[] = [];
+    const prunedIds: string[] = [];
+    let leafMilestoneAdded = false;
+
+    const pushQueryFrame = (
+      codeLine: number,
+      action: string,
+      explanation: string,
+      overrides: SnapshotOverrides,
+      pedagogy: StepPedagogy,
+      extra: {
+        variables?: Record<string, any>;
+        conditionEval?: ExecutionFrame<OctreeState>['conditionEval'];
+        soundCue?: SoundCue;
+        milestone?: string;
+        checkpoint?: PredictionCheckpoint;
+      } = {}
+    ) => {
+      pushFrame({
+        codeLine,
+        action,
+        explanation,
+        state: {
+          activeNodeId: null,
+          activePointId: null,
+          phase: 'query',
+          querySphere: sphere,
+          foundIds: [...foundIds],
+          prunedIds: [...prunedIds],
+          ...overrides,
+        },
+        pedagogy,
+        variables: extra.variables,
+        conditionEval: extra.conditionEval,
+        soundCue: extra.soundCue,
+        milestone: extra.milestone,
+        checkpoint: extra.checkpoint,
+      });
+    };
+
+    pushQueryFrame(
+      20,
+      'QUERY_START',
+      `Sphere range query: centre ${centerPoint.label}(${sphere.x}, ${sphere.y}, ${sphere.z}), radius ${sphere.radius}.`,
+      {},
+      {
+        what: `The query sphere is centred on ${centerPoint.label} with radius ${sphere.radius}.`,
+        why: 'A range query returns every stored point within the radius; the octree lets us skip whole boxes first.',
+        whatNext: 'Start at the root and test the sphere against each node AABB.',
+      },
+      {
+        variables: { center: [sphere.x, sphere.y, sphere.z], radius: sphere.radius },
+        soundCue: 'start',
+      }
+    );
+
+    function queryNode(node: OctreeNodeData, path: string[]): void {
+      path.push(node.id);
+      nodeVisits++;
+
+      if (!sphereIntersectsBox(sphere, sphere.radius, node)) {
+        prunedIds.push(node.id);
+        pushQueryFrame(
+          21,
+          'PRUNE',
+          `Octant ${node.octantIndex ?? 'root'} at depth ${node.depth} is fully outside the sphere — prune its entire subtree.`,
+          {
+            activeNodeId: node.id,
+            activeOctantIndex: node.octantIndex,
+            pathIds: [...path],
+          },
+          {
+            what: 'The closest point of this AABB is farther than the radius.',
+            why: 'If the box does not intersect the sphere, no point inside it can be within range.',
+            whatNext: 'Skip every descendant and continue with the next sibling.',
+          },
+          {
+            variables: {
+              node: node.octantIndex ?? 'root',
+              depth: node.depth,
+              radius: sphere.radius,
+              prunedSubtrees: 1,
+            },
+            conditionEval: { expr: 'intersects(sphere, node.bounds)', result: false },
+            soundCue: 'discard',
+          }
+        );
+        path.pop();
+        return;
+      }
+
+      if (node.children.length === 0) {
+        // An intersecting leaf with no stored points has nothing to verify:
+        // skip the frame instead of repeating "check 0 points" dozens of times.
+        if (node.pointIds.length === 0) {
+          path.pop();
+          return;
+        }
+        pushQueryFrame(
+          22,
+          'QUERY_LEAF',
+          `Leaf at depth ${node.depth} intersects the sphere — check its ${node.pointIds.length} stored point(s) exactly.`,
+          {
+            activeNodeId: node.id,
+            activeOctantIndex: node.octantIndex,
+            pathIds: [...path],
+          },
+          {
+            what: 'Box intersection is only a filter; the leaf points still need an exact distance check.',
+            why: 'A box can overlap the sphere while its points sit outside it.',
+            whatNext: 'Compare each point distance with the radius.',
+          },
+          {
+            variables: { depth: node.depth, leafPoints: node.pointIds.length },
+            conditionEval: { expr: 'intersects(sphere, node.bounds)', result: true },
+            milestone: !leafMilestoneAdded ? 'First Leaf Verified' : undefined,
+          }
+        );
+        leafMilestoneAdded = true;
+
+        for (const id of node.pointIds) {
+          const point = pointMap.get(id);
+          if (!point) continue;
+          pointChecks++;
+          const dist = distance3D(sphere, point);
+          const inside = dist <= sphere.radius;
+          if (inside && !foundIds.includes(point.id)) foundIds.push(point.id);
+
+          pushQueryFrame(
+            inside ? 25 : 24,
+            inside ? 'FOUND_POINT' : 'CHECK_POINT',
+            inside
+              ? `${point.label} distance ${dist.toFixed(2)} <= ${sphere.radius} — reported.`
+              : `${point.label} distance ${dist.toFixed(2)} > ${sphere.radius} — outside the sphere.`,
+            {
+              activeNodeId: node.id,
+              activePointId: point.id,
+              activeOctantIndex: node.octantIndex,
+              pathIds: [...path],
+            },
+            {
+              what: inside
+                ? `${point.label} is inside the query sphere.`
+                : `${point.label} lies in an intersecting leaf but outside the sphere.`,
+              why: 'The exact distance test is the final authority; box overlap alone is not a hit.',
+              whatNext: inside ? 'Add it to the result set.' : 'Continue with the next point.',
+            },
+            {
+              variables: {
+                point: point.label,
+                distance: Number(dist.toFixed(2)),
+                radius: sphere.radius,
+                inside,
+              },
+              conditionEval: {
+                expr: `distance(${point.label}) <= ${sphere.radius}`,
+                result: inside,
+              },
+              soundCue: inside ? 'success' : 'compare',
+            }
+          );
+        }
+        path.pop();
+        return;
+      }
+
+      pushQueryFrame(
+        29,
+        'DESCEND',
+        `Node at depth ${node.depth} intersects the sphere — descend into its 8 children.`,
+        {
+          activeNodeId: node.id,
+          activeOctantIndex: node.octantIndex,
+          pathIds: [...path],
+        },
+        {
+          what: 'The AABB overlaps the sphere, so some descendant may contain a hit.',
+          why: 'An octree prunes at the highest node that cannot intersect, not at every level.',
+          whatNext: 'Visit the 8 children in index order.',
+        },
+        {
+          variables: { depth: node.depth, children: node.children.length },
+          conditionEval: { expr: 'intersects(sphere, node.bounds)', result: true },
+        }
+      );
+
+      node.children.forEach((child) => queryNode(child, path));
+      path.pop();
+    }
+
+    queryNode(root, []);
+
+    const stats = computeStats(root);
+    pushFrame({
+      codeLine: 31,
+      action: 'QUERY_COMPLETE',
+      explanation:
+        foundIds.length > 0
+          ? `Query complete: ${foundIds.map((id) => pointMap.get(id)?.label ?? id).join(', ')} inside radius ${sphere.radius}.`
+          : `Query complete: no stored point lies within radius ${sphere.radius} of ${centerPoint.label}.`,
+      state: {
+        activeNodeId: null,
+        phase: 'done',
+        querySphere: sphere,
+        foundIds: [...foundIds],
+        prunedIds: [...prunedIds],
+        pathIds: [],
+      },
+      callStack: [
+        { name: 'queryRange(sphere)', params: { center: [sphere.x, sphere.y, sphere.z], radius: sphere.radius }, line: 30, isCurrent: true },
+        { name: 'main()', params: { matched: foundIds.length }, line: 1 },
+      ],
+      variables: {
+        queryResults: foundIds.map((id) => pointMap.get(id)?.label ?? id).join(', ') || 'none',
+        matchedCount: foundIds.length,
+        nodes: stats.nodes,
+        leaves: stats.leaves,
+        maxDepth: stats.maxDepth,
+        stored: stats.stored,
+        prunedNodes: prunedIds.length,
+      },
+      milestone: 'Range Query Complete',
+      soundCue: foundIds.length > 0 ? 'finish' : 'fail',
+      pedagogy: {
+        what: `The DFS visited ${nodeVisits} node(s), pruned ${prunedIds.length}, and checked ${pointChecks} stored point(s).`,
+        why: 'Pruning whole AABBs is what turns a linear scan into a logarithmic range query.',
+        whatNext: 'Drag to orbit the cube and compare the surviving octant with the pruned ones.',
+      },
+    });
+
+    frames.forEach((f) => {
+      f.totalSteps = frames.length;
+    });
+    return frames;
+  },
+  renderStage: (frame: ExecutionFrame<OctreeState>) => <OctreeStage3D state={frame.state} />,
 };
 
 interface OctreeStage3DProps {
@@ -530,9 +1195,8 @@ interface OctreeStage3DProps {
 }
 
 export const OctreeStage3D: React.FC<OctreeStage3DProps> = ({ state }) => {
-  // Simple, elegant 3D isometric projection with mouse orbit capability
-  const [rotX, setRotX] = useState<number>(25); // Pitch (elevation)
-  const [rotY, setRotY] = useState<number>(45); // Yaw (azimuth)
+  const [rotX, setRotX] = useState<number>(25);
+  const [rotY, setRotY] = useState<number>(45);
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
 
@@ -552,32 +1216,22 @@ export const OctreeStage3D: React.FC<OctreeStage3DProps> = ({ state }) => {
 
   const handleMouseUp = () => setIsDragging(false);
 
-  // 3D to 2D isometric projection math
-  const project3D = (x: number, y: number, z: number, cx = 250, cy = 180, scale = 2.4) => {
-    // Center coordinates around [0, 0, 0]
+  const scale = 2.4;
+  const project3D = (x: number, y: number, z: number, cx = 250, cy = 190) => {
     const nx = x - 50;
     const ny = y - 50;
     const nz = z - 50;
-
     const radY = (rotY * Math.PI) / 180;
     const radX = (rotX * Math.PI) / 180;
-
-    // Y rotation (yaw)
     const x1 = nx * Math.cos(radY) - nz * Math.sin(radY);
     const z1 = nx * Math.sin(radY) + nz * Math.cos(radY);
-
-    // X rotation (pitch)
     const y2 = ny * Math.cos(radX) - z1 * Math.sin(radX);
-    const z2 = ny * Math.sin(radX) + z1 * Math.cos(radX);
-
-    return {
-      x: cx + x1 * scale,
-      y: cy - y2 * scale, // SVG Y is inverted
-      depth: z2,
-    };
+    return { x: cx + x1 * scale, y: cy - y2 * scale };
   };
 
-  // Draw wireframe box
+  const pathSet = new Set(state.pathIds);
+  const prunedSet = new Set(state.prunedIds);
+
   const renderWireBox = (box: OctantBox) => {
     const p = [
       project3D(box.xMin, box.yMin, box.zMin),
@@ -589,23 +1243,49 @@ export const OctreeStage3D: React.FC<OctreeStage3DProps> = ({ state }) => {
       project3D(box.xMax, box.yMax, box.zMax),
       project3D(box.xMin, box.yMax, box.zMax),
     ];
-
     const edges = [
-      [0, 1], [1, 2], [2, 3], [3, 0], // bottom face
-      [4, 5], [5, 6], [6, 7], [7, 4], // top face
-      [0, 4], [1, 5], [2, 6], [3, 7], // vertical pillars
+      [0, 1], [1, 2], [2, 3], [3, 0],
+      [4, 5], [5, 6], [6, 7], [7, 4],
+      [0, 4], [1, 5], [2, 6], [3, 7],
     ];
 
-    const isBoxActive = box.active;
-    const strokeColor = isBoxActive
-      ? 'rgba(99, 102, 241, 0.9)'
-      : box.depth === 0
-      ? 'rgba(56, 189, 248, 0.7)'
-      : 'rgba(148, 163, 184, 0.25)';
-    const strokeWidth = isBoxActive ? 2 : box.depth === 0 ? 1.5 : 1;
+    const isActive = box.id === state.activeNodeId;
+    const onPath = pathSet.has(box.id);
+    const isPruned = prunedSet.has(box.id);
+    const hasPoints = box.pointCount > 0;
+
+    // Keep the root and its 8 children always visible, but skip empty leaves
+    // below depth 1 unless the traversal is touching them. Internal boxes are
+    // never skipped, so nesting stays readable.
+    if (box.isLeaf && !hasPoints && !onPath && !isActive && !isPruned && box.depth >= 2) {
+      return null;
+    }
+
+    let stroke = 'rgba(148, 163, 184, 0.22)';
+    let strokeWidth = 1;
+    if (box.depth === 0) {
+      stroke = 'rgba(56, 189, 248, 0.65)';
+      strokeWidth = 1.5;
+    }
+    if (hasPoints) {
+      stroke = 'rgba(16, 185, 129, 0.45)';
+      strokeWidth = 1.25;
+    }
+    if (onPath) {
+      stroke = 'rgba(245, 158, 11, 0.9)';
+      strokeWidth = 2;
+    }
+    if (isPruned) {
+      stroke = 'rgba(244, 63, 94, 0.85)';
+      strokeWidth = 1.5;
+    }
+    if (isActive) {
+      stroke = '#818cf8';
+      strokeWidth = 2.5;
+    }
 
     return (
-      <g key={box.id} className="transition-all duration-300">
+      <g key={box.id}>
         {edges.map(([i, j], eIdx) => (
           <line
             key={eIdx}
@@ -613,59 +1293,123 @@ export const OctreeStage3D: React.FC<OctreeStage3DProps> = ({ state }) => {
             y1={p[i].y}
             x2={p[j].x}
             y2={p[j].y}
-            stroke={strokeColor}
+            stroke={stroke}
             strokeWidth={strokeWidth}
-            strokeDasharray={!isBoxActive && box.depth > 0 ? '3 3' : undefined}
+            strokeDasharray={isPruned ? '3 3' : undefined}
           />
         ))}
       </g>
     );
   };
 
+  const renderQuerySphere = () => {
+    if (!state.querySphere) return null;
+    const center = project3D(state.querySphere.x, state.querySphere.y, state.querySphere.z);
+    const r = state.querySphere.radius * scale;
+    return (
+      <g>
+        <defs>
+          <radialGradient id="octree-sphere" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stopColor="#34D399" stopOpacity="0.28" />
+            <stop offset="70%" stopColor="#10B981" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#10B981" stopOpacity="0.04" />
+          </radialGradient>
+        </defs>
+        <circle
+          cx={center.x}
+          cy={center.y}
+          r={r}
+          fill="url(#octree-sphere)"
+          stroke="rgba(52, 211, 153, 0.95)"
+          strokeWidth={1.5}
+          strokeDasharray="4 3"
+        />
+        <ellipse
+          cx={center.x}
+          cy={center.y}
+          rx={r}
+          ry={r * 0.42}
+          fill="none"
+          stroke="rgba(52, 211, 153, 0.35)"
+          strokeWidth={1}
+        />
+        <ellipse
+          cx={center.x}
+          cy={center.y}
+          rx={r * 0.42}
+          ry={r}
+          fill="none"
+          stroke="rgba(52, 211, 153, 0.25)"
+          strokeWidth={1}
+        />
+        <text
+          x={center.x}
+          y={center.y - r - 6}
+          textAnchor="middle"
+          fill="#34D399"
+          fontSize="9"
+          fontFamily="monospace"
+          fontWeight="600"
+        >
+          radius {state.querySphere.radius}
+        </text>
+      </g>
+    );
+  };
+
   return (
-    <div className="w-full h-full flex flex-col items-center justify-between p-4 select-none">
-      {/* 3D Orbit Canvas */}
+    <div className="w-full h-full flex flex-col items-center justify-between p-4 select-none gap-3">
       <div
-        className="relative w-full max-w-2xl h-[340px] bg-[#0B0F19] border border-slate-800 rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing shadow-inner flex items-center justify-center"
+        className="relative w-full max-w-3xl h-[380px] bg-[#0B0F19] border border-slate-800 rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing shadow-inner flex items-center justify-center"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Floating Controls HUD */}
-        <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-400 font-mono">
+        <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-2 bg-slate-900/85 backdrop-blur border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-400 font-mono">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span>Click & Drag to Orbit 3D Space</span>
+          <span>Drag to orbit</span>
           <span className="text-slate-600">|</span>
-          <span className="text-cyan-300">Yaw: {Math.round(rotY)}°</span>
-          <span className="text-cyan-300">Pitch: {Math.round(rotX)}°</span>
+          <span className="text-cyan-300">Yaw {Math.round(rotY)}°</span>
+          <span className="text-cyan-300">Pitch {Math.round(rotX)}°</span>
+          {state.phase && (
+            <span className="ml-1 px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 uppercase text-[10px]">
+              {state.phase}
+            </span>
+          )}
         </div>
 
-        {/* Spatial Legend HUD */}
-        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1 items-end text-[10px] font-mono">
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1 items-end text-[10px] font-mono bg-slate-900/70 backdrop-blur rounded-lg px-2 py-1.5 border border-slate-800">
           <div className="flex items-center gap-1.5 text-cyan-400">
             <span className="w-2.5 h-0.5 bg-cyan-400 rounded-full" />
-            <span>Root Bounding Box [0..100]³</span>
+            <span>Root cube</span>
           </div>
-          <div className="flex items-center gap-1.5 text-indigo-400">
-            <span className="w-2.5 h-0.5 bg-indigo-400 rounded-full" />
-            <span>Target Octant</span>
+          <div className="flex items-center gap-1.5 text-amber-400">
+            <span className="w-2.5 h-0.5 bg-amber-400 rounded-full" />
+            <span>Traversal path</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-indigo-300">
+            <span className="w-2.5 h-0.5 bg-indigo-300 rounded-full" />
+            <span>Active node</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-rose-400">
+            <span className="w-2.5 h-0.5 bg-rose-400 rounded-full" />
+            <span>Pruned by query</span>
           </div>
           <div className="flex items-center gap-1.5 text-emerald-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>3D Point Vector (x, y, z)</span>
+            <span>Stored / found point</span>
           </div>
         </div>
 
-        <svg className="w-full h-full" viewBox="0 0 500 360">
-          {/* Coordinate Axes */}
+        <svg className="w-full h-full" viewBox="0 0 500 400">
           {(() => {
             const origin = project3D(0, 0, 0);
             const xAxis = project3D(40, 0, 0);
             const yAxis = project3D(0, 40, 0);
             const zAxis = project3D(0, 0, 40);
             return (
-              <g opacity={0.6} className="font-mono text-[9px]">
+              <g opacity={0.6} fontFamily="monospace" fontSize="9">
                 <line x1={origin.x} y1={origin.y} x2={xAxis.x} y2={xAxis.y} stroke="#EF4444" strokeWidth={1.5} />
                 <text x={xAxis.x + 4} y={xAxis.y} fill="#EF4444">+X</text>
                 <line x1={origin.x} y1={origin.y} x2={yAxis.x} y2={yAxis.y} stroke="#10B981" strokeWidth={1.5} />
@@ -676,81 +1420,115 @@ export const OctreeStage3D: React.FC<OctreeStage3DProps> = ({ state }) => {
             );
           })()}
 
-          {/* Render Wireframe Bounding Boxes */}
-          {state.boxes.map(renderWireBox)}
+          {[...state.boxes]
+            .sort((a, b) => a.depth - b.depth)
+            .map(renderWireBox)}
 
-          {/* Render Spatial Query Sphere */}
-          {state.querySphere && (() => {
-            const center = project3D(state.querySphere.x, state.querySphere.y, state.querySphere.z);
-            return (
-              <g className="transition-all duration-300">
-                <circle
-                  cx={center.x}
-                  cy={center.y}
-                  r={55}
-                  fill="rgba(16, 185, 129, 0.12)"
-                  stroke="rgba(16, 185, 129, 0.8)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
-                />
-                <text
-                  x={center.x}
-                  y={center.y + 40}
-                  textAnchor="middle"
-                  fill="#34D399"
-                  className="font-mono text-[9px] font-semibold"
-                >
-                  Range Query Radius=25
-                </text>
-              </g>
-            );
-          })()}
+          {renderQuerySphere()}
 
-          {/* Render 3D Point Nodes */}
           {state.points.map((pt) => {
             const p2d = project3D(pt.x, pt.y, pt.z);
-            const isFound = state.foundPoints?.includes(pt.id);
-            const isHighlighted = pt.highlighted || isFound;
+            const isFound = pt.found || state.foundPoints?.includes(pt.id);
+            const isActive = pt.active;
+            const isStored = pt.stored;
+            const isRejected = pt.rejected;
+            const isPending = !isStored && !isActive && !isFound && !isRejected;
+
+            let fill = '#0f172a';
+            let stroke = '#475569';
+            if (isStored) {
+              fill = '#06B6D4';
+              stroke = '#0F172A';
+            }
+            if (isFound) {
+              fill = '#10B981';
+              stroke = '#052e16';
+            }
+            if (isRejected) {
+              fill = '#7f1d1d';
+              stroke = '#f87171';
+            }
+            if (isActive) {
+              fill = '#6366F1';
+              stroke = '#c7d2fe';
+            }
+
+            if (isPending) {
+              return (
+                <g key={pt.id} opacity={0.45}>
+                  <circle cx={p2d.x} cy={p2d.y} r={3.5} fill="#475569" stroke="#64748b" strokeWidth={1} />
+                  <text
+                    x={p2d.x + 6}
+                    y={p2d.y + 3}
+                    fill="#94a3b8"
+                    fontSize="8"
+                    fontFamily="monospace"
+                    fontWeight="600"
+                  >
+                    {pt.label}
+                  </text>
+                </g>
+              );
+            }
+
+            const showCoords = isActive || isFound || isRejected;
+            const labelText = showCoords
+              ? `${pt.label} (${pt.x},${pt.y},${pt.z})`
+              : pt.label;
+            const labelWidth = labelText.length * 5.3 + 10;
 
             return (
-              <g key={pt.id} className="transition-all duration-300">
-                {/* Glow ring */}
-                {isHighlighted && (
-                  <circle
-                    cx={p2d.x}
-                    cy={p2d.y}
-                    r={14}
-                    fill="none"
-                    stroke={isFound ? '#10B981' : '#6366F1'}
-                    strokeWidth={1.5}
-                    className="animate-ping origin-center opacity-70"
-                  />
+              <g key={pt.id}>
+                {isActive && (
+                  <>
+                    <circle
+                      cx={p2d.x}
+                      cy={p2d.y}
+                      r={13}
+                      fill="none"
+                      stroke="#818cf8"
+                      strokeWidth={1.5}
+                      opacity={0.55}
+                    />
+                    <circle
+                      cx={p2d.x}
+                      cy={p2d.y}
+                      r={9}
+                      fill="none"
+                      stroke="#a5b4fc"
+                      strokeWidth={1}
+                      opacity={0.35}
+                    />
+                  </>
                 )}
                 <circle
                   cx={p2d.x}
                   cy={p2d.y}
-                  r={isHighlighted ? 7 : 5}
-                  fill={isFound ? '#10B981' : isHighlighted ? '#6366F1' : '#06B6D4'}
-                  stroke="#0F172A"
+                  r={isActive || isFound ? 7 : 5}
+                  fill={fill}
+                  stroke={stroke}
                   strokeWidth={2}
+                  strokeDasharray={!isStored && !isRejected ? '2 2' : undefined}
                 />
                 <rect
                   x={p2d.x + 8}
                   y={p2d.y - 14}
-                  width={82}
+                  width={labelWidth}
                   height={18}
                   rx={4}
-                  fill="rgba(15, 23, 42, 0.85)"
-                  stroke={isHighlighted ? '#818CF8' : '#334155'}
+                  fill="rgba(15, 23, 42, 0.88)"
+                  stroke={isFound ? '#10B981' : isActive ? '#818CF8' : isRejected ? '#f87171' : '#334155'}
                   strokeWidth={1}
                 />
                 <text
                   x={p2d.x + 12}
                   y={p2d.y - 2}
-                  fill="#F8FAFC"
-                  className="font-mono text-[9px] font-semibold"
+                  fill={isRejected ? '#fca5a5' : '#F8FAFC'}
+                  fontSize="9"
+                  fontFamily="monospace"
+                  fontWeight="600"
                 >
-                  {pt.label} ({pt.x},{pt.y},{pt.z})
+                  {labelText}
                 </text>
               </g>
             );
@@ -758,8 +1536,23 @@ export const OctreeStage3D: React.FC<OctreeStage3DProps> = ({ state }) => {
         </svg>
       </div>
 
-      {/* Octant Partitioning Hierarchy HUD */}
-      <div className="w-full max-w-2xl mt-3 grid grid-cols-4 md:grid-cols-8 gap-1.5 font-mono text-[10px]">
+      <div className="w-full max-w-3xl flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] text-slate-400">
+        <div className="flex flex-wrap items-center gap-3">
+          <span>nodes <span className="text-slate-200">{state.stats.nodes}</span></span>
+          <span>leaves <span className="text-slate-200">{state.stats.leaves}</span></span>
+          <span>depth <span className="text-slate-200">{state.stats.maxDepth}</span></span>
+          <span>stored <span className="text-emerald-300">{state.stats.stored}</span></span>
+          <span>capacity <span className="text-slate-200">{CAPACITY}</span></span>
+          <span>max depth <span className="text-slate-200">{MAX_DEPTH}</span></span>
+        </div>
+        {state.querySphere && (
+          <span className="text-emerald-300">
+            found {state.foundPoints?.length ?? 0} · pruned {state.prunedIds.length}
+          </span>
+        )}
+      </div>
+
+      <div className="w-full max-w-3xl grid grid-cols-4 md:grid-cols-8 gap-1.5 font-mono text-[10px]">
         {Array.from({ length: 8 }).map((_, i) => {
           const isActive = state.activeOctantIndex === i;
           return (
@@ -767,7 +1560,7 @@ export const OctreeStage3D: React.FC<OctreeStage3DProps> = ({ state }) => {
               key={i}
               className={`p-1.5 rounded-lg border text-center transition-all ${
                 isActive
-                  ? 'bg-indigo-600/30 border-indigo-400 text-indigo-300 font-bold shadow-sm'
+                  ? 'bg-indigo-600/30 border-indigo-400 text-indigo-200 font-bold shadow-sm'
                   : 'bg-slate-900/40 border-slate-800 text-slate-500'
               }`}
             >

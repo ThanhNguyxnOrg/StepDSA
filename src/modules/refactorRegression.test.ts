@@ -3410,3 +3410,166 @@ describe('ternary search tree regressions', () => {
     ).toBe(0);
   });
 });
+
+describe('octree 3d regressions', () => {
+  function collectBoxIds(state: any): Set<string> {
+    return new Set((state.boxes ?? []).map((box: any) => box.id));
+  }
+
+  it('splits a full leaf before routing, and never hides a subdivision', () => {
+    const mod = moduleById('octree-3d');
+    const input = [
+      { id: 'a', x: 10, y: 10, z: 10, label: 'A' },
+      { id: 'b', x: 80, y: 80, z: 80, label: 'B' },
+      { id: 'c', x: 20, y: 20, z: 20, label: 'C' },
+    ];
+    const timeline = mod.generateTimeline(input as any);
+    const actions = timeline.map((f) => f.action);
+
+    // First point fills the root leaf; the second must overflow it.
+    expect(actions[0]).toBe('INIT');
+    expect(actions[1]).toBe('STORE_POINT');
+    const overflowIdx = actions.indexOf('OVERFLOW');
+    expect(overflowIdx).toBeGreaterThan(0);
+    expect(actions[overflowIdx + 1]).toBe('SUBDIVIDE');
+    expect(actions[overflowIdx + 2]).toBe('REDISTRIBUTE_ROUTE');
+    expect(actions[overflowIdx + 3]).toBe('REDISTRIBUTE_STORE');
+    expect(actions[overflowIdx + 4]).toBe('ROUTE');
+    expect(actions[overflowIdx + 5]).toBe('STORE_POINT');
+
+    // The root leaf gains exactly 8 children in the SUBDIVIDE frame.
+    const subdivide = timeline[overflowIdx + 1];
+    expect(subdivide.state.root?.children.length).toBe(8);
+    expect(subdivide.state.stats.nodes).toBe(9);
+
+    const expectedLines: Record<string, number> = {
+      REJECT_OUTSIDE: 2,
+      STORE_POINT: 4,
+      REDISTRIBUTE_STORE: 4,
+      DEPTH_CAP: 8,
+      OVERFLOW: 11,
+      SUBDIVIDE: 12,
+      REDISTRIBUTE_ROUTE: 13,
+      ROUTE: 17,
+      QUERY_START: 20,
+      PRUNE: 21,
+      QUERY_LEAF: 22,
+      CHECK_POINT: 24,
+      FOUND_POINT: 25,
+      DESCEND: 29,
+      QUERY_COMPLETE: 31,
+    };
+    for (const frame of timeline) {
+      const expected = expectedLines[frame.action ?? ''];
+      if (expected !== undefined) {
+        expect(frame.codeLine, `${frame.action} at frame ${frame.stepIndex}`).toBe(expected);
+      }
+      expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      expect(frame.pedagogy?.why, `why missing on ${frame.action}`).toBeTruthy();
+    }
+
+    // Path/active ids must exist in the cloned boxes of the same frame.
+    for (const frame of timeline) {
+      const ids = collectBoxIds(frame.state);
+      for (const id of frame.state.pathIds) {
+        expect(ids.has(id), `stale path id ${id} on frame ${frame.stepIndex}`).toBe(true);
+      }
+      if (frame.state.activeNodeId) {
+        expect(ids.has(frame.state.activeNodeId)).toBe(true);
+      }
+    }
+
+    const last = timeline[timeline.length - 1];
+    expect(last.state.stats.stored).toBe(3);
+    expect(last.state.foundPoints).toContain('a');
+    expect(last.state.foundPoints).toContain('c');
+    expect(() => mod.renderStage(timeline[overflowIdx + 1], '2d')).not.toThrow();
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+  });
+
+  it('asks the overflow prediction at the first full root leaf', () => {
+    const mod = moduleById('octree-3d');
+    const timeline = mod.generateTimeline(mod.defaultInput as any);
+    const checkpoints = timeline.filter((f) => f.checkpoint);
+    expect(checkpoints).toHaveLength(1);
+    expect(checkpoints[0].checkpoint?.id).toBe('octree-first-overflow');
+    expect(checkpoints[0].checkpoint?.correctIndex).toBe(1);
+    expect(checkpoints[0].action).toBe('OVERFLOW');
+    expect(checkpoints[0].state.stats.stored).toBe(1);
+  });
+
+  it('rejects points outside the root cube instead of clamping them', () => {
+    const mod = moduleById('octree-3d');
+    const input = [
+      { id: 'in1', x: 20, y: 20, z: 20, label: 'IN1' },
+      { id: 'out', x: 140, y: 40, z: 40, label: 'OUT' },
+      { id: 'in2', x: 70, y: 70, z: 70, label: 'IN2' },
+    ];
+    const timeline = mod.generateTimeline(input as any);
+
+    const reject = timeline.find((f) => f.action === 'REJECT_OUTSIDE');
+    expect(reject).toBeDefined();
+    expect(reject?.variables?.point).toBe('OUT');
+    expect(reject?.conditionEval?.result).toBe(false);
+    expect(timeline.some((f) => f.action === 'INSERT_REJECTED')).toBe(true);
+
+    const last = timeline[timeline.length - 1];
+    expect(last.state.stats.stored).toBe(2);
+    expect(last.state.points.find((p: any) => p.id === 'out')?.rejected).toBe(true);
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+  });
+
+  it('stops coincident points at the depth cap instead of recursing forever', () => {
+    const mod = moduleById('octree-3d');
+    const input = [
+      { id: 'd0', x: 50, y: 50, z: 50, label: 'D0' },
+      { id: 'd1', x: 50, y: 50, z: 50, label: 'D1' },
+      { id: 'd2', x: 50, y: 50, z: 50, label: 'D2' },
+    ];
+    const timeline = mod.generateTimeline(input as any);
+    const caps = timeline.filter((f) => f.action === 'DEPTH_CAP');
+
+    // The second and third identical points cannot be separated by any split.
+    expect(caps.length).toBe(2);
+    for (const cap of caps) {
+      expect(cap.variables?.depth).toBe(6);
+      expect(cap.conditionEval?.result).toBe(true);
+    }
+    const last = timeline[timeline.length - 1];
+    expect(last.state.stats.maxDepth).toBe(6);
+    expect(last.state.stats.stored).toBe(3);
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+  });
+
+  it('prunes non-intersecting octants and reports only exact-distance hits', () => {
+    const mod = moduleById('octree-3d');
+    const timeline = mod.generateTimeline(mod.defaultInput as any);
+
+    const pruneFrames = timeline.filter((f) => f.action === 'PRUNE');
+    expect(pruneFrames.length).toBeGreaterThan(0);
+    for (const frame of pruneFrames) {
+      expect(frame.conditionEval?.result).toBe(false);
+      expect(frame.state.prunedIds).toContain(frame.state.activeNodeId);
+    }
+
+    const queryStart = timeline.find((f) => f.action === 'QUERY_START');
+    expect(queryStart?.state.querySphere).toEqual({ x: 25, y: 75, z: 30, radius: 25 });
+
+    const foundFrames = timeline.filter((f) => f.action === 'FOUND_POINT');
+    expect(foundFrames.map((f) => f.variables?.point)).toEqual(['P0', 'P2']);
+    for (const frame of foundFrames) {
+      expect(frame.variables?.inside).toBe(true);
+      expect(frame.variables?.distance).toBeLessThanOrEqual(25);
+    }
+
+    const last = timeline[timeline.length - 1];
+    expect(last.action).toBe('QUERY_COMPLETE');
+    expect(last.state.foundPoints).toEqual(['p0', 'p2']);
+    expect(last.state.prunedIds.length).toBe(pruneFrames.length);
+    expect(last.milestoneTitle).toBe('Range Query Complete');
+
+    for (const preset of mod.presets) {
+      expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
+    }
+  });
+});
