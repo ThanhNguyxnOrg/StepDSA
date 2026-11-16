@@ -71,10 +71,19 @@ bfs ✅ · dijkstra ✅ · dfs ✅ · bellman-ford ✅ · floyd-warshall ✅ · 
 line-intersection → ⬜ (module is category math; covered in the M1 geometry batch)
 
 ### DP (18)
-coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ /
-lis / edit-distance / knapsack / unbounded-knapsack / subset-sum / matrix-chain /
-house-robber / climbing-stairs / unique-paths / kadane / lps / tsp-held-karp /
-burst-balloons / longest-palindromic-substring / tree-diameter-dp → ⬜
+coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ /
+lis / knapsack / unbounded-knapsack / subset-sum / matrix-chain / house-robber /
+climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
+longest-palindromic-substring / tree-diameter-dp → ⬜
+
+Edit-distance notes: the borders dp[i][0] = i and dp[0][j] = j are now filled one cell per
+frame (`BASE_ROW` / `BASE_COL`) instead of being pre-filled invisibly, each inner cell
+reports the three candidate costs and the winning operation (with a tie note), the
+recovered edit script — previously never shown — is walked one operation per frame
+(`BT_KEEP` / `BT_DELETE` / `BT_INSERT` / `BT_REPLACE`) and displayed as chips, and
+`edit-distance-cheapest-op` / `edit-distance-backtrack-first-step` checkpoints ask for the
+prediction at a genuine three-way choice. Tests re-apply the recovered script and assert it
+transforms word1 into word2 with exactly dp[m][n] edits.
 
 LCS notes: the table fill keeps one frame per cell but now carries the exact
 dependencies (diagonal on a match, top+left on a max) plus WHAT/WHY/WHAT-NEXT with
@@ -153,8 +162,8 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
    flood-fill, graph-representations. `line-intersection` is category math → M1.
 5. **T1 — balanced trees:** red-black, treap, splay (rotation animations).
 6. **T2 — specialized trees:** segment, fenwick, b-tree family, trie family, kd/interval.
-7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅, lis,
-   edit-distance, knapsack family, matrix-chain.
+7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅,
+   edit-distance ✅, lis, knapsack family, matrix-chain.
 8. **DP2 — grid/sequence DP + backtracking:** unique-paths, house-robber, n-queens,
    sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.

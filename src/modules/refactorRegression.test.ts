@@ -4313,3 +4313,306 @@ describe('LCS 2D DP regressions', () => {
     }
   });
 });
+
+describe('edit distance regressions', () => {
+  const mod = () => moduleById('edit-distance');
+
+  function tableProblems(state: any, action: string): string[] {
+    const problems: string[] = [];
+    const { word1, word2, dpTable, stats } = state;
+    if (dpTable.length !== word1.length + 1) problems.push(`rows ${dpTable.length} != ${word1.length + 1}`);
+    for (const row of dpTable) {
+      if (row.length !== word2.length + 1) problems.push(`row width ${row.length} != ${word2.length + 1}`);
+    }
+    // The borders are filled one cell per frame, so only the cells that were
+    // already written may hold their final value.
+    let filledLeft = word1.length;
+    let filledTop = word2.length;
+    if (state.phase === 'base') {
+      if (action === 'INIT') {
+        filledLeft = 0;
+        filledTop = 0;
+      } else if (action === 'BASE_ROW') {
+        filledLeft = state.currentI;
+        filledTop = 0;
+      } else {
+        filledLeft = word1.length;
+        filledTop = state.currentJ;
+      }
+    }
+    for (let i = 1; i <= word1.length; i++) {
+      const expected = i <= filledLeft ? i : 0;
+      if (dpTable[i][0] !== expected) problems.push(`border dp[${i}][0] = ${dpTable[i][0]} != ${expected}`);
+    }
+    for (let j = 1; j <= word2.length; j++) {
+      const expected = j <= filledTop ? j : 0;
+      if (dpTable[0][j] !== expected) problems.push(`border dp[0][${j}] = ${dpTable[0][j]} != ${expected}`);
+    }
+    let seen = 0;
+    for (let i = 1; i <= word1.length; i++) {
+      for (let j = 1; j <= word2.length; j++) {
+        if (seen >= (stats?.cells ?? 0)) break;
+        seen++;
+        const match = word1[i - 1] === word2[j - 1];
+        const expected = match
+          ? dpTable[i - 1][j - 1]
+          : 1 + Math.min(dpTable[i - 1][j], dpTable[i][j - 1], dpTable[i - 1][j - 1]);
+        if (dpTable[i][j] !== expected) problems.push(`dp[${i}][${j}] = ${dpTable[i][j]} but the recurrence gives ${expected}`);
+      }
+    }
+    const candidate = state.candidate;
+    if (candidate) {
+      const value = candidate.kind === 'match'
+        ? candidate.replaceCost
+        : 1 + Math.min(candidate.deleteCost, candidate.insertCost, candidate.replaceCost);
+      if (candidate.value !== value) problems.push(`candidate value ${candidate.value} != ${value}`);
+      if (dpTable[candidate.i][candidate.j] !== candidate.value) problems.push('candidate disagrees with the table');
+      const expectedSources = (
+        candidate.kind === 'match'
+          ? [`${candidate.i - 1}:${candidate.j - 1}`]
+          : [`${candidate.i - 1}:${candidate.j}`, `${candidate.i}:${candidate.j - 1}`, `${candidate.i - 1}:${candidate.j - 1}`]
+      ).sort();
+      const sources = state.sourceCells.map(([i, j]: [number, number]) => `${i}:${j}`).sort();
+      if (JSON.stringify(sources) !== JSON.stringify(expectedSources)) {
+        problems.push(`sourceCells ${JSON.stringify(sources)} != ${JSON.stringify(expectedSources)}`);
+      }
+    }
+    return problems;
+  }
+
+  /** Every recorded operation must explain the cell it was taken from. */
+  function scriptProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { word1, word2, editScript, walkPath, phase, dpTable } = state;
+
+    for (const step of editScript) {
+      const { op, i, j } = step;
+      if (i === undefined || j === undefined) continue;
+      const cell = dpTable[i]?.[j];
+      const diagonal = dpTable[i - 1]?.[j - 1];
+      const above = dpTable[i - 1]?.[j];
+      const left = dpTable[i]?.[j - 1];
+      if (op === 'MATCH') {
+        if (cell !== diagonal) problems.push(`MATCH at (${i},${j}) but dp = ${cell} != diagonal ${diagonal}`);
+      } else if (op === 'DELETE') {
+        if (cell !== above + 1) problems.push(`DELETE at (${i},${j}) but dp = ${cell} != ${above} + 1`);
+      } else if (op === 'INSERT') {
+        if (cell !== left + 1) problems.push(`INSERT at (${i},${j}) but dp = ${cell} != ${left} + 1`);
+      } else if (cell !== diagonal + 1) {
+        problems.push(`REPLACE at (${i},${j}) but dp = ${cell} != ${diagonal} + 1`);
+      }
+    }
+
+    if (phase === 'done') {
+      // The finished script must really transform word1 into word2.
+      let cursor = 0;
+      let output = '';
+      for (const step of editScript) {
+        if (step.op === 'MATCH' || step.op === 'REPLACE') {
+          if (word1[cursor] !== step.from) problems.push(`${step.op} at ${cursor} expected '${step.from}'`);
+          output += step.to;
+          cursor++;
+        } else if (step.op === 'DELETE') {
+          if (word1[cursor] !== step.from) problems.push(`DELETE at ${cursor} expected '${step.from}'`);
+          cursor++;
+        } else {
+          output += step.to;
+        }
+      }
+      if (output !== word2) problems.push(`script produces "${output}" instead of "${word2}"`);
+      if (cursor !== word1.length) problems.push(`script consumed ${cursor}/${word1.length} characters of word1`);
+      const costed = editScript.filter((step: any) => step.op !== 'MATCH').length;
+      if (costed !== dpTable[word1.length][word2.length]) {
+        problems.push(`script has ${costed} edits but dp[m][n] = ${dpTable[word1.length][word2.length]}`);
+      }
+    }
+    // Every walk move must follow the dependency of the cell it leaves.
+    for (let k = 1; k < walkPath.length; k++) {
+      const [pi, pj] = walkPath[k - 1];
+      const [ci, cj] = walkPath[k];
+      const di = pi - ci;
+      const dj = pj - cj;
+      if (pi > 0 && pj > 0 && word1[pi - 1] === word2[pj - 1]) {
+        if (di !== 1 || dj !== 1) problems.push(`match cell (${pi},${pj}) must move diagonally`);
+      } else if (pi > 0 && dpTable[pi][pj] === dpTable[pi - 1][pj] + 1) {
+        if (di !== 1 || dj !== 0) problems.push(`cell (${pi},${pj}) realises a delete but moved ${di},${dj}`);
+      } else if (pj > 0 && dpTable[pi][pj] === dpTable[pi][pj - 1] + 1) {
+        if (di !== 0 || dj !== 1) problems.push(`cell (${pi},${pj}) realises an insert but moved ${di},${dj}`);
+      } else if (di !== 1 || dj !== 1) {
+        problems.push(`cell (${pi},${pj}) must move diagonally (replace)`);
+      }
+    }
+    return problems;
+  }
+
+  it('recovers an edit script that really transforms word1 into word2', () => {
+    const module = mod();
+    const expected: Record<string, { distance: number; script: string }> = {
+      'horse-ros': { distance: 3, script: "replace 'H' with 'R' → delete 'R' → delete 'E'" },
+      'kitten-sitting': { distance: 3, script: "replace 'K' with 'S' → replace 'E' with 'I' → insert 'G'" },
+      'single-char': { distance: 1, script: "replace 'T' with 'R'" },
+      'same-words': { distance: 0, script: '(no edits needed)' },
+      'append-suffix': { distance: 1, script: "insert 'S'" },
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const m = last.state.word1.length;
+      const n = last.state.word2.length;
+      const want = expected[preset.id];
+      expect(last.state.dpTable[m][n], `distance for ${preset.id}`).toBe(want.distance);
+      expect(last.variables?.script ?? '(no edits needed)', `script for ${preset.id}`).toBe(want.script);
+
+      for (const frame of timeline) {
+        expect(tableProblems(frame.state, frame.action ?? ''), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(scriptProblems(frame.state), `script on frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('shows the border cells separately and keeps one frame per decision', () => {
+    const module = mod();
+    const timeline = module.generateTimeline({ word1: 'HORSE', word2: 'ROS' } as any);
+
+    expect(timeline[0].action).toBe('INIT');
+    const baseRows = timeline.filter((f) => f.action === 'BASE_ROW');
+    const baseCols = timeline.filter((f) => f.action === 'BASE_COL');
+    expect(baseRows).toHaveLength(5);
+    expect(baseCols).toHaveLength(3);
+    baseRows.forEach((frame, index) => {
+      const i = index + 1;
+      expect(frame.state.dpTable[i][0]).toBe(i);
+      expect(frame.state.dpTable[i].slice(1).every((v: number) => v === 0)).toBe(true);
+    });
+    // HORSE vs ROS matches on O, R (row 3) and S (row 4): three match cells.
+    expect(timeline.filter((f) => f.action === 'CELL_MATCH')).toHaveLength(3);
+    expect(timeline.filter((f) => f.action === 'CELL_MISMATCH')).toHaveLength(5 * 3 - 3);
+    expect(timeline.filter((f) => f.action === 'TABLE_COMPLETE')).toHaveLength(1);
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [3],
+      BASE_ROW: [4],
+      BASE_COL: [5],
+      CELL_MATCH: [9],
+      CELL_MISMATCH: [11],
+      TABLE_COMPLETE: [9, 11],
+      BACKTRACK_START: [12],
+      BT_KEEP: [15],
+      BT_DELETE: [17],
+      BT_INSERT: [19],
+      BT_REPLACE: [21],
+      DONE: [22],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+
+    // The script is filled one operation per frame during the walk.
+    const walkFrames = timeline.filter((f) => (f.action ?? '').startsWith('BT_'));
+    expect(walkFrames.length).toBeGreaterThanOrEqual(3);
+    let collected = 0;
+    for (const frame of walkFrames) {
+      const script = frame.state.editScript;
+      expect(script.length).toBeGreaterThanOrEqual(collected);
+      collected = script.length;
+    }
+    // HORSE -> ROS needs 3 edits and no matches.
+    const btOps = walkFrames.map((f) => f.state.operationType);
+    expect(btOps).toContain('REPLACE');
+    expect(btOps).toContain('DELETE');
+  });
+
+  it('asks which of the three candidates is cheapest and how the walk decides', () => {
+    const module = mod();
+    const timeline = module.generateTimeline({ word1: 'HORSE', word2: 'ROS' } as any);
+
+    const choice = timeline.find((f) => f.checkpoint?.id === 'edit-distance-cheapest-op');
+    expect(choice).toBeDefined();
+    expect(choice?.action).toBe('CELL_MISMATCH');
+    expect(choice?.checkpoint?.correctIndex).toBe(0);
+    const v = choice?.variables ?? {};
+    expect(new Set([v.deleteCost, v.insertCost, v.replaceCost]).size).toBe(3);
+    expect(choice?.checkpoint?.options[0]).toContain(v.chosen);
+    expect(choice?.checkpoint?.options[0]).toContain(String(v['dp[i][j]']));
+
+    const walk = timeline.find((f) => f.checkpoint?.id === 'edit-distance-backtrack-first-step');
+    expect(walk).toBeDefined();
+    expect(['BT_KEEP', 'BT_DELETE', 'BT_INSERT', 'BT_REPLACE']).toContain(walk?.action);
+    expect(walk?.checkpoint?.correctIndex).toBe(0);
+
+    // Distinct candidate costs must differ for the cheapest-op checkpoint to be asked.
+    const checkpointCells = timeline.filter((f) => f.checkpoint?.id === 'edit-distance-cheapest-op');
+    expect(checkpointCells).toHaveLength(1);
+  });
+
+  it('maps every action to an exact line in all five language snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline({ word1: 'KITTEN', word2: 'SITTING' } as any);
+    const lineMatchers: Record<number, RegExp> = {
+      3: /D|dp/,
+      4: /\[i\]\[0\]|D\[i, 0\]|D\[i\]\[0\]/,
+      5: /\[0\]\[j\]|D\[0, j\]|D\[0\]\[j\]/,
+      9: /D\[i\]\[j\]/,
+      11: /min|Math\.min/,
+      12: /ops|i = m|i, j/,
+      15: /i--|i = i - 1|i, j = i/,
+      17: /DELETE|delete|i--|i -= 1/,
+      19: /INSERT|insert|j--|j -= 1/,
+      21: /REPLACE|replace/,
+      22: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        expect(lines[line - 1]).not.toBeUndefined();
+        expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+      }
+    }
+  });
+
+  it('forces the script when one word is empty and normalises bad input', () => {
+    const module = mod();
+    const inserts = module.generateTimeline({ word1: '', word2: 'ABC' } as any);
+    expect(inserts).toHaveLength(2);
+    expect(inserts[inserts.length - 1].state.editScript.map((s: any) => s.op)).toEqual(['INSERT', 'INSERT', 'INSERT']);
+    expect(inserts[inserts.length - 1].variables?.script).toBe("insert 'A' → insert 'B' → insert 'C'");
+
+    const deletes = module.generateTimeline({ word1: 'AB', word2: '' } as any);
+    expect(deletes[deletes.length - 1].state.editScript.map((s: any) => s.op)).toEqual(['DELETE', 'DELETE']);
+
+    const none = module.generateTimeline({ word1: '', word2: '' } as any);
+    expect(none[none.length - 1].variables?.distance).toBe(0);
+
+    const cleaned = module.generateTimeline({ word1: 'c-a!t', word2: 'car' } as any);
+    expect(cleaned[0].state.word1).toBe('CAT');
+    expect(cleaned[0].state.word2).toBe('CAR');
+    expect(cleaned[0].explanation).toMatch(/removed non-alphanumeric/);
+
+    const long = module.generateTimeline({ word1: 'ABCDEFGHIJKL', word2: 'WXYZABCDE' } as any);
+    expect(long[0].state.word1).toBe('ABCDEFGH');
+    expect(long[0].explanation).toMatch(/truncated/);
+
+    const fallback = module.generateTimeline({} as any);
+    expect(fallback[0].state.word1).toBe('HORSE');
+    expect(auditTimeline(module, {} as any).errorCount).toBe(0);
+
+    for (const data of [{ word1: 'HORSE', word2: 'ROS' }, { word1: 'SAME', word2: 'SAME' }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});
