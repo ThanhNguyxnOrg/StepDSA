@@ -253,8 +253,29 @@ nhu cầu học DSA qua tiếng Việt là thật — **StepDSA nên i18n việt
 
 ## 9. Unknowns (cần điều tra tiếp bằng craft-anything)
 
-- VisuAlgo làm quiz/training & e-Lecture chính xác thế nào (cấu trúc trong bundle)?
-- Clement Pathfinding Visualizer tổ chức maze generator + animation ra sao?
-- Toptal sorting page điều khiển "Play All" thế nào?
-- algorithm-visualizer tracer DSL có thể học gì cho StepDSA?
-- LeetCodeAnimation "web từng bước/tua lại/đổi tốc độ/thuyết minh" triển khai thế nào?
+- VisuAlgo làm quiz/training & e-Lecture chính xác thế nào (cấu trúc trong bundle)? ✅ **đã trả lời** — xem §10 + `docs/research/PRODUCT_TEARDOWN.md`
+- Clement Pathfinding Visualizer tổ chức maze generator + animation ra sao? ✅ **đã trả lời (source)** — `docs/research/clement-visualizers.md`
+- Toptal sorting page điều khiển "Play All" thế nào? ⚠️ live bị Cloudflare chặn; giữ tham chiếu thiết kế từ nội dung công khai
+- algorithm-visualizer tracer DSL có thể học gì cho StepDSA? ✅ **đã trả lời (source)** — `docs/research/algorithm-visualizer.md`
+- LeetCodeAnimation "web từng bước/tua lại/đổi tốc độ/thuyết minh" triển khai thế nào? ❌ chưa điều tra (việc còn lại)
+
+---
+
+## 10. TEARDOWN 2026-11-15 → 16 — kết quả điều tra (craft-anything)
+
+Giai đoạn điều tra sâu đã hoàn tất phần lớn. **Tài liệu tổng hợp: [`research/PRODUCT_TEARDOWN.md`](research/PRODUCT_TEARDOWN.md)**; 5 báo cáo source đầy đủ (file:line) nằm trong `docs/research/`:
+
+| File | Nội dung |
+|---|---|
+| `research/algorithm-visualizer.md` | Teardown 49.5k sao: tracer/command/playback, 5 bài học |
+| `research/sound-of-sorting.md` | Teardown GPLv3: instrumentation + audibilization + 10 gợi ý Web Audio |
+| `research/clement-visualizers.md` | Teardown Pathfinding + Sorting: grid UX, maze, 6 bài học, anti-pattern |
+| `research/recursion-tree-visualizer.md` | Teardown brpapa: wrapper `_fn`/`fn`, Reingold-Tilford + Euler tour, sandbox |
+| `research/opendsa.md` | Teardown OpenDSA: proficiency exercise, gradeable step, fix/model answer, SPLICE |
+
+**Quan sát live (craft-anything, Chrome riêng tư + walkthrough)**:
+- **VisuAlgo**: e-Lecture (slide + timeline checkpoint, Esc toggle, quiz nhúng mcq/msq), Exploration Mode (preset input nhóm + user-defined, codetrace `code1..code7`, current-action, playback từng frame, scale 1.0x, Share), Training tự sinh (`/training?diff&n&tl&module`, 1 câu/trang, SUBMIT/NEXT, đổi đề mỗi lần tải), Recursion tool (Tree/DAG + stats 15/3/8 vs 7/0/2, code sửa được + preset). Evidence ids: xem `PRODUCT_TEARDOWN.md` §3.
+- **Python Tutor**: options hiển thị (objects/2D array), "Generate permanent link", Teacher Mode; **iframe-embed chạy thật** (Prev/Next, Step N of M, Frames/Objects).
+- **recursionvisualizer.com**: preset virfib → tự điền hàm + call, "Computing call graph…", thư viện rcviz.
+- **Toptal**: bị Cloudflare chặn từ môi trường điều tra — ghi trung thực, không quan sát live được.
+- Lưu ý: phiên craft-anything 15/11 bị restart giữa chừng (memory theo session bị reset, `/tmp` bị dọn); các kết luận quan trọng đã được chuyển vào repo (mục này + `docs/research/`) để không mất.
