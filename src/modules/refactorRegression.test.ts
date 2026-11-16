@@ -2749,6 +2749,75 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
   });
 
+  it('radix tree compacts paths, splits diverging edges once per branch point, and verifies exact-match search', () => {
+    const mod = moduleById('radix-tree');
+    const input = { words: ['romane', 'romanus', 'romulus', 'rubens'], searchTarget: 'romanus' };
+    const timeline = mod.generateTimeline(input as any);
+
+    // Classic romane/romanus divergence: "roman" stays, "e" is pushed down, "us" becomes the new branch.
+    const splits = timeline.filter((f) => f.action === 'SPLIT_EDGE');
+    expect(splits.length).toBe(3);
+    expect(splits[0].variables?.commonPrefix).toBe('roman');
+    expect(splits[0].variables?.pushedDownSuffix).toBe('e');
+    expect(splits[0].variables?.newBranchSuffix).toBe('us');
+
+    // "romane" arrives as a single compacted leaf edge — no per-character nodes.
+    const attaches = timeline.filter((f) => f.action === 'ATTACH_LEAF');
+    expect(attaches.length).toBe(1);
+    expect(attaches[0].variables?.attachedLabel).toBe('romane');
+
+    // Search for a present key: four traversals, then an exact-match verdict on line 34.
+    const traversals = timeline.filter((f) => f.action === 'TRAVERSE_EDGE');
+    expect(traversals.length).toBe(4);
+    const verdict = timeline[timeline.length - 1];
+    expect(verdict.action).toBe('SEARCH_COMPLETE');
+    expect(verdict.variables?.searchSuccess).toBe(true);
+    expect(verdict.state.found).toBe(true);
+
+    // Frame → pseudocode line mapping stays honest after the WIP remap.
+    for (const frame of timeline.filter((f) => f.action === 'INSERT_WORD')) {
+      expect(frame.codeLine).toBe(4);
+    }
+    for (const frame of timeline.filter((f) => f.action === 'START_SEARCH')) {
+      expect(frame.codeLine).toBe(28);
+    }
+    for (const frame of timeline.filter((f) => f.action === 'TRAVERSE_EDGE')) {
+      expect(frame.codeLine).toBe(33);
+    }
+    for (const frame of timeline.filter((f) => f.action === 'SEARCH_COMPLETE')) {
+      expect(frame.codeLine).toBe(34);
+    }
+
+    // Every user-visible step carries full W/H/N pedagogy.
+    for (const action of ['INSERT_WORD', 'START_SEARCH', 'TRAVERSE_EDGE', 'SEARCH_COMPLETE']) {
+      const frames = timeline.filter((f) => f.action === action);
+      expect(frames.length).toBeGreaterThan(0);
+      for (const frame of frames) {
+        expect(frame.pedagogy?.what?.trim()).toBeTruthy();
+        expect(frame.pedagogy?.why?.trim()).toBeTruthy();
+        expect(frame.pedagogy?.whatNext?.trim()).toBeTruthy();
+      }
+    }
+
+    // One pedagogical checkpoint, plus milestones for time-travel navigation.
+    expect(timeline.filter((f) => f.checkpoint?.id === 'radix-edge-compaction').length).toBe(1);
+    expect(timeline.some((f) => f.milestoneTitle === 'First Edge Split Created')).toBe(true);
+    expect(timeline.some((f) => f.milestoneTitle === 'Dictionary Fully Inserted')).toBe(true);
+    expect(timeline.some((f) => f.milestoneTitle === 'Exact Match Verified')).toBe(true);
+
+    // A key that shares a prefix but was never inserted must report MISS.
+    const miss = mod.generateTimeline({
+      words: ['romane', 'romanus', 'romulus', 'rubens'],
+      searchTarget: 'roma',
+    } as any);
+    expect(miss[miss.length - 1].variables?.searchSuccess).toBe(false);
+
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[0].data as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, mod.presets[1].data as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, input as any).warningCount).toBe(0);
+  });
+
   it('introsort dispatches engines correctly and the heapsort fallback really fires', () => {
     const mod = moduleById('introsort');
 

@@ -214,6 +214,7 @@ function search(root, target):
     const frames: ExecutionFrame<RadixTreeState>[] = [];
     const root: RadixNodeData = makeNode(false);
     let checkpointAdded = false;
+    let firstSplitAdded = false;
 
     frames.push({
       stepIndex: 0,
@@ -379,6 +380,9 @@ function search(root, target):
             totalSteps: 1,
             codeLine: 22,
             action: 'SPLIT_EDGE',
+            ...(!firstSplitAdded
+              ? { isMilestone: true, milestoneTitle: 'First Edge Split Created' }
+              : {}),
             state: {
               root: cloneRadix(root),
               activeWord: word,
@@ -402,19 +406,24 @@ function search(root, target):
             },
             explanation: `Split edge: common "${matchedEdge.label}", old suffix "${oldRemainingLabel}" pushed down${newSuffix ? `, new branch "${newSuffix}"` : ', split node marked as word end'}.`,
           });
+          firstSplitAdded = true;
           return;
         }
       }
       curr.isEnd = true;
     }
 
-    for (const w of words) {
+    words.forEach((w, wi) => {
       insert(root, w);
+      const isLastWord = wi === words.length - 1;
       frames.push({
         stepIndex: frames.length,
         totalSteps: frames.length + 1,
-        codeLine: 12,
+        codeLine: 4,
         action: 'INSERT_WORD',
+        ...(isLastWord
+          ? { isMilestone: true, milestoneTitle: 'Dictionary Fully Inserted' }
+          : {}),
         state: {
           root: cloneRadix(root),
           activeWord: w,
@@ -423,17 +432,24 @@ function search(root, target):
           matchedPrefix: w,
           found: null,
         },
-        callStack: [{ name: 'insertWord', params: { word: w } }],
+        callStack: [{ name: 'insertWord', params: { word: w }, line: 4, isCurrent: true }],
         variables: { insertedWord: w },
-        explanation: `Inserted word "${w}" into Radix Tree with edge compaction.`,
+        pedagogy: {
+          what: `Word "${w}" is fully inserted; the dictionary now holds ${wi + 1}/${words.length} words.`,
+          why: 'Insertion only walks the path whose edge labels share prefixes; every other subtree is untouched.',
+          whatNext: isLastWord
+            ? `Run the exact-match search for "${target}" starting from the root.`
+            : `Insert the next word "${words[wi + 1]}".`,
+        },
+        explanation: `Inserted word "${w}" via the buildRadixTree loop (line 4); compaction preserved.`,
       });
-    }
+    });
 
     // Now search for target
     frames.push({
       stepIndex: frames.length,
       totalSteps: frames.length + 1,
-      codeLine: 25,
+      codeLine: 28,
       action: 'START_SEARCH',
       state: {
         root: cloneRadix(root),
@@ -443,8 +459,13 @@ function search(root, target):
         matchedPrefix: '',
         found: null,
       },
-      callStack: [{ name: 'searchTarget', params: { target } }],
+      callStack: [{ name: 'search', params: { target }, line: 28, isCurrent: true }],
       variables: { target },
+      pedagogy: {
+        what: `Exact-match search starts for "${target}" at the root (line 28).`,
+        why: 'Search reuses the same prefix-sharing structure: whole edge labels are compared as substrings, never character by character across nodes.',
+        whatNext: 'Walk down edges whose label is a prefix of the remaining key.',
+      },
       explanation: `Initiating search for "${target}" from root.`,
     });
 
@@ -465,10 +486,11 @@ function search(root, target):
         break;
       }
 
+      const remainingAfter = remaining.slice(matchedEdge.label.length);
       frames.push({
         stepIndex: frames.length,
         totalSteps: frames.length + 1,
-        codeLine: 30,
+        codeLine: 33,
         action: 'TRAVERSE_EDGE',
         state: {
           root: cloneRadix(root),
@@ -478,8 +500,16 @@ function search(root, target):
           matchedPrefix: target.slice(0, target.length - remaining.length + matchedEdge.label.length),
           found: null,
         },
-        callStack: [{ name: 'traverseEdge', params: { label: matchedEdge.label } }],
-        variables: { matchedEdgeLabel: matchedEdge.label, remainingBefore: remaining },
+        callStack: [{ name: 'traverseEdge', params: { label: matchedEdge.label }, line: 33, isCurrent: true }],
+        variables: { matchedEdgeLabel: matchedEdge.label, remainingBefore: remaining, remainingAfter },
+        pedagogy: {
+          what: `Edge "${matchedEdge.label}" is a prefix of the remaining key, so the walk descends and consumes it whole.`,
+          why: 'Each traversal spends O(label length) character work and skips every node that compaction removed.',
+          whatNext:
+            remainingAfter.length > 0
+              ? `Continue with the remaining key "${remainingAfter}".`
+              : 'The key is fully consumed; check whether this node marks a word end.',
+        },
         explanation: `Matched edge label "${matchedEdge.label}". Traversing down to node ${matchedEdge.target.id}.`,
       });
 
@@ -494,8 +524,9 @@ function search(root, target):
     frames.push({
       stepIndex: frames.length,
       totalSteps: frames.length + 1,
-      codeLine: 35,
+      codeLine: 34,
       action: 'SEARCH_COMPLETE',
+      ...(found ? { isMilestone: true, milestoneTitle: 'Exact Match Verified' } : {}),
       state: {
         root: cloneRadix(root),
         activeWord: target,
@@ -504,8 +535,17 @@ function search(root, target):
         matchedPrefix: target,
         found,
       },
-      callStack: [{ name: 'complete', params: { found: found ? 1 : 0 } }],
+      callStack: [{ name: 'search', params: { found: found ? 1 : 0 }, line: 34, isCurrent: true }],
       variables: { completed: true, target, searchSuccess: found },
+      pedagogy: {
+        what: found
+          ? `The key "${target}" was consumed exactly and the final node is a word end — exact match verified (line 34).`
+          : `The walk stopped without consuming all of "${target}" at a word-end node — the key is not present.`,
+        why: 'A radix search only matches on word boundaries: consuming every character is necessary, but the final node must also carry the isEnd flag.',
+        whatNext: found
+          ? 'Done — the dictionary lookup answered HIT in O(|target|) character work.'
+          : 'Done — report MISS; the key shares prefixes but was never inserted as a word.',
+      },
       explanation: found
         ? `Search SUCCESS: Exact match for "${target}" verified in Radix Tree!`
         : `Search MISS: Word "${target}" does not exist in Radix Tree.`,
