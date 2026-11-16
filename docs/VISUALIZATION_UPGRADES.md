@@ -51,12 +51,19 @@ Status: ✅ deep-refactored · 🔶 stage upgraded, pedagogy/checkpoint partial 
 | binary-search-answer | ✅ | answer-space explanation, monotone-predicate checkpoint, pile-hour breakdown pedagogy, code lines remapped (was 15 > 12 lines) |
 
 ### Trees (26)
-avl-tree ✅ · bst ✅ · bst-delete ✅ · tree-traversals ✅ · level-order-traversal ✅ · binary-heap ✅ · max-heap ✅ · trie ✅ · ternary-search-tree ✅ · segment-tree ✅ · fenwick-tree ✅ · red-black-tree ✅ · treap ✅ · splay-tree ✅ · b-tree ✅ · two-three-tree ✅ · two-three-four-tree ✅ · skip-list ✅ · tree-map ✅ · kd-tree ✅ · interval-tree ✅ · radix-tree ✅ · octree-3d ✅
-suffix-tree / recursion-trees → ⬜
+avl-tree ✅ · bst ✅ · bst-delete ✅ · tree-traversals ✅ · level-order-traversal ✅ · binary-heap ✅ · max-heap ✅ · trie ✅ · ternary-search-tree ✅ · segment-tree ✅ · fenwick-tree ✅ · red-black-tree ✅ · treap ✅ · splay-tree ✅ · b-tree ✅ · two-three-tree ✅ · two-three-four-tree ✅ · skip-list ✅ · tree-map ✅ · kd-tree ✅ · interval-tree ✅ · radix-tree ✅ · octree-3d ✅ · suffix-tree ✅
+recursion-trees → ⬜
 
 Octree notes: real capacity-1 / max-depth-6 insertion (reject outside, overflow →
 subdivide → redistribute → route), explicit depth-cap frame for coincident points,
 sphere range query with AABB pruning and exact distance checks, orbitable 3D stage.
+
+Suffix-tree notes: real Ukkonen construction (active point, remainder, suffix links,
+edge splits, implicit leaf growth) instead of the earlier Rule-2-only stub — one frame
+per phase start / active-edge reset / canonicalisation walk-down / leaf creation /
+suffix-link assignment / Rule 3 stop / edge split / extension update / phase complete;
+`$` sentinel normalisation, 24-char visual cap, checkpoints `suffix-tree-rule3-stop`
+and `suffix-tree-first-split`, lexicographic child order, suffix-link arcs on the stage.
 
 ### Graphs (27)
 bfs ✅ · dijkstra ✅ · dfs ✅ · bellman-ford ✅ · floyd-warshall ✅ · a-star ✅ · zero-one-bfs ✅ · topological-sort ✅ · topological-sort-dfs ✅ · kruskal ✅ · prim ✅ · boruvka ✅ · dsu ✅ · tarjan-scc ✅ · kosaraju ✅ · articulation-points ✅ · bridge-finding ✅ · bipartite-check ✅ · edmonds-karp ✅ · dinic ✅ · hopcroft-karp ✅ · hierholzer ✅ · hamiltonian-path ✅ · transitive-closure ✅ · graph-coloring ✅ · flood-fill ✅ · graph-representations ✅ /
@@ -77,7 +84,7 @@ shunting-yard / postfix-evaluation / sliding-window-max → ⬜
 
 ### Strings (9)
 kmp / rabin-karp / z-algorithm / naive-search / boyer-moore / aho-corasick /
-suffix-array-kasai / suffix-automaton / suffix-tree → ⬜
+suffix-array-kasai / suffix-automaton → ⬜ · suffix-tree ✅ (Ukkonen, see Trees notes)
 
 ### Arrays & hashing (17)
 hash-table-chaining / hash-table-open-addressing / dynamic-rehashing / dynamic-array /

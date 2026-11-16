@@ -3573,3 +3573,248 @@ describe('octree 3d regressions', () => {
     }
   });
 });
+
+describe('suffix tree (Ukkonen) regressions', () => {
+  function suffixTreeProblems(state: any): string[] {
+    const problems: string[] = [];
+    const nodes = new Map(state.nodes.map((n: any) => [n.id, n]));
+    const incoming = new Map<string, any>();
+    const childKeys = new Set<string>();
+    for (const edge of state.edges) {
+      if (!edge.label) problems.push(`empty edge label ${edge.id}`);
+      if (incoming.has(edge.toNode)) problems.push(`double parent ${edge.toNode}`);
+      incoming.set(edge.toNode, edge);
+      const key = `${edge.fromNode}:${state.text[edge.start]}`;
+      if (childKeys.has(key)) problems.push(`duplicate child key ${key}`);
+      childKeys.add(key);
+      if (state.text.slice(edge.start, edge.end + 1) !== edge.label) {
+        problems.push(`label mismatch ${edge.id}`);
+      }
+      if (edge.isLeaf && edge.end !== Math.max(edge.start, state.phase)) {
+        problems.push(`leaf ${edge.id} not extended to phase ${state.phase}`);
+      }
+    }
+    for (const node of state.nodes) {
+      if (node.id !== 'n0' && !incoming.has(node.id)) problems.push(`orphan ${node.id}`);
+    }
+    const leaves = state.nodes.filter((n: any) => n.isLeaf);
+    if (leaves.length > state.phase + 1) {
+      problems.push(`leaves ${leaves.length} exceed suffixes ${state.phase + 1}`);
+    }
+    const seenSuffixes = new Set<number>();
+    for (const leaf of leaves) {
+      if (leaf.suffixIdx == null) {
+        problems.push(`leaf ${leaf.id} has no suffix index`);
+        continue;
+      }
+      if (seenSuffixes.has(leaf.suffixIdx)) problems.push(`duplicate suffix ${leaf.suffixIdx}`);
+      seenSuffixes.add(leaf.suffixIdx);
+      let cur: any = leaf;
+      const parts: string[] = [];
+      while (cur.parent) {
+        const edge = incoming.get(cur.id);
+        if (!edge) break;
+        parts.push(edge.label);
+        cur = nodes.get(cur.parent);
+      }
+      const path = parts.reverse().join('');
+      const expected = state.text.slice(leaf.suffixIdx, state.phase + 1);
+      if (path !== expected) {
+        problems.push(`leaf ${leaf.id} path ${JSON.stringify(path)} != ${JSON.stringify(expected)}`);
+      }
+    }
+    for (const node of state.nodes) {
+      if (!node.isLeaf && node.id !== 'n0') {
+        const children = state.edges.filter((e: any) => e.fromNode === node.id);
+        if (children.length < 2) problems.push(`internal ${node.id} has ${children.length} child`);
+      }
+    }
+    return problems;
+  }
+
+  function unrepresentedSuffixes(state: any): number[] {
+    const nodes = new Map(state.nodes.map((n: any) => [n.id, n]));
+    const incoming = new Map<string, any>();
+    for (const edge of state.edges) incoming.set(edge.toNode, edge);
+    const pathTo = (id: string): string => {
+      let cur: any = nodes.get(id);
+      const parts: string[] = [];
+      while (cur?.parent) {
+        const edge = incoming.get(cur.id);
+        if (!edge) break;
+        parts.push(edge.label);
+        cur = nodes.get(cur.parent);
+      }
+      return parts.reverse().join('');
+    };
+    const loci: string[] = [];
+    for (const node of state.nodes) loci.push(pathTo(node.id));
+    for (const edge of state.edges) loci.push(pathTo(edge.fromNode) + edge.label);
+    const missing: number[] = [];
+    for (let j = 0; j <= state.phase; j++) {
+      const expected = state.text.slice(j, state.phase + 1);
+      if (!loci.some((locus) => locus.startsWith(expected))) missing.push(j);
+    }
+    return missing;
+  }
+
+  it('builds every suffix with real splits, suffix links and leaf extension', () => {
+    const mod = moduleById('suffix-tree');
+
+    for (const input of [
+      { text: 'banana$' },
+      { text: 'mississippi$' },
+      { text: 'abaa$' },
+      { text: 'aaaa$' },
+      { text: 'abc$' },
+      { text: 'abracadabra' },
+    ]) {
+      const timeline = mod.generateTimeline(input as any);
+      const last = timeline[timeline.length - 1];
+      expect(last.action).toBe('COMPLETE');
+      expect(suffixTreeProblems(last.state)).toEqual([]);
+      expect(last.state.nodes.filter((n: any) => n.isLeaf).length).toBe(last.state.text.length);
+
+      // Every intermediate frame is a structurally valid suffix tree of the
+      // current prefix: no orphan nodes, no empty labels, leaves end at phase.
+      for (const frame of timeline) {
+        expect(suffixTreeProblems(frame.state), `frame ${frame.stepIndex}`).toEqual([]);
+        if (frame.action === 'PHASE_COMPLETE' || frame.action === 'COMPLETE') {
+          // Ukkonen's invariant: every suffix of text[0..phase] is explicit as
+          // a leaf or implicit somewhere along an edge.
+          expect(unrepresentedSuffixes(frame.state), `frame ${frame.stepIndex}`).toEqual([]);
+        }
+      }
+      expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+    }
+  });
+
+  it('emits one frame per phase, rule-3 stop, split and suffix link with honest code lines', () => {
+    const mod = moduleById('suffix-tree');
+    const timeline = mod.generateTimeline({ text: 'banana$' } as any);
+    const actions = timeline.map((f) => f.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions.filter((a) => a === 'PHASE_START')).toHaveLength(7);
+    expect(actions.filter((a) => a === 'RULE3_MATCH')).toHaveLength(3);
+    expect(actions.filter((a) => a === 'SPLIT_EDGE')).toHaveLength(3);
+    expect(actions.filter((a) => a === 'CREATE_LEAF')).toHaveLength(4);
+    expect(actions.filter((a) => a === 'PHASE_COMPLETE')).toHaveLength(7);
+
+    const expectedLines: Record<string, number> = {
+      INIT: 1,
+      PHASE_START: 5,
+      SET_ACTIVE_EDGE: 8,
+      CREATE_LEAF: 11,
+      WALK_DOWN: 16,
+      RULE3_MATCH: 20,
+      SPLIT_EDGE: 23,
+      EXTENSION_DONE: 26,
+      PHASE_COMPLETE: 32,
+      COMPLETE: 33,
+    };
+    for (const frame of timeline) {
+      const expected = expectedLines[frame.action ?? ''];
+      if (expected !== undefined) {
+        expect(frame.codeLine, `${frame.action} at ${frame.stepIndex}`).toBe(expected);
+      }
+      expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `whatNext missing on ${frame.action}`).toBeTruthy();
+    }
+
+    // SET_SUFFIX_LINK uses line 12 (leaf case) or 24 (split case).
+    for (const frame of timeline.filter((f) => f.action === 'SET_SUFFIX_LINK')) {
+      expect([12, 19, 24]).toContain(frame.codeLine);
+      const link = frame.state.suffixLinkHighlight;
+      expect(link).toBeTruthy();
+      const ids = new Set(frame.state.nodes.map((n: any) => n.id));
+      expect(ids.has(link!.from)).toBe(true);
+      expect(ids.has(link!.to)).toBe(true);
+    }
+  });
+
+  it('stops on Rule 3 and asks the learner to predict the early phase stop', () => {
+    const mod = moduleById('suffix-tree');
+    const timeline = mod.generateTimeline({ text: 'banana$' } as any);
+    const checkpoints = timeline.filter((f) => f.checkpoint);
+    expect(checkpoints.map((f) => f.checkpoint?.id)).toEqual([
+      'suffix-tree-rule3-stop',
+      'suffix-tree-first-split',
+    ]);
+
+    const rule3 = checkpoints[0];
+    expect(rule3.action).toBe('RULE3_MATCH');
+    expect(rule3.checkpoint?.correctIndex).toBe(1);
+    expect(rule3.state.activeLength).toBeGreaterThan(0);
+    expect(rule3.variables?.rule).toBe(3);
+    // Rule 3 ends the phase without decrementing remainder.
+    const next = timeline[rule3.stepIndex + 1];
+    expect(next.action).toBe('PHASE_COMPLETE');
+    expect(next.state.remainder).toBe(rule3.state.remainder);
+  });
+
+  it('splits the active edge and links the new internal node', () => {
+    const mod = moduleById('suffix-tree');
+    const timeline = mod.generateTimeline({ text: 'banana$' } as any);
+    const splitCheckpoint = timeline.find(
+      (f) => f.checkpoint?.id === 'suffix-tree-first-split'
+    );
+    expect(splitCheckpoint?.action).toBe('SPLIT_EDGE');
+    expect(splitCheckpoint?.checkpoint?.correctIndex).toBe(1);
+
+    const splitNodeId = splitCheckpoint?.variables?.splitNode;
+    const leafId = splitCheckpoint?.variables?.newLeaf;
+    expect(splitCheckpoint?.state.highlightNodeIds).toEqual([splitNodeId, leafId]);
+    const splitNode = splitCheckpoint?.state.nodes.find((n: any) => n.id === splitNodeId);
+    expect(splitNode?.isLeaf).toBe(false);
+    const splitEdges = splitCheckpoint?.state.edges.filter((e: any) => e.fromNode === splitNodeId);
+    expect(splitEdges).toHaveLength(2);
+    expect(splitEdges?.some((e: any) => e.isLeaf)).toBe(true);
+
+    const linkFrames = timeline.filter(
+      (f) => f.state.suffixLinkHighlight?.from === splitNodeId
+    );
+    expect(linkFrames.length).toBeGreaterThan(0);
+    expect(linkFrames[0].state.suffixLinkHighlight?.to).toBeTruthy();
+
+    // The final tree has a suffix link on every internal non-root node.
+    const last = timeline[timeline.length - 1];
+    for (const node of last.state.nodes) {
+      if (!node.isLeaf && node.id !== 'n0') {
+        expect(node.suffixLink, `internal ${node.id} missing suffix link`).toBeTruthy();
+      }
+    }
+  });
+
+  it('normalises input: appends the sentinel, removes internal sentinels, caps length', () => {
+    const mod = moduleById('suffix-tree');
+
+    const noSentinel = mod.generateTimeline({ text: 'banana' } as any);
+    expect(noSentinel[0].state.text).toBe('banana$');
+    expect(noSentinel[0].variables?.sentinelAdded).toBe(true);
+
+    const internalSentinel = mod.generateTimeline({ text: 'a$b$a' } as any);
+    expect(internalSentinel[0].state.text).toBe('aba$');
+    expect(internalSentinel[0].variables?.internalSentinelsRemoved).toBe(true);
+
+    const long = mod.generateTimeline({ text: 'abcdefghijklmnopqrstuvwxyz0123456789' } as any);
+    expect(long[0].state.text.length).toBeLessThanOrEqual(24);
+    expect(long[0].state.text.endsWith('$')).toBe(true);
+    expect(long[0].variables?.truncated).toBe(true);
+    expect(auditTimeline(mod, { text: 'banana' } as any).errorCount).toBe(0);
+    expect(auditTimeline(mod, { text: 'abcdefghijklmnopqrstuvwxyz0123456789' } as any).errorCount).toBe(0);
+  });
+
+  it('renders the tree stage for an active split without throwing', () => {
+    const mod = moduleById('suffix-tree');
+    const timeline = mod.generateTimeline({ text: 'mississippi$' } as any);
+    const split = timeline.find((f) => f.action === 'SPLIT_EDGE');
+    expect(split).toBeDefined();
+    expect(() => mod.renderStage(split!, '2d')).not.toThrow();
+    expect(() => mod.renderStage(timeline[0], '2d')).not.toThrow();
+    for (const preset of mod.presets) {
+      expect(auditTimeline(mod, preset.data as any).errorCount).toBe(0);
+    }
+  });
+});
