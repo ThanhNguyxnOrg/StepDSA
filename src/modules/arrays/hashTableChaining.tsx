@@ -31,6 +31,9 @@ export const hashTableChainingModule: AlgorithmModule<
   title: 'Hash Table (Separate Chaining with Linked Collision Buckets)',
   category: 'searching',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'hash-table-open-addressing', label: 'Open Addressing' },
+  ],
   complexity: {
     timeBest: 'O(1)',
     timeAverage: 'O(1 + alpha)',

@@ -16,6 +16,11 @@ export const avlTreeModule: AlgorithmModule<{ values: number[] }, TreeStageState
   title: 'AVL Tree (Self-Balancing Rotations)',
   category: 'trees-bst',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'bst-insert', label: 'Plain BST' },
+    { id: 'red-black-tree', label: 'Red-Black Tree' },
+    { id: 'treap', label: 'Treap' },
+  ],
   complexity: {
     timeBest: 'O(log N)',
     timeAverage: 'O(log N)',

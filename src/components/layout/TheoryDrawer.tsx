@@ -1,14 +1,21 @@
 import React from 'react';
-import { BookOpen, ShieldCheck, AlertCircle, Clock, Database, X } from 'lucide-react';
+import { BookOpen, ShieldCheck, AlertCircle, Clock, Database, X, GitBranch, ArrowUpRight } from 'lucide-react';
 import { AlgorithmModule } from '../../core/types';
 
 interface TheoryDrawerProps {
   module: AlgorithmModule;
   isOpen: boolean;
   onToggle: () => void;
+  /** Navigate to a related/variant module by id (cross-category, không chỉ sibling). */
+  onSelectModule?: (moduleId: string) => void;
 }
 
-export const TheoryDrawer: React.FC<TheoryDrawerProps> = ({ module, isOpen, onToggle }) => {
+export const TheoryDrawer: React.FC<TheoryDrawerProps> = ({
+  module,
+  isOpen,
+  onToggle,
+  onSelectModule,
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -125,6 +132,29 @@ export const TheoryDrawer: React.FC<TheoryDrawerProps> = ({ module, isOpen, onTo
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Variants & Related — cross-category navigation (sortvisualizer variants / USFCA implementation variants) */}
+        {module.relatedModules && module.relatedModules.length > 0 && onSelectModule && (
+          <div className="space-y-1.5">
+            <h3 className="text-xs font-mono font-semibold tracking-wider uppercase text-slate-300 flex items-center gap-1.5">
+              <GitBranch className="w-3.5 h-3.5 text-[#8B5CF6]" /> Variants & Related
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {module.relatedModules.map((related) => (
+                <button
+                  key={related.id}
+                  type="button"
+                  onClick={() => onSelectModule(related.id)}
+                  title={`Open ${related.label}`}
+                  className="group flex items-center gap-1 px-2 py-1 rounded-md bg-[#8B5CF6]/10 border border-[#8B5CF6]/30 text-[11px] font-mono font-semibold text-[#C4B5FD] hover:bg-[#8B5CF6]/20 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span>{related.label}</span>
+                  <ArrowUpRight className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

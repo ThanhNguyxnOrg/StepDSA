@@ -6,6 +6,18 @@ describe('Algorithm Modules Integrity & Generator Test', () => {
     expect(allModules.length).toBeGreaterThanOrEqual(5);
   });
 
+  it('every relatedModules id resolves to a real module (no dead cross-links)', () => {
+    const ids = new Set(allModules.map((m) => m.id));
+    const dead: string[] = [];
+    for (const mod of allModules) {
+      for (const related of mod.relatedModules ?? []) {
+        if (!ids.has(related.id)) dead.push(`${mod.id} -> ${related.id}`);
+        if (related.id === mod.id) dead.push(`${mod.id} -> itself`);
+      }
+    }
+    expect(dead).toEqual([]);
+  });
+
   allModules.forEach((mod) => {
     describe(`Module: ${mod.title} (${mod.id})`, () => {
       it('has valid metadata and multi-language snippets', () => {

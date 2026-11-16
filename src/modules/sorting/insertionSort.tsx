@@ -6,6 +6,11 @@ export const insertionSortModule: AlgorithmModule<number[], ArrayStageState> = {
   title: 'Insertion Sort (Incremental Insertion)',
   category: 'sorting',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'bubble-sort', label: 'Bubble Sort' },
+    { id: 'selection-sort', label: 'Selection Sort' },
+    { id: 'shellsort', label: 'Shell Sort' },
+  ],
   complexity: {
     timeBest: 'O(N)',
     timeAverage: 'O(N²)',

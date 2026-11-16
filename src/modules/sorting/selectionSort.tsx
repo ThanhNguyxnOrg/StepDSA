@@ -6,6 +6,11 @@ export const selectionSortModule: AlgorithmModule<number[], ArrayStageState> = {
   title: 'Selection Sort (Minimum Scan)',
   category: 'sorting',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'bubble-sort', label: 'Bubble Sort' },
+    { id: 'insertion-sort', label: 'Insertion Sort' },
+    { id: 'heapsort', label: 'Heap Sort' },
+  ],
   complexity: {
     timeBest: 'O(N²)',
     timeAverage: 'O(N²)',

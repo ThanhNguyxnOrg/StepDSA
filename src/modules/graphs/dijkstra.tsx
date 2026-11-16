@@ -66,6 +66,12 @@ export const dijkstraModule: AlgorithmModule<DijkstraGraphInput, DijkstraState> 
   title: "Dijkstra's Shortest Path (Priority Queue)",
   category: 'graphs',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'graph-bfs', label: 'BFS' },
+    { id: 'bellman-ford', label: 'Bellman-Ford' },
+    { id: 'a-star-search', label: 'A* Search' },
+    { id: 'floyd-warshall', label: 'Floyd-Warshall' },
+  ],
   complexity: {
     timeBest: 'O((V + E) log V)',
     timeAverage: 'O((V + E) log V)',

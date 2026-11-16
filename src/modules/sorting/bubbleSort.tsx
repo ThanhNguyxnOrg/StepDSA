@@ -6,6 +6,12 @@ export const bubbleSortModule: AlgorithmModule<number[], ArrayStageState> = {
   title: 'Bubble Sort (Adjacent Swaps)',
   category: 'sorting',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'insertion-sort', label: 'Insertion Sort' },
+    { id: 'selection-sort', label: 'Selection Sort' },
+    { id: 'cocktail-shaker-sort', label: 'Cocktail Shaker' },
+    { id: 'shellsort', label: 'Shell Sort' },
+  ],
   complexity: {
     timeBest: 'O(N)',
     timeAverage: 'O(N²)',

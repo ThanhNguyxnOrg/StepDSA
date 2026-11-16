@@ -6,6 +6,12 @@ export const bstModule: AlgorithmModule<{ valuesToInsert: number[] }, TreeStageS
   title: 'Binary Search Tree (BST Construction)',
   category: 'trees-bst',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'avl-tree', label: 'AVL Tree' },
+    { id: 'red-black-tree', label: 'Red-Black Tree' },
+    { id: 'treap', label: 'Treap' },
+    { id: 'splay-tree', label: 'Splay Tree' },
+  ],
   complexity: {
     timeBest: 'O(log N)',
     timeAverage: 'O(log N)',

@@ -21,6 +21,11 @@ export const queueVisualizerModule: AlgorithmModule<number[], QueueState> = {
   title: 'Queue (FIFO Operations)',
   category: 'stack-queue',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'stack-lifo', label: 'Stack (LIFO)' },
+    { id: 'circular-queue', label: 'Circular Queue' },
+    { id: 'deque-visualizer', label: 'Deque' },
+  ],
   complexity: {
     timeBest: 'O(1)',
     timeAverage: 'O(1)',

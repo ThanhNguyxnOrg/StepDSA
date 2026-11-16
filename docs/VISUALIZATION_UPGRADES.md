@@ -88,6 +88,18 @@ binary-exponentiation / bitwise-operations / count-set-bits / single-number /
 prime-factorization / strassen-matrix / convex-hull / closest-pair / point-in-polygon /
 sweep-line-intersections / recursion-trees / lps → ⬜
 
+## Cross-module navigation (2026-11-16)
+
+- **`relatedModules`** — optional field on `AlgorithmModule`; TheoryDrawer renders a
+  "Variants & Related" chip row when `onSelectModule` is supplied. Populated for 20
+  modules (sorting family, BST/AVL/RB/trie/heap, BFS/DFS/Dijkstra/Kruskal/A*,
+  coin-change, stack/queue, linked list, linear/binary search, hash chaining).
+  Learnt from sortvisualizer ("variants" of Bubble Sort) and USFCA implementation
+  variants (Stack Array vs Linked List, heap families, DP strategies).
+- **Integrity test** in `src/modules/modules.test.ts` fails if any `relatedModules.id`
+  does not resolve to a registered module or points at itself.
+- **`?input=` permalink** (LZString) — see `docs/research/ROUND3_CLASSICS.md` §5.
+
 ## Batch plan (execution order)
 
 1. **S1 — sorting mechanics ✅ COMPLETE (18/18):** insertion, mergesort, quicksort,

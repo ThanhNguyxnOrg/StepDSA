@@ -59,6 +59,10 @@ export const kruskalMSTModule: AlgorithmModule<KruskalGraphInput, KruskalMSTStat
   title: "Kruskal's MST (Disjoint Set Union)",
   category: 'graphs',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'prim-mst', label: 'Prim MST' },
+    { id: 'dijkstra', label: 'Dijkstra' },
+  ],
   complexity: {
     timeBest: 'O(E log E)',
     timeAverage: 'O(E log E) or O(E log V)',

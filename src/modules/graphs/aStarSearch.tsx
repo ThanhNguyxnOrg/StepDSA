@@ -51,6 +51,10 @@ export const aStarModule: AlgorithmModule<AStarInput, AStarState> = {
   title: 'A* Search (Heuristic Pathfinding)',
   category: 'graphs',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'dijkstra', label: 'Dijkstra' },
+    { id: 'graph-bfs', label: 'BFS' },
+  ],
   complexity: {
     timeBest: 'O(N) direct line with perfect heuristic',
     timeAverage: 'O(E) focused beam',

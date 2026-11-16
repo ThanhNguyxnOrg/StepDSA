@@ -782,6 +782,10 @@ export default function App() {
               module={currentModule}
               isOpen={theoryOpen}
               onToggle={() => setTheoryOpen(!theoryOpen)}
+              onSelectModule={(id) => {
+                const related = allModules.find((m) => m.id === id);
+                if (related) handleSelectModule(related);
+              }}
             />
 
             {/* Central Stage & Bottom Transport Controls */}

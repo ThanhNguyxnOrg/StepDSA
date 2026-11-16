@@ -17,6 +17,10 @@ export const singlyLinkedListModule: AlgorithmModule<number[], LinkedListState> 
   title: 'Linked List (Traversal & Insertion)',
   category: 'linked-lists',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'doubly-linked-list', label: 'Doubly Linked List' },
+    { id: 'circular-linked-list', label: 'Circular Linked List' },
+  ],
   complexity: {
     timeBest: 'O(1)',
     timeAverage: 'O(N)',

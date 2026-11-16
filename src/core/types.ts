@@ -161,6 +161,11 @@ export interface AlgorithmModule<TInput = any, TState = any> {
   defaultInput: TInput;
   generateTimeline: (input: TInput) => ExecutionFrame<TState>[];
   renderStage: (frame: ExecutionFrame<TState>, projection: '2d' | 'isometric') => React.ReactNode;
+  /**
+   * Cross-links to variant/sibling modules — học từ sortvisualizer ("variants" của Bubble Sort)
+   * và USFCA (Stack Array vs Linked List, các họ heap, các chiến lược DP).
+   */
+  relatedModules?: { id: string; label: string }[];
 }
 
 export interface PlaybackController {

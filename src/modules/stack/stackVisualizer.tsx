@@ -20,6 +20,11 @@ export const stackVisualizerModule: AlgorithmModule<number[], StackState> = {
   title: 'Stack (LIFO Dynamic Operations)',
   category: 'stack-queue',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'queue-fifo', label: 'Queue (FIFO)' },
+    { id: 'deque-visualizer', label: 'Deque' },
+    { id: 'circular-queue', label: 'Circular Queue' },
+  ],
   complexity: {
     timeBest: 'O(1)',
     timeAverage: 'O(1)',

@@ -11,6 +11,11 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
   title: 'Linear Search (Sequential Scan)',
   category: 'searching',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'binary-search', label: 'Binary Search' },
+    { id: 'jump-search', label: 'Jump Search' },
+    { id: 'interpolation-search', label: 'Interpolation Search' },
+  ],
   complexity: {
     timeBest: 'O(1)',
     timeAverage: 'O(N)',

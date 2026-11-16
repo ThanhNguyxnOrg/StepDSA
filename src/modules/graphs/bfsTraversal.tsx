@@ -35,6 +35,11 @@ export const bfsTraversalModule: AlgorithmModule<number, GraphBFSState> = {
   title: 'Graph Traversal (Breadth-First Search)',
   category: 'graphs',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'graph-dfs', label: 'DFS' },
+    { id: 'dijkstra', label: 'Dijkstra' },
+    { id: 'a-star-search', label: 'A* Search' },
+  ],
   complexity: {
     timeBest: 'O(V + E)',
     timeAverage: 'O(V + E)',

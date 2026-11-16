@@ -6,6 +6,11 @@ export const binarySearchModule: AlgorithmModule<{ array: number[]; target: numb
   title: 'Binary Search (Logarithmic Halving)',
   category: 'searching',
   difficulty: 'Beginner',
+  relatedModules: [
+    { id: 'linear-search', label: 'Linear Search' },
+    { id: 'jump-search', label: 'Jump Search' },
+    { id: 'ternary-search', label: 'Ternary Search' },
+  ],
   complexity: {
     timeBest: 'O(1)',
     timeAverage: 'O(log N)',

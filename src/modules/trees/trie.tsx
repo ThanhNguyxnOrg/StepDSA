@@ -34,6 +34,10 @@ export const trieModule: AlgorithmModule<TrieInput, TrieState> = {
   title: 'Trie (Prefix Tree & Autocomplete)',
   category: 'trees-bst',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'ternary-search-tree', label: 'Ternary Search Tree' },
+    { id: 'radix-tree', label: 'Radix Tree' },
+  ],
   complexity: {
     timeBest: 'O(L)',
     timeAverage: 'O(L)',

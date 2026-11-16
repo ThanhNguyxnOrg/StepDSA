@@ -25,6 +25,11 @@ export const coinChangeModule: AlgorithmModule<CoinChangeInput, CoinChangeState>
   title: 'Coin Change (Fewest Coins DP)',
   category: 'dynamic-programming',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'longest-common-subsequence', label: 'LCS' },
+    { id: 'longest-increasing-subsequence', label: 'LIS' },
+    { id: 'knapsack-01', label: '0/1 Knapsack' },
+  ],
   complexity: {
     timeBest: 'O(A * C)',
     timeAverage: 'O(A * C)',

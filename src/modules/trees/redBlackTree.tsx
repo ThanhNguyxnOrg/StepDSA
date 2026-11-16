@@ -25,6 +25,11 @@ export const redBlackTreeModule: AlgorithmModule<
   title: 'Red-Black Tree (Color Invariants & Recoloring Rotations O(log N))',
   category: 'trees-bst',
   difficulty: 'Advanced',
+  relatedModules: [
+    { id: 'avl-tree', label: 'AVL Tree' },
+    { id: 'bst-insert', label: 'Plain BST' },
+    { id: 'b-tree', label: 'B-Tree' },
+  ],
   complexity: {
     timeBest: 'O(log N)',
     timeAverage: 'O(log N)',

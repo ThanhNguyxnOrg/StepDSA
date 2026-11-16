@@ -56,6 +56,11 @@ export const dfsTraversalModule: AlgorithmModule<DFSGraphInput, DFSState> = {
   title: 'Depth-First Search (DFS & Cycle Detection)',
   category: 'graphs',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'graph-bfs', label: 'BFS' },
+    { id: 'topological-sort', label: 'Topological Sort' },
+    { id: 'topological-sort-dfs', label: 'Topo Sort (DFS)' },
+  ],
   complexity: {
     timeBest: 'O(V + E)',
     timeAverage: 'O(V + E)',

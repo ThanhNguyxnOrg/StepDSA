@@ -13,6 +13,10 @@ export const binaryHeapModule: AlgorithmModule<number[], HeapState> = {
   title: 'Binary Heap (Max Heap Insert & Sift-Up)',
   category: 'trees-bst',
   difficulty: 'Intermediate',
+  relatedModules: [
+    { id: 'max-heap-build', label: 'Max-Heap Build' },
+    { id: 'heapsort', label: 'Heap Sort' },
+  ],
   complexity: {
     timeBest: 'O(1)',
     timeAverage: 'O(log N)',
