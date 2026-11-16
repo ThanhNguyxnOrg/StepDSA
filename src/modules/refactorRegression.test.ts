@@ -3317,3 +3317,96 @@ describe('pedagogical timeline regressions', () => {
     expect(auditTimeline(mod, { values: [30, 10, 20] }).errorCount).toBe(0);
   });
 });
+
+describe('ternary search tree regressions', () => {
+  function collectTstIds(node: any): string[] {
+    if (!node) return [];
+    return [node.id, ...collectTstIds(node.left), ...collectTstIds(node.mid), ...collectTstIds(node.right)];
+  }
+
+  it('emits one frame per three-way branch decision with honest pseudocode lines', () => {
+    const mod = moduleById('ternary-search-tree');
+    const input = { words: ['cat', 'car', 'dog', 'bug'], searchTarget: 'car' };
+    const timeline = mod.generateTimeline(input as any);
+
+    // No bulk "inserted word" shortcut: each allocation/branch is its own frame.
+    expect(timeline.filter((f) => f.action === 'INSERT_CREATE').length).toBe(10);
+    expect(timeline.filter((f) => f.action === 'INSERT_MID').length).toBe(8);
+    expect(timeline.filter((f) => f.action === 'INSERT_LEFT').length).toBe(2);
+    expect(timeline.filter((f) => f.action === 'INSERT_RIGHT').length).toBe(1);
+    expect(timeline.filter((f) => f.action === 'INSERT_MARK_END').length).toBe(4);
+    expect(timeline.filter((f) => f.action === 'INSERT_WORD_DONE').length).toBe(4);
+
+    const expectedLines: Record<string, number> = {
+      INSERT_CREATE: 4,
+      INSERT_LEFT: 6,
+      INSERT_RIGHT: 8,
+      INSERT_MID: 10,
+      INSERT_MARK_END: 12,
+      INSERT_WORD_DONE: 13,
+      START_SEARCH: 16,
+      SEARCH_MISS_NULL: 17,
+      SEARCH_LEFT: 19,
+      SEARCH_RIGHT: 20,
+      SEARCH_MID: 21,
+      SEARCH_CHECK_END: 22,
+      SEARCH_COMPLETE: 22,
+    };
+    for (const frame of timeline) {
+      const expected = expectedLines[frame.action ?? ''];
+      if (expected !== undefined) {
+        expect(frame.codeLine, `${frame.action} at frame ${frame.stepIndex}`).toBe(expected);
+      }
+      expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+    }
+
+    // The checkpoint asks about the first real comparison at the root.
+    const checkpointFrame = timeline.find((f) => f.checkpoint);
+    expect(checkpointFrame?.checkpoint?.id).toBe('tst-first-search-branch');
+    expect(checkpointFrame?.checkpoint?.correctIndex).toBe(1); // 'c' = 'c' -> MID
+    expect(checkpointFrame?.checkpoint?.options[1]).toContain('Mid');
+
+    // Path highlight must only reference nodes that exist in that frame's tree.
+    for (const frame of timeline) {
+      const ids = new Set(collectTstIds(frame.state.root));
+      for (const id of frame.state.pathIds) {
+        expect(ids.has(id), `stale path id ${id} on frame ${frame.stepIndex}`).toBe(true);
+      }
+      if (frame.state.activeNodeId) expect(ids.has(frame.state.activeNodeId)).toBe(true);
+      if (frame.state.createdNodeId) expect(ids.has(frame.state.createdNodeId)).toBe(true);
+    }
+
+    expect(timeline.some((f) => f.milestoneTitle === 'Root Character Created')).toBe(true);
+    expect(timeline.some((f) => f.milestoneTitle === 'Dictionary Fully Inserted')).toBe(true);
+    expect(timeline.some((f) => f.milestoneTitle === 'Exact Word Verified')).toBe(true);
+
+    const last = timeline[timeline.length - 1];
+    expect(last.state.found).toBe(true);
+    expect(last.state.pathIds.length).toBeGreaterThan(0);
+    expect(() => mod.renderStage(timeline.find((f) => f.action === 'INSERT_MID')!, '2d')).not.toThrow();
+    expect(auditTimeline(mod, input as any).errorCount).toBe(0);
+  });
+
+  it('distinguishes a stored word from a mere prefix and reports null-child misses', () => {
+    const mod = moduleById('ternary-search-tree');
+
+    const prefix = mod.generateTimeline({ words: ['carpet'], searchTarget: 'car' } as any);
+    const prefixCheck = prefix.find((f) => f.action === 'SEARCH_CHECK_END');
+    expect(prefixCheck?.state.found).toBe(false);
+    expect(prefixCheck?.variables?.isEnd).toBe(false);
+    expect(prefix[prefix.length - 1].state.found).toBe(false);
+    expect(prefix.some((f) => f.milestoneTitle === 'Search Miss Confirmed')).toBe(true);
+
+    const miss = mod.generateTimeline({
+      words: ['cat', 'dog'],
+      searchTarget: 'cow',
+    } as any);
+    expect(miss.some((f) => f.action === 'SEARCH_MISS_NULL')).toBe(true);
+    expect(miss[miss.length - 1].state.found).toBe(false);
+
+    expect(auditTimeline(mod, { words: ['carpet'], searchTarget: 'car' } as any).errorCount).toBe(0);
+    expect(
+      auditTimeline(mod, { words: ['cat', 'dog'], searchTarget: 'cow' } as any).errorCount
+    ).toBe(0);
+  });
+});
