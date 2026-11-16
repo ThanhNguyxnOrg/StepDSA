@@ -257,7 +257,7 @@ nhu cầu học DSA qua tiếng Việt là thật — **StepDSA nên i18n việt
 - Clement Pathfinding Visualizer tổ chức maze generator + animation ra sao? ✅ **đã trả lời (source)** — `docs/research/clement-visualizers.md`
 - Toptal sorting page điều khiển "Play All" thế nào? ⚠️ live bị Cloudflare chặn; giữ tham chiếu thiết kế từ nội dung công khai
 - algorithm-visualizer tracer DSL có thể học gì cho StepDSA? ✅ **đã trả lời (source)** — `docs/research/algorithm-visualizer.md`
-- LeetCodeAnimation "web từng bước/tua lại/đổi tốc độ/thuyết minh" triển khai thế nào? ❌ chưa điều tra (việc còn lại)
+- LeetCodeAnimation "web từng bước/tua lại/đổi tốc độ/thuyết minh" triển khai thế nào? ✅ **đã trả lời** — web là `algomooc.com`, xem `research/ROUND2_FINDINGS.md`
 
 ---
 
@@ -272,6 +272,8 @@ Giai đoạn điều tra sâu đã hoàn tất phần lớn. **Tài liệu tổn
 | `research/clement-visualizers.md` | Teardown Pathfinding + Sorting: grid UX, maze, 6 bài học, anti-pattern |
 | `research/recursion-tree-visualizer.md` | Teardown brpapa: wrapper `_fn`/`fn`, Reingold-Tilford + Euler tour, sandbox |
 | `research/opendsa.md` | Teardown OpenDSA: proficiency exercise, gradeable step, fix/model answer, SPLICE |
+| `research/ROUND2_FINDINGS.md` | Vòng 2 live: USFCA, hello-algo, algomooc (LeetCodeAnimation), Red Blob, CS Academy, OpenDSA |
+| `research/ROUND3_CLASSICS.md` | Vòng 3 live: **48 trang USFCA**, sortvisualizer, Clement Sorting, Princeton, PyAlgoViz, Graph Online, Setosa, Bostock, PathFinding.js + gap analysis |
 
 **Quan sát live (craft-anything, Chrome riêng tư + walkthrough)**:
 - **VisuAlgo**: e-Lecture (slide + timeline checkpoint, Esc toggle, quiz nhúng mcq/msq), Exploration Mode (preset input nhóm + user-defined, codetrace `code1..code7`, current-action, playback từng frame, scale 1.0x, Share), Training tự sinh (`/training?diff&n&tl&module`, 1 câu/trang, SUBMIT/NEXT, đổi đề mỗi lần tải), Recursion tool (Tree/DAG + stats 15/3/8 vs 7/0/2, code sửa được + preset). Evidence ids: xem `PRODUCT_TEARDOWN.md` §3.

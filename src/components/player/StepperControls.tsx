@@ -316,7 +316,7 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
           <button
             type="button"
             onClick={onCopyLink}
-            title="Copy link to this step (permalink)"
+            title="Copy link to this step (includes custom input)"
             aria-label="Copy link to this step"
             className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${
               linkCopied

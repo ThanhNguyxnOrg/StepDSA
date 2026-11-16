@@ -35,7 +35,15 @@ import { useOperationalMetrics } from './core/useOperationalMetrics';
 import { OperationalMetricsBar } from './components/stage/OperationalMetricsBar';
 import { usePlatformShortcuts } from './utils/platformShortcuts';
 import { useAppTheme, APP_THEMES } from './utils/themeEngine';
-import { buildPermalink, clampFrameIndex, parsePermalinkStep } from './utils/permalink';
+import {
+  buildPermalink,
+  clampFrameIndex,
+  decodePermalinkInput,
+  encodePermalinkInput,
+  inputsEqual,
+  parsePermalinkInput,
+  parsePermalinkStep,
+} from './utils/permalink';
 
 const CATEGORY_LABELS: Record<string, string> = {
   sorting: 'Sorting',
@@ -78,18 +86,33 @@ export default function App() {
     return defaultModule;
   }, [initialUrlParams]);
 
+  // Deep-linked custom input (Python Tutor / Graph Online style): validate it
+  // against the module before adopting it, otherwise fall back to the preset.
+  const initialInput = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const decoded = decodePermalinkInput(parsePermalinkInput(window.location.search));
+    if (decoded === null) return null;
+    try {
+      initialModule.generateTimeline(decoded as any);
+      return decoded;
+    } catch {
+      return null;
+    }
+  }, [initialModule]);
+
   const [currentView, setCurrentView] = useState<'dashboard' | 'visualizer'>(() => {
     if (
       initialUrlParams.get('autostart') === '1' ||
       initialUrlParams.has('module') ||
-      initialUrlParams.has('step')
+      initialUrlParams.has('step') ||
+      initialUrlParams.has('input')
     ) {
       return 'visualizer';
     }
     return 'dashboard';
   });
   const [currentModule, setCurrentModule] = useState<AlgorithmModule>(initialModule);
-  const [currentData, setCurrentData] = useState<any>(initialModule.defaultInput);
+  const [currentData, setCurrentData] = useState<any>(initialInput ?? initialModule.defaultInput);
   const [isMuted, setIsMuted] = useState<boolean>(soundEngine.getMuted());
   const [theoryOpen, setTheoryOpen] = useState<boolean>(false);
   const [codeOpen, setCodeOpen] = useState<boolean>(true);
@@ -157,23 +180,39 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep the address bar in sync with module + step (debounced) so the current
-  // view can always be shared by copying the URL. Skipped for CLI trace sessions,
-  // which carry their own #trace= payload.
+  // Custom input is carried in the URL only when it differs from the preset, so
+  // canonical links stay short while edited arrays/graphs survive a reload/share.
+  const shareInput = useMemo(
+    () =>
+      inputsEqual(currentData, currentModule.defaultInput)
+        ? null
+        : encodePermalinkInput(currentData),
+    [currentData, currentModule.defaultInput]
+  );
+
+  // Keep the address bar in sync with module + step + custom input (debounced) so
+  // the current view can always be shared by copying the URL. Skipped for CLI
+  // trace sessions, which carry their own #trace= payload.
   useEffect(() => {
     if (currentView !== 'visualizer' || cliSession) return;
     const handle = window.setTimeout(() => {
-      const built = new URL(buildPermalink({ moduleId: currentModule.id, step: currentStep }));
+      const built = new URL(
+        buildPermalink({ moduleId: currentModule.id, step: currentStep, input: shareInput })
+      );
       window.history.replaceState(null, '', built.pathname + built.search);
     }, 250);
     return () => window.clearTimeout(handle);
-  }, [currentView, currentModule.id, currentStep, cliSession]);
+  }, [currentView, currentModule.id, currentStep, shareInput, cliSession]);
 
   // Copy-link-to-step (permalink) with a transient "Copied!" confirmation.
   const [linkCopied, setLinkCopied] = useState(false);
   const linkCopiedTimer = useRef<number | null>(null);
   const handleCopyStepLink = useCallback(() => {
-    const shareUrl = buildPermalink({ moduleId: currentModule.id, step: currentStep });
+    const shareUrl = buildPermalink({
+      moduleId: currentModule.id,
+      step: currentStep,
+      input: shareInput,
+    });
     const showCopied = () => {
       setLinkCopied(true);
       if (linkCopiedTimer.current) window.clearTimeout(linkCopiedTimer.current);
@@ -189,7 +228,7 @@ export default function App() {
     } else if (typeof window !== 'undefined') {
       window.prompt('Copy link to this step:', shareUrl);
     }
-  }, [currentModule.id, currentStep]);
+  }, [currentModule.id, currentStep, shareInput]);
 
   // Clear the copied-feedback timer on unmount.
   useEffect(() => {

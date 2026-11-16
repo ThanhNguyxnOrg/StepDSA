@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, afterEach } from 'vitest';
 import App from './App';
+import { encodePermalinkInput } from './utils/permalink';
 
 describe('App Full Integration Smoke Test', () => {
   afterEach(() => {
@@ -92,5 +93,27 @@ describe('App Full Integration Smoke Test', () => {
     expect(
       screen.getByRole('button', { name: /Copy link to this step/i })
     ).toBeInTheDocument();
+  }, 20000);
+
+  it('restores a custom input from ?input= and keeps it in the synced URL', async () => {
+    const encoded = encodePermalinkInput([77, 66, 55]);
+    expect(encoded).toBeTruthy();
+    window.history.replaceState(null, '', `/?module=bubble-sort&step=2&input=${encoded}`);
+    render(<App />);
+
+    await waitFor(() => {
+      const scrubber = screen.getByLabelText('Timeline step scrubber') as HTMLInputElement;
+      expect(scrubber.value).toBe('2');
+    });
+
+    // The custom array reached the stage (not the default [29, 10, 14, ...]).
+    await waitFor(() => {
+      expect(screen.getAllByText('77').length).toBeGreaterThan(0);
+    });
+
+    // Address-bar sync preserves the payload so copying the URL shares the input.
+    await waitFor(() => {
+      expect(window.location.search).toContain('input=');
+    });
   }, 20000);
 });
