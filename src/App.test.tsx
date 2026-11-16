@@ -23,6 +23,7 @@ describe('App Full Integration Smoke Test', () => {
     // Should now show the Workbench controls
     expect(screen.getByTitle(/Reset to Start/i)).toBeInTheDocument();
     expect(screen.getByTitle('Play (Space)')).toBeInTheDocument();
+    expect(screen.getByTitle(/Jump to End/i)).toBeInTheDocument();
   }, 20000);
 
   it('opens Personal Code Studio modal when clicking CLI button', () => {

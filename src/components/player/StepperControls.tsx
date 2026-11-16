@@ -15,6 +15,7 @@ import {
   Keyboard,
   Link2,
   Check,
+  ChevronsRight,
 } from 'lucide-react';
 import { PlaybackController, ExecutionFrame } from '../../core/types';
 import { usePlatformShortcuts } from '../../utils/platformShortcuts';
@@ -165,6 +166,19 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
         >
           <span className="hidden md:inline">Next</span>
           <ChevronRight className="w-3.5 h-3.5" />
+        </motion.button>
+
+        {/* Jump to End (learned from USFCA "Skip Forward" / instant mode) */}
+        <motion.button
+          whileTap={{ scale: 0.94 }}
+          type="button"
+          onClick={() => seekTo(totalSteps - 1)}
+          disabled={currentStep >= totalSteps - 1}
+          title={`Jump to End (${shortcuts.jumpEnd})`}
+          aria-label="Jump to End"
+          className="hidden sm:flex p-1.5 rounded-md bg-[#1F2937] text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-colors cursor-pointer"
+        >
+          <ChevronsRight className="w-3.5 h-3.5" />
         </motion.button>
 
         {/* Next Action Milestone Button */}
