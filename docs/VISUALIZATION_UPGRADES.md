@@ -73,9 +73,22 @@ line-intersection → ⬜ (module is category math; covered in the M1 geometry b
 ### DP (18)
 coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ ·
 knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ · subset-sum ✅ ·
-matrix-chain ✅ · house-robber ✅ /
+matrix-chain ✅ · house-robber ✅ · unique-paths ✅ /
 climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
 longest-palindromic-substring / tree-diameter-dp → ⬜
+
+Unique-paths notes: the old module pre-filled both boundaries invisibly in one
+frame, made every cell write a milestone and mis-mapped five differently-shaped
+snippets. Now the first column is written one cell per frame (`BASE_ROW`, with the
+`unique-paths-boundary` checkpoint asking why a first-column cell has exactly one
+path) followed by the first row (`BASE_COL`), and every inner cell is a single
+`CELL_SUM` frame showing top + left with both predecessors highlighted. Only real
+turning points are milestones (Boundary Base Case / First Sum / Grid Fill Complete
+/ Goal Reached), with the `unique-paths-first-sum` checkpoint contrasting additive
+path counting against a max or a product. The sidebar cross-checks the running
+answer against C(m+n-2, m-1). Five snippets re-aligned to 10 shared lines; input
+normalisation clamps both dimensions to 1..6 with a note, and degenerate grids
+(1x1, corridors) run honestly with zero inner cells.
 
 House-robber notes: the old module crashed on an empty street (dp[0] = nums[0]
 before any guard), scattered code lines across five differently-shaped snippets,
@@ -261,8 +274,8 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
 7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅,
    edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum ✅,
    matrix-chain ✅.
-8. **DP2 — grid/sequence DP + backtracking:** house-robber ✅, unique-paths, n-queens,
-   sudoku, word-search, rat-in-maze.
+8. **DP2 — grid/sequence DP + backtracking:** house-robber ✅, unique-paths ✅,
+   n-queens, sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.
 10. **ST1 — stack/queue internals:** capacity rings, push/pop frames, monotonic stack.
 11. **H1 — hashing:** bucket chains, probe sequences, rehash waves.

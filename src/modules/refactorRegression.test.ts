@@ -6391,3 +6391,198 @@ describe('house robber regressions', () => {
     }
   });
 });
+
+describe('unique paths regressions', () => {
+  const mod = () => moduleById('unique-paths');
+
+  function gridProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { m, n, dp, stats } = state;
+    if (dp.length !== m) problems.push(`rows ${dp.length} != ${m}`);
+    for (const row of dp) {
+      if (row.length !== n) problems.push(`row width ${row.length} != ${n}`);
+    }
+    // boundaryCells is incremented before the frame is pushed, so it already
+    // includes the cell currently being written. The fill order is column 0
+    // top-down, then row 0 left-to-right.
+    const boundary = stats?.boundaryCells ?? 0;
+    for (let r = 0; r < Math.min(boundary, m); r++) {
+      if (dp[r][0] !== 1) problems.push(`boundary dp[${r}][0] = ${dp[r][0]}, expected 1`);
+    }
+    for (let c = 1; c <= boundary - m && c < n; c++) {
+      if (dp[0][c] !== 1) problems.push(`boundary dp[0][${c}] = ${dp[0][c]}, expected 1`);
+    }
+    const summed = stats?.sumCells ?? 0;
+    let seen = 0;
+    for (let r = 1; r < m; r++) {
+      for (let c = 1; c < n; c++) {
+        if (seen >= summed) break;
+        seen++;
+        const expected = (dp[r - 1][c] ?? 0) + (dp[r][c - 1] ?? 0);
+        if (dp[r][c] !== expected) {
+          problems.push(`dp[${r}][${c}] = ${dp[r][c]} but the sum gives ${expected}`);
+        }
+      }
+    }
+    return problems;
+  }
+
+  it('solves every preset with counts matching the binomial formula', () => {
+    const module = mod();
+    const expected: Record<string, number> = {
+      'grid-3x4': 10,
+      'grid-3x3': 6,
+      'grid-2x2': 2,
+      'grid-1x5': 1,
+    };
+    function binom(a: number, b: number): number {
+      let result = 1;
+      for (let k = 1; k <= b; k++) result = (result * (a - b + k)) / k;
+      return result;
+    }
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const { m, n } = preset.data as any;
+      const want = expected[preset.id];
+      expect(last.variables?.totalPaths, `paths for ${preset.id}`).toBe(want);
+      expect(want, `binomial check for ${preset.id}`).toBe(binom(m + n - 2, m - 1));
+      expect(last.state.phase).toBe('done');
+
+      for (const frame of timeline) {
+        expect(gridProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('fills both boundaries cell by cell and sums every inner cell from its two parents', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const { m, n } = module.defaultInput;
+
+    expect(timeline[0].action).toBe('INIT');
+    expect(timeline.filter((f) => f.action === 'BASE_ROW')).toHaveLength(m);
+    expect(timeline.filter((f) => f.action === 'BASE_COL')).toHaveLength(n - 1);
+    const cells = timeline.filter((f) => f.action === 'CELL_SUM');
+    expect(cells).toHaveLength((m - 1) * (n - 1));
+    const first = cells[0];
+    expect(first.state.currentCell).toEqual([1, 1]);
+    expect(first.variables?.fromTop).toBe(1);
+    expect(first.variables?.fromLeft).toBe(1);
+    expect(first.state.fromCells).toEqual([
+      [0, 1],
+      [1, 0],
+    ]);
+    for (const frame of cells) {
+      const v = frame.variables!;
+      expect(v['dp[r][c]']).toBe(v.fromTop + v.fromLeft);
+      expect(frame.state.fromCells).toEqual([
+        [v.r - 1, v.c],
+        [v.r, v.c - 1],
+      ]);
+    }
+    // Milestones mark turning points only, not every cell.
+    expect(timeline.filter((f) => f.isMilestone)).toHaveLength(5);
+    const titles = timeline.filter((f) => f.isMilestone).map((f) => f.milestoneTitle);
+    expect(titles).toEqual(
+      expect.arrayContaining(['Start', 'Boundary Base Case', 'First Sum', 'Grid Fill Complete', 'Goal Reached'])
+    );
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [2],
+      BASE_ROW: [4],
+      BASE_COL: [6],
+      CELL_SUM: [9],
+      GRID_DONE: [10],
+      DONE: [10],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+  });
+
+  it('asks the boundary question once and the first sum question once', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    const boundaryCps = timeline.filter((f) => f.checkpoint?.id === 'unique-paths-boundary');
+    expect(boundaryCps).toHaveLength(1);
+    expect(boundaryCps[0].action).toBe('BASE_ROW');
+    expect(boundaryCps[0].checkpoint?.correctIndex).toBe(0);
+
+    const sumCps = timeline.filter((f) => f.checkpoint?.id === 'unique-paths-first-sum');
+    expect(sumCps).toHaveLength(1);
+    const sum = sumCps[0];
+    expect(sum.action).toBe('CELL_SUM');
+    const v = sum.variables ?? {};
+    expect(sum.checkpoint?.correctIndex).toBe(0);
+    expect(sum.checkpoint?.options[0]).toContain(String(v.fromTop + v.fromLeft));
+    expect(sum.checkpoint?.options[1]).toContain(String(Math.max(v.fromTop, v.fromLeft)));
+  });
+
+  it('maps every action to an exact line in all five 10-line snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.presets[1].data as any);
+    const lineMatchers: Record<number, RegExp> = {
+      2: /dp =|const dp|vector<vector<int>> dp|int\[\]\[\] dp/,
+      4: /dp\[r\]\[0\] = 1/,
+      6: /dp\[0\]\[c\] = 1/,
+      9: /dp\[r\]\[c\] = dp\[r ?- ?1\]\[c\] \+ dp\[r\]\[c ?- ?1\]/,
+      10: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(10);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (lineMatchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles degenerate, invalid and clamped grids honestly', () => {
+    const module = mod();
+
+    const tiny = module.generateTimeline({ m: 1, n: 1 } as any);
+    expect(tiny).toHaveLength(4);
+    expect(tiny[tiny.length - 1].variables?.totalPaths).toBe(1);
+    expect(tiny.filter((f) => f.action === 'CELL_SUM')).toHaveLength(0);
+    expect(auditTimeline(module, { m: 1, n: 1 } as any).errorCount).toBe(0);
+
+    const corridor = module.generateTimeline({ m: 1, n: 5 } as any);
+    expect(corridor[corridor.length - 1].variables?.totalPaths).toBe(1);
+    expect(corridor.filter((f) => f.action === 'CELL_SUM')).toHaveLength(0);
+
+    const invalid = module.generateTimeline({ m: 'x', n: 0 } as any);
+    expect(invalid[0].state.m).toBe(1);
+    expect(invalid[0].state.n).toBe(1);
+    expect(invalid[0].explanation).toMatch(/clamped/);
+    expect(invalid[invalid.length - 1].variables?.totalPaths).toBe(1);
+
+    const clamped = module.generateTimeline({ m: 99, n: 99 } as any);
+    expect(clamped[0].explanation).toMatch(/clamped/);
+    expect(clamped[0].state.m).toBe(6);
+    expect(clamped[0].state.n).toBe(6);
+    expect(clamped[clamped.length - 1].variables?.totalPaths).toBe(252);
+
+    for (const data of [module.defaultInput, module.presets[3].data, { m: 1, n: 1 }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});
