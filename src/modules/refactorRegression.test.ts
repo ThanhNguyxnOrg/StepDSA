@@ -4910,3 +4910,368 @@ describe('0/1 knapsack regressions', () => {
     }
   });
 });
+
+describe('LIS DP regressions', () => {
+  const mod = () => moduleById('longest-increasing-subsequence');
+
+  /** Brute-force LIS length for cross-checking dp values. */
+  function bruteForceLis(values: number[]): number {
+    if (values.length === 0) return 0;
+    const best = new Array(values.length).fill(1);
+    for (let i = 1; i < values.length; i++) {
+      for (let j = 0; j < i; j++) {
+        if (values[j] < values[i]) best[i] = Math.max(best[i], best[j] + 1);
+      }
+    }
+    return Math.max(...best);
+  }
+
+  function fillProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { array, dp, parent, stats, candidate, phase, actionType } = state;
+    if (dp.length !== array.length) problems.push(`dp size ${dp.length} != ${array.length}`);
+    if (parent.length !== array.length) problems.push(`parent size ${parent.length} != ${array.length}`);
+    for (let i = 0; i < dp.length; i++) {
+      if (parent[i] !== -1 && (parent[i] < 0 || parent[i] >= i)) {
+        problems.push(`parent[${i}] = ${parent[i]} is not an earlier index or -1`);
+      }
+      if (parent[i] !== -1 && array[parent[i]] >= array[i]) {
+        problems.push(`parent[${i}] = ${parent[i]} but nums[${parent[i]}] >= nums[${i}] (not increasing)`);
+      }
+      // An UPDATE frame has already written the new dp but not yet the new parent,
+      // so pointer/length consistency is only asserted on every other frame.
+      if (parent[i] !== -1 && actionType !== 'UPDATE' && dp[i] !== dp[parent[i]] + 1) {
+        problems.push(`dp[${i}] = ${dp[i]} but dp[parent] + 1 = ${dp[parent[i]] + 1}`);
+      }
+    }
+    // A fill frame with a decided candidate must agree with the stored dp value.
+    if (candidate && phase === 'fill') {
+      if (candidate.canExtend !== (array[candidate.j] < array[candidate.i])) {
+        problems.push('candidate canExtend disagrees with the strict comparison');
+      }
+      if (candidate.dpJPlusOne !== dp[candidate.j] + 1) {
+        problems.push('candidate dpJPlusOne is stale');
+      }
+      if (state.actionType === 'CHECK') {
+        if (dp[candidate.i] !== candidate.dpI) problems.push('dp[i] changed during the check');
+        if (candidate.better !== (candidate.dpJPlusOne > candidate.dpI)) {
+          problems.push('candidate better disagrees with the candidate comparison');
+        }
+      } else if (state.actionType === 'UPDATE' || state.actionType === 'LINK') {
+        const expected = Math.max(candidate.dpI, candidate.dpJPlusOne);
+        if (dp[candidate.i] !== expected) {
+          problems.push(`dp[${candidate.i}] = ${dp[candidate.i]} but the candidate outcome gives ${expected}`);
+        }
+        if (state.actionType === 'LINK' && parent[candidate.i] !== candidate.j) {
+          problems.push(`parent[${candidate.i}] = ${parent[candidate.i]} but the link says ${candidate.j}`);
+        }
+      }
+    }
+    if (stats.comparisons > ((array.length - 1) * array.length) / 2) {
+      problems.push(`comparisons ${stats.comparisons} exceed the pair count`);
+    }
+    return problems;
+  }
+
+  function sequenceProblems(state: any, array: number[]): string[] {
+    const problems: string[] = [];
+    if (state.phase !== 'done') return problems;
+    const seq: number[] = state.optimalSequence;
+    if (seq.length !== state.maxLisLength) {
+      problems.push(`sequence length ${seq.length} != maxLisLength ${state.maxLisLength}`);
+    }
+    for (let k = 1; k < seq.length; k++) {
+      if (seq[k] <= seq[k - 1]) problems.push(`sequence not strictly increasing at ${k}: ${seq[k]} <= ${seq[k - 1]}`);
+    }
+    // The sequence must be a subsequence of the input (multiset check, in order).
+    let cursor = 0;
+    for (const value of seq) {
+      const found = array.indexOf(value, cursor);
+      if (found === -1) {
+        problems.push(`${value} is not a subsequence element after position ${cursor}`);
+        break;
+      }
+      cursor = found + 1;
+    }
+    if (state.chainIndices.length !== seq.length) {
+      problems.push(`chainIndices ${state.chainIndices.length} != sequence length ${seq.length}`);
+    }
+    for (let k = 1; k < state.chainIndices.length; k++) {
+      if (state.chainIndices[k] <= state.chainIndices[k - 1]) problems.push('chainIndices not increasing');
+      if (array[state.chainIndices[k]] !== seq[k]) problems.push('chainIndices values do not match the sequence');
+    }
+    return problems;
+  }
+
+  it('solves every preset with a dp table matching brute force', () => {
+    const module = mod();
+    const expected: Record<string, { length: number; sequence: string }> = {
+      'classic-leetcode': { length: 4, sequence: '2, 5, 7, 101' },
+      alternating: { length: 4, sequence: '0, 8, 12, 14' },
+      sorted: { length: 5, sequence: '1, 2, 3, 4, 5' },
+      'all-equal': { length: 1, sequence: '4' },
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const want = expected[preset.id];
+      const arr = (preset.data as any).array as number[];
+      expect(last.variables?.maxLen, `length for ${preset.id}`).toBe(want.length);
+      expect(last.variables?.maxLen, `brute force for ${preset.id}`).toBe(bruteForceLis(arr));
+      expect(last.variables?.sequence, `sequence for ${preset.id}`).toBe(want.sequence);
+      expect(last.state.phase).toBe('done');
+
+      for (const frame of timeline) {
+        expect(fillProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(sequenceProblems(frame.state, arr), `sequence on frame ${frame.stepIndex}`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('shows guard, base case, one frame per comparison and separate check/update/link', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const arr = module.defaultInput.array;
+
+    expect(timeline[0].action).toBe('GUARD');
+    expect(timeline[0].conditionEval?.result).toBe(false);
+    expect(timeline.map((f) => f.action)).toContain('SIZE');
+    expect(timeline.filter((f) => f.action === 'BASE_DP')).toHaveLength(1);
+    expect(timeline.filter((f) => f.action === 'BASE_PARENT')).toHaveLength(1);
+    expect(timeline.filter((f) => f.action === 'ITER_START')).toHaveLength(arr.length - 1);
+
+    const pairs = timeline.filter((f) => f.action === 'PAIR_COMPARE');
+    expect(pairs).toHaveLength((arr.length * (arr.length - 1)) / 2);
+    const expectedPairs: string[] = [];
+    for (let i = 1; i < arr.length; i++) {
+      for (let j = 0; j < i; j++) expectedPairs.push(`${j}:${i}`);
+    }
+    expect(pairs.map((f) => `${f.variables?.j}:${f.variables?.i}`)).toEqual(expectedPairs);
+    for (const frame of pairs) {
+      expect(frame.conditionEval?.result).toBe(arr[frame.variables!.j] < arr[frame.variables!.i]);
+    }
+
+    // Every pair that can extend gets its own CHECK_BETTER frame with the honest outcome.
+    const checks = timeline.filter((f) => f.action === 'CHECK_BETTER');
+    expect(checks).toHaveLength(pairs.filter((f) => f.conditionEval?.result === true).length);
+    for (const frame of checks) {
+      const v = frame.variables!;
+      // Variables are captured before the write, so the condition is exactly
+      // candidate > dp[i].
+      expect(frame.conditionEval?.result).toBe(v.candidate > v['dp[i]']);
+      expect(v.outcome).toBe(
+        frame.conditionEval?.result ? 'will update' : v.candidate === v['dp[i]'] ? 'tie — keep' : 'keep'
+      );
+      expect(frame.state.parent[v.i] === -1 || arr[frame.state.parent[v.i]] < arr[v.i]).toBe(true);
+    }
+
+    const updates = timeline.filter((f) => f.action === 'UPDATE');
+    const links = timeline.filter((f) => f.action === 'LINK');
+    expect(updates).toHaveLength(links.length);
+    for (const link of links) {
+      const before = timeline[link.stepIndex - 1];
+      expect(before.action).toBe('UPDATE');
+      expect(before.variables?.i).toBe(link.variables?.i);
+      expect(before.state.dp[link.variables!.i]).toBe(before.state.dp[link.variables!.j] + 1);
+      expect(link.state.parent[link.variables!.i]).toBe(link.variables!.j);
+    }
+
+    const expectedLines: Record<string, number[]> = {
+      GUARD: [2],
+      EMPTY_DONE: [2],
+      SIZE: [3],
+      BASE_DP: [4],
+      BASE_PARENT: [5],
+      ITER_START: [6],
+      FILL_SKIP: [6],
+      FILL_COMPLETE: [6],
+      PAIR_COMPARE: [8],
+      CHECK_BETTER: [9],
+      UPDATE: [10],
+      LINK: [11],
+      RECON_START: [12],
+      SCAN_SKIP: [13],
+      SCAN_COMPARE: [14],
+      NEW_BEST: [15],
+      LENGTH: [16],
+      WALK_PICK: [19],
+      WALK_MOVE: [20],
+      REVERSE: [21],
+      DONE: [22],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+  });
+
+  it('scans for argmax honestly and walks the parent chain end to start', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    // The scan compares every index after 0 with the running best.
+    const scans = timeline.filter((f) => f.action === 'SCAN_COMPARE');
+    expect(scans).toHaveLength(module.defaultInput.array.length - 1);
+    for (const frame of scans) {
+      expect(frame.conditionEval?.result).toBe(
+        frame.variables!['dp[i]'] > frame.variables!['dp[best]']
+      );
+    }
+    const newBests = timeline.filter((f) => f.action === 'NEW_BEST');
+    for (const frame of newBests) {
+      const before = timeline[frame.stepIndex - 1];
+      expect(before.action).toBe('SCAN_COMPARE');
+      expect(before.conditionEval?.result).toBe(true);
+      expect(frame.variables?.best).toBe(before.variables?.i);
+    }
+    // Ties do not move best: dp[7] = dp[6] = 4 is the last scan comparison.
+    const lastScan = scans[scans.length - 1];
+    expect(lastScan.conditionEval?.result).toBe(false);
+    expect(lastScan.variables?.['dp[i]']).toBe(lastScan.variables?.['dp[best]']);
+
+    const picks = timeline.filter((f) => f.action === 'WALK_PICK');
+    const moves = timeline.filter((f) => f.action === 'WALK_MOVE');
+    const finalState = timeline[timeline.length - 1].state;
+    expect(picks).toHaveLength(finalState.maxLisLength);
+    expect(moves).toHaveLength(picks.length);
+    for (const pick of picks) {
+      expect(pick.conditionEval).toMatchObject({ expr: 'best != -1', result: true });
+      expect(pick.variables?.appended).toBe(finalState.array[pick.variables?.best]);
+    }
+    for (const move of moves) {
+      const pick = timeline[move.stepIndex - 1];
+      expect(pick.action).toBe('WALK_PICK');
+      expect(move.variables?.previousBest).toBe(pick.variables?.best);
+      expect(finalState.parent[move.variables!.previousBest]).toBe(move.variables!.nextBest);
+    }
+    // The walk follows the parent chain exactly.
+    const chainFromParents: number[] = [];
+    let cursor = finalState.chainIndices[finalState.chainIndices.length - 1];
+    while (cursor !== -1) {
+      chainFromParents.unshift(cursor);
+      cursor = finalState.parent[cursor];
+    }
+    expect(finalState.chainIndices).toEqual(chainFromParents);
+    expect(timeline.filter((f) => f.action === 'REVERSE')).toHaveLength(1);
+    const reverse = timeline.find((f) => f.action === 'REVERSE')!;
+    expect(reverse.variables?.walkOrder).toBe(`[${[...finalState.optimalSequence].reverse().join(', ')}]`);
+    expect(reverse.variables?.reversed).toBe(`[${finalState.optimalSequence.join(', ')}]`);
+  });
+
+  it('asks for the extend-or-keep prediction at a genuine choice and the parent jump on the walk', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    const extend = timeline.filter((f) => f.checkpoint?.id === 'lis-extend-or-keep');
+    expect(extend).toHaveLength(1);
+    const check = extend[0];
+    expect(check.action).toBe('CHECK_BETTER');
+    const v = check.variables ?? {};
+    expect(v.candidate).not.toBe(v['dp[i]']);
+    expect(check.checkpoint?.correctIndex).toBe(v.candidate > v['dp[i]'] ? 0 : 1);
+    expect(check.checkpoint?.options[0]).toContain(String(v.candidate));
+    expect(check.checkpoint?.options[1]).toContain(String(v['dp[i]']));
+
+    const jumps = timeline.filter((f) => f.checkpoint?.id === 'lis-parent-jump');
+    expect(jumps).toHaveLength(1);
+    const jump = jumps[0];
+    expect(jump.action).toBe('WALK_PICK');
+    const firstMove = timeline.filter((f) => f.action === 'WALK_MOVE')[0];
+    expect(jump.stepIndex).toBeLessThan(firstMove.stepIndex);
+    const options = jump.checkpoint!.options;
+    expect(new Set(options).size).toBe(options.length);
+    expect(options[jump.checkpoint!.correctIndex]).toContain('Index');
+    // The correct option names the real predecessor.
+    const best = jump.variables?.best as number;
+    const parent = jump.state.parent[best];
+    if (parent !== -1) {
+      expect(options[0]).toContain(`Index ${parent}`);
+      expect(options[0]).toContain(String(jump.state.array[parent]));
+    }
+    expect(timeline.filter((f) => f.isMilestone)).toHaveLength(6);
+    const titles = timeline.filter((f) => f.isMilestone).map((f) => f.milestoneTitle);
+    expect(titles).toEqual(
+      expect.arrayContaining(['Start', 'Base Case dp[:]=1', 'First Extension', 'Fill Complete', 'Longest Chain Found', 'LIS Reconstructed'])
+    );
+  });
+
+  it('maps every action to an exact line in all five 22-line snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.presets[1].data as any);
+    const lineMatchers: Record<number, RegExp> = {
+      2: /== 0|return/,
+      3: /n =|len|length|size/,
+      4: /dp.*1|fill\(dp/,
+      5: /parent.*-1|fill\(parent/,
+      6: /for \((let |int )?i|for i in range|for i = 1/,
+      8: /nums\[j\] < nums\[i\]|nums\[j\] < nums\[i\]/,
+      9: /dp\[j\] \+ 1 > dp\[i\]/,
+      10: /dp\[i\] = dp\[j\] \+ 1/,
+      11: /parent\[i\] = j/,
+      12: /best = 0/,
+      13: /for \((let |int )?i = 1; i < n; i\+\+\)|for i in range\(1, n\)|for i = 1 to n - 1/,
+      14: /dp\[i\] > dp\[best\]/,
+      15: /best = i/,
+      16: /maxLen = dp\[best\]|max_len = dp\[best\]/,
+      19: /push|append|add/,
+      20: /best = parent\[best\]/,
+      21: /reverse|Reverse/,
+      22: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(22);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+      }
+    }
+  });
+
+  it('handles empty, invalid, clamped and truncated input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ array: [] } as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(true);
+    expect(empty[1].variables?.maxLen).toBe(0);
+    expect(empty[1].state.phase).toBe('done');
+    expect(auditTimeline(module, { array: [] } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ array: ['x', 3, null, 7] } as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(invalid[invalid.length - 1].variables?.maxLen).toBe(2);
+    expect(invalid[invalid.length - 1].variables?.sequence).toBe('3, 7');
+
+    const clamped = module.generateTimeline({ array: [5, 1000, -1000, 6] } as any);
+    expect(clamped[0].explanation).toMatch(/clamped/);
+    expect(clamped[0].state.array).toEqual([5, 999, -999, 6]);
+
+    const truncated = module.generateTimeline({ array: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] } as any);
+    expect(truncated[0].explanation).toMatch(/truncated to 10/);
+    expect(truncated[0].state.array).toHaveLength(10);
+    expect(truncated[truncated.length - 1].variables?.maxLen).toBe(10);
+    expect(auditTimeline(module, { array: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] } as any).errorCount).toBe(0);
+
+    const fallback = module.generateTimeline({ array: ['a', 'b'] } as any);
+    expect(fallback[0].state.array).toEqual([10, 9, 2, 5, 3, 7, 101, 18]);
+    expect(fallback[fallback.length - 1].variables?.maxLen).toBe(4);
+
+    for (const data of [module.defaultInput, module.presets[3].data, { array: [] }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});
