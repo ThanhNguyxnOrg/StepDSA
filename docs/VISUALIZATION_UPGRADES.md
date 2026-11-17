@@ -73,10 +73,24 @@ line-intersection → ⬜ (module is category math; covered in the M1 geometry b
 ### DP (18)
 coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ ·
 knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ · subset-sum ✅ ·
-matrix-chain ✅ /
-house-robber /
+matrix-chain ✅ · house-robber ✅ /
 climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
 longest-palindromic-substring / tree-diameter-dp → ⬜
+
+House-robber notes: the old module crashed on an empty street (dp[0] = nums[0]
+before any guard), scattered code lines across five differently-shaped snippets,
+and dropped the robbed set to an empty array during the middle frames. Now the
+base cases are folded into the loop the way the snippets show it: every house gets
+`SKIP_BRANCH` (dp[i-1], with the honest `i > 0` guard) and `ROB_BRANCH`
+(dp[i-2] + nums[i], guard `i > 1`) before `DECIDE` writes the max, so house 0 and 1
+are no longer special-cased off-screen. The reconstruction walks the rob equation
+dp[i] == dp[i-2] + nums[i] one house per frame (`BT_CHECK`, `BT_TAKE` jumping two
+back, `BT_SKIP` stepping one back) and keeps the loot visible throughout.
+Checkpoints `house-robber-skip-or-rob` and `house-robber-backtrack-first`;
+milestones First Decision / Table Complete / First House Robbed / Max Loot
+Secured. Five snippets re-aligned to 17 shared lines including the walk; input
+normalisation drops non-numeric values with a note, clamps cash to 0..999, caps
+the street at 10 houses, and an explicitly empty street is a valid answer-0 run.
 
 Matrix-chain notes: the old module had no pedagogy, and never showed the
 parenthesisation being built. Now the diagonal base case is explicit (`ALLOC`),
@@ -247,7 +261,7 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
 7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅,
    edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum ✅,
    matrix-chain ✅.
-8. **DP2 — grid/sequence DP + backtracking:** unique-paths, house-robber, n-queens,
+8. **DP2 — grid/sequence DP + backtracking:** house-robber ✅, unique-paths, n-queens,
    sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.
 10. **ST1 — stack/queue internals:** capacity rings, push/pop frames, monotonic stack.

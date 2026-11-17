@@ -6128,3 +6128,266 @@ describe('matrix chain multiplication regressions', () => {
     }
   });
 });
+
+describe('house robber regressions', () => {
+  const mod = () => moduleById('house-robber');
+
+  /** Brute-force max non-adjacent sum. */
+  function bruteForce(values: number[]): number {
+    let take = 0;
+    let skip = 0;
+    for (const value of values) {
+      const newTake = skip + value;
+      skip = Math.max(skip, take);
+      take = newTake;
+    }
+    return Math.max(take, skip);
+  }
+
+  function fillProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { houses, dp, stats, candidate } = state;
+    if (dp.length !== houses.length) problems.push(`dp size ${dp.length} != ${houses.length}`);
+    // Only the first `decisions` cells are final; later cells still hold 0.
+    for (let i = 0; i < (stats?.decisions ?? 0); i++) {
+      const skip = i > 0 ? dp[i - 1] : 0;
+      const rob = (i > 1 ? dp[i - 2] : 0) + houses[i];
+      if (dp[i] !== Math.max(skip, rob)) {
+        problems.push(`dp[${i}] = ${dp[i]} but the recurrence gives ${Math.max(skip, rob)}`);
+      }
+    }
+    if (stats.decisions > houses.length) problems.push('more decisions than houses');
+    if (candidate && candidate.skipVal !== (candidate.i > 0 ? dp[candidate.i - 1] : 0)) {
+      problems.push('candidate skip branch is stale');
+    }
+    if (candidate && candidate.robVal !== (candidate.i > 1 ? dp[candidate.i - 2] + houses[candidate.i] : houses[candidate.i])) {
+      problems.push('candidate rob branch is stale');
+    }
+    return problems;
+  }
+
+  function lootProblems(state: any, houses: number[]): string[] {
+    const problems: string[] = [];
+    if (state.phase !== 'done') return problems;
+    const loot: number[] = [...state.loot].sort((a: number, b: number) => a - b);
+    for (let k = 1; k < loot.length; k++) {
+      if (loot[k] - loot[k - 1] < 2) problems.push(`robbed houses ${loot[k - 1]} and ${loot[k]} are adjacent`);
+    }
+    const total = loot.reduce((sum: number, idx: number) => sum + houses[idx], 0);
+    if (total !== state.maxLoot) problems.push(`loot sums to ${total} != maxLoot ${state.maxLoot}`);
+    if (state.maxLoot !== bruteForce(houses)) problems.push('maxLoot disagrees with brute force');
+    return problems;
+  }
+
+  it('solves every preset with the brute-force optimum and a legal, non-adjacent set', () => {
+    const module = mod();
+    const expected: Record<string, { loot: number; max: number }> = {
+      'leetcode-198': { loot: 3, max: 12 },
+      'alternating-high': { loot: 2, max: 100 },
+      staircase: { loot: 2, max: 4 },
+      'single-house': { loot: 1, max: 7 },
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const want = expected[preset.id];
+      const houses = (preset.data as any).houses as number[];
+      expect(last.variables?.maxLoot, `loot for ${preset.id}`).toBe(want.max);
+      expect(last.variables?.maxLoot, `brute force for ${preset.id}`).toBe(bruteForce(houses));
+      expect(last.variables?.lootCount, `house count for ${preset.id}`).toBe(want.loot);
+      expect(last.state.phase).toBe('done');
+
+      for (const frame of timeline) {
+        expect(fillProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(lootProblems(frame.state, houses), `loot on frame ${frame.stepIndex}`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('shows both branches for every house and writes the decision separately', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const { houses } = module.defaultInput;
+
+    expect(timeline[0].action).toBe('INIT');
+    expect(timeline.filter((f) => f.action === 'ALLOC')).toHaveLength(1);
+    const skips = timeline.filter((f) => f.action === 'SKIP_BRANCH');
+    const robs = timeline.filter((f) => f.action === 'ROB_BRANCH');
+    const decides = timeline.filter((f) => f.action === 'DECIDE');
+    expect(skips).toHaveLength(houses.length);
+    expect(robs).toHaveLength(houses.length);
+    expect(decides).toHaveLength(houses.length);
+    for (const frame of skips) {
+      expect(frame.conditionEval?.result).toBe(frame.variables!.i > 0);
+    }
+    for (const frame of robs) {
+      expect(frame.conditionEval?.result).toBe(frame.variables!.i > 1);
+      expect(frame.variables!.rob).toBe(
+        (frame.variables!.i > 1 ? timeline[frame.stepIndex - 1].state.dp[frame.variables!.i - 2] : 0) +
+          frame.variables!['nums[i]']
+      );
+    }
+    for (const frame of decides) {
+      const v = frame.variables!;
+      expect(v['dp[i]']).toBe(Math.max(v.skip, v.rob));
+      expect(v.decision).toBe(v.rob > v.skip ? 'rob' : 'skip');
+      expect(frame.conditionEval?.result).toBe(v['dp[i]']);
+      expect(frame.conditionEval?.formatted).toBe(`dp[${v.i}] = ${v['dp[i]']} (${v.decision})`);
+    }
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [2],
+      EMPTY_DONE: [2],
+      ALLOC: [3],
+      SKIP_BRANCH: [5],
+      ROB_BRANCH: [6],
+      DECIDE: [7],
+      TABLE_DONE: [4],
+      BT_START: [10],
+      BT_CHECK: [12],
+      BT_TAKE: [13],
+      BT_SKIP: [16],
+      DONE: [17],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+  });
+
+  it('walks back testing the rob equation and proves the recorded set', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const finalState = timeline[timeline.length - 1].state;
+    const houses = module.defaultInput.houses;
+
+    const checks = timeline.filter((f) => f.action === 'BT_CHECK');
+    const takes = timeline.filter((f) => f.action === 'BT_TAKE');
+    const moves = timeline.filter((f) => f.action === 'BT_SKIP');
+    expect(checks.length).toBeLessThanOrEqual(houses.length);
+    expect(takes).toHaveLength(finalState.loot.length);
+    for (const take of takes) {
+      const before = timeline[take.stepIndex - 1];
+      expect(before.action).toBe('BT_CHECK');
+      expect(before.conditionEval?.result).toBe(true);
+      expect(before.variables?.i).toBe(take.variables?.robbed);
+      // A take always jumps two houses back (or ends the walk).
+      const next = timeline[take.stepIndex + 1];
+      const nextIndex = next.state.currentIndex;
+      expect(nextIndex === take.variables!.robbed - 2 || nextIndex === -1).toBe(true);
+    }
+    for (const move of moves) {
+      const before = timeline[move.stepIndex - 1];
+      expect(before.action).toBe('BT_CHECK');
+      expect(before.conditionEval?.result).toBe(false);
+      expect(move.variables!.nextHouse).toBe(before.variables!.i - 1);
+    }
+    // The walk visits descending houses and each check is honest.
+    const visited = checks.map((f) => f.variables!.i);
+    for (let k = 1; k < visited.length; k++) {
+      expect(visited[k]).toBeLessThan(visited[k - 1]);
+      expect(visited[k - 1] - visited[k]).toBeLessThanOrEqual(2);
+    }
+    const lootSum = finalState.loot.reduce((sum: number, idx: number) => sum + houses[idx], 0);
+    expect(lootSum).toBe(finalState.maxLoot);
+    expect(finalState.loot).toEqual([4, 2, 0]);
+  });
+
+  it('asks for the skip-or-rob prediction and the first walk check', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    const choiceCps = timeline.filter((f) => f.checkpoint?.id === 'house-robber-skip-or-rob');
+    expect(choiceCps).toHaveLength(1);
+    const check = choiceCps[0];
+    expect(check.action).toBe('DECIDE');
+    const v = check.variables ?? {};
+    expect(v.skip).not.toBe(v.rob);
+    expect(check.checkpoint?.correctIndex).toBe(v.rob > v.skip ? 0 : 1);
+    expect(check.checkpoint?.options[0]).toContain(String(Math.max(v.skip, v.rob)));
+    expect(check.checkpoint?.options[1]).toContain(String(Math.min(v.skip, v.rob)));
+
+    const walkCps = timeline.filter((f) => f.checkpoint?.id === 'house-robber-backtrack-first');
+    expect(walkCps).toHaveLength(1);
+    const walk = walkCps[0];
+    expect(walk.action).toBe('BT_CHECK');
+    expect(walk.checkpoint?.correctIndex).toBe(walk.conditionEval?.result ? 0 : 1);
+    expect(walk.checkpoint?.options[0]).toContain(`House ${walk.variables?.i}`);
+
+    expect(timeline.filter((f) => f.isMilestone)).toHaveLength(5);
+    const titles = timeline.filter((f) => f.isMilestone).map((f) => f.milestoneTitle);
+    expect(titles).toEqual(
+      expect.arrayContaining(['Start', 'First Decision', 'Table Complete', 'First House Robbed', 'Max Loot Secured'])
+    );
+  });
+
+  it('maps every action to an exact line in all five 17-line snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.presets[1].data as any);
+    const lineMatchers: Record<number, RegExp> = {
+      2: /== 0|return/,
+      3: /dp.*0|new Array|vector<int> dp|int\[\] dp/,
+      4: /for i|for \(int i|for \(let i|for i in range/,
+      5: /skip =/,
+      6: /rob =/,
+      7: /dp\[i\] = max|dp\[i\] = Math\.max/,
+      10: /while/,
+      12: /robVal ==+ dp|rob_val == dp/,
+      13: /push|append|count\+\+/,
+      16: /i -= 1|i = i - 1/,
+      17: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(17);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (lineMatchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, clamped and legacy input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ houses: [] } as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(true);
+    expect(empty[1].variables?.maxLoot).toBe(0);
+    expect(auditTimeline(module, { houses: [] } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ houses: ['x', 3, null, 8] } as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(invalid[0].state.houses).toEqual([3, 8]);
+    expect(invalid[invalid.length - 1].variables?.maxLoot).toBe(8);
+
+    const clamped = module.generateTimeline({ houses: [9999, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } as any);
+    expect(clamped[0].explanation).toMatch(/truncated to 10/);
+    expect(clamped[0].explanation).toMatch(/clamped/);
+    expect(clamped[0].state.houses).toHaveLength(10);
+    expect(clamped[0].state.houses[0]).toBe(999);
+
+    const fallback = module.generateTimeline({ houses: ['a', 'b'] } as any);
+    expect(fallback[0].state.houses).toEqual([2, 7, 9, 3, 1]);
+    expect(fallback[fallback.length - 1].variables?.maxLoot).toBe(12);
+
+    for (const data of [module.defaultInput, module.presets[3].data, { houses: [] }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});
