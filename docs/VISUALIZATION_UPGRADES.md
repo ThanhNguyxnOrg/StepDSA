@@ -73,9 +73,25 @@ line-intersection → ⬜ (module is category math; covered in the M1 geometry b
 ### DP (18)
 coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ ·
 knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ · subset-sum ✅ ·
-matrix-chain ✅ · house-robber ✅ · unique-paths ✅ · climbing-stairs ✅ /
+matrix-chain ✅ · house-robber ✅ · unique-paths ✅ · climbing-stairs ✅ ·
+kadanes-algorithm ✅ /
 climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
 longest-palindromic-substring / tree-diameter-dp → ⬜
+
+Kadane notes: the old module crashed on an empty array, folded the restart
+decision and the record update into one frame, and never explained the negative
+prefix heuristic. Now the seeds are explicit (`SETUP_CUR` currentSum = nums[0],
+`SETUP_MAX` maxSum = nums[0] with the all-negative pitfall, `WINDOW_INIT` for the
+two windows), every element gets `CHECK_PREFIX` (currentSum < 0, the entire
+heuristic in one conditionEval) followed by `RESTART` + `WINDOW_START` or
+`EXTEND`, then `CHECK_MAX` and — on a new record — `NEW_MAX` + `RECORD_WINDOW`.
+The running window and the best window are tracked and drawn separately.
+Checkpoints `kadane-negative-prefix` (drop vs drag the dead prefix) and
+`kadane-new-max`; milestones Base Window Seeded / First Prefix Restart / New
+Global Max / Max Subarray Found. The sidebar cross-checks against a brute-force
+O(N^2) reference. Five snippets re-aligned to 18 shared lines; input
+normalisation drops non-numeric values with a note, clamps to +/-999, caps at 10
+elements, and an explicitly empty array is a valid 2-frame answer-0 run.
 
 Climbing-stairs notes: the old module never showed the `n <= 2` guard that its own
 snippets start with, made every write a milestone and mis-mapped five
@@ -290,7 +306,7 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
    edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum ✅,
    matrix-chain ✅.
 8. **DP2 — grid/sequence DP + backtracking:** house-robber ✅, unique-paths ✅,
-   climbing-stairs ✅, n-queens, sudoku, word-search, rat-in-maze.
+   climbing-stairs ✅, kadanes-algorithm ✅, n-queens, sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.
 10. **ST1 — stack/queue internals:** capacity rings, push/pop frames, monotonic stack.
 11. **H1 — hashing:** bucket chains, probe sequences, rehash waves.

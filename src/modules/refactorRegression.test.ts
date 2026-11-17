@@ -6777,3 +6777,241 @@ describe('climbing stairs regressions', () => {
     }
   });
 });
+
+describe('kadane regressions', () => {
+  const mod = () => moduleById('kadanes-algorithm');
+
+  function bruteForce(array: number[]): number {
+    let best = -Infinity;
+    for (let i = 0; i < array.length; i++) {
+      let sum = 0;
+      for (let j = i; j < array.length; j++) {
+        sum += array[j];
+        best = Math.max(best, sum);
+      }
+    }
+    return best;
+  }
+
+  function scanProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { array, currentSum, maxSum, windowStart, windowEnd, bestStart, bestEnd, stats, phase } = state;
+    // Before the seeds are written the windows are placeholders.
+    if (phase !== 'init') {
+    if (windowStart > windowEnd) problems.push('running window is empty');
+    if (bestStart > bestEnd) problems.push('best window is empty');
+    // RESTART/EXTEND frames carry the new sum while the window bounds are written
+    // in the following frame, so the sum-vs-window check applies elsewhere.
+    const windowWritten = !['RESTART', 'EXTEND'].includes(state.actionType);
+    if (windowWritten &&
+        currentSum !== array.slice(windowStart, windowEnd + 1).reduce((s: number, v: number) => s + v, 0)) {
+      problems.push(`currentSum ${currentSum} != running window sum`);
+    }
+    if (maxSum < currentSum && state.phase === 'done') problems.push('maxSum below the final running sum');
+    if (stats.restarts > array.length) problems.push('more restarts than elements');
+    if (stats.maxUpdates > array.length) problems.push('more record updates than elements');
+    }
+    // maxSum is seeded one frame after currentSum, so the record check starts later.
+    if (phase === 'init' || (phase === 'setup' && state.actionType === 'SETUP')) {
+      return problems;
+    }
+    if (maxSum !== array.slice(bestStart, bestEnd + 1).reduce((s: number, v: number) => s + v, 0)) {
+      problems.push(`maxSum ${maxSum} != best window sum`);
+    }
+    return problems;
+  }
+
+  it('solves every preset with the brute-force optimum and consistent windows', () => {
+    const module = mod();
+    const expected: Record<string, { max: number; range: string }> = {
+      'leetcode-53': { max: 6, range: '[3..6]' },
+      'all-negatives': { max: -2, range: '[3..3]' },
+      alternating: { max: 12, range: '[4..7]' },
+      'single-element': { max: -7, range: '[0..0]' },
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const want = expected[preset.id];
+      const array = (preset.data as any).array as number[];
+      expect(last.variables?.maxSum, `max for ${preset.id}`).toBe(want.max);
+      expect(last.variables?.maxSum, `brute force for ${preset.id}`).toBe(bruteForce(array));
+      expect(last.variables?.range, `range for ${preset.id}`).toBe(want.range);
+      expect(last.state.phase).toBe('done');
+
+      for (const frame of timeline) {
+        expect(scanProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('tests the prefix honestly and splits restart, extend and record', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const { array } = module.defaultInput;
+
+    expect(timeline[0].action).toBe('INIT');
+    expect(timeline.filter((f) => f.action === 'SETUP_CUR')).toHaveLength(1);
+    expect(timeline.filter((f) => f.action === 'SETUP_MAX')).toHaveLength(1);
+    expect(timeline.filter((f) => f.action === 'WINDOW_INIT')).toHaveLength(1);
+
+    const checks = timeline.filter((f) => f.action === 'CHECK_PREFIX');
+    expect(checks).toHaveLength(array.length - 1);
+    for (const frame of checks) {
+      expect(frame.conditionEval?.result).toBe(frame.variables!.currentSum < 0);
+      expect(frame.conditionEval?.expr).toBe('currentSum < 0');
+    }
+    // Every restart is justified and followed by a window move.
+    const restarts = timeline.filter((f) => f.action === 'RESTART');
+    for (const restart of restarts) {
+      const before = timeline[restart.stepIndex - 1];
+      expect(before.action).toBe('CHECK_PREFIX');
+      expect(before.conditionEval?.result).toBe(true);
+      expect(restart.variables!.currentSum).toBe(array[restart.variables!.i]);
+      const after = timeline[restart.stepIndex + 1];
+      expect(after.action).toBe('WINDOW_START');
+      expect(after.state.windowStart).toBe(restart.variables!.i);
+    }
+    // Extends happen exactly where the prefix was non-negative.
+    const extendsFrames = timeline.filter((f) => f.action === 'EXTEND');
+    expect(extendsFrames.length + restarts.length).toBe(array.length - 1);
+    for (const extend of extendsFrames) {
+      const before = timeline[extend.stepIndex - 1];
+      expect(before.action).toBe('CHECK_PREFIX');
+      expect(before.conditionEval?.result).toBe(false);
+      expect(extend.variables!.currentSum).toBe(before.variables!.currentSum + extend.variables!['nums[i]']);
+    }
+    // Record updates follow new maxima and keep the window consistent.
+    const newMax = timeline.filter((f) => f.action === 'NEW_MAX');
+    const records = timeline.filter((f) => f.action === 'RECORD_WINDOW');
+    expect(records).toHaveLength(newMax.length);
+    for (const record of records) {
+      const before = timeline[record.stepIndex - 1];
+      expect(before.action).toBe('NEW_MAX');
+      expect(before.state.maxSum).toBe(record.state.maxSum);
+      expect(record.state.maxSum).toBe(record.state.currentSum);
+    }
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [2],
+      EMPTY_DONE: [2],
+      SETUP_CUR: [3],
+      SETUP_MAX: [4],
+      WINDOW_INIT: [5],
+      SCAN_SKIP: [8],
+      CHECK_PREFIX: [9],
+      RESTART: [10],
+      WINDOW_START: [11],
+      EXTEND: [13],
+      CHECK_MAX: [14],
+      NEW_MAX: [15],
+      RECORD_WINDOW: [16],
+      DONE: [18],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+  });
+
+  it('asks about the dead prefix and the record update', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    const restartCps = timeline.filter((f) => f.checkpoint?.id === 'kadane-negative-prefix');
+    expect(restartCps).toHaveLength(1);
+    const restart = restartCps[0];
+    expect(restart.action).toBe('RESTART');
+    const v = restart.variables ?? {};
+    expect(v.discardedPrefix).toBeLessThan(0);
+    expect(restart.checkpoint?.correctIndex).toBe(0);
+    expect(restart.checkpoint?.options[0]).toContain(String(v.currentSum));
+    expect(restart.checkpoint?.options[1]).toContain(String(v.currentSum + v.discardedPrefix));
+
+    const maxCps = timeline.filter((f) => f.checkpoint?.id === 'kadane-new-max');
+    expect(maxCps).toHaveLength(1);
+    const max = maxCps[0];
+    expect(max.action).toBe('CHECK_MAX');
+    expect(max.conditionEval?.result).toBe(true);
+    expect(max.checkpoint?.options[0]).toContain(String(max.variables?.currentSum));
+
+    expect(timeline.filter((f) => f.isMilestone)).toHaveLength(5);
+    const titles = timeline.filter((f) => f.isMilestone).map((f) => f.milestoneTitle);
+    expect(titles).toEqual(
+      expect.arrayContaining(['Start', 'Base Window Seeded', 'First Prefix Restart', 'New Global Max', 'Max Subarray Found'])
+    );
+  });
+
+  it('maps every action to an exact line in all five 18-line snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.presets[2].data as any);
+    const lineMatchers: Record<number, RegExp> = {
+      2: /== 0|return/,
+      3: /currentSum = nums\[0\]|current_sum = nums\[0\]/,
+      4: /maxSum = nums\[0\]|max_sum = nums\[0\]/,
+      5: /start = 0/,
+      8: /for i|for \(int i|for \(let i|for i in range/,
+      9: /currentSum < 0|current_sum < 0/,
+      10: /currentSum = nums\[i\]|current_sum = nums\[i\]/,
+      11: /start = i/,
+      13: /currentSum \+ nums|current_sum \+ nums/,
+      14: /currentSum > maxSum|current_sum > max_sum/,
+      15: /maxSum = currentSum|max_sum = current_sum/,
+      16: /bestStart = start|best_start = start/,
+      17: /bestEnd = i|best_end = i/,
+      18: /return|outSum = maxSum/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(18);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (lineMatchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, clamped and single-element input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ array: [] } as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(true);
+    expect(empty[1].variables?.maxSum).toBe(0);
+    expect(auditTimeline(module, { array: [] } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ array: ['x', 3, null, -4, 5] } as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(invalid[0].state.array).toEqual([3, -4, 5]);
+    // [3, -4, 5]: the best window is [5] alone (5) — the negative middle kills [3, -4, 5].
+    expect(invalid[invalid.length - 1].variables?.maxSum).toBe(5);
+
+    const clamped = module.generateTimeline({ array: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, -9999] } as any);
+    expect(clamped[0].explanation).toMatch(/truncated to 10/);
+    expect(clamped[0].state.array).toHaveLength(10);
+    expect(clamped[clamped.length - 1].variables?.maxSum).toBe(55);
+
+    const fallback = module.generateTimeline({ array: ['a'] } as any);
+    expect(fallback[0].state.array).toEqual([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
+    expect(fallback[fallback.length - 1].variables?.maxSum).toBe(6);
+
+    for (const data of [module.defaultInput, module.presets[3].data, { array: [] }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});
