@@ -5859,3 +5859,272 @@ describe('subset sum regressions', () => {
     }
   });
 });
+
+describe('matrix chain multiplication regressions', () => {
+  const mod = () => moduleById('matrix-chain-multiplication');
+
+  /** Brute-force minimum cost over all parenthesisations. */
+  function bruteForceMcm(dims: number[], i: number, j: number, memo = new Map<string, number>()): number {
+    const key = `${i}:${j}`;
+    if (memo.has(key)) return memo.get(key)!;
+    if (i === j) return 0;
+    let best = Infinity;
+    for (let k = i; k < j; k++) {
+      const cost = bruteForceMcm(dims, i, k, memo) + bruteForceMcm(dims, k + 1, j, memo) + dims[i - 1] * dims[k] * dims[j];
+      best = Math.min(best, cost);
+    }
+    memo.set(key, best);
+    return best;
+  }
+
+  function tableProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { dims, n, costTable, splitTable, candidate, actionType } = state;
+    if (dims.length !== n + 1) problems.push(`dims length ${dims.length} != n + 1`);
+    if (costTable.length !== n + 1 || splitTable.length !== n + 1) problems.push('table sizes are wrong');
+    for (let i = 1; i <= n; i++) {
+      if (costTable[i][i] !== 0) problems.push(`diagonal m[${i}][${i}] is not 0`);
+      for (let j = 1; j < i; j++) {
+        if (splitTable[i][j] !== 0) problems.push(`splitTable[${i}][${j}] set below the diagonal`);
+      }
+    }
+    // Decided cells must hold a cost achievable by their recorded split. A
+    // WRITE frame has the new cost but not yet its split pointer.
+    if (actionType !== 'WRITE') {
+    for (let i = 1; i <= n; i++) {
+      for (let j = i + 1; j <= n; j++) {
+        const cost = costTable[i][j];
+        // Infinity or 0 above the diagonal means the cell is not decided yet.
+        if (cost === Infinity || cost === undefined || cost === 0) continue;
+        const k = splitTable[i][j];
+        if (!k || k < i || k >= j) {
+          problems.push(`splitTable[${i}][${j}] = ${k} is not a legal split`);
+          continue;
+        }
+        const expected = costTable[i][k] + costTable[k + 1][j] + dims[i - 1] * dims[k] * dims[j];
+        if (cost !== expected) {
+          problems.push(`m[${i}][${j}] = ${cost} but its recorded split costs ${expected}`);
+        }
+      }
+    }
+    }
+    if (candidate && state.phase === 'fill' && actionType !== 'TRY') {
+      const expected = candidate.leftCost + candidate.rightCost + candidate.multCost;
+      if (candidate.totalCost !== expected) problems.push('candidate totalCost is stale');
+      if (costTable[candidate.i][candidate.j] !== (candidate.improved ? candidate.totalCost : candidate.bestBefore)) {
+        problems.push('cost table disagrees with the candidate outcome');
+      }
+    }
+    return problems;
+  }
+
+  it('solves every preset with the brute-force optimum and a consistent split tree', () => {
+    const module = mod();
+    const expected: Record<string, { cost: number; order: string }> = {
+      'classic-4': { cost: 30000, order: '(((A1 × A2) × A3) × A4)' },
+      'dramatic-diff': { cost: 7500, order: '((A1 × A2) × A3)' },
+      'five-matrices': { cost: 26000, order: '((A1 × (A2 × A3)) × A4)' },
+      'two-matrices': { cost: 6000, order: '(A1 × A2)' },
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const want = expected[preset.id];
+      const dims = (preset.data as any).dims as number[];
+      expect(last.variables?.minCost, `cost for ${preset.id}`).toBe(want.cost);
+      expect(last.variables?.minCost, `brute force for ${preset.id}`).toBe(bruteForceMcm(dims, 1, dims.length - 1));
+      expect(last.variables?.order, `order for ${preset.id}`).toBe(want.order);
+      expect(last.state.phase).toBe('done');
+
+      for (const frame of timeline) {
+        expect(tableProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('solves by chain length with explicit infinity, try, write and record frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const n = module.defaultInput.dims.length - 1;
+
+    expect(timeline[0].action).toBe('INIT');
+    expect(timeline[1].action).toBe('ALLOC');
+    expect(timeline.filter((f) => f.action === 'L_START')).toHaveLength(n - 1);
+
+    // One SET_INF per interval above the diagonal.
+    const intervals = (n * (n - 1)) / 2;
+    expect(timeline.filter((f) => f.action === 'SET_INF')).toHaveLength(intervals);
+    for (const frame of timeline.filter((f) => f.action === 'SET_INF')) {
+      expect(frame.state.costTable[frame.variables!.i] === undefined
+        ? Infinity
+        : frame.state.costTable[frame.state.currentI][frame.state.currentJ]).toBe(Infinity);
+    }
+
+    const tries = timeline.filter((f) => f.action === 'TRY_SPLIT');
+    let expectedSplits = 0;
+    for (let L = 2; L <= n; L++) expectedSplits += (n - L + 1) * (L - 1);
+    expect(tries).toHaveLength(expectedSplits);
+    for (const frame of tries) {
+      const v = frame.variables!;
+      expect(v.candidateCost).toBe(v.leftCost + v.rightCost + v.multCost);
+      expect(v.multCost).toBe(
+        module.defaultInput.dims[frame.state.currentI - 1] *
+          module.defaultInput.dims[v.splitK === undefined ? 0 : frame.state.currentK] *
+          module.defaultInput.dims[frame.state.currentJ]
+      );
+      expect(frame.state.dependencies?.leftCell).toEqual([frame.state.currentI, frame.state.currentK]);
+      expect(frame.state.dependencies?.rightCell).toEqual([frame.state.currentK + 1, frame.state.currentJ]);
+    }
+    const writes = timeline.filter((f) => f.action === 'WRITE_MIN');
+    const records = timeline.filter((f) => f.action === 'RECORD_SPLIT');
+    expect(records).toHaveLength(writes.length);
+    for (const record of records) {
+      const before = timeline[record.stepIndex - 1];
+      expect(before.action).toBe('WRITE_MIN');
+      expect(before.variables?.['m[i][j]']).toBe(before.state.costTable[before.state.currentI][before.state.currentJ]);
+      expect(record.state.splitTable[record.state.currentI][record.state.currentJ]).toBe(record.state.currentK);
+    }
+    // Every first candidate for an interval improves from infinity.
+    const improvedTries = tries.filter((f) => f.conditionEval?.result === true);
+    expect(writes.length).toBe(improvedTries.length);
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [2],
+      ALLOC: [3],
+      L_START: [5],
+      TABLE_DONE: [5],
+      SET_INF: [8],
+      TRY_SPLIT: [10],
+      WRITE_MIN: [12],
+      RECORD_SPLIT: [13],
+      BT_START: [14],
+      BT_SPLIT: [14],
+      DONE: [15],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+  });
+
+  it('reconstructs the parenthesisation by reading n-1 splits', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const finalState = timeline[timeline.length - 1].state;
+
+    const splits = timeline.filter((f) => f.action === 'BT_SPLIT');
+    expect(splits).toHaveLength(finalState.n - 1);
+    // Pre-order DFS: the outermost interval is split first.
+    expect(splits[0].state.currentI === 1 && splits[0].state.currentJ === finalState.n).toBe(true);
+    for (const split of splits) {
+      const { currentI: i, currentJ: j, currentK: k } = split.state;
+      expect(k).toBe(finalState.splitTable[i][j]);
+      const left = split.variables?.leftFormula as string;
+      const right = split.variables?.rightFormula as string;
+      expect(split.conditionEval?.formatted).toBe(`(${left}) × (${right})`);
+      // Every leaf of the split tree is a single matrix.
+      expect(left.replace(/[()×\s]/g, '').length).toBeGreaterThan(0);
+    }
+    expect(finalState.formula).toBe(timeline[timeline.length - 1].variables?.order);
+    expect(finalState.minCost).toBe(finalState.costTable[1][finalState.n]);
+    expect(finalState.stats.reconSteps).toBe(finalState.n - 1);
+  });
+
+  it('asks for the minimum prediction and the first split at genuine points', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    const costCps = timeline.filter((f) => f.checkpoint?.id === 'mcm-split-cost');
+    expect(costCps).toHaveLength(1);
+    const check = costCps[0];
+    expect(check.action).toBe('TRY_SPLIT');
+    const v = check.variables ?? {};
+    expect(v.currentMin).not.toBe('INF');
+    expect(v.candidateCost).not.toBe(v.currentMin);
+    expect(check.checkpoint?.correctIndex).toBe(v.improved ? 0 : 1);
+    expect(check.checkpoint?.options[0]).toContain(String(Math.min(v.candidateCost, v.currentMin as number)));
+
+    const walkCps = timeline.filter((f) => f.checkpoint?.id === 'mcm-backtrack-first-split');
+    expect(walkCps).toHaveLength(1);
+    const split = walkCps[0];
+    expect(split.action).toBe('BT_SPLIT');
+    const options = split.checkpoint!.options;
+    expect(new Set(options).size).toBe(options.length);
+    expect(options[0]).toContain(`A${split.state.currentI}..A${split.state.currentK}`);
+    expect(options[0]).toContain(`A${split.state.currentK + 1}..A${split.state.currentJ}`);
+
+    expect(timeline.filter((f) => f.isMilestone)).toHaveLength(5);
+    const titles = timeline.filter((f) => f.isMilestone).map((f) => f.milestoneTitle);
+    expect(titles).toEqual(
+      expect.arrayContaining(['Start', 'First Minimum', 'Table Complete', 'First Split Revealed', 'Optimal Order Found'])
+    );
+  });
+
+  it('maps every action to an exact line in all five 15-line snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.presets[1].data as any);
+    const lineMatchers: Record<number, RegExp> = {
+      2: /n =/,
+      3: /m =|m\(n \+ 1|m: number|vector<vector<long long>>|long\[\]\[\] m/,
+      5: /for L|for \(int L|for \(let L|for L in range/,
+      8: /INFINITY|inf|Infinity|LLONG_MAX|Long\.MAX/,
+      10: /cost = m/,
+      12: /m\[i\]\[j\] = cost/,
+      13: /s\[i\]\[j\] = k|sTable\[i\]\[j\] = k/,
+      14: /order = build|Order = build/,
+      15: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(15);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (lineMatchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles short, invalid, clamped and legacy input honestly', () => {
+    const module = mod();
+
+    const single = module.generateTimeline({ dims: [5, 10] } as any);
+    expect(single).toHaveLength(5);
+    expect(single[single.length - 1].variables?.minCost).toBe(0);
+    expect(single[single.length - 1].variables?.order).toBe('A1');
+    expect(auditTimeline(module, { dims: [5, 10] } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ dims: [10, 'x', 20, 30] } as any);
+    expect(invalid[0].explanation).toMatch(/1 non-numeric dimension\(s\) dropped/);
+    expect(invalid[0].state.dims).toEqual([10, 20, 30]);
+    expect(invalid[invalid.length - 1].variables?.minCost).toBe(6000);
+
+    const clamped = module.generateTimeline({ dims: [5000, 20, 30, 40, 50, 60, 70, 80] } as any);
+    expect(clamped[0].explanation).toMatch(/truncated to 6/);
+    expect(clamped[0].explanation).toMatch(/clamped/);
+    expect(clamped[0].state.dims).toEqual([999, 20, 30, 40, 50, 60, 70]);
+    expect(clamped[0].state.n).toBe(6);
+
+    const fallback = module.generateTimeline({ dims: [] } as any);
+    expect(fallback[0].state.dims).toEqual([10, 20, 30, 40, 30]);
+    expect(fallback[fallback.length - 1].variables?.minCost).toBe(30000);
+
+    for (const data of [module.defaultInput, module.presets[3].data, { dims: [5, 10] }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});

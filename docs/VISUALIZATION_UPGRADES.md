@@ -72,10 +72,27 @@ line-intersection → ⬜ (module is category math; covered in the M1 geometry b
 
 ### DP (18)
 coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ ·
-knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ · subset-sum ✅ /
-matrix-chain / house-robber /
+knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ · subset-sum ✅ ·
+matrix-chain ✅ /
+house-robber /
 climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
 longest-palindromic-substring / tree-diameter-dp → ⬜
+
+Matrix-chain notes: the old module had no pedagogy, and never showed the
+parenthesisation being built. Now the diagonal base case is explicit (`ALLOC`),
+every interval is armed with `SET_INF` (m[i][j] = infinity) before its splits,
+each split is `TRY_SPLIT` (left m[i][k] + right m[k+1][j] + join p[i-1]p[k]p[j],
+both dependency cells highlighted) and a winning split is `WRITE_MIN` +
+`RECORD_SPLIT` writing the cost and the split pointer separately. The
+reconstruction reads splitTable in DFS pre-order — one `BT_SPLIT` per internal
+interval until n-1 splits reveal the full parenthesisation, shown live with the
+split-tree path. Checkpoints `mcm-split-cost` (candidate vs current minimum on a
+real comparison) and `mcm-backtrack-first-split` (recorded split vs positional
+convenience); milestones First Minimum / Table Complete / First Split Revealed /
+Optimal Order Found. Five snippets re-aligned to 15 shared lines; input
+normalisation drops non-numeric dimensions with a note, clamps to 1..999, caps
+the chain at 6 matrices, keeps a single-matrix chain as a valid 5-frame answer-0
+run, and a 'single product' preset shows the degenerate one-cell table.
 
 Subset-sum notes: the base column dp[i][0] = true is now filled one row per frame
 (`BASE_ROW`) instead of pre-filled invisibly, too-big sums inherit explicitly
@@ -228,7 +245,8 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
 5. **T1 — balanced trees:** red-black, treap, splay (rotation animations).
 6. **T2 — specialized trees:** segment, fenwick, b-tree family, trie family, kd/interval.
 7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅,
-   edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum ✅, matrix-chain.
+   edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum ✅,
+   matrix-chain ✅.
 8. **DP2 — grid/sequence DP + backtracking:** unique-paths, house-robber, n-queens,
    sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.
