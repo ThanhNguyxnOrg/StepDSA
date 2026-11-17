@@ -5569,3 +5569,293 @@ describe('unbounded knapsack regressions', () => {
     }
   });
 });
+
+describe('subset sum regressions', () => {
+  const mod = () => moduleById('subset-sum');
+
+  function tableProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { nums, target, table, stats, candidate } = state;
+    if (table.length !== nums.length + 1) problems.push(`rows ${table.length} != ${nums.length + 1}`);
+    for (const row of table) {
+      if (row.length !== target + 1) problems.push(`row width ${row.length} != ${target + 1}`);
+    }
+    for (let i = 0; i <= nums.length; i++) {
+      if (table[i][0] !== true) problems.push(`base column dp[${i}][0] is not TRUE`);
+    }
+    // Decided cells (row-major) must satisfy the OR recurrence.
+    const decided = (stats?.cells ?? 0) - (state.actionType === 'COMPARE' ? 1 : 0);
+    let seen = 0;
+    for (let i = 1; i <= nums.length; i++) {
+      for (let j = 1; j <= target; j++) {
+        if (seen >= decided) break;
+        seen++;
+        const val = nums[i - 1];
+        const expected = val > j ? table[i - 1][j] : table[i - 1][j] || table[i - 1][j - val];
+        if (table[i][j] !== expected) {
+          problems.push(`dp[${i}][${j}] = ${table[i][j]} but the recurrence gives ${expected}`);
+        }
+      }
+    }
+    if (candidate && state.phase === 'fill' && state.actionType !== 'COMPARE') {
+      const expected = candidate.val > candidate.j ? candidate.exclude : candidate.exclude || candidate.include;
+      if (candidate.result !== expected) problems.push('candidate result disagrees with the branches');
+      if (candidate.include !== (candidate.val <= candidate.j && table[candidate.i - 1][candidate.j - candidate.val])) {
+        problems.push('candidate include branch is stale');
+      }
+    }
+    return problems;
+  }
+
+  function subsetProblems(state: any, nums: number[]): string[] {
+    const problems: string[] = [];
+    if (state.phase !== 'done') return problems;
+    const subset: number[] = state.subset;
+    if (state.isFeasible) {
+      const total = subset.reduce((sum: number, v: number) => sum + v, 0);
+      if (total !== state.target) problems.push(`subset sums to ${total}, target is ${state.target}`);
+      const pool = [...nums];
+      for (const value of subset) {
+        const found = pool.indexOf(value);
+        if (found === -1) {
+          problems.push(`${value} is not an unused input element`);
+          break;
+        }
+        pool.splice(found, 1);
+      }
+      if (state.chosenRows.length !== subset.length) problems.push('chosenRows and subset disagree');
+      // The walk may stop early once the remaining sum hits the base column 0.
+      if (state.stats.backtrackSteps > nums.length) {
+        problems.push(`walk visited ${state.stats.backtrackSteps} rows, more than the ${nums.length} available`);
+      }
+      if (state.remainingSum !== 0) problems.push(`walk ended with remaining sum ${state.remainingSum}`);
+    } else if (subset.length > 0) {
+      problems.push('an infeasible run produced a subset');
+    }
+    return problems;
+  }
+
+  it('solves every preset with a verified subset or a proven negative', () => {
+    const module = mod();
+    const expected: Record<string, { feasible: boolean; subset: string }> = {
+      'standard-feasible': { feasible: true, subset: '5, 4' },
+      'partition-equal': { feasible: true, subset: '11' },
+      'infeasible-target': { feasible: false, subset: undefined as unknown as string },
+      'empty-subset-target-zero': { feasible: true, subset: '' },
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const want = expected[preset.id];
+      const nums = (preset.data as any).nums as number[];
+      expect(last.variables?.feasible, `feasibility for ${preset.id}`).toBe(want.feasible);
+      expect(last.variables?.subset, `subset for ${preset.id}`).toBe(want.subset);
+      expect(last.state.phase).toBe('done');
+
+      for (const frame of timeline) {
+        expect(tableProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(subsetProblems(frame.state, nums), `subset on frame ${frame.stepIndex}`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('fills the base column visibly and splits inherit, compare and decide', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const { nums, target } = module.defaultInput;
+
+    expect(timeline[0].action).toBe('INIT');
+    expect(timeline.filter((f) => f.action === 'BASE_ROW')).toHaveLength(nums.length + 1);
+    expect(timeline.filter((f) => f.action === 'ROW_START')).toHaveLength(nums.length);
+
+    const cells = timeline.filter((f) => ['CELL_TOO_BIG', 'CELL_COMPARE', 'CELL_DECIDE'].includes(f.action!));
+    const tooBig = cells.filter((f) => f.action === 'CELL_TOO_BIG');
+    for (const frame of tooBig) {
+      expect(frame.conditionEval?.result).toBe(true);
+      expect(frame.state.actionType).toBe('INHERIT');
+      expect(frame.state.activeDependencies?.includeCell).toBeUndefined();
+      expect(frame.variables?.decision).toBe('inherit (item too big)');
+    }
+    const compares = cells.filter((f) => f.action === 'CELL_COMPARE');
+    // A compared cell is two frames (compare then decide); an inherited cell is one.
+    expect(tooBig.length + compares.length).toBe(nums.length * target);
+    for (const frame of compares) {
+      expect(frame.conditionEval?.result).toBe(false);
+      expect(frame.state.decision ?? 'compare').toBeTruthy();
+      expect(frame.state.activeDependencies?.includeCell).toBeTruthy();
+      const v = frame.variables!;
+      expect(v['dp[i][j]']).toBe(v.exclude === 'TRUE' || v.include === 'TRUE' ? 'TRUE' : 'FALSE');
+    }
+    const decides = cells.filter((f) => f.action === 'CELL_DECIDE');
+    expect(decides).toHaveLength(compares.length);
+    for (const frame of decides) {
+      const v = frame.variables!;
+      expect(frame.conditionEval?.result).toBe(v.exclude === 'TRUE' || v.include === 'TRUE');
+      expect(frame.conditionEval?.expr).toBe(`dp[${v.i - 1}][${v.j}] || dp[${v.i - 1}][${v.j - v.itemValue}]`);
+    }
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [3],
+      BASE_ROW: [5],
+      ROW_START: [6],
+      CELL_TOO_BIG: [9],
+      CELL_COMPARE: [11],
+      CELL_DECIDE: [13],
+      TABLE_COMPLETE: [14],
+      BT_START: [15],
+      BT_CHECK: [17],
+      BT_TAKE: [18],
+      NO_SOLUTION: [20],
+      DONE: [20],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+  });
+
+  it('walks back row by row and proves every taken item', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const finalState = timeline[timeline.length - 1].state;
+
+    const checks = timeline.filter((f) => f.action === 'BT_CHECK');
+    const takes = timeline.filter((f) => f.action === 'BT_TAKE');
+    // The walk stops as soon as the remaining sum reaches the base column 0.
+    expect(checks.length).toBeLessThanOrEqual(finalState.nums.length);
+    expect(finalState.remainingSum).toBe(0);
+    expect(takes.length).toBeGreaterThan(0);
+    expect(takes).toHaveLength(finalState.chosenRows.length);
+
+    for (const take of takes) {
+      const before = timeline[take.stepIndex - 1];
+      expect(before.action).toBe('BT_CHECK');
+      expect(before.conditionEval?.result).toBe(true);
+      expect(before.variables?.i).toBe(take.variables?.i);
+      expect(before.state.table[take.variables!.i][before.variables!.j]).toBe(true);
+      expect(before.state.table[take.variables!.i - 1][before.variables!.j]).toBe(false);
+    }
+    // Skipped rows keep the remaining sum unchanged.
+    for (const check of checks.filter((f) => f.conditionEval?.result === false)) {
+      const next = timeline[check.stepIndex + 1];
+      if (next && next.action === 'BT_CHECK') {
+        expect(next.variables?.j).toBe(check.variables?.j);
+      }
+    }
+    // The subset sums to the target and realises the final TRUE cell.
+    const total = finalState.subset.reduce((sum: number, v: number) => sum + v, 0);
+    expect(total).toBe(finalState.target);
+    expect(finalState.remainingSum).toBe(0);
+    const firstTake = takes[0];
+    expect(firstTake.variables?.subsetSum).toBe(finalState.nums[firstTake.variables!.i - 1]);
+  });
+
+  it('asks for the OR prediction and the first take at genuine points', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    const orCps = timeline.filter((f) => f.checkpoint?.id === 'subset-sum-or-choice');
+    expect(orCps).toHaveLength(1);
+    const cell = orCps[0];
+    expect(cell.action).toBe('CELL_DECIDE');
+    const v = cell.variables ?? {};
+    expect(v.exclude).not.toBe(v.include);
+    expect(cell.checkpoint?.correctIndex).toBe(v.result === 'TRUE' ? 0 : 1);
+    expect(cell.checkpoint?.options[0]).toContain('OR');
+
+    const walkCps = timeline.filter((f) => f.checkpoint?.id === 'subset-sum-backtrack-first-take');
+    expect(walkCps).toHaveLength(1);
+    const check = walkCps[0];
+    expect(check.action).toBe('BT_CHECK');
+    expect(check.checkpoint?.correctIndex).toBe(check.conditionEval?.result ? 0 : 1);
+    expect(check.checkpoint?.options[0]).toContain(`Item ${check.variables?.i}`);
+
+    expect(timeline.filter((f) => f.isMilestone)).toHaveLength(6);
+    const titles = timeline.filter((f) => f.isMilestone).map((f) => f.milestoneTitle);
+    expect(titles).toEqual(
+      expect.arrayContaining([
+        'Start',
+        'Base Case: sum 0 always reachable',
+        'First Reachable Sum',
+        'Table Complete',
+        'First Item Taken',
+        'Subset Found',
+      ])
+    );
+  });
+
+  it('maps every action to an exact line in all five 20-line snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.presets[1].data as any);
+    const lineMatchers: Record<number, RegExp> = {
+      3: /dp.*matrix|dp: boolean|dp = new|\[\[False\]|vector<vector<bool>>/,
+      5: /dp\[i\]\[0\] = (true|True)/,
+      6: /for i|for \(int i = 1|for \(let i = 1|for i in range\(1/,
+      9: /dp\[i\]\[j\] = dp\[i - 1\]\[j\]/,
+      11: /exclude = dp/,
+      13: /exclude or include|exclude \|\| include/,
+      14: /subset = \[\]|subset: number|subset;|new int\[n\]/,
+      15: /j = target|let j = target|int j = target/,
+      17: /dp\[i\]\[j\] and not|dp\[i\]\[j\] && !/,
+      18: /push|append|count\+\+/,
+      20: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(20);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (lineMatchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, clamped and zero-target input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ nums: [], target: 5 } as any);
+    expect(empty).toHaveLength(4);
+    expect(empty[empty.length - 1].variables?.feasible).toBe(false);
+    expect(auditTimeline(module, { nums: [], target: 5 } as any).errorCount).toBe(0);
+
+    const zero = module.generateTimeline({ nums: [3, 4], target: 0 } as any);
+    expect(zero[zero.length - 1].variables?.feasible).toBe(true);
+    expect(zero[zero.length - 1].variables?.subset).toBe('');
+    expect(zero.filter((f) => f.action === 'BT_CHECK')).toHaveLength(0);
+
+    const invalid = module.generateTimeline({ nums: ['x', 3, null, 7], target: 4 } as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(invalid[0].state.nums).toEqual([3, 7]);
+    expect(invalid[invalid.length - 1].variables?.feasible).toBe(false);
+
+    const clamped = module.generateTimeline({ nums: [1, 2, 3, 4, 5, 6, 7, 8, 300.7], target: 99 } as any);
+    expect(clamped[0].explanation).toMatch(/truncated to 6/);
+    expect(clamped[0].explanation).toMatch(/clamped/);
+    expect(clamped[0].state.nums).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(clamped[0].state.target).toBe(20);
+
+    const fallback = module.generateTimeline({ nums: ['a', 'b'], target: 2 } as any);
+    expect(fallback[0].state.nums).toEqual([3, 4, 5, 2]);
+    expect(fallback[fallback.length - 1].variables?.feasible).toBe(true);
+    expect(fallback[fallback.length - 1].variables?.subset).toBe('2');
+
+    for (const data of [module.defaultInput, module.presets[2].data, { nums: [3, 4], target: 0 }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});

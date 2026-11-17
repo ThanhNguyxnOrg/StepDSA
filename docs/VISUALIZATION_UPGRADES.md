@@ -72,10 +72,25 @@ line-intersection → ⬜ (module is category math; covered in the M1 geometry b
 
 ### DP (18)
 coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ ·
-knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ /
-subset-sum / matrix-chain / house-robber /
+knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ · subset-sum ✅ /
+matrix-chain / house-robber /
 climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
 longest-palindromic-substring / tree-diameter-dp → ⬜
+
+Subset-sum notes: the base column dp[i][0] = true is now filled one row per frame
+(`BASE_ROW`) instead of pre-filled invisibly, too-big sums inherit explicitly
+(`CELL_TOO_BIG` with the failed `nums[i-1] > j` test), fitting sums are
+`CELL_COMPARE` (both dependency cells highlighted) then `CELL_DECIDE` (the OR
+result with a tie note), and the recovered subset — previously collapsed into the
+final frame — is walked one row per frame (`BT_CHECK` comparing dp[i][j] with
+dp[i-1][j], `BT_TAKE` taking the item and reducing the sum). An infeasible target
+ends in an honest `NO_SOLUTION` frame listing the reachable sums, and target 0 is
+a legal run answered by the empty subset. Checkpoints `subset-sum-or-choice`
+(first genuine exclude/include difference) and `subset-sum-backtrack-first-take`;
+milestones Base Case / First Reachable Sum / Table Complete / First Item Taken /
+Subset Found. Five snippets re-aligned to 20 shared lines (reconstruction
+included); input normalisation drops non-numeric values with a note, clamps
+values to 0..99, caps n at 6 and target at 20.
 
 Unbounded-knapsack notes: the old module merged every candidate test into one
 frame, hid the packing in the final frame, kept `itemChoiceCount` empty during the
@@ -213,7 +228,7 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
 5. **T1 — balanced trees:** red-black, treap, splay (rotation animations).
 6. **T2 — specialized trees:** segment, fenwick, b-tree family, trie family, kd/interval.
 7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅,
-   edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum, matrix-chain.
+   edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum ✅, matrix-chain.
 8. **DP2 — grid/sequence DP + backtracking:** unique-paths, house-robber, n-queens,
    sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.
