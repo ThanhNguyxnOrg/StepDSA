@@ -73,9 +73,24 @@ line-intersection → ⬜ (module is category math; covered in the M1 geometry b
 ### DP (18)
 coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ ·
 knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ · subset-sum ✅ ·
-matrix-chain ✅ · house-robber ✅ · unique-paths ✅ /
+matrix-chain ✅ · house-robber ✅ · unique-paths ✅ · climbing-stairs ✅ /
 climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
 longest-palindromic-substring / tree-diameter-dp → ⬜
+
+Climbing-stairs notes: the old module never showed the `n <= 2` guard that its own
+snippets start with, made every write a milestone and mis-mapped five
+differently-shaped snippets. Now the guard is frame 0 (`INIT` with the honest
+`n <= 2` evaluation, and an n <= 2 input ends in a 2-frame `SMALL_DONE` run), the
+base cases are explicit (`BASE_ONE` dp[1] = 1 with sequence [1], `BASE_TWO`
+dp[2] = 2 with [1+1] and [2]), and every step reads its two branches separately
+(`READ_ONE` dp[i-1] highlighted as the 1-step group, `READ_TWO` dp[i-2] as the
+2-step group) before `SUM_STEP` adds them. Checkpoints `climbing-stairs-why-two`
+(why the count is a sequence count, not a move count) and `climbing-stairs-fib-sum`
+(addition, not max or product); milestones Base Cases Set / First Sum / Top
+Reached. The staircase stage highlights which predecessor feeds which branch, and
+the sidebar cross-checks the answer against fib(n+1). Five snippets re-aligned to
+10 shared lines; input normalisation clamps n to 1..10 with a note and reports
+invalid inputs.
 
 Unique-paths notes: the old module pre-filled both boundaries invisibly in one
 frame, made every cell write a milestone and mis-mapped five differently-shaped
@@ -275,7 +290,7 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
    edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum ✅,
    matrix-chain ✅.
 8. **DP2 — grid/sequence DP + backtracking:** house-robber ✅, unique-paths ✅,
-   n-queens, sudoku, word-search, rat-in-maze.
+   climbing-stairs ✅, n-queens, sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.
 10. **ST1 — stack/queue internals:** capacity rings, push/pop frames, monotonic stack.
 11. **H1 — hashing:** bucket chains, probe sequences, rehash waves.

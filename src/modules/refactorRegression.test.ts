@@ -6586,3 +6586,194 @@ describe('unique paths regressions', () => {
     }
   });
 });
+
+describe('climbing stairs regressions', () => {
+  const mod = () => moduleById('climbing-stairs');
+
+  function fibWays(n: number): number {
+    let a = 1;
+    let b = 1;
+    for (let i = 2; i <= n; i++) {
+      const next = a + b;
+      a = b;
+      b = next;
+    }
+    return n <= 1 ? 1 : b;
+  }
+
+  function tableProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { n, dpTable, stats } = state;
+    if (dpTable.length !== n + 1) problems.push(`table size ${dpTable.length} != ${n + 1}`);
+    if (dpTable[0] !== 0 && dpTable[0] !== null) problems.push(`dp[0] = ${dpTable[0]}, expected 0/null`);
+    const sums = stats?.sums ?? 0;
+    for (let i = 3; i <= 2 + sums && i <= n; i++) {
+      const expected = (dpTable[i - 1] ?? 0) + (dpTable[i - 2] ?? 0);
+      if (dpTable[i] !== expected) {
+        problems.push(`dp[${i}] = ${dpTable[i]} but the recurrence gives ${expected}`);
+      }
+    }
+    for (let i = 2 + sums + 1; i <= n; i++) {
+      if (dpTable[i] !== null && dpTable[i] !== 0) problems.push(`undecided dp[${i}] holds ${dpTable[i]}`);
+    }
+    return problems;
+  }
+
+  it('produces the Fibonacci count for every preset and input size', () => {
+    const module = mod();
+    const expected: Record<string | number, number> = {
+      'n-5': 8,
+      'n-7': 21,
+      'n-2': 2,
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const want = expected[preset.id];
+      const n = preset.data as number;
+      expect(last.variables?.totalWays, `ways for ${preset.id}`).toBe(want);
+      expect(want, `fib check for ${preset.id}`).toBe(fibWays(n));
+      expect(last.state.phase).toBe('done');
+
+      for (const frame of timeline) {
+        expect(tableProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('shows the guard, both base cases and two reads per step', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const n = module.defaultInput as number;
+
+    expect(timeline[0].action).toBe('INIT');
+    expect(timeline[0].conditionEval?.result).toBe(false);
+    expect(timeline.filter((f) => f.action === 'ALLOC')).toHaveLength(1);
+    expect(timeline.filter((f) => f.action === 'BASE_ONE')).toHaveLength(1);
+    expect(timeline.filter((f) => f.action === 'BASE_TWO')).toHaveLength(1);
+    const ones = timeline.filter((f) => f.action === 'READ_ONE');
+    const twos = timeline.filter((f) => f.action === 'READ_TWO');
+    const sums = timeline.filter((f) => f.action === 'SUM_STEP');
+    expect(ones).toHaveLength(n - 2);
+    expect(twos).toHaveLength(n - 2);
+    expect(sums).toHaveLength(n - 2);
+    for (const frame of ones) {
+      expect(frame.state.highlightedIndices).toEqual([frame.variables!.i - 1]);
+    }
+    for (const frame of twos) {
+      expect(frame.state.highlightedIndices).toEqual([frame.variables!.i - 2]);
+    }
+    for (const frame of sums) {
+      const v = frame.variables!;
+      expect(v['dp[i]']).toBe(v.one + v.two);
+      expect(frame.conditionEval?.result).toBe(v['dp[i]']);
+      expect(frame.conditionEval?.expr).toBe(`dp[${v.i - 1}] + dp[${v.i - 2}]`);
+    }
+    // The base cases are honest: dp[1] = 1 ([1]), dp[2] = 2 ([1+1], [2]).
+    const baseTwo = timeline.find((f) => f.action === 'BASE_TWO')!;
+    expect(baseTwo.state.dpTable[1]).toBe(1);
+    expect(baseTwo.state.dpTable[2]).toBe(2);
+    expect(baseTwo.variables?.moveSequences).toBe('[1+1], [2]');
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [2],
+      SMALL_DONE: [2],
+      ALLOC: [3],
+      BASE_ONE: [4],
+      BASE_TWO: [5],
+      READ_ONE: [7],
+      READ_TWO: [8],
+      SUM_STEP: [9],
+      DONE: [10],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+  });
+
+  it('asks why two and predicts the first Fibonacci sum', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    const whyCps = timeline.filter((f) => f.checkpoint?.id === 'climbing-stairs-why-two');
+    expect(whyCps).toHaveLength(1);
+    expect(whyCps[0].action).toBe('BASE_TWO');
+    expect(whyCps[0].checkpoint?.correctIndex).toBe(0);
+
+    const sumCps = timeline.filter((f) => f.checkpoint?.id === 'climbing-stairs-fib-sum');
+    expect(sumCps).toHaveLength(1);
+    const sum = sumCps[0];
+    expect(sum.action).toBe('SUM_STEP');
+    const v = sum.variables ?? {};
+    expect(v['dp[i]']).toBe(v.one + v.two);
+    expect(sum.checkpoint?.options[0]).toContain(String(v.one + v.two));
+    expect(sum.checkpoint?.options[1]).toContain(String(Math.max(v.one, v.two)));
+    expect(timeline.filter((f) => f.isMilestone)).toHaveLength(4);
+  });
+
+  it('maps every action to an exact line in all five 10-line snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.presets[1].data as any);
+    const lineMatchers: Record<number, RegExp> = {
+      2: /n <= 2/,
+      3: /dp.*0|new Array|vector<int> dp|int\[\] dp/,
+      4: /dp\[1\] = 1/,
+      5: /dp\[2\] = 2/,
+      6: /for i|for \(int i|for \(let i|for i in range/,
+      7: /one = dp/,
+      8: /two = dp/,
+      9: /dp\[i\] = one \+ two/,
+      10: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(10);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (lineMatchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles the guard, invalid and clamped input honestly', () => {
+    const module = mod();
+
+    const small = module.generateTimeline(2 as any);
+    expect(small).toHaveLength(2);
+    expect(small[0].conditionEval?.result).toBe(true);
+    expect(small[1].variables?.totalWays).toBe(2);
+    expect(auditTimeline(module, 2 as any).errorCount).toBe(0);
+
+    const single = module.generateTimeline(1 as any);
+    expect(single[1].variables?.totalWays).toBe(1);
+
+    const invalid = module.generateTimeline('x' as any);
+    expect(invalid[0].explanation).toMatch(/invalid step count/);
+    expect(invalid[0].state.n).toBe(5);
+
+    const clamped = module.generateTimeline(99 as any);
+    expect(clamped[0].explanation).toMatch(/clamped/);
+    expect(clamped[0].state.n).toBe(10);
+    expect(clamped[clamped.length - 1].variables?.totalWays).toBe(89);
+
+    for (const data of [module.defaultInput, 1, 2]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});
