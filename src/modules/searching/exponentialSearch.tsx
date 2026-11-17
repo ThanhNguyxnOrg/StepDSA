@@ -50,19 +50,32 @@ export const exponentialSearchModule: AlgorithmModule<
   ],
   defaultInput: { array: [2, 5, 8, 12, 17, 23, 38, 45, 56, 72, 85, 91, 104, 118, 130], target: 17 },
   codeSnippets: {
-    python: `def exponential_search(arr, target):
-    n = len(arr)
-    if arr[0] == target:
-        return 0
+    pseudocode: `function exponentialSearch(arr, target):
+    n = length(arr)
+    if arr[0] == target: return 0
     i = 1
     while i < n and arr[i] <= target:
         i = i * 2
-    # Binary search within [i // 2, min(i, n - 1)]
-    low, high = i // 2, min(i, n - 1)
+    low = i / 2
+    high = min(i, n - 1)
+    while low <= high:
+        mid = low + (high - low) / 2
+        if arr[mid] == target: return mid
+        if arr[mid] < target: low = mid + 1
+        else: high = mid - 1
+    return -1`,
+    python: `def exponential_search(arr, target):
+    n = len(arr)
+    if arr[0] == target: return 0
+    i = 1
+    while i < n and arr[i] <= target:
+        i = i * 2
+    low = i // 2
+    high = min(i, n - 1)
     while low <= high:
         mid = (low + high) // 2
         if arr[mid] == target: return mid
-        elif arr[mid] < target: low = mid + 1
+        if arr[mid] < target: low = mid + 1
         else: high = mid - 1
     return -1`,
     typescript: `function exponentialSearch(arr: number[], target: number): number {
@@ -70,59 +83,43 @@ export const exponentialSearchModule: AlgorithmModule<
   if (arr[0] === target) return 0;
   let i = 1;
   while (i < n && arr[i] <= target) {
-    i *= 2;
-  }
-  let low = Math.floor(i / 2);
-  let high = Math.min(i, n - 1);
+    i *= 2; }
+  const low = Math.floor(i / 2);
+  const high = Math.min(i, n - 1);
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
     if (arr[mid] === target) return mid;
     if (arr[mid] < target) low = mid + 1;
-    else high = mid - 1;
-  }
-  return -1;
-}`,
+    else high = mid - 1; }
+  return -1; }`,
     cpp: `int exponentialSearch(const vector<int>& arr, int target) {
     int n = arr.size();
     if (arr[0] == target) return 0;
     int i = 1;
-    while (i < n && arr[i] <= target) i *= 2;
-    int low = i / 2, high = min(i, n - 1);
+    while (i < n && arr[i] <= target) {
+        i *= 2; }
+    int low = i / 2;
+    int high = min(i, n - 1);
     while (low <= high) {
         int mid = low + (high - low) / 2;
         if (arr[mid] == target) return mid;
         if (arr[mid] < target) low = mid + 1;
-        else high = mid - 1;
-    }
-    return -1;
-}`,
+        else high = mid - 1; }
+    return -1; }`,
     java: `public int exponentialSearch(int[] arr, int target) {
     int n = arr.length;
     if (arr[0] == target) return 0;
     int i = 1;
-    while (i < n && arr[i] <= target) i *= 2;
-    int low = i / 2, high = Math.min(i, n - 1);
+    while (i < n && arr[i] <= target) {
+        i *= 2; }
+    int low = i / 2;
+    int high = Math.min(i, n - 1);
     while (low <= high) {
         int mid = low + (high - low) / 2;
         if (arr[mid] == target) return mid;
         if (arr[mid] < target) low = mid + 1;
-        else high = mid - 1;
-    }
-    return -1;
-}`,
-    pseudocode: `function exponentialSearch(arr, target):
-    if arr[0] == target: return 0
-    i <- 1
-    while i < n and arr[i] <= target:
-        i <- i * 2
-    return binarySearch(arr, target, i / 2, min(i, n - 1))
-function binarySearch(arr, target, low, high):
-    while low <= high:
-        mid <- low + (high - low) / 2
-        if arr[mid] == target: return mid
-        if arr[mid] < target: low <- mid + 1
-        else: high <- mid - 1
-    return -1`,
+        else high = mid - 1; }
+    return -1; }`,
   },
   generateTimeline: (input) => {
     const arr = [...input.array].sort((a, b) => a - b);
@@ -160,7 +157,7 @@ function binarySearch(arr, target, low, high):
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 2,
+      codeLine: 3,
       explanation: `Checking base element arr[0] = ${arr[0]}. Testing if arr[0] == target (${target}).`,
       soundCue: 'compare',
       variables: { n, target, 'arr[0]': arr[0] },
@@ -182,7 +179,7 @@ function binarySearch(arr, target, low, high):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 2,
+        codeLine: 3,
         explanation: `Target ${target} matches arr[0] immediately! Returning index 0 in O(1).`,
         isMilestone: true,
         milestoneTitle: 'Target Found at Index 0',
@@ -211,7 +208,7 @@ function binarySearch(arr, target, low, high):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 4,
+        codeLine: 5,
         explanation: `Exponential Doubling probe: arr[${i}] = ${arr[i]}. Evaluating arr[${i}] <= target (${target}).`,
         soundCue: 'compare',
         variables: { i, 'arr[i]': arr[i], target, nextCandidate: i * 2 },
@@ -251,7 +248,7 @@ function binarySearch(arr, target, low, high):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 5,
+        codeLine: 6,
         explanation: `Condition met: ${arr[i]} <= ${target}. Doubling index jump: i = ${i} * 2 = ${nextI}.`,
         soundCue: 'step',
         variables: { prevI: i, i: nextI, target },
@@ -281,7 +278,7 @@ function binarySearch(arr, target, low, high):
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 6,
+      codeLine: 8,
       explanation: `Doubling loop terminated: ${overshootExceeded}. Target must reside between index ${Math.floor(i / 2)} and ${Math.min(i, n - 1)}.`,
       soundCue: 'pivot',
       variables: { i, 'arr[i]': i < n ? arr[i] : 'OOB', target },
@@ -314,7 +311,7 @@ function binarySearch(arr, target, low, high):
     frames.push({
       stepIndex: frames.length,
       totalSteps: 1,
-      codeLine: 6,
+      codeLine: 8,
       explanation: `Bounded Search Window: low = ${low}, high = ${high}. Subarray size = ${high - low + 1}. Invoking binarySearch.`,
       isMilestone: true,
       milestoneTitle: 'Subarray Bounded',
@@ -347,7 +344,7 @@ function binarySearch(arr, target, low, high):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 9,
+        codeLine: 10,
         explanation: `Binary Search mid calculation: mid = floor((${low} + ${high}) / 2) = ${mid}. Inspecting arr[${mid}] = ${arr[mid]}.`,
         soundCue: 'compare',
         variables: { low, mid, high, 'arr[mid]': arr[mid], target },
@@ -377,7 +374,7 @@ function binarySearch(arr, target, low, high):
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 10,
+          codeLine: 11,
           explanation: `🎯 Target ${target} successfully matched at index ${mid}! Exponential search complete in O(log i) time.`,
           isMilestone: true,
           milestoneTitle: `Target Found at Index ${mid}`,
@@ -411,7 +408,7 @@ function binarySearch(arr, target, low, high):
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 11,
+          codeLine: 12,
           explanation: `arr[${mid}] (${arr[mid]}) < ${target}. Discarding left subarray [${low}..${mid}]. Adjusting low = ${nextLow}.`,
           soundCue: 'discard',
           variables: { oldLow: low, newLow: nextLow, high, mid, target },
@@ -441,7 +438,7 @@ function binarySearch(arr, target, low, high):
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 12,
+          codeLine: 13,
           explanation: `arr[${mid}] (${arr[mid]}) > ${target}. Discarding right subarray [${mid}..${high}]. Adjusting high = ${nextHigh}.`,
           soundCue: 'discard',
           variables: { low, oldHigh: high, newHigh: nextHigh, mid, target },
@@ -473,7 +470,7 @@ function binarySearch(arr, target, low, high):
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 13,
+        codeLine: 14,
         explanation: `Target ${target} not found within range (low > high). Search terminated. Returning -1.`,
         isMilestone: true,
         milestoneTitle: 'Target Not Found',

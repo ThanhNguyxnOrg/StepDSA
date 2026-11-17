@@ -51,69 +51,56 @@ export const interpolationSearchModule: AlgorithmModule<
   ],
   defaultInput: { array: [2, 5, 8, 12, 16, 23, 38, 56, 72, 91], target: 23 },
   codeSnippets: {
+    pseudocode: `function interpolationSearch(arr, target):
+    low = 0
+    high = length(arr) - 1
+    while low <= high and target >= arr[low] and target <= arr[high]:
+        if low == high: return (arr[low] == target ? low : -1)
+        pos = low + ((target - arr[low]) * (high - low)) / (arr[high] - arr[low])
+        if arr[pos] == target: return pos
+        if arr[pos] < target: low = pos + 1
+        else: high = pos - 1
+    return -1`,
     python: `def interpolation_search(arr, target):
     low = 0
     high = len(arr) - 1
     while low <= high and target >= arr[low] and target <= arr[high]:
-        if low == high:
-            if arr[low] == target: return low
-            return -1
+        if low == high: return low if arr[low] == target else -1
         pos = low + int(((target - arr[low]) * (high - low)) / (arr[high] - arr[low]))
-        if arr[pos] == target:
-            return pos
-        if arr[pos] < target:
-            low = pos + 1
-        else:
-            high = pos - 1
+        if arr[pos] == target: return pos
+        if arr[pos] < target: low = pos + 1
+        else: high = pos - 1
     return -1`,
     typescript: `function interpolationSearch(arr: number[], target: number): number {
   let low = 0;
   let high = arr.length - 1;
   while (low <= high && target >= arr[low] && target <= arr[high]) {
-    if (low === high) {
-      return arr[low] === target ? low : -1;
-    }
+    if (low === high) return arr[low] === target ? low : -1;
     const pos = low + Math.floor(((target - arr[low]) * (high - low)) / (arr[high] - arr[low]));
     if (arr[pos] === target) return pos;
-    if (arr[pos] < target) {
-      low = pos + 1;
-    } else {
-      high = pos - 1;
-    }
-  }
-  return -1;
-}`,
+    if (arr[pos] < target) low = pos + 1;
+    else high = pos - 1; }
+  return -1; }`,
     cpp: `int interpolationSearch(const vector<int>& arr, int target) {
-    int low = 0, high = arr.size() - 1;
+    int low = 0;
+    int high = arr.size() - 1;
     while (low <= high && target >= arr[low] && target <= arr[high]) {
         if (low == high) return (arr[low] == target) ? low : -1;
         int pos = low + ((double)(high - low) / (arr[high] - arr[low]) * (target - arr[low]));
         if (arr[pos] == target) return pos;
         if (arr[pos] < target) low = pos + 1;
-        else high = pos - 1;
-    }
-    return -1;
-}`,
+        else high = pos - 1; }
+    return -1; }`,
     java: `public int interpolationSearch(int[] arr, int target) {
-    int low = 0, high = arr.length - 1;
+    int low = 0;
+    int high = arr.length - 1;
     while (low <= high && target >= arr[low] && target <= arr[high]) {
         if (low == high) return (arr[low] == target) ? low : -1;
         int pos = low + (int)(((long)(target - arr[low]) * (high - low)) / (arr[high] - arr[low]));
         if (arr[pos] == target) return pos;
         if (arr[pos] < target) low = pos + 1;
-        else high = pos - 1;
-    }
-    return -1;
-}`,
-    pseudocode: `function interpolationSearch(arr, target):
-    low <- 0, high <- length(arr) - 1
-    while low <= high and target in [arr[low]..arr[high]]:
-        if low == high: return low if arr[low] == target else -1
-        pos <- low + ((target - arr[low]) * (high - low)) / (arr[high] - arr[low])
-        if arr[pos] == target: return pos
-        if arr[pos] < target: low <- pos + 1
-        else: high <- pos - 1
-    return -1`,
+        else high = pos - 1; }
+    return -1; }`,
   },
   generateTimeline: (input) => {
     const arr = [...input.array].sort((a, b) => a - b);
@@ -149,7 +136,7 @@ export const interpolationSearchModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 3,
+        codeLine: 4,
         action: 'CHECK_INVARIANT',
         callStack,
         conditionEval: {
@@ -224,7 +211,7 @@ export const interpolationSearchModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 5,
+        codeLine: 6,
         action: 'COMPUTE_PROBE',
         isMilestone: true,
         milestoneTitle: `Probe Formula -> Index ${pos}`,
@@ -275,7 +262,7 @@ export const interpolationSearchModule: AlgorithmModule<
       frames.push({
         stepIndex: frames.length,
         totalSteps: 1,
-        codeLine: 6,
+        codeLine: 7,
         action: 'COMPARE_PROBE',
         callStack,
         conditionEval: {
@@ -306,7 +293,7 @@ export const interpolationSearchModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 6,
+          codeLine: 7,
           action: 'MATCH_FOUND',
           isMilestone: true,
           milestoneTitle: `Target Found at [${pos}]`,
@@ -337,7 +324,7 @@ export const interpolationSearchModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 7,
+          codeLine: 8,
           action: 'DISCARD_LEFT',
           callStack,
           variables: { low, high, target, discardedUpTo: pos },
@@ -363,7 +350,7 @@ export const interpolationSearchModule: AlgorithmModule<
         frames.push({
           stepIndex: frames.length,
           totalSteps: 1,
-          codeLine: 8,
+          codeLine: 9,
           action: 'DISCARD_RIGHT',
           callStack,
           variables: { low, high, target, discardedFrom: pos },

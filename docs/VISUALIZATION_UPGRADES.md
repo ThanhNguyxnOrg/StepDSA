@@ -285,6 +285,18 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
   does not resolve to a registered module or points at itself.
 - **`?input=` permalink** (LZString) — see `docs/research/ROUND3_CLASSICS.md` §5.
 
+## Legacy batch audit (2026-11-17)
+
+Full sweep of all 40 sorting/searching modules against the DP-batch standard
+(pedagogy, checkpoints, audit 0/0 on every preset, five aligned snippets, exact
+code-line map). Results in `docs/AUDIT_SWEEP_2026-11-17.md`: 7 modules are fully
+up to standard (binary-search, exponential-search, interpolation-search re-aligned
+in this pass; linear/rotated/jump/ternary already exact), 3 have small drift
+(timsort, binary-search-answer, sleep-sort), and the remaining 30 — including the
+flagship sorts — still map code lines proportionally and need one-by-one
+re-alignment. Remediation order: insertion → quicksort → mergesort → bubble →
+heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
+
 ## Batch plan (execution order)
 
 1. **S1 — sorting mechanics ✅ COMPLETE (18/18):** insertion, mergesort, quicksort,
