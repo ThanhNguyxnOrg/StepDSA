@@ -5275,3 +5275,297 @@ describe('LIS DP regressions', () => {
     }
   });
 });
+
+describe('unbounded knapsack regressions', () => {
+  const mod = () => moduleById('unbounded-knapsack');
+
+  function tableProblems(state: any): string[] {
+    const problems: string[] = [];
+    const { items, capacity, dp, parent } = state;
+    if (dp.length !== capacity + 1) problems.push(`dp size ${dp.length} != ${capacity + 1}`);
+    if (parent.length !== capacity + 1) problems.push(`parent size ${parent.length} != ${capacity + 1}`);
+    for (let w = 0; w <= capacity; w++) {
+      if (parent[w] !== -1 && (parent[w] < 0 || parent[w] >= items.length)) {
+        problems.push(`parent[${w}] = ${parent[w]} is not a valid item index`);
+      } else if (parent[w] !== -1) {
+        const item = items[parent[w]];
+        if (item.weight > w) problems.push(`parent[${w}] names '${item.name}' which does not fit capacity ${w}`);
+        // An UPDATE frame has already written the new dp but not yet the new parent.
+        if (state.actionType !== 'UPDATE' && dp[w] !== dp[w - item.weight] + item.value) {
+          problems.push(`dp[${w}] = ${dp[w]} but dp[parent] + value = ${dp[w - item.weight] + item.value}`);
+        }
+      }
+    }
+    // Once the fill phase passed capacity w, dp[w] must satisfy the full recurrence.
+    if (state.phase === 'walk' || state.phase === 'done') {
+      for (let w = 0; w <= capacity; w++) {
+        const fitting = items.filter((item: any) => item.weight <= w);
+        const expected = fitting.reduce(
+          (best: number, item: any) => Math.max(best, dp[w - item.weight] + item.value),
+          0
+        );
+        if (dp[w] !== expected) problems.push(`dp[${w}] = ${dp[w]} but the unbounded recurrence gives ${expected}`);
+      }
+    }
+    return problems;
+  }
+
+  function packingProblems(state: any): string[] {
+    const problems: string[] = [];
+    if (state.phase !== 'done') return problems;
+    const { items, capacity, dp, walkPicks, remainingCapacity, stats } = state;
+    let weight = 0;
+    let value = 0;
+    let expectedCapacity = capacity;
+    for (const pick of walkPicks) {
+      const item = items[pick.itemIndex];
+      if (pick.itemName !== item.name) problems.push('pick names the wrong item');
+      if (pick.capacityBefore !== expectedCapacity) problems.push(`pick at capacity ${pick.capacityBefore}, expected ${expectedCapacity}`);
+      if (pick.capacityAfter !== expectedCapacity - item.weight) problems.push('pick capacityAfter is wrong');
+      weight += item.weight;
+      value += item.value;
+      expectedCapacity -= item.weight;
+    }
+    if (expectedCapacity !== remainingCapacity) problems.push('remaining capacity does not match the walk');
+    if (weight > capacity) problems.push(`packing weighs ${weight} > ${capacity}`);
+    if (value !== dp[capacity]) problems.push(`packing value ${value} != dp[${capacity}] = ${dp[capacity]}`);
+    if (stats.walkSteps !== walkPicks.length) problems.push('walkSteps disagrees with walkPicks');
+    return problems;
+  }
+
+  it('solves every preset with an optimal reusable packing', () => {
+    const module = mod();
+    const expected: Record<string, { value: number; picks: string; weight: number }> = {
+      'coin-density': { value: 28, picks: 'C, C', weight: 10 },
+      'high-density-light': { value: 28, picks: 'Gem, Gem, Gem, Gem', weight: 8 },
+      'reuse-beats-unique': { value: 18, picks: 'Sword, Sword', weight: 10 },
+    };
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data as any);
+      const last = timeline[timeline.length - 1];
+      const want = expected[preset.id];
+      expect(last.variables?.maxValue, `value for ${preset.id}`).toBe(want.value);
+      expect(last.variables?.picks, `packing for ${preset.id}`).toBe(want.picks);
+      expect(last.variables?.pickedWeight, `weight for ${preset.id}`).toBe(want.weight);
+      expect(last.state.phase).toBe('done');
+
+      for (const frame of timeline) {
+        expect(tableProblems(frame.state), `frame ${frame.stepIndex} (${frame.action})`).toEqual([]);
+        expect(packingProblems(frame.state), `packing on frame ${frame.stepIndex}`).toEqual([]);
+        expect(frame.pedagogy?.what, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.why, `pedagogy missing on ${frame.action}`).toBeTruthy();
+        expect(frame.pedagogy?.whatNext, `pedagogy missing on ${frame.action}`).toBeTruthy();
+      }
+      const audit = auditTimeline(module, preset.data as any);
+      expect(audit.errorCount).toBe(0);
+      expect(audit.warningCount).toBe(0);
+    }
+  });
+
+  it('tests every item per capacity with separate candidate, update and link frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const { items, capacity } = module.defaultInput;
+
+    expect(timeline[0].action).toBe('INIT');
+    expect(timeline.filter((f) => f.action === 'W_START')).toHaveLength(capacity);
+    const tries = timeline.filter((f) => f.action === 'ITEM_TRY');
+    expect(tries).toHaveLength(items.length * capacity);
+    for (const frame of tries) {
+      expect(frame.state.currentItem).toBe(frame.state.candidate.i);
+      expect(frame.conditionEval?.result).toBe(items[frame.state.candidate.i].weight <= frame.variables!.w);
+    }
+    const fits = tries.filter((f) => f.conditionEval?.result === true);
+    const candidates = timeline.filter((f) => f.action === 'CANDIDATE');
+    expect(candidates).toHaveLength(fits.length);
+    for (const frame of candidates) {
+      const v = frame.variables!;
+      expect(v.candidate).toBe(v['dp[w-wt]'] + v.itemValue);
+      expect(frame.conditionEval?.result).toBe(v.candidate);
+    }
+    const updates = timeline.filter((f) => f.action === 'UPDATE');
+    const links = timeline.filter((f) => f.action === 'LINK');
+    expect(links).toHaveLength(updates.length);
+    for (const link of links) {
+      const before = timeline[link.stepIndex - 1];
+      expect(before.action).toBe('UPDATE');
+      expect(before.variables?.w).toBe(link.variables?.w);
+      const w = link.variables!.w;
+      const linked = link.state.items[link.state.parent[w]];
+      expect(linked.name).toBe(link.variables!.item);
+      expect(link.state.dp[w]).toBe(link.state.dp[w - linked.weight] + linked.value);
+      expect(link.state.parent[w]).toBe(items.findIndex((i: { name: string }) => i.name === linked.name));
+    }
+    // A fitting candidate that loses is honestly reported as skipped.
+    const skippedCandidates = candidates.filter((f) => f.variables!.candidate <= f.variables!.currentBest);
+    expect(skippedCandidates.length + updates.length).toBe(fits.length);
+    for (const frame of skippedCandidates) {
+      const after = timeline[frame.stepIndex + 1];
+      expect(after.action === 'CANDIDATE' || after.action === 'W_START' || after.action === 'ITEM_TRY').toBe(true);
+      expect(after.state.dp[frame.variables!.w]).toBe(frame.variables!.currentBest);
+    }
+
+    const expectedLines: Record<string, number[]> = {
+      INIT: [2],
+      W_START: [4],
+      ITEM_TRY: [6],
+      CANDIDATE: [7],
+      UPDATE: [9],
+      LINK: [10],
+      TABLE_DONE: [11],
+      WALK_START: [13],
+      PICK: [15],
+      MOVE: [16],
+      DONE: [17],
+    };
+    for (const frame of timeline) {
+      const allowed = expectedLines[frame.action ?? ''];
+      expect(allowed, `unexpected action ${frame.action}`).toBeDefined();
+      expect(allowed, `${frame.action} at frame ${frame.stepIndex}`).toContain(frame.codeLine);
+    }
+  });
+
+  it('walks the parent chain and proves the reuse is real', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+    const finalState = timeline[timeline.length - 1].state;
+
+    const picks = timeline.filter((f) => f.action === 'PICK');
+    const moves = timeline.filter((f) => f.action === 'MOVE');
+    expect(picks).toHaveLength(finalState.walkPicks.length);
+    expect(moves).toHaveLength(picks.length);
+    for (const pick of picks) {
+      const w = pick.variables!.w;
+      expect(finalState.parent[w]).toBe(finalState.items.findIndex((i: any) => i.name === pick.variables!.item));
+      expect(pick.variables!.copyNumber).toBe(pick.variables!.picksSoFar.split(', ').filter((n: string) => n === pick.variables!.item).length);
+    }
+    for (const move of moves) {
+      const pick = timeline[move.stepIndex - 1];
+      expect(pick.action).toBe('PICK');
+      expect(move.variables!.previousW).toBe(pick.variables!.w);
+      expect(move.state.dp[move.variables!.previousW] - pick.state.items[finalState.parent[pick.variables!.w]].value).toBe(
+        move.state.dp[move.variables!.w]
+      );
+    }
+    // The default optimum is C twice — the unbounded hallmark.
+    expect(finalState.walkPicks.map((p: any) => p.itemName)).toEqual(['C', 'C']);
+    expect(finalState.pickedCounts['C']).toBe(2);
+    const reuseMilestone = timeline.filter((f) => f.milestoneTitle === 'Same Item Reused');
+    expect(reuseMilestone).toHaveLength(1);
+    expect(reuseMilestone[0].action).toBe('PICK');
+    expect(reuseMilestone[0].variables!.copyNumber).toBe(2);
+  });
+
+  it('asks for the candidate prediction and the walk jump at genuine points', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput as any);
+
+    const candidateCps = timeline.filter((f) => f.checkpoint?.id === 'unbounded-candidate-vs-best');
+    expect(candidateCps).toHaveLength(1);
+    const check = candidateCps[0];
+    expect(check.action).toBe('CANDIDATE');
+    const v = check.variables ?? {};
+    expect(v.candidate).not.toBe(v.currentBest);
+    expect(check.checkpoint?.correctIndex).toBe(v.candidate > v.currentBest ? 0 : 1);
+    expect(check.checkpoint?.options[0]).toContain(String(Math.max(v.candidate, v.currentBest)));
+
+    const walkCps = timeline.filter((f) => f.checkpoint?.id === 'unbounded-walk-jump');
+    expect(walkCps).toHaveLength(1);
+    const jump = walkCps[0];
+    expect(jump.action).toBe('PICK');
+    const options = jump.checkpoint!.options;
+    expect(new Set(options).size).toBe(options.length);
+    expect(options[0]).toContain(String(jump.variables!.w - jump.state.items[jump.state.parent[jump.variables!.w]].weight));
+    const firstMove = timeline.filter((f) => f.action === 'MOVE')[0];
+    expect(jump.stepIndex).toBeLessThan(firstMove.stepIndex);
+
+    expect(timeline.filter((f) => f.isMilestone)).toHaveLength(6);
+    const titles = timeline.filter((f) => f.isMilestone).map((f) => f.milestoneTitle);
+    expect(titles).toEqual(
+      expect.arrayContaining(['Start', 'First Update', 'Table Complete', 'First Copy Picked', 'Same Item Reused', 'Knapsack Solved'])
+    );
+  });
+
+  it('maps every action to an exact line in all five 17-line snippets', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.presets[1].data as any);
+    const lineMatchers: Record<number, RegExp> = {
+      2: /dp/,
+      4: /for w|for \(int w|for \(let w|for w in range/,
+      6: /<= w/,
+      7: /candidate/,
+      8: /candidate > dp\[w\]/,
+      9: /dp\[w\] = candidate/,
+      10: /parent\[w\] = i/,
+      11: /best/,
+      12: /picks/,
+      13: /w = W|let w = W|int w = W/,
+      14: /while/,
+      15: /push|append|count\+\+/,
+      16: /w -=|w = w - /,
+      17: /return/,
+    };
+    const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(17);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (lineMatchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(lineMatchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, clamped and legacy input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ capacity: 5, items: [] } as any);
+    expect(empty[empty.length - 1].variables?.maxValue).toBe(0);
+    expect(empty[empty.length - 1].variables?.picks).toBe('(none)');
+    expect(auditTimeline(module, { capacity: 5, items: [] } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ capacity: 5, items: [{ name: 'bad' }] } as any);
+    expect(invalid[0].explanation).toMatch(/no usable items/);
+    // Capacity 5 with the default items: one copy of C (14) beats A+B (13).
+    expect(invalid[invalid.length - 1].variables?.maxValue).toBe(14);
+    expect(invalid[invalid.length - 1].variables?.picks).toBe('C');
+
+    const clamped = module.generateTimeline({
+      capacity: 99,
+      items: [
+        { name: 'Heavy', weight: 0, value: 500 },
+        { name: 'Light', weight: 2, value: 3 },
+      ],
+    } as any);
+    expect(clamped[0].explanation).toMatch(/clamped/);
+    expect(clamped[0].state.items.map((i: any) => i.weight)).toEqual([1, 2]);
+    expect(clamped[0].state.items.map((i: any) => i.value)).toEqual([99, 3]);
+    expect(clamped[0].state.capacity).toBe(15);
+    expect(clamped[0].state.items.map((i: any) => i.id)).toEqual([1, 2]);
+
+    const tooHeavy = module.generateTimeline({
+      capacity: 3,
+      items: [
+        { name: 'Big', weight: 9, value: 50 },
+        { name: 'Small', weight: 3, value: 4 },
+      ],
+    } as any);
+    expect(tooHeavy[tooHeavy.length - 1].variables?.maxValue).toBe(4);
+    expect(tooHeavy[tooHeavy.length - 1].variables?.picks).toBe('Small');
+
+    const fallback = module.generateTimeline({} as any);
+    expect(fallback[0].state.items.map((i: any) => i.name)).toEqual(['A', 'B', 'C']);
+    expect(fallback[fallback.length - 1].variables?.maxValue).toBe(28);
+
+    for (const data of [module.defaultInput, module.presets[2].data, { capacity: 5, items: [] }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+});

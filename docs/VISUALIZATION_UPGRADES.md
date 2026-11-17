@@ -72,10 +72,27 @@ line-intersection → ⬜ (module is category math; covered in the M1 geometry b
 
 ### DP (18)
 coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ ·
-knapsack-01 ✅ · lis ✅ /
-unbounded-knapsack / subset-sum / matrix-chain / house-robber /
+knapsack-01 ✅ · lis ✅ · unbounded-knapsack ✅ /
+subset-sum / matrix-chain / house-robber /
 climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
 longest-palindromic-substring / tree-diameter-dp → ⬜
+
+Unbounded-knapsack notes: the old module merged every candidate test into one
+frame, hid the packing in the final frame, kept `itemChoiceCount` empty during the
+fill and mis-mapped code lines. Now every (capacity, item) pair is `ITEM_TRY` with
+the honest `wt[i] <= w` test, a fitting item gets `CANDIDATE` (dp[w-wt] + val vs
+dp[w], explicitly noting the sub-answer may already contain this very item) and a
+winning candidate is `UPDATE` + `LINK` writing the value and parent pointer
+separately. The reconstruction walks the parent chain one copy per frame
+(`WALK_START` / `PICK` / `MOVE`), so seeing the same item picked twice — the
+unbounded hallmark — is a milestone (`Same Item Reused`). Parent labels sit under
+every dp cell; copy counts appear on the item cards. Checkpoints
+`unbounded-candidate-vs-best` and `unbounded-walk-jump`; milestones First Update /
+Table Complete / First Copy Picked / Same Item Reused / Knapsack Solved. Five
+snippets re-aligned to 17 shared lines; input normalisation clamps capacity 1..15,
+items <=5, weight 1..15 (weight 0 would loop the walk forever), value 1..99, an
+explicitly empty item list is a valid value-0 run, and a 'reuse beats unique'
+preset contrasts with the 0/1 variant.
 
 LIS notes: the old module had no pedagogy, one frame per comparison with the whole
 reconstruction collapsed into the final frame, and code lines that pointed at blank
@@ -196,7 +213,7 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
 5. **T1 — balanced trees:** red-black, treap, splay (rotation animations).
 6. **T2 — specialized trees:** segment, fenwick, b-tree family, trie family, kd/interval.
 7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅,
-   edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack, subset-sum, matrix-chain.
+   edit-distance ✅, knapsack-01 ✅, lis ✅, unbounded-knapsack ✅, subset-sum, matrix-chain.
 8. **DP2 — grid/sequence DP + backtracking:** unique-paths, house-robber, n-queens,
    sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.
