@@ -71,10 +71,26 @@ bfs ✅ · dijkstra ✅ · dfs ✅ · bellman-ford ✅ · floyd-warshall ✅ · 
 line-intersection → ⬜ (module is category math; covered in the M1 geometry batch)
 
 ### DP (18)
-coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ /
-lis / knapsack / unbounded-knapsack / subset-sum / matrix-chain / house-robber /
+coin-change ✅ · recursion-trees ✅ · longest-common-subsequence ✅ · edit-distance ✅ ·
+knapsack-01 ✅ /
+lis / unbounded-knapsack / subset-sum / matrix-chain / house-robber /
 climbing-stairs / unique-paths / kadane / lps / tsp-held-karp / burst-balloons /
 longest-palindromic-substring / tree-diameter-dp → ⬜
+
+Knapsack-01 notes: the old module wrote every cell in a single frame and hid the
+reconstruction in the final frame. Now each fitting cell is two frames —
+`CELL_COMPARE` (reads exclude dp[i-1][w] and include val[i] + dp[i-1][w-wt[i]]
+with both dependency cells highlighted) then `CELL_DECIDE` (writes the max and
+reports the winning branch) — while `CELL_TOO_HEAVY` explicitly inherits the row
+above and shows the failed `wt[i-1] <= w` test. The reconstruction is one frame
+per row (`BT_CHECK` comparing dp[i][w] with dp[i-1][w], then `BT_TAKE` subtracting
+the weight), so the recovered selection grows visibly. Checkpoints
+`knapsack-include-or-exclude` (first genuine unequal branch) and
+`knapsack-backtrack-first-decision`; milestones First Fitting Item / First Include /
+Table Complete / First Item Selected / Knapsack Solved. The five snippets were
+re-aligned to 15 shared lines; input normalisation clamps capacity 1..12, items ≤6,
+weight 1..12, value 1..99, an explicitly empty item list is a valid 2-frame
+value-0 run, and unusable items fall back to the documented default with a note.
 
 Edit-distance notes: the borders dp[i][0] = i and dp[0][j] = j are now filled one cell per
 frame (`BASE_ROW` / `BASE_COL`) instead of being pre-filled invisibly, each inner cell
@@ -163,7 +179,7 @@ sweep-line-intersections / lps → ⬜ (recursion-trees now lives in the DP batc
 5. **T1 — balanced trees:** red-black, treap, splay (rotation animations).
 6. **T2 — specialized trees:** segment, fenwick, b-tree family, trie family, kd/interval.
 7. **DP1 — table DP:** recursion-trees ✅, longest-common-subsequence ✅,
-   edit-distance ✅, lis, knapsack family, matrix-chain.
+   edit-distance ✅, knapsack-01 ✅, lis, unbounded-knapsack, subset-sum, matrix-chain.
 8. **DP2 — grid/sequence DP + backtracking:** unique-paths, house-robber, n-queens,
    sudoku, word-search, rat-in-maze.
 9. **L1 — linked lists:** pointer-diagram stages for the remaining 8.
