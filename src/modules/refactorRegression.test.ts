@@ -3126,7 +3126,7 @@ describe('pedagogical timeline regressions', () => {
     }
 
     // Both outcomes of a left-child comparison are visualized.
-    const leftCompares = timeline.filter((frame) => frame.codeLine === 17);
+    const leftCompares = timeline.filter((frame) => frame.codeLine === 14);
     expect(leftCompares.length).toBeGreaterThan(0);
     const outcomes = new Set(leftCompares.map((frame) => frame.conditionEval?.result));
     expect(outcomes.has(true)).toBe(true);
@@ -3136,7 +3136,7 @@ describe('pedagogical timeline regressions', () => {
     expect(timeline.some((frame) => frame.state.heapView.statusKind === 'swap')).toBe(true);
     expect(
       timeline.some(
-        (frame) => frame.codeLine === 21 && frame.conditionEval?.result === true
+        (frame) => frame.codeLine === 18 && frame.conditionEval?.result === true
       )
     ).toBe(true);
 
@@ -7666,6 +7666,168 @@ describe('bubble sort rebuild regressions', () => {
     const fallback = module.generateTimeline(['a'] as any);
     expect(fallback[0].explanation).toMatch(/no usable numbers/);
     expect(values(fallback[0])).toEqual([29, 10, 14, 37, 13, 45, 8]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
+
+describe('heapsort rebuild regressions', () => {
+  const mod = () => moduleById('heapsort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames every heap operation individually with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('BUILD_SIFT');
+    expect(actions).toContain('INSPECT');
+    expect(actions).toContain('LEFT_COMPARE');
+    expect(actions).toContain('RIGHT_COMPARE');
+    expect(actions).toContain('SWAP_DECISION');
+    expect(actions).toContain('SIFT_SWAP');
+    expect(actions).toContain('SIFT_CONTINUE');
+    expect(actions).toContain('HEAP_READY');
+    expect(actions).toContain('EXTRACT_SWAP');
+    expect(actions).toContain('LOCK_SUFFIX');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+      expect(frame.state.heapView, 'every heapsort frame carries a heapView').toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('heapsort-first-left-compare');
+    expect(checkpoints[1].checkpoint!.id).toBe('heapsort-extract');
+    expect(checkpoints[1].checkpoint!.correctIndex).toBe(1);
+  });
+
+  it('builds the heap bottom-up, then locks one maximum per extraction', () => {
+    const module = mod();
+    const input = [35, 12, 45, 9, 28, 50, 18];
+    const timeline = module.generateTimeline(input);
+
+    // build phase sifts every internal node exactly once, right-to-left
+    const buildSifts = timeline.filter((frame) => frame.action === 'BUILD_SIFT');
+    expect(buildSifts.map((frame) => frame.variables?.i)).toEqual([2, 1, 0]);
+
+    // ready frame: root must be the global maximum
+    const ready = timeline.find((frame) => frame.action === 'HEAP_READY')!;
+    expect(ready.variables?.max).toBe(50);
+
+    // one extraction per element except the last (which is already in place)
+    const extractions = timeline.filter((frame) => frame.action === 'EXTRACT_SWAP');
+    expect(extractions).toHaveLength(input.length - 1);
+    const extractedMaxes = extractions.map((frame) => frame.variables?.rootMax);
+    for (let k = 0; k < extractedMaxes.length - 1; k++) {
+      expect(extractedMaxes[k]).toBeGreaterThan(extractedMaxes[k + 1]);
+    }
+    const locks = timeline.filter((frame) => frame.action === 'LOCK_SUFFIX');
+    expect(locks).toHaveLength(input.length - 1);
+    expect(locks.map((frame) => frame.variables?.sortedIndex)).toEqual([6, 5, 4, 3, 2, 1]);
+
+    // sift-down terminates on both outcomes of the swap decision
+    expect(timeline.some((frame) => frame.action === 'SWAP_DECISION' && frame.conditionEval?.result === true)).toBe(true);
+    expect(timeline.some((frame) => frame.action === 'SWAP_DECISION' && frame.conditionEval?.result === false)).toBe(true);
+
+    const last = timeline[timeline.length - 1];
+    expectSorted(values(last));
+    expect(last.variables?.result).toBe(7);
+    expect(last.variables?.extractions).toBe(6);
+    expect(last.state.heapView.heapSize).toBe(0);
+  });
+
+  it('marks real turning points as milestones instead of every node or extraction', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'Max-Heap Ready',
+      'First Extraction',
+      'Half the Array Sorted',
+      'Sorted Complete',
+    ]);
+    const extractFrames = timeline.filter((frame) => frame.action === 'EXTRACT_SWAP');
+    expect(extractFrames.length).toBeGreaterThan(milestones.length);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const matchers: Record<number, RegExp> = {
+      1: /heapSort\(|heap_sort\(/,
+      4: /siftDown\(|sift_down\(/,
+      5: /for i = n - 1|for \(int i = n - 1|for \(let i = n - 1|for i in range\(n - 1/,
+      6: /swap arr\[0\]|arr\[0\], arr\[i\]|arr\[0\], arr\[i\]|swap\(arr\[0\], arr\[i\]\)|arr\[0\] = arr\[i\]/,
+      7: /siftDown\(arr, i, 0\)|sift_down\(arr, i, 0\)/,
+      8: /return arr/,
+      10: /while/,
+      14: /left < n and arr\[left\] > arr\[largest\]|left < n && arr\[left\] > arr\[largest\]/,
+      16: /right < n and arr\[right\] > arr\[largest\]|right < n && arr\[right\] > arr\[largest\]/,
+      18: /largest == i|largest === i/,
+      20: /swap arr\[i\] with arr\[largest\]|arr\[i\], arr\[largest\]|arr\[i\] = arr\[largest\]|swap\(arr\[i\], arr\[largest\]\)/,
+      21: /i = largest/,
+    };
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(21);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (matchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(false);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.extractions).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([35, 12, 45, 9, 28, 50, 18]);
 
     const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
     expect(oversized[0].explanation).toMatch(/truncated to 12/);
