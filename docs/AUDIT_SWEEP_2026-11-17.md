@@ -53,7 +53,6 @@ with heavily drifted snippets. These need a full LIS-style rebuild, one per sess
 | heapsort | 95 | 100% | 1 | 78/475 | |
 | cocktail-shaker-sort | 39 | 100% | 1 | 67/195 | |
 | bucket-sort | 26 | 100% | 1 | 62/130 | |
-| bubble-sort | 40 | 100% | 1 | 52/200 | flagship, high visit rate |
 | introsort | 32 | 100% | 1 | 38/160 | |
 | bogosort | 12 | 50% | 1 | 37/60 | |
 | stooge-sort | 111 | 97% | 1 | 28/555 | |
@@ -100,6 +99,11 @@ all Tier C (0% pedagogy, 0 checkpoints).
    decomposition stage, 123 frames with full pedagogy, 2 checkpoints, 4 real
    milestones, five aligned 18-line snippets, mapBad 0 on every input, honest
    input normalisation, stability check on duplicates, 6 regression tests.
+   ~~bubble-sort~~ ✅ rebuilt 2026-11-18: per-operation frames incl. explicit
+   PASS_START/SWAPPED_FLAG/SCAN_START, 58 frames with full pedagogy, 2
+   checkpoints, 3 real milestones + Start, five aligned 11-line snippets,
+   mapBad 0 on every input, honest input normalisation, early-exit tested both
+   ways, 6 regression tests.
 2. Then the remaining S1 sorts: selection, counting, radix, shellsort, cocktail,
    bucket, introsort, quickselect, timsort, stooge, bogosort, drop-sort, sleep-sort.
 3. `backtracking-decision-tree` / `mergesort-recursion-tree` /

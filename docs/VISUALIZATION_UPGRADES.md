@@ -299,6 +299,16 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **bubble-sort ✅ (2026-11-18):** full rebuild — one operation per frame
+  (INIT → PASS_START → SWAPPED_FLAG → SCAN_START → COMPARE → SWAP → PASS_END →
+  EARLY_EXIT → DONE), 58 frames on the default input with WHAT/WHY/NEXT on all
+  of them, 2 checkpoints (first compare with a dynamic correct index + first
+  pass result), 3 real milestones + auto Start (First Element Settled, Half the
+  Array Settled, Complete — no per-pass noise), five 11-line snippets with the
+  same statement per line and exact code-line mapping (mapBad 52/200 → 0),
+  honest input normalisation, early-exit semantics regression-tested both ways
+  (fires on sorted input, never on reversed). 6 regression tests added
+  (665 total).
 - **mergesort ✅ (2026-11-18):** full rebuild on top of the existing decomposition
   stage — one operation per frame (INIT → DIVIDE → CALL_LEFT/CALL_RIGHT →
   MERGE_CALL → TEMP_INIT → POINTER_I/POINTER_J → COMPARE → APPEND_LEFT/RIGHT →

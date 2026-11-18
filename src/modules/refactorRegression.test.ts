@@ -7529,3 +7529,166 @@ describe('mergesort rebuild regressions', () => {
     expect(dupFinal).toEqual([10, 15, 15, 30, 30, 45]);
   });
 });
+
+describe('bubble sort rebuild regressions', () => {
+  const mod = () => moduleById('bubble-sort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames every pass operation individually with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('PASS_START');
+    expect(actions).toContain('SWAPPED_FLAG');
+    expect(actions).toContain('SCAN_START');
+    expect(actions).toContain('COMPARE');
+    expect(actions).toContain('SWAP');
+    expect(actions).toContain('PASS_END');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('bubble-sort-first-compare');
+    expect(checkpoints[1].checkpoint!.id).toBe('bubble-sort-pass-result');
+    expect(checkpoints[1].checkpoint!.correctIndex).toBe(1);
+  });
+
+  it('settles one maximum per pass and shrinks the scan window', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const passEnds = timeline.filter((frame) => frame.action === 'PASS_END');
+    expect(passEnds).toHaveLength(6);
+    const settledIndices = passEnds.map((frame) => frame.variables?.settledIndex);
+    expect(settledIndices).toEqual([6, 5, 4, 3, 2, 1]);
+    const settledValues = passEnds.map((frame) => frame.variables?.settledValue);
+    for (let k = 0; k < settledValues.length - 1; k++) {
+      expect(settledValues[k]).toBeGreaterThanOrEqual(settledValues[k + 1]);
+    }
+
+    // scan windows shrink: SCAN_START variables announce one fewer pair each pass
+    const scans = timeline.filter((frame) => frame.action === 'SCAN_START');
+    expect(scans).toHaveLength(6);
+    expect(scans.map((frame) => frame.variables?.scanTo)).toEqual([5, 4, 3, 2, 1, 0]);
+
+    // default input never exits early: every pass swapped at least once
+    expect(timeline.some((frame) => frame.action === 'EARLY_EXIT')).toBe(false);
+
+    const last = timeline[timeline.length - 1];
+    expectSorted(values(last));
+    expect(last.variables?.result).toBe(7);
+    expect(last.variables?.comparisons).toBe(21);
+    expect(last.variables?.swaps).toBe(11);
+    expect(last.variables?.passes).toBe(6);
+  });
+
+  it('fires the early exit only on a genuinely clean pass', () => {
+    const module = mod();
+    const sortedTimeline = module.generateTimeline([10, 20, 30, 40, 50]);
+    const early = sortedTimeline.find((frame) => frame.action === 'EARLY_EXIT');
+    expect(early).toBeTruthy();
+    expect(early!.explanation).toContain('Early termination');
+    expect(early!.variables?.totalPasses).toBe(1);
+    // sorted input: 4 compares, 0 swaps, then early exit — 11 frames total
+    expect(sortedTimeline).toHaveLength(11);
+    expectSorted(values(sortedTimeline[sortedTimeline.length - 1]));
+
+    const reversedTimeline = module.generateTimeline([60, 45, 30, 25, 15, 10]);
+    expect(reversedTimeline.some((frame) => frame.action === 'EARLY_EXIT')).toBe(false);
+    expect(reversedTimeline.some((frame) => frame.action === 'SWAP')).toBe(true);
+  });
+
+  it('marks real turning points as milestones instead of every pass', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Element Settled',
+      'Half the Array Settled',
+      'Bubble Sort Complete',
+    ]);
+    const passEnds = timeline.filter((frame) => frame.action === 'PASS_END');
+    expect(passEnds.length).toBeGreaterThan(milestones.length);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const sortedTimeline = module.generateTimeline([10, 20, 30, 40, 50]);
+    const matchers: Record<number, RegExp> = {
+      1: /bubbleSort\(|bubble_sort\(/,
+      3: /for i|for \(int i|for \(let i|for i in range/,
+      4: /swapped = false|swapped = False|let swapped|bool swapped|boolean swapped/,
+      5: /for j|for \(int j|for \(let j|for j in range/,
+      6: /arr\[j\] > arr\[j \+ 1\]/,
+      7: /swap arr\[j\]|arr\[j\], arr\[j \+ 1\]|arr\[j\] = arr\[j \+ 1\]|swap\(arr\[j\]/,
+      9: /if not swapped|if \(!swapped\)/,
+      11: /return arr/,
+    };
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(11);
+      for (const frame of [...timeline, ...sortedTimeline]) {
+        const line = resolveActiveCodeLine(raw, frame, sortedTimeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (matchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(false);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.comparisons).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([29, 10, 14, 37, 13, 45, 8]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
