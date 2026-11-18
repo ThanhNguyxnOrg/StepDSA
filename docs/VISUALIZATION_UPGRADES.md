@@ -299,6 +299,17 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **mergesort ✅ (2026-11-18):** full rebuild on top of the existing decomposition
+  stage — one operation per frame (INIT → DIVIDE → CALL_LEFT/CALL_RIGHT →
+  MERGE_CALL → TEMP_INIT → POINTER_I/POINTER_J → COMPARE → APPEND_LEFT/RIGHT →
+  FRONT_EXHAUSTED → remainder appends → BUFFER_READY → COPY_BACK per slot →
+  MERGED → DONE), 123 frames on the default input with WHAT/WHY/NEXT on all of
+  them, 2 checkpoints (first compare with a dynamic correct index + first
+  copy-back), 4 real milestones + auto Start (First Merge, Half the Array
+  Merged, Top-Level Merge, Complete), five 18-line snippets with the same
+  statement per line and exact code-line mapping (mapBad 361/435 → 0 — the
+  worst drift in the repo, now clean), honest input normalisation, stability
+  regression on the duplicates preset. 6 regression tests added (658 total).
 - **quicksort ✅ (2026-11-18):** full rebuild — one operation per frame
   (INIT → ENTER_RANGE → CALL_PARTITION → PIVOT_SELECTED → PINDEX_INIT →
   SCAN_START → COMPARE → SWAP / NO_SWAP → ADVANCE_PINDEX → PIVOT_SWAP →

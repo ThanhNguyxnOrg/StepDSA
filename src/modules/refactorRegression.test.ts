@@ -7346,3 +7346,186 @@ describe('quicksort rebuild regressions', () => {
     expect(worst[worst.length - 1].variables?.comparisons).toBe(10);
   });
 });
+
+describe('mergesort rebuild regressions', () => {
+  const mod = () => moduleById('mergesort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames every divide and merge operation individually with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('DIVIDE');
+    expect(actions).toContain('CALL_LEFT');
+    expect(actions).toContain('CALL_RIGHT');
+    expect(actions).toContain('MERGE_CALL');
+    expect(actions).toContain('TEMP_INIT');
+    expect(actions).toContain('POINTER_I');
+    expect(actions).toContain('POINTER_J');
+    expect(actions).toContain('COMPARE');
+    expect(actions).toContain('APPEND_LEFT');
+    expect(actions).toContain('APPEND_RIGHT');
+    expect(actions).toContain('FRONT_EXHAUSTED');
+    expect(actions).toContain('APPEND_LEFT_REST');
+    expect(actions).toContain('APPEND_RIGHT_REST');
+    expect(actions).toContain('BUFFER_READY');
+    expect(actions).toContain('COPY_BACK');
+    expect(actions).toContain('MERGED');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+      expect(frame.state.mergeView, 'every mergesort frame carries a mergeView').toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('mergesort-first-compare');
+    expect(checkpoints[1].checkpoint!.id).toBe('mergesort-copy-back');
+    expect(checkpoints[1].checkpoint!.correctIndex).toBe(1);
+  });
+
+  it('builds the temp buffer front-by-front and copies it back slot by slot', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const appends = timeline.filter((frame) => frame.action === 'APPEND_LEFT' || frame.action === 'APPEND_RIGHT');
+    const restAppends = timeline.filter(
+      (frame) => frame.action === 'APPEND_LEFT_REST' || frame.action === 'APPEND_RIGHT_REST'
+    );
+    // main-scan appends (one per comparison) plus remainder appends fill the buffer completely
+    expect(appends).toHaveLength(14);
+    expect(restAppends).toHaveLength(6);
+    // every appended value must be one of the two fronts at compare time
+    for (const frame of appends) {
+      expect(frame.variables?.tempSize).toBeGreaterThan(0);
+    }
+    // the last append of each merge leaves temp fully sorted
+    const bufferReady = timeline.filter((frame) => frame.action === 'BUFFER_READY');
+    expect(bufferReady).toHaveLength(6);
+    for (const frame of bufferReady) {
+      expectSorted(frame.state.auxiliary.data);
+    }
+
+    const copies = timeline.filter((frame) => frame.action === 'COPY_BACK');
+    expect(copies).toHaveLength(20);
+    for (const frame of copies) {
+      const { tempIndex, arrayIndex, copied } = frame.variables as Record<string, number>;
+      expect(frame.state.auxiliary.data[tempIndex]).toBe(copied);
+      expect(frame.state.array[arrayIndex].value).toBe(copied);
+    }
+
+    // exactly one exhaustion frame per merge: a half always runs out first
+    const exhausted = timeline.filter((frame) => frame.action === 'FRONT_EXHAUSTED');
+    expect(exhausted).toHaveLength(6);
+
+    const last = timeline[timeline.length - 1];
+    expectSorted(values(last));
+    expect(last.variables?.result).toBe(7);
+    expect(last.variables?.merges).toBe(6);
+    expect(last.variables?.copies).toBe(20);
+  });
+
+  it('marks real turning points as milestones instead of every merge', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Merge',
+      'Half the Array Merged',
+      'Top-Level Merge',
+      'Mergesort Complete',
+    ]);
+    const mergedFrames = timeline.filter((frame) => frame.action === 'MERGED');
+    expect(mergedFrames.length).toBeGreaterThan(milestones.length);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const matchers: Record<number, RegExp> = {
+      1: /mergesort\(/,
+      2: /left < right/,
+      3: /mid = |const mid|int mid/,
+      4: /mergesort\(arr, left,/,
+      5: /mergesort\(arr, mid/,
+      6: /merge\(arr, left, mid, right\)/,
+      8: /temp = |temp: number\[\]|vector<int> temp|int\[\] temp/,
+      9: /i = left|int i = left|let i = left/,
+      10: /j = mid \+ 1|int j = mid \+ 1|let j = mid \+ 1/,
+      11: /while/,
+      12: /if arr\[i\] <= arr\[j\]|if \(arr\[i\] <= arr\[j\]\)/,
+      13: /append arr\[i\]|arr\[i\]\)|arr\[i\]\]|temp\[tempSize\+\+\] = arr\[i\]/,
+      15: /append arr\[j\]|arr\[j\]\)|temp\[tempSize\+\+\] = arr\[j\]/,
+      16: /while i <= mid|while \(i <= mid\)/,
+      17: /while j <= right|while \(j <= right\)/,
+      18: /copy temp|for k in range|for \(let k|for \(int k/,
+    };
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(18);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (matchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(false);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.merges).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([38, 27, 43, 3, 9, 82, 10]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean, sorted and stable on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+    // stability: with duplicates [15, 30, 15a, ...] the first 15 must stay left of the second
+    const dup = module.generateTimeline([15, 30, 15, 45, 30, 10]);
+    const dupFinal = values(dup[dup.length - 1]);
+    expectSorted(dupFinal);
+    expect(dupFinal).toEqual([10, 15, 15, 30, 30, 45]);
+  });
+});

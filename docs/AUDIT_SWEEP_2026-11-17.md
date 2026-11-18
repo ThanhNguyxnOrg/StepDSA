@@ -46,7 +46,6 @@ with heavily drifted snippets. These need a full LIS-style rebuild, one per sess
 
 | Module | Frames | Pedagogy | Checkpoint | mapBad | Note |
 |---|---|---|---|---|---|
-| mergesort | 87 | 92% | 1 | 361/435 | worst drift in the repo (83% of pairs) |
 | shellsort | 125 | 100% | 1 | 186/625 | |
 | counting-sort | 40 | 100% | 1 | 161/200 | |
 | radix-sort | 70 | 100% | 1 | 95/350 | |
@@ -97,6 +96,10 @@ all Tier C (0% pedagogy, 0 checkpoints).
    explicit CALL_LEFT/CALL_RIGHT), 172 frames with full pedagogy, 2 checkpoints,
    4 real milestones, five aligned 14-line snippets, mapBad 0 on every input,
    honest input normalisation, 6 regression tests.
+   ~~mergesort~~ ✅ rebuilt 2026-11-18: per-operation frames around the existing
+   decomposition stage, 123 frames with full pedagogy, 2 checkpoints, 4 real
+   milestones, five aligned 18-line snippets, mapBad 0 on every input, honest
+   input normalisation, stability check on duplicates, 6 regression tests.
 2. Then the remaining S1 sorts: selection, counting, radix, shellsort, cocktail,
    bucket, introsort, quickselect, timsort, stooge, bogosort, drop-sort, sleep-sort.
 3. `backtracking-decision-tree` / `mergesort-recursion-tree` /
