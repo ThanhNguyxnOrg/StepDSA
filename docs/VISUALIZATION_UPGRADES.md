@@ -299,6 +299,19 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **quicksort ✅ (2026-11-18):** full rebuild — one operation per frame
+  (INIT → ENTER_RANGE → CALL_PARTITION → PIVOT_SELECTED → PINDEX_INIT →
+  SCAN_START → COMPARE → SWAP / NO_SWAP → ADVANCE_PINDEX → PIVOT_SWAP →
+  PIVOT_SETTLED → PARTITION_RETURNED → CALL_LEFT → CALL_RIGHT → DONE),
+  172 frames on the default input with WHAT/WHY/NEXT on all of them, 2
+  checkpoints (first compare + final pivot position, non-zero correct index),
+  4 real milestones + auto Start (First Pivot Settled, Half the Array Settled,
+  Final Pivot Settled, Complete — no per-partition noise), five 14-line
+  snippets with the same statement per line and exact code-line mapping
+  (mapBad 112/735 → 0), honest input normalisation, custom stage with
+  range/pivot HUD, settled-pivot log and legend. Worst-case already-sorted
+  preset documents the O(N²) split (4 partitions, 10 compares). 6 regression
+  tests added (652 total).
 - **insertion-sort ✅ (2026-11-17):** full rebuild — one operation per frame
   (INIT → PICK_KEY → SET_J → CHECK_GUARD → SHIFT → DECREMENT_J → INSERT_KEY →
   NEXT_ITERATION → DONE), WHAT/WHY/NEXT on all 70 frames, 2 checkpoints

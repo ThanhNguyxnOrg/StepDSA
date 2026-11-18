@@ -3175,6 +3175,9 @@ describe('pedagogical timeline regressions', () => {
     const timeline = mod.generateTimeline(input);
 
     expect(
+      timeline.some((frame) => frame.codeLine === 10 && frame.conditionEval?.result === false)
+    ).toBe(true);
+    expect(
       timeline.some((frame) => frame.codeLine === 11 && frame.conditionEval?.result === false)
     ).toBe(true);
     expect(timeline.some((frame) => frame.variables?.noSwap === true)).toBe(true);
@@ -7172,5 +7175,174 @@ describe('insertion sort rebuild regressions', () => {
       expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
       expect(result.pedagogyFrameCount).toBe(timeline.length);
     }
+  });
+});
+
+describe('quicksort rebuild regressions', () => {
+  const mod = () => moduleById('quicksort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames every partition operation individually with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('ENTER_RANGE');
+    expect(actions).toContain('CALL_PARTITION');
+    expect(actions).toContain('PIVOT_SELECTED');
+    expect(actions).toContain('PINDEX_INIT');
+    expect(actions).toContain('SCAN_START');
+    expect(actions).toContain('COMPARE');
+    expect(actions).toContain('SWAP');
+    expect(actions).toContain('NO_SWAP');
+    expect(actions).toContain('ADVANCE_PINDEX');
+    expect(actions).toContain('PIVOT_SWAP');
+    expect(actions).toContain('PIVOT_SETTLED');
+    expect(actions).toContain('CALL_LEFT');
+    expect(actions).toContain('CALL_RIGHT');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('quicksort-first-compare');
+    expect(checkpoints[1].checkpoint!.id).toBe('quicksort-pivot-position');
+    expect(checkpoints[1].checkpoint!.correctIndex).toBe(1);
+  });
+
+  it('keeps the Lomuto invariant honest: swap only on <=, no-op when pIndex === j', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const swaps = timeline.filter((frame) => frame.action === 'SWAP');
+    const noSwaps = timeline.filter((frame) => frame.action === 'NO_SWAP');
+    expect(swaps.length).toBeGreaterThan(0);
+    expect(noSwaps.length).toBeGreaterThan(0);
+    for (const frame of [...swaps, ...noSwaps]) {
+      expect(frame.conditionEval?.expr).toBe('pIndex !== j');
+      // every SWAP frame carries a genuinely different pair; NO_SWAP frames never do
+      expect(frame.conditionEval?.result).toBe(frame.action === 'SWAP');
+    }
+    for (const frame of swaps) {
+      const { pIndex, j, valPIndex, valJ } = frame.variables as Record<string, number>;
+      expect(valPIndex).toBe(frame.state.array[pIndex].value);
+      expect(valJ).toBe(frame.state.array[j].value);
+    }
+
+    const settles = timeline.filter((frame) => frame.action === 'PIVOT_SETTLED');
+    expect(settles).toHaveLength(8);
+    for (const frame of settles) {
+      const sortedIndex = (frame.variables as Record<string, number>).sortedIndex;
+      expect(frame.state.array[sortedIndex].status).toBe('sorted');
+    }
+
+    const last = timeline[timeline.length - 1];
+    expectSorted(values(last));
+    expect(last.variables?.result).toBe(11);
+    expect(last.variables?.partitions).toBe(8);
+    expect(last.variables?.calls).toBe(17);
+  });
+
+  it('marks real turning points as milestones instead of every partition', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Pivot Settled',
+      'Half the Array Settled',
+      'Final Pivot Settled',
+      'Quicksort Complete',
+    ]);
+    // partitions must NOT each be a milestone
+    const pivotSelects = timeline.filter((frame) => frame.action === 'PIVOT_SELECTED');
+    expect(pivotSelects.length).toBeGreaterThan(milestones.length);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const matchers: Record<number, RegExp> = {
+      1: /quicksort\(/,
+      2: /low < high/,
+      3: /partition\(arr, low, high\)/,
+      4: /quicksort\(arr, low,/,
+      5: /quicksort\(arr, p/,
+      7: /pivot = arr\[high\]|const pivot|int pivot/,
+      8: /pIndex = low|p_index = low|let pIndex|int pIndex/,
+      9: /for/,
+      10: /if arr\[j\] <= pivot|if \(arr\[j\] <= pivot\)/,
+      11: /swap|arr\[p_index\], arr\[j\]|arr\[pIndex\], arr\[j\]|arr\[pIndex\] = arr\[j\]/,
+      12: /pIndex = pIndex \+ 1|p_index \+= 1|pIndex\+\+/,
+      13: /swap arr\[pIndex\] with arr\[high\]|arr\[pIndex\], arr\[high\]|arr\[p_index\], arr\[high\]|swap\(arr\[pIndex\], arr\[high\]\)|arr\[pIndex\] = arr\[high\]/,
+      14: /return pIndex|return p_index/,
+    };
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(14);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (matchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(false);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.comparisons).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([45, 12, 85, 32, 89, 39, 69, 44, 42, 1, 98]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+        expect(() => module.renderStage(frame, 'isometric')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset including the worst case', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+    // already-sorted input is the classic O(N^2) Lomuto worst case: n-1 partitions
+    const worst = module.generateTimeline([10, 20, 30, 40, 50]);
+    expect(worst[worst.length - 1].variables?.partitions).toBe(4);
+    expect(worst[worst.length - 1].variables?.comparisons).toBe(10);
   });
 });
