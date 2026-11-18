@@ -7015,3 +7015,162 @@ describe('kadane regressions', () => {
     }
   });
 });
+
+describe('insertion sort rebuild regressions', () => {
+  const mod = () => moduleById('insertion-sort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames every operation individually with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions[1]).toBe('PICK_KEY');
+    expect(actions[2]).toBe('SET_J');
+    expect(actions[3]).toBe('CHECK_GUARD');
+    expect(actions[4]).toBe('SHIFT');
+    expect(actions[5]).toBe('DECREMENT_J');
+    expect(actions).toContain('INSERT_KEY');
+    expect(actions).toContain('NEXT_ITERATION');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('insertion-sort-first-compare');
+    expect(checkpoints[1].checkpoint!.id).toBe('insertion-sort-insert-position');
+    expect(checkpoints[1].checkpoint!.correctIndex).toBe(1);
+    for (const frame of checkpoints) {
+      const cp = frame.checkpoint!;
+      expect(cp.options.length).toBeGreaterThanOrEqual(3);
+      expect(cp.correctIndex).toBeGreaterThanOrEqual(0);
+      expect(cp.correctIndex).toBeLessThan(cp.options.length);
+      expect(cp.explanation).toBeTruthy();
+    }
+  });
+
+  it('keeps the held key visible through every shift and lands it exactly once', () => {
+    const module = mod();
+    const input = [35, 12, 48, 20, 9, 31, 15];
+    const timeline = module.generateTimeline(input);
+
+    const held = timeline.filter((frame) => frame.state.auxiliary?.type === 'value');
+    expect(held.length).toBeGreaterThan(0);
+    expect(held.every((frame) => frame.state.auxiliary.name === 'key')).toBe(true);
+
+    const insertFrames = timeline.filter((frame) => frame.action === 'INSERT_KEY');
+    expect(insertFrames).toHaveLength(6);
+    expect(insertFrames.every((frame) => frame.state.auxiliary === undefined)).toBe(true);
+
+    const firstShift = timeline.find((frame) => frame.action === 'SHIFT')!;
+    expect(firstShift.variables?.shiftedValue).toBe(35);
+    expect(firstShift.state.auxiliary.data).toBe(12);
+
+    expect(
+      timeline.some((frame) => frame.action === 'CHECK_GUARD' && frame.conditionEval?.result === true)
+    ).toBe(true);
+    expect(
+      timeline.some((frame) => frame.action === 'CHECK_GUARD' && frame.conditionEval?.result === false)
+    ).toBe(true);
+
+    const last = timeline[timeline.length - 1];
+    expectSorted(values(last));
+    expect(last.variables?.result).toBe(7);
+    expect(last.variables?.insertions).toBe(6);
+    expect(last.variables?.comparisons).toBe(19);
+    expect(last.variables?.shifts).toBe(13);
+  });
+
+  it('marks real turning points as milestones instead of every frame', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Insert',
+      'Longest Shift Run',
+      'Final Insert',
+      'Insertion Sort Complete',
+    ]);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const matchers: Record<number, RegExp> = {
+      2: /n = |const n = |int n = /,
+      3: /for i|for \(int i|for \(let i|for i in range/,
+      4: /key = arr|const key = |int key = /,
+      5: /j = i - 1|let j = i - 1|int j = i - 1/,
+      6: /while/,
+      7: /arr\[j \+ 1\] = arr\[j\]/,
+      8: /j = j - 1|j -= 1|j--/,
+      9: /arr\[j \+ 1\] = key/,
+      10: /return arr/,
+    };
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(10);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (matchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(false);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.comparisons).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(values(invalid[invalid.length - 1])).toEqual([3, 8]);
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([35, 12, 48, 20, 9, 31, 15]);
+    expectSorted(values(fallback[fallback.length - 1]));
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+        expect(() => module.renderStage(frame, 'isometric')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+    }
+  });
+});

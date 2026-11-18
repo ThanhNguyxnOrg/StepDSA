@@ -49,7 +49,6 @@ with heavily drifted snippets. These need a full LIS-style rebuild, one per sess
 | mergesort | 87 | 92% | 1 | 361/435 | worst drift in the repo (83% of pairs) |
 | shellsort | 125 | 100% | 1 | 186/625 | |
 | counting-sort | 40 | 100% | 1 | 161/200 | |
-| insertion-sort | 65 | 100% | 1 | 131/325 | flagship, high visit rate |
 | quicksort | 147 | 100% | 1 | 112/735 | flagship, high visit rate |
 | radix-sort | 70 | 100% | 1 | 95/350 | |
 | selection-sort | 47 | 100% | 1 | 86/235 | |
@@ -89,9 +88,12 @@ all Tier C (0% pedagogy, 0 checkpoints).
 
 ## Remediation order for the rest
 
-1. Flagship sorts first (highest visit rate, worst teaching impact): insertion-sort,
-   quicksort, mergesort, bubble-sort, heapsort — one per session, LIS-style
+1. Flagship sorts first (highest visit rate, worst teaching impact): quicksort,
+   mergesort, bubble-sort, heapsort — one per session, LIS-style
    (snippet layout chosen first, frames remapped, regression tests added).
+   ~~insertion-sort~~ ✅ rebuilt 2026-11-17: per-operation frames, pedagogy on all
+   70 frames, 2 checkpoints, 4 real milestones, five aligned 10-line snippets,
+   mapBad 0 on every input, honest input normalisation, 6 regression tests.
 2. Then the remaining S1 sorts: selection, counting, radix, shellsort, cocktail,
    bucket, introsort, quickselect, timsort, stooge, bogosort, drop-sort, sleep-sort.
 3. `backtracking-decision-tree` / `mergesort-recursion-tree` /

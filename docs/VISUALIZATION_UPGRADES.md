@@ -297,6 +297,18 @@ flagship sorts — still map code lines proportionally and need one-by-one
 re-alignment. Remediation order: insertion → quicksort → mergesort → bubble →
 heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
+### Legacy rebuilds (DP standard applied to old batches)
+
+- **insertion-sort ✅ (2026-11-17):** full rebuild — one operation per frame
+  (INIT → PICK_KEY → SET_J → CHECK_GUARD → SHIFT → DECREMENT_J → INSERT_KEY →
+  NEXT_ITERATION → DONE), WHAT/WHY/NEXT on all 70 frames, 2 checkpoints
+  (first guard evaluation + first insertion position, non-zero correct index),
+  4 real milestones + auto Start, five 10-line snippets with the same statement
+  per line and exact code-line mapping (mapBad 131/325 → 0 on every input),
+  honest input normalisation (empty = valid 2-frame run, non-numeric dropped,
+  values clamped ±999, >12 truncated — all reported in INIT), custom stage with
+  key chip, insertion log and legend. 6 regression tests added (646 total).
+
 ## Batch plan (execution order)
 
 1. **S1 — sorting mechanics ✅ COMPLETE (18/18):** insertion, mergesort, quicksort,
