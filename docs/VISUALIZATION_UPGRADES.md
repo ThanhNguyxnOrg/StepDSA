@@ -299,6 +299,16 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **shellsort ✅ (2026-11-19):** rebuild — named actions on every frame (INIT →
+  PASS_START → PICKUP → GUARD (both outcomes) → SHIFT → CURSOR → INSERT →
+  PASS_END → DONE) around the existing key-shelf + chain visuals, 125 frames
+  on the default input with WHAT/WHY/NEXT on all of them, 2 checkpoints
+  (first guard with dynamic correct index + gap halving with non-zero correct
+  index), 4 real milestones + auto Start (one per completed gap pass —
+  genuine h-sorted turning points), five 13-line snippets with the same
+  statement per line and exact code-line mapping (mapBad 613 → 0), honest
+  input normalisation, pickup/shift accounting regression (pickups 22,
+  guard both outcomes). 6 regression tests added (695 total).
 - **radix-sort ✅ (2026-11-19):** full rebuild around the existing bucket-grid
   stage — one operation per frame (INIT → PASS_START → DIGIT_PLACE per element
   → COLLECT_BUCKET per non-empty bucket → PASS_COMPLETE per digit place →
