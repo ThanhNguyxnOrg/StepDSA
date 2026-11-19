@@ -299,6 +299,18 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **counting-sort ✅ (2026-11-19):** full rebuild around the existing three-panel
+  stage — one operation per frame (INIT → COUNT per element → PREFIX_START →
+  PREFIX_ACC per key → BUILD_START → PLACE per element → DONE), 26 frames on
+  the default input with WHAT/WHY/NEXT on all of them, 2 checkpoints (prefix
+  meaning with non-zero correct index + duplicate slot), 3 real milestones +
+  auto Start (First Placement, Half the Output Filled, Complete — no
+  per-placement noise), five 14-line snippets with the same statement per line
+  and exact code-line mapping (mapBad 616 → 0), honest normalisation for the
+  key domain (negative values dropped with one aggregated note, clamped to
+  max key 99, >12 truncated; empty = valid 2-frame run), stability regression
+  (duplicates claim blocks right-to-left). 6 regression tests added
+  (683 total).
 - **selection-sort ✅ (2026-11-19):** full rebuild — one operation per frame
   (INIT → PASS_START → SCAN_START → COMPARE → MIN_UPDATE → SWAP / NO_SWAP →
   INDEX_LOCKED → DONE), 53 frames on the default input with WHAT/WHY/NEXT on

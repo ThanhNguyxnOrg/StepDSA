@@ -55,7 +55,6 @@ with heavily drifted snippets. These need a full LIS-style rebuild, one per sess
 | Module | Frames | Pedagogy | Checkpoint | mapBad | Note |
 |---|---|---|---|---|---|
 | shellsort | 125 | 100% | 1 | 186/625 | |
-| counting-sort | 40 | 100% | 1 | 161/200 | |
 | radix-sort | 70 | 100% | 1 | 95/350 | |
 | cocktail-shaker-sort | 39 | 100% | 1 | 67/195 | |
 | bucket-sort | 26 | 100% | 1 | 62/130 | |
@@ -120,6 +119,11 @@ all Tier C (0% pedagogy, 0 checkpoints).
    2 checkpoints, 3 real milestones + Start, five aligned 10-line snippets,
    mapBad 0 on every input, honest input normalisation, write-minimality
    tested, 6 regression tests.
+   ~~counting-sort~~ ✅ rebuilt 2026-11-19: per-operation frames around the
+   existing three-panel stage, 26 frames with full pedagogy, 2 checkpoints,
+   3 real milestones + Start, five aligned 14-line snippets, mapBad 0 on every
+   input, honest key-domain normalisation (negatives dropped, clamp 99),
+   stability tested, 6 regression tests.
 2. Then the remaining S1 sorts: selection, counting, radix, shellsort, cocktail,
    bucket, introsort, quickselect, timsort, stooge, bogosort, drop-sort, sleep-sort.
 3. `backtracking-decision-tree` / `mergesort-recursion-tree` /
