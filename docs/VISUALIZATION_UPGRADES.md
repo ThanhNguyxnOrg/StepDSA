@@ -299,6 +299,18 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **quickselect ✅ (2026-11-19):** rebuild — named actions on every frame (INIT
+  → WINDOW → PIVOT_SELECTED → COMPARE → SWAP/NO_SWAP → PIVOT_PLACED →
+  FOUND / PRUNE_RIGHT / PRUNE_LEFT), 14 frames on the default input (the first
+  partition lands the pivot exactly on k = 3) with WHAT/WHY/NEXT on all of
+  them, 2 checkpoints (rank decision with a dynamic correct index + prune
+  direction), real milestones (First Rank Locked, Found k-th Element —
+  per-pivot-selection milestones removed), five 20-line snippets with the same
+  statement per line and exact code-line mapping (mapBad 156 → 0), honest
+  normalisation for the {array, k} pair (non-numeric dropped, k clamped into
+  [0..n-1] or replaced by the median rank with a note, >12 truncated; empty
+  array = valid 2-frame run returning the -1 sentinel). 6 regression tests
+  added (713 total).
 - **bucket-sort ✅ (2026-11-19):** rebuild around the existing bucket stage —
   named actions on every frame (INIT → SCATTER per element → SCATTER_COMPLETE →
   INTERNAL_SWAP/BUCKET_SORTED per bucket → GATHER per element → DONE), 26

@@ -59,7 +59,6 @@ with heavily drifted snippets. These need a full LIS-style rebuild, one per sess
 | introsort | 32 | 100% | 1 | 38/160 | |
 | bogosort | 12 | 50% | 1 | 37/60 | |
 | stooge-sort | 111 | 97% | 1 | 28/555 | |
-| quickselect | 14 | 100% | 1 | 24/70 | |
 | drop-sort | 14 | 100% | 1 | 24/70 | |
 | backtracking-decision-tree | 64 | 0% | 0 | 164/320 | no pedagogy at all |
 | mergesort-recursion-tree | 46 | 0% | 0 | 62/230 | superseded by `recursion-trees` |
@@ -142,6 +141,11 @@ all Tier C (0% pedagogy, 0 checkpoints).
    3 real milestones + Start, five aligned 14-line snippets, mapBad 0 on every
    input, honest input normalisation, gather monotonicity tested, 6 regression
    tests.
+   ~~quickselect~~ ✅ rebuilt 2026-11-19: named per-operation frames for the rank
+   search, 14 frames with full pedagogy on the default input, 2 checkpoints,
+   3 real milestones + Start, five aligned 20-line snippets, mapBad 0 on every
+   input, honest {array, k} normalisation (k clamped / median fallback),
+   prune-only-the-impossible-side tested, 6 regression tests.
 2. Then the remaining S1 sorts: selection, counting, radix, shellsort, cocktail,
    bucket, introsort, quickselect, timsort, stooge, bogosort, drop-sort, sleep-sort.
 3. `backtracking-decision-tree` / `mergesort-recursion-tree` /

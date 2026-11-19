@@ -2896,18 +2896,16 @@ describe('pedagogical timeline regressions', () => {
 
     // Window-entry + pivot frames exist for every iteration.
     expect(timeline.some((frame) => frame.codeLine === 13)).toBe(true);
-    expect(
-      timeline.some((frame) => frame.codeLine === 3 && frame.milestoneTitle?.includes('Pivot'))
-    ).toBe(true);
+    expect(timeline.some((frame) => frame.codeLine === 2 && frame.action === 'PIVOT_SELECTED')).toBe(true);
 
     // Both outcomes of the partition comparison are visible.
-    const compares = timeline.filter((frame) => frame.codeLine === 6);
+    const compares = timeline.filter((frame) => frame.codeLine === 5);
     expect(compares.some((frame) => frame.conditionEval?.result === true)).toBe(true);
     expect(compares.some((frame) => frame.conditionEval?.result === false)).toBe(true);
 
     // The no-op swap branch (i === j) is explicit instead of hidden.
     expect(
-      timeline.some((frame) => frame.codeLine === 7 && frame.conditionEval?.result === false)
+      timeline.some((frame) => frame.codeLine === 6 && frame.conditionEval?.result === false)
     ).toBe(true);
 
     // The rank-decision checkpoint fires on the first pivot placement.
@@ -2917,7 +2915,7 @@ describe('pedagogical timeline regressions', () => {
 
     // Pruning frames appear when the target rank lies on one side (preset: k = 0).
     const smallest = mod.generateTimeline({ array: [25, 12, 48, 6, 33, 19], k: 0 });
-    expect(smallest.some((frame) => frame.codeLine === 20)).toBe(true);
+    expect(smallest.some((frame) => frame.codeLine === 19)).toBe(true);
 
     const found = timeline[timeline.length - 1];
     expect(found.explanation).toContain('Rank match found');
@@ -8748,6 +8746,150 @@ describe('bucket sort rebuild regressions', () => {
       expectSorted(values(timeline[timeline.length - 1]));
       expect(result.pedagogyFrameCount).toBe(timeline.length);
       expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
+
+describe('quickselect rebuild regressions', () => {
+  const mod = () => moduleById('quickselect');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+
+  it('frames the rank search with named actions and pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('WINDOW');
+    expect(actions).toContain('PIVOT_SELECTED');
+    expect(actions).toContain('COMPARE');
+    expect(actions).toContain('PIVOT_PLACED');
+    expect(actions).toContain('FOUND');
+    expect(actions[timeline.length - 1]).toBe('FOUND');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+  });
+
+  it('locks one rank per partition and prunes only the impossible side', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    // default: the very first partition lands the pivot exactly on k = 3
+    const placed = timeline.filter((frame) => frame.action === 'PIVOT_PLACED');
+    expect(placed).toHaveLength(1);
+    expect(placed[0].variables?.rankMatch).toBe(true);
+    expect(timeline.some((frame) => frame.action === 'PRUNE_RIGHT' || frame.action === 'PRUNE_LEFT')).toBe(false);
+
+    // k = 5 preset needs pruning: the window shrinks toward the answer
+    const kth = module.generateTimeline({ array: [14, 3, 9, 21, 5, 18, 12], k: 5 });
+    const prunes = kth.filter((frame) => frame.action === 'PRUNE_RIGHT' || frame.action === 'PRUNE_LEFT');
+    expect(prunes.length).toBeGreaterThan(0);
+    for (const frame of prunes) {
+      // every prune shrinks the window to a strict subset
+      const pIdx = frame.variables?.pIdx as number;
+      expect(pIdx).toBeGreaterThanOrEqual(0);
+    }
+    expect(kth[kth.length - 1].variables?.answer).toBe(18);
+
+    const found = timeline[timeline.length - 1];
+    expect(found.variables?.answer).toBe(8);
+  });
+
+  it('marks real turning points as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Rank Locked',
+      'Found k-th Element: 8',
+    ]);
+    // per-pivot milestones are gone: pivot selections are plain frames
+    expect(timeline.filter((frame) => frame.action === 'PIVOT_SELECTED' && frame.isMilestone)).toHaveLength(0);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, module.presets[1].data]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /pivot = arr\[high\]|const pivot = arr\[high\]|int pivot = arr\[high\]/,
+        5: /arr\[j\] <= pivot/,
+        6: /swap arr\[i\] with arr\[j\]|arr\[i\], arr\[j\]|swap\(arr\[i\], arr\[j\]\)|arr\[i\] = arr\[j\]/,
+        8: /swap arr\[i\] with arr\[high\]|arr\[i\], arr\[high\]|swap\(arr\[i\], arr\[high\]\)|arr\[i\] = arr\[high\]/,
+        11: /low = 0|let low = 0|int low = 0/,
+        13: /while low <= high|while \(low <= high\)/,
+        15: /p_idx == k|pIdx ==/,
+        17: /low = p_idx \+ 1|low = pIdx \+ 1/,
+        19: /high = p_idx - 1|high = pIdx - 1/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(20);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, clamped and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ array: [], k: 0 } as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(false);
+    expect(empty[1].variables?.result).toBe(-1);
+    expect(empty[1].variables?.found).toBe(false);
+    expect(auditTimeline(module, { array: [], k: 0 } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ array: ['x', 3, null, 8], k: 2 } as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(invalid[invalid.length - 1].variables?.answer).toBe(8);
+
+    const clamped = module.generateTimeline({ array: [5, 4, 3, 2, 1], k: 99 } as any);
+    expect(clamped[0].explanation).toMatch(/k = 99 clamped to 4 \(largest valid rank\)/);
+    expect(clamped[clamped.length - 1].variables?.answer).toBe(5);
+
+    const nanK = module.generateTimeline({ array: [9, 1, 8], k: 'x' } as any);
+    expect(nanK[0].explanation).toMatch(/k was not a number, so the median rank 1 is used/);
+
+    const fallback = module.generateTimeline({ array: ['a'], k: 0 } as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(fallback[0].state.array.map((el: any) => el.value)).toEqual([7, 10, 4, 3, 20, 15, 8]);
+
+    const oversized = module.generateTimeline({ array: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], k: 3 } as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].variables?.answer).toBe(4);
+
+    for (const data of [module.defaultInput, { array: [], k: 0 }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and answers every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+      // the last frame always carries the answer
+      expect(timeline[timeline.length - 1].variables?.found).toBe(true);
     }
   });
 });
