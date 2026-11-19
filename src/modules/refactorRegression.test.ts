@@ -8610,3 +8610,144 @@ describe('cocktail shaker rebuild regressions', () => {
     }
   });
 });
+
+describe('bucket sort rebuild regressions', () => {
+  const mod = () => moduleById('bucket-sort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames scatter, internal sort and gather with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('SCATTER');
+    expect(actions).toContain('SCATTER_COMPLETE');
+    expect(actions).toContain('BUCKET_SORTED');
+    expect(actions).toContain('GATHER');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('bucket-sort-range-invariant');
+    expect(checkpoints[1].checkpoint!.id).toBe('bucket-sort-gather-order');
+    expect(checkpoints[1].checkpoint!.correctIndex).toBe(1);
+  });
+
+  it('scatters once, sorts each bucket internally, and gathers ascending', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const scatters = timeline.filter((frame) => frame.action === 'SCATTER');
+    expect(scatters).toHaveLength(8);
+    // routing is pure arithmetic: bucket index is derived, never compared
+    for (const frame of scatters) {
+      expect(typeof frame.variables?.bIdx).toBe('number');
+      expect(frame.variables?.bIdx).toBeGreaterThanOrEqual(0);
+      expect(frame.variables?.bIdx).toBeLessThan(5);
+    }
+
+    const gathers = timeline.filter((frame) => frame.action === 'GATHER');
+    expect(gathers).toHaveLength(8);
+    // the write cursor only ever moves right
+    for (let k = 1; k < gathers.length; k++) {
+      expect(gathers[k].variables?.writeIdx).toBeGreaterThan(gathers[k - 1].variables?.writeIdx);
+    }
+
+    const last = timeline[timeline.length - 1];
+    expectSorted(values(last));
+    expect(last.variables?.result).toBe(8);
+    expect(last.variables?.scattered).toBe(8);
+    expect(last.variables?.gathered).toBe(8);
+  });
+
+  it('marks real turning points as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'Scatter Phase Complete',
+      'Half the Array Gathered',
+      'Bucket Sort Completed',
+    ]);
+    const gatherFrames = timeline.filter((frame) => frame.action === 'GATHER');
+    expect(gatherFrames.length).toBeGreaterThan(milestones.length);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const matchers: Record<number, RegExp> = {
+      2: /length\(arr\) == 0|len\(arr\) == 0|arr.length === 0|arr.empty\(\)/,
+      5: /bucketRange = |bucket_range = /,
+      9: /buckets\[idx\]|buckets\.get\(idx\)|append x into B\[idx\]/,
+      10: /output = \[\]|const result|vector<int> result|int\[\] result/,
+      12: /sort bucket internally|bucket\.sort|sort\(bucket\.begin|Collections\.sort/,
+      13: /append bucket to output|output\.extend\(bucket\)|result\.push\(\.\.\.bucket\)|result\.insert\(result\.end\(\)|result\[k\+\+\] = v/,
+      14: /return output|return result/,
+    };
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(14);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (matchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(true);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.scattered).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([29, 25, 3, 49, 9, 37, 21, 43]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});

@@ -299,6 +299,16 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **bucket-sort ✅ (2026-11-19):** rebuild around the existing bucket stage —
+  named actions on every frame (INIT → SCATTER per element → SCATTER_COMPLETE →
+  INTERNAL_SWAP/BUCKET_SORTED per bucket → GATHER per element → DONE), 26
+  frames on the default input with WHAT/WHY/NEXT on all of them, 2 checkpoints
+  (range-partition invariant + ascending gather order with non-zero correct
+  index), 3 real milestones + auto Start (Scatter Phase Complete, Half the
+  Array Gathered, Complete), five 14-line snippets with the same statement per
+  line and exact code-line mapping (mapBad 260 → 0), honest input
+  normalisation, write-cursor monotonicity regression. 6 regression tests
+  added (707 total).
 - **cocktail-shaker-sort ✅ (2026-11-19):** rebuild — named actions on every
   frame (INIT → FORWARD_COMPARE/SWAP → MAX_LOCKED → BACKWARD_COMPARE/SWAP →
   MIN_LOCKED → EARLY_EXIT → DONE), 39 frames on the default input with

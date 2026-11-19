@@ -55,7 +55,6 @@ with heavily drifted snippets. These need a full LIS-style rebuild, one per sess
 
 | Module | Frames | Pedagogy | Checkpoint | mapBad | Note |
 |---|---|---|---|---|---|
-| bucket-sort | 26 | 100% | 1 | 62/130 | |
 | introsort | 32 | 100% | 1 | 38/160 | |
 | bogosort | 12 | 50% | 1 | 37/60 | |
 | stooge-sort | 111 | 97% | 1 | 28/555 | |
@@ -136,6 +135,11 @@ all Tier C (0% pedagogy, 0 checkpoints).
    both sweep directions, 39 frames with full pedagogy, 2 checkpoints,
    4 real milestones + Start, five aligned 20-line snippets, mapBad 0 on every
    input, honest input normalisation, turtle rescue covered, 6 regression
+   tests.
+   ~~bucket-sort~~ ✅ rebuilt 2026-11-19: named per-operation frames around the
+   existing bucket stage, 26 frames with full pedagogy, 2 checkpoints,
+   3 real milestones + Start, five aligned 14-line snippets, mapBad 0 on every
+   input, honest input normalisation, gather monotonicity tested, 6 regression
    tests.
 2. Then the remaining S1 sorts: selection, counting, radix, shellsort, cocktail,
    bucket, introsort, quickselect, timsort, stooge, bogosort, drop-sort, sleep-sort.
