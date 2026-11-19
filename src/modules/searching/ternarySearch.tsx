@@ -47,6 +47,17 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
   ],
   defaultInput: { array: [5, 12, 23, 34, 45, 56, 67, 78, 89, 99], target: 78 },
   codeSnippets: {
+    pseudocode: `function ternarySearch(arr, target):
+    low = 0, high = length(arr) - 1
+    while low <= high:
+        mid1 = low + (high - low) / 3
+        mid2 = high - (high - low) / 3
+        if arr[mid1] == target: return mid1
+        if arr[mid2] == target: return mid2
+        if target < arr[mid1]: high = mid1 - 1
+        else if target > arr[mid2]: low = mid2 + 1
+        else: low = mid1 + 1, high = mid2 - 1
+    return -1`,
     python: `def ternary_search(arr, target):
     low, high = 0, len(arr) - 1
     while low <= high:
@@ -54,13 +65,9 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         mid2 = high - (high - low) // 3
         if arr[mid1] == target: return mid1
         if arr[mid2] == target: return mid2
-        if target < arr[mid1]:
-            high = mid1 - 1
-        elif target > arr[mid2]:
-            low = mid2 + 1
-        else:
-            low = mid1 + 1
-            high = mid2 - 1
+        if target < arr[mid1]: high = mid1 - 1
+        elif target > arr[mid2]: low = mid2 + 1
+        else: low = mid1 + 1; high = mid2 - 1
     return -1`,
     typescript: `function ternarySearch(arr: number[], target: number): number {
   let low = 0, high = arr.length - 1;
@@ -69,17 +76,10 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
     const mid2 = high - Math.floor((high - low) / 3);
     if (arr[mid1] === target) return mid1;
     if (arr[mid2] === target) return mid2;
-    if (target < arr[mid1]) {
-      high = mid1 - 1;
-    } else if (target > arr[mid2]) {
-      low = mid2 + 1;
-    } else {
-      low = mid1 + 1;
-      high = mid2 - 1;
-    }
-  }
-  return -1;
-}`,
+    if (target < arr[mid1]) { high = mid1 - 1; }
+    else if (target > arr[mid2]) { low = mid2 + 1; }
+    else { low = mid1 + 1; high = mid2 - 1; } }
+  return -1; }`,
     cpp: `int ternarySearch(const vector<int>& arr, int target) {
     int low = 0, high = arr.size() - 1;
     while (low <= high) {
@@ -87,12 +87,10 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         int mid2 = high - (high - low) / 3;
         if (arr[mid1] == target) return mid1;
         if (arr[mid2] == target) return mid2;
-        if (target < arr[mid1]) high = mid1 - 1;
-        else if (target > arr[mid2]) low = mid2 + 1;
-        else { low = mid1 + 1; high = mid2 - 1; }
-    }
-    return -1;
-}`,
+        if (target < arr[mid1]) { high = mid1 - 1; }
+        else if (target > arr[mid2]) { low = mid2 + 1; }
+        else { low = mid1 + 1; high = mid2 - 1; } }
+    return -1; }`,
     java: `public int ternarySearch(int[] arr, int target) {
     int low = 0, high = arr.length - 1;
     while (low <= high) {
@@ -100,24 +98,12 @@ export const ternarySearchModule: AlgorithmModule<{ array: number[]; target: num
         int mid2 = high - (high - low) / 3;
         if (arr[mid1] == target) return mid1;
         if (arr[mid2] == target) return mid2;
-        if (target < arr[mid1]) high = mid1 - 1;
-        else if (target > arr[mid2]) low = mid2 + 1;
-        else { low = mid1 + 1; high = mid2 - 1; }
-    }
-    return -1;
-}`,
-    pseudocode: `function ternarySearch(arr, target):
-    low <- 0, high <- length(arr) - 1
-    while low <= high:
-        mid1 <- low + (high - low) / 3
-        mid2 <- high - (high - low) / 3
-        if arr[mid1] == target: return mid1
-        if arr[mid2] == target: return mid2
-        if target < arr[mid1]: high <- mid1 - 1
-        else if target > arr[mid2]: low <- mid2 + 1
-        else: low <- mid1 + 1, high <- mid2 - 1
-    return -1`,
+        if (target < arr[mid1]) { high = mid1 - 1; }
+        else if (target > arr[mid2]) { low = mid2 + 1; }
+        else { low = mid1 + 1; high = mid2 - 1; } }
+    return -1; }`,
   },
+
   generateTimeline: (input) => {
     const arr = [...input.array].sort((a, b) => a - b);
     const target = input.target;

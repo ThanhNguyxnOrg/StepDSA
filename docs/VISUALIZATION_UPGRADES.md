@@ -299,6 +299,12 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **linear-search / jump-search / ternary-search / rotated-sorted-array ✅
+  (2026-11-19):** snippet-only re-alignment (frames were already semantically
+  correct) — five language snippets rebuilt to shared 5-line, 13-line, 11-line
+  and 12-line layouts respectively with the same statement per line; mapBad
+  3+3+2+1 → 0 across every input, audit 0/0 preserved. Every searching module
+  with authored frames is now at full standard.
 - **quickselect ✅ (2026-11-19):** rebuild — named actions on every frame (INIT
   → WINDOW → PIVOT_SELECTED → COMPARE → SWAP/NO_SWAP → PIVOT_PLACED →
   FOUND / PRUNE_RIGHT / PRUNE_LEFT), 14 frames on the default input (the first

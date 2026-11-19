@@ -11,13 +11,15 @@ Measured with a scripted sweep over `generateTimeline` for the default input plu
 
 ## Status after the flagship rebuilds (2026-11-19)
 
-**12/40 modules fully meet the standard** (aligned snippets + exact code-line map
+**16/40 modules fully meet the standard** (aligned snippets + exact code-line map
 + full pedagogy + 2 checkpoints + clean audit on every input): the five flagship
 sorts — insertion-sort, quicksort, mergesort, bubble-sort, heapsort — plus
 selection-sort, counting-sort, radix-sort, shellsort, cocktail-shaker-sort and
 bucket-sort, and the three re-aligned searches —
-binary-search, exponential-search, interpolation-search.
-The remaining 28 keep their tier classification below.
+binary-search, exponential-search, interpolation-search, plus the four
+snippet-re-aligned linear-search, jump-search, ternary-search and
+rotated-sorted-array.
+The remaining 24 keep their tier classification below.
 
 ## Verdict by tier
 

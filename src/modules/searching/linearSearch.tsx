@@ -45,40 +45,31 @@ export const linearSearchModule: AlgorithmModule<LinearSearchInput, ArrayStageSt
     target: 35,
   },
   codeSnippets: {
-    python: `def linear_search(arr, target):
-    for i in range(len(arr)):
-        if arr[i] == target:
-            return i # Found at index i
-    return -1 # Not found`,
-    typescript: `function linearSearch(arr: number[], target: number): number {
-  for (let i = 0; i < arr.length; i++) {
-    if (arr[i] === target) {
-      return i; // Found at index i
-    }
-  }
-  return -1; // Not found
-}`,
-    cpp: `int linearSearch(const vector<int>& arr, int target) {
-    for (int i = 0; i < arr.size(); i++) {
-        if (arr[i] == target) {
-            return i; // Found at index i
-        }
-    }
-    return -1; // Not found
-}`,
-    java: `int linearSearch(int[] arr, int target) {
-    for (int i = 0; i < arr.length; i++) {
-        if (arr[i] == target) {
-            return i; // Found at index i
-        }
-    }
-    return -1; // Not found
-}`,
     pseudocode: `function linearSearch(arr, target):
-    for i = 0 to length(arr) - 1:
+    for i from 0 to length(arr) - 1:
         if arr[i] == target:
             return i
     return -1`,
+    python: `def linear_search(arr, target):
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1`,
+    typescript: `function linearSearch(arr: number[], target: number): number {
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === target) {
+      return i; } }
+  return -1; }`,
+    cpp: `int linearSearch(const vector<int>& arr, int target) {
+    for (int i = 0; i < (int)arr.size(); i++) {
+        if (arr[i] == target) {
+            return i; } }
+    return -1; }`,
+    java: `int linearSearch(int[] arr, int target) {
+    for (int i = 0; i < arr.length; i++) {
+        if (arr[i] == target) {
+            return i; } }
+    return -1; }`,
   },
 
   generateTimeline: (input: LinearSearchInput): ExecutionFrame<ArrayStageState>[] => {

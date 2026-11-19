@@ -48,23 +48,31 @@ export const jumpSearchModule: AlgorithmModule<{ array: number[]; target: number
   ],
   defaultInput: { array: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610], target: 55 },
   codeSnippets: {
-    python: `import math
-
-def jump_search(arr, target):
+    pseudocode: `function jumpSearch(arr, target):
+    n = length(arr)
+    step = floor(sqrt(n))
+    prev = 0
+    while arr[min(step, n) - 1] < target:
+        prev = step
+        step = step + floor(sqrt(n))
+        if prev >= n: return -1
+    while arr[prev] < target:
+        prev = prev + 1
+        if prev == min(step, n): return -1
+    if arr[prev] == target: return prev
+    return -1`,
+    python: `def jump_search(arr, target):
     n = len(arr)
     step = int(math.isqrt(n))
     prev = 0
     while arr[min(step, n) - 1] < target:
         prev = step
         step += int(math.isqrt(n))
-        if prev >= n:
-            return -1
+        if prev >= n: return -1
     while arr[prev] < target:
         prev += 1
-        if prev == min(step, n):
-            return -1
-    if arr[prev] == target:
-        return prev
+        if prev == min(step, n): return -1
+    if arr[prev] == target: return prev
     return -1`,
     typescript: `function jumpSearch(arr: number[], target: number): number {
   const n = arr.length;
@@ -73,15 +81,12 @@ def jump_search(arr, target):
   while (arr[Math.min(step, n) - 1] < target) {
     prev = step;
     step += Math.floor(Math.sqrt(n));
-    if (prev >= n) return -1;
-  }
+    if (prev >= n) return -1; }
   while (arr[prev] < target) {
     prev++;
-    if (prev === Math.min(step, n)) return -1;
-  }
+    if (prev === Math.min(step, n)) return -1; }
   if (arr[prev] === target) return prev;
-  return -1;
-}`,
+  return -1; }`,
     cpp: `int jumpSearch(const vector<int>& arr, int target) {
     int n = arr.size();
     int step = sqrt(n);
@@ -89,15 +94,12 @@ def jump_search(arr, target):
     while (arr[min(step, n) - 1] < target) {
         prev = step;
         step += sqrt(n);
-        if (prev >= n) return -1;
-    }
+        if (prev >= n) return -1; }
     while (arr[prev] < target) {
         prev++;
-        if (prev == min(step, n)) return -1;
-    }
+        if (prev == min(step, n)) return -1; }
     if (arr[prev] == target) return prev;
-    return -1;
-}`,
+    return -1; }`,
     java: `public int jumpSearch(int[] arr, int target) {
     int n = arr.length;
     int step = (int) Math.floor(Math.sqrt(n));
@@ -105,29 +107,14 @@ def jump_search(arr, target):
     while (arr[Math.min(step, n) - 1] < target) {
         prev = step;
         step += (int) Math.floor(Math.sqrt(n));
-        if (prev >= n) return -1;
-    }
+        if (prev >= n) return -1; }
     while (arr[prev] < target) {
         prev++;
-        if (prev == Math.min(step, n)) return -1;
-    }
+        if (prev == Math.min(step, n)) return -1; }
     if (arr[prev] == target) return prev;
-    return -1;
-}`,
-    pseudocode: `function jumpSearch(arr, target):
-    n <- length(arr)
-    step <- floor(sqrt(n))
-    prev <- 0
-    while arr[min(step, n) - 1] < target:
-        prev <- step
-        step <- step + floor(sqrt(n))
-        if prev >= n: return -1
-    while arr[prev] < target:
-        prev <- prev + 1
-        if prev == min(step, n): return -1
-    if arr[prev] == target: return prev
-    return -1`,
+    return -1; }`,
   },
+
   generateTimeline: (input) => {
     const arr = [...input.array].sort((a, b) => a - b);
     const target = input.target;
