@@ -55,7 +55,6 @@ with heavily drifted snippets. These need a full LIS-style rebuild, one per sess
 
 | Module | Frames | Pedagogy | Checkpoint | mapBad | Note |
 |---|---|---|---|---|---|
-| cocktail-shaker-sort | 39 | 100% | 1 | 67/195 | |
 | bucket-sort | 26 | 100% | 1 | 62/130 | |
 | introsort | 32 | 100% | 1 | 38/160 | |
 | bogosort | 12 | 50% | 1 | 37/60 | |
@@ -132,6 +131,11 @@ all Tier C (0% pedagogy, 0 checkpoints).
    shelf and chain visuals, 125 frames with full pedagogy, 2 checkpoints,
    4 real milestones + Start, five aligned 13-line snippets, mapBad 0 on every
    input, honest input normalisation, pickups/guards accounted, 6 regression
+   tests.
+   ~~cocktail-shaker-sort~~ ✅ rebuilt 2026-11-19: named per-operation frames for
+   both sweep directions, 39 frames with full pedagogy, 2 checkpoints,
+   4 real milestones + Start, five aligned 20-line snippets, mapBad 0 on every
+   input, honest input normalisation, turtle rescue covered, 6 regression
    tests.
 2. Then the remaining S1 sorts: selection, counting, radix, shellsort, cocktail,
    bucket, introsort, quickselect, timsort, stooge, bogosort, drop-sort, sleep-sort.

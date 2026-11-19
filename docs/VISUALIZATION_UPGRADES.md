@@ -299,6 +299,16 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **cocktail-shaker-sort ✅ (2026-11-19):** rebuild — named actions on every
+  frame (INIT → FORWARD_COMPARE/SWAP → MAX_LOCKED → BACKWARD_COMPARE/SWAP →
+  MIN_LOCKED → EARLY_EXIT → DONE), 39 frames on the default input with
+  WHAT/WHY/NEXT on all of them, 2 checkpoints (first forward compare with a
+  dynamic correct index + which boundary shrinks), 4 real milestones + auto
+  Start (First Max Locked, Half the Array Locked, Early Exit, Complete —
+  per-swap milestones removed), five 20-line snippets with the same statement
+  per line and exact code-line mapping (mapBad 348 → 0), honest input
+  normalisation, turtle-rescue phrasing kept and regression-covered. 6
+  regression tests added (701 total).
 - **shellsort ✅ (2026-11-19):** rebuild — named actions on every frame (INIT →
   PASS_START → PICKUP → GUARD (both outcomes) → SHIFT → CURSOR → INSERT →
   PASS_END → DONE) around the existing key-shelf + chain visuals, 125 frames

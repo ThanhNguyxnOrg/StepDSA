@@ -151,7 +151,7 @@ describe('pedagogical timeline regressions', () => {
     const sortedTimeline = mod.generateTimeline([1, 2, 3, 4, 5]);
     expect(
       sortedTimeline.some(
-        (frame) => frame.codeLine === 13 && frame.conditionEval?.result === true
+        (frame) => frame.codeLine === 11 && frame.conditionEval?.result === true
       )
     ).toBe(true);
     expect(sortedTimeline.some((frame) => frame.explanation.includes('stops early'))).toBe(true);
@@ -8442,6 +8442,148 @@ describe('shellsort rebuild regressions', () => {
     const fallback = module.generateTimeline(['a'] as any);
     expect(fallback[0].explanation).toMatch(/no usable numbers/);
     expect(values(fallback[0])).toEqual([62, 83, 18, 53, 7, 17, 95, 22, 47, 34]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
+
+describe('cocktail shaker rebuild regressions', () => {
+  const mod = () => moduleById('cocktail-shaker-sort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames both sweeps with named actions and pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('FORWARD_COMPARE');
+    expect(actions).toContain('FORWARD_SWAP');
+    expect(actions).toContain('MAX_LOCKED');
+    expect(actions).toContain('BACKWARD_COMPARE');
+    expect(actions).toContain('BACKWARD_SWAP');
+    expect(actions).toContain('MIN_LOCKED');
+    expect(actions).toContain('EARLY_EXIT');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('cocktail-first-forward-compare');
+    expect(checkpoints[1].checkpoint!.id).toBe('cocktail-window-shrink');
+    expect(checkpoints[1].checkpoint!.correctIndex).toBe(1);
+  });
+
+  it('locks one maximum and one minimum per shake and shrinks the window both ways', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const maxLocks = timeline.filter((frame) => frame.action === 'MAX_LOCKED');
+    const minLocks = timeline.filter((frame) => frame.action === 'MIN_LOCKED');
+    // the final shake exits early, so only two locks happen on each side
+    expect(maxLocks).toHaveLength(2);
+    expect(minLocks).toHaveLength(2);
+    expect(maxLocks.map((frame) => frame.variables?.lockedIndex)).toEqual([6, 5]);
+    expect(minLocks.map((frame) => frame.variables?.lockedIndex)).toEqual([0, 1]);
+
+    // per-swap milestones are gone: swaps vastly outnumber milestones
+    const swaps = timeline.filter((frame) => frame.action === 'FORWARD_SWAP' || frame.action === 'BACKWARD_SWAP');
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(swaps.length).toBeGreaterThan(milestones.length);
+
+    const last = timeline[timeline.length - 1];
+    expectSorted(values(last));
+    expect(last.variables?.result).toBe(7);
+    expect(last.variables?.shakes).toBeGreaterThan(2);
+  });
+
+  it('marks real turning points as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Max Locked',
+      'Half the Array Locked',
+      'Early Exit (Sorted)',
+      'Cocktail Shaker Complete',
+    ]);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const sortedTimeline = module.generateTimeline([1, 2, 3, 4, 5]);
+    const matchers: Record<number, RegExp> = {
+      2: /start = 0|let start = 0|int start = 0/,
+      8: /arr\[i\] > arr\[i \+ 1\]/,
+      9: /swap arr\[i\] with arr\[i \+ 1\]|arr\[i\], arr\[i \+ 1\]|swap\(arr\[i\], arr\[i \+ 1\]\)|arr\[i\] = arr\[i \+ 1\]/,
+      11: /if not swapped|if \(!swapped\)/,
+      13: /end = end - 1|end -= 1|end--/,
+      16: /arr\[i\] > arr\[i \+ 1\]/,
+      17: /swap arr\[i\] with arr\[i \+ 1\]|arr\[i\], arr\[i \+ 1\]|swap\(arr\[i\], arr\[i \+ 1\]\)|arr\[i\] = arr\[i \+ 1\]/,
+      19: /start = start \+ 1|start \+= 1|start\+\+;/,
+      20: /return arr/,
+    };
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(20);
+      for (const frame of [...timeline, ...sortedTimeline]) {
+        const line = resolveActiveCodeLine(raw, frame, sortedTimeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (matchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(false);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.comparisons).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([5, 1, 4, 2, 8, 0, 2]);
 
     const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
     expect(oversized[0].explanation).toMatch(/truncated to 12/);
