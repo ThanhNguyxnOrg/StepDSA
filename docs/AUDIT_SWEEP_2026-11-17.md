@@ -9,13 +9,14 @@ landing exactly on the authored line in all five languages.
 Measured with a scripted sweep over `generateTimeline` for the default input plus
 `auditTimeline` for every preset. Raw numbers, no sampling.
 
-## Status after the flagship rebuilds (2026-11-18)
+## Status after the flagship rebuilds (2026-11-19)
 
-**8/40 modules fully meet the standard** (aligned snippets + exact code-line map
+**11/40 modules fully meet the standard** (aligned snippets + exact code-line map
 + full pedagogy + 2 checkpoints + clean audit on every input): the five flagship
-sorts — insertion-sort, quicksort, mergesort, bubble-sort, heapsort — plus the
-three re-aligned searches — binary-search, exponential-search, interpolation-search.
-The remaining 32 keep their tier classification below.
+sorts — insertion-sort, quicksort, mergesort, bubble-sort, heapsort — plus
+selection-sort, counting-sort and radix-sort, and the three re-aligned searches —
+binary-search, exponential-search, interpolation-search.
+The remaining 29 keep their tier classification below.
 
 ## Verdict by tier
 
