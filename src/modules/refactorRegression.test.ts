@@ -3034,7 +3034,7 @@ describe('pedagogical timeline regressions', () => {
 
     // Routing frames expose the extracted digit (the 1s pass routes 170 via digit 0).
     expect(
-      timeline.some((frame) => frame.codeLine === 8 && frame.scopeVariables?.digit === 0)
+      timeline.some((frame) => frame.codeLine === 9 && frame.scopeVariables?.digit === 0)
     ).toBe(true);
 
     // Collect phase: one drain frame per non-empty bucket — never one bulk jump.
@@ -3043,7 +3043,7 @@ describe('pedagogical timeline regressions', () => {
     expect(
       timeline.some(
         (frame) =>
-          frame.codeLine === 10 &&
+          frame.codeLine === 11 &&
           frame.scopeVariables?.bucket === 0 &&
           frame.state.array.length > 0
       )
@@ -8157,6 +8157,167 @@ describe('counting sort rebuild regressions', () => {
       expect(result.errorCount, `${preset.id} errors`).toBe(0);
       expect(result.warningCount, `${preset.id} warnings`).toBe(0);
       expectSorted(outputValues(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
+
+describe('radix sort rebuild regressions', () => {
+  const mod = () => moduleById('radix-sort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+
+  it('frames every digit operation with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('PASS_START');
+    expect(actions).toContain('DIGIT_PLACE');
+    expect(actions).toContain('COLLECT_BUCKET');
+    expect(actions).toContain('PASS_COMPLETE');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('radix-digit-formula');
+    expect(checkpoints[0].checkpoint!.correctIndex).toBe(1);
+    expect(checkpoints[1].checkpoint!.id).toBe('radix-collect-order');
+  });
+
+  it('runs one stable pass per digit place and drains buckets in ascending order', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    // 3 digit passes for max 802
+    const passes = timeline.filter((frame) => frame.action === 'PASS_COMPLETE');
+    expect(passes).toHaveLength(3);
+    expect(passes.map((frame) => frame.variables?.exp)).toEqual([1, 10, 100]);
+
+    // every element routed once per pass
+    const routes = timeline.filter((frame) => frame.action === 'DIGIT_PLACE');
+    expect(routes).toHaveLength(24); // 8 elements × 3 passes
+
+    // bucket drains are ascending within each pass
+    const collectExp = new Map<number, number[]>();
+    for (const frame of timeline.filter((frame) => frame.action === 'COLLECT_BUCKET')) {
+      const list = collectExp.get(frame.variables?.exp) ?? [];
+      list.push(frame.variables?.bucket);
+      collectExp.set(frame.variables?.exp, list);
+    }
+    for (const [, bucketsDrained] of collectExp) {
+      const sortedCopy = [...bucketsDrained].sort((a, b) => a - b);
+      expect(bucketsDrained).toEqual(sortedCopy);
+    }
+
+    // after the 10s pass the array is sorted by the two lowest digits (802's low digits)
+    const after10s = passes[1].state.array as number[];
+    const lowTwoDigits = after10s.map((v) => v % 100);
+    for (let k = 1; k < lowTwoDigits.length; k++) {
+      expect(lowTwoDigits[k]).toBeGreaterThanOrEqual(lowTwoDigits[k - 1]);
+    }
+
+    const last = timeline[timeline.length - 1];
+    expect(last.state.array).toEqual([2, 24, 45, 66, 75, 90, 170, 802]);
+    expect(last.variables?.result).toBe(8);
+    expect(last.variables?.passes).toBe(3);
+    expect(last.variables?.routes).toBe(24);
+  });
+
+  it('marks each digit pass as a real milestone', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      '1s Pass Sorted',
+      '10s Pass Sorted',
+      '100s Pass Sorted',
+      'Radix Sort Complete',
+    ]);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const matchers: Record<number, RegExp> = {
+      2: /length\(arr\) == 0|len\(arr\) == 0|arr.length === 0|arr.empty\(\)/,
+      3: /maxVal = |max_val = max|const maxVal = Math.max|int maxVal = \*max_element|int maxVal = Arrays/,
+      6: /10 empty buckets|range\(10\)|length: 10|vector<vector<int>> buckets\(10\)|new int\[10\]/,
+      8: /digit = |const digit|int digit/,
+      9: /append x into B|buckets\[digit\]/,
+      11: /append all bucket|arr.extend\(bucket\)|arr.push\(\.\.\.bucket\)|arr.insert\(arr.end\(\)|arr\[k\+\+\] = buckets/,
+      12: /exp = exp \* 10|exp \*= 10/,
+      13: /return arr/,
+    };
+    for (const lang of languages) {
+      const raw = module.codeSnippets[lang];
+      const lines = raw.split('\n');
+      expect(lines, `${lang} snippet line count`).toHaveLength(13);
+      for (const frame of timeline) {
+        const line = resolveActiveCodeLine(raw, frame, timeline);
+        expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+        if (matchers[frame.codeLine]) {
+          expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, negative and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[0].conditionEval?.result).toBe(true);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.passes).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(invalid[invalid.length - 1].state.array).toEqual([3, 8]);
+
+    const negative = module.generateTimeline([-1, 5, -2, 3] as any);
+    expect(negative[0].explanation).toMatch(
+      /2 negative value\(s\) dropped \(LSD radix sort needs non-negative keys\)/
+    );
+    expect(negative[negative.length - 1].state.array).toEqual([3, 5]);
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(fallback[0].state.array).toEqual([170, 45, 75, 90, 802, 24, 2, 66]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      const final = timeline[timeline.length - 1].state.array as number[];
+      for (let k = 1; k < final.length; k++) {
+        expect(final[k]).toBeGreaterThanOrEqual(final[k - 1]);
+      }
       expect(result.pedagogyFrameCount).toBe(timeline.length);
       expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
     }

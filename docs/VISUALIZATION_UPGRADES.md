@@ -299,6 +299,18 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **radix-sort ✅ (2026-11-19):** full rebuild around the existing bucket-grid
+  stage — one operation per frame (INIT → PASS_START → DIGIT_PLACE per element
+  → COLLECT_BUCKET per non-empty bucket → PASS_COMPLETE per digit place →
+  DONE), 46 frames on the default input with WHAT/WHY/NEXT on all of them,
+  2 checkpoints (digit formula with non-zero correct index + collect order),
+  4 real milestones + auto Start (one per digit pass — genuine invariant
+  extensions — plus Complete), five 13-line snippets with the same statement
+  per line and exact code-line mapping (mapBad 312 → 0), honest normalisation
+  for the key domain (negatives dropped with one aggregated note, clamped to
+  max key 9999, >12 truncated; empty = valid 2-frame run), invariant
+  regression (after the 10s pass the array is sorted by its two lowest
+  digits). 6 regression tests added (689 total).
 - **counting-sort ✅ (2026-11-19):** full rebuild around the existing three-panel
   stage — one operation per frame (INIT → COUNT per element → PREFIX_START →
   PREFIX_ACC per key → BUILD_START → PLACE per element → DONE), 26 frames on

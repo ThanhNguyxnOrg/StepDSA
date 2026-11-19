@@ -12,6 +12,79 @@ export interface RadixSortState {
   phase: 'inspect-digit' | 'place-bucket' | 'collect' | 'done';
 }
 
+const MAX_LEN = 12;
+const MAX_KEY = 9999;
+const DEFAULT_ARRAY = [170, 45, 75, 90, 802, 24, 2, 66];
+
+interface NormalisedInput {
+  array: number[];
+  notes: string[];
+}
+
+/**
+ * LSD radix sort needs non-negative integer keys: non-numeric entries and
+ * negative values are dropped, values are clamped to MAX_KEY, and the input is
+ * truncated to MAX_LEN elements. Every adjustment is reported as a note so the
+ * INIT frame can state it honestly. An explicitly empty array stays empty —
+ * it is a valid two-frame run, not an error.
+ */
+function normalise(input: number[] | undefined): NormalisedInput {
+  const notes: string[] = [];
+
+  if (!Array.isArray(input)) {
+    notes.push('input was not an array, so the default array is used');
+    return { array: [...DEFAULT_ARRAY], notes };
+  }
+
+  const usable = input.filter(
+    (value): value is number => typeof value === 'number' && Number.isFinite(value)
+  );
+
+  if (input.length > 0 && usable.length === 0) {
+    notes.push('no usable numbers in the input, so the default array is used');
+    return { array: [...DEFAULT_ARRAY], notes };
+  }
+  if (usable.length < input.length) {
+    notes.push(`${input.length - usable.length} non-numeric value(s) dropped`);
+  }
+
+  const negatives = usable.filter((value) => Math.round(value) < 0);
+  if (negatives.length > 0) {
+    notes.push(`${negatives.length} negative value(s) dropped (LSD radix sort needs non-negative keys)`);
+  }
+
+  const kept: number[] = [];
+  for (const value of usable) {
+    const rounded = Math.round(value);
+    if (rounded < 0) continue;
+    const clamped = Math.min(MAX_KEY, rounded);
+    if (clamped !== rounded) {
+      notes.push(`value ${rounded} clamped to ${clamped} (max key ${MAX_KEY})`);
+    }
+    kept.push(clamped);
+  }
+
+  if (input.length > 0 && kept.length === 0) {
+    notes.push('no non-negative keys remain, so the default array is used');
+    return { array: [...DEFAULT_ARRAY], notes };
+  }
+
+  let array = kept;
+  if (array.length > MAX_LEN) {
+    notes.push(`${array.length} values truncated to ${MAX_LEN} for a readable strip`);
+    array = array.slice(0, MAX_LEN);
+  }
+
+  return { array, notes };
+}
+
+function isSorted(input: number[]): boolean {
+  for (let i = 1; i < input.length; i++) {
+    if (input[i] < input[i - 1]) return false;
+  }
+  return true;
+}
+
 export const radixSortModule: AlgorithmModule<number[], RadixSortState> = {
   id: 'radix-sort',
   title: 'Radix Sort (LSD Digit Buckets)',
@@ -58,8 +131,21 @@ export const radixSortModule: AlgorithmModule<number[], RadixSortState> = {
   ],
   defaultInput: [170, 45, 75, 90, 802, 24, 2, 66],
   codeSnippets: {
+    pseudocode: `function radixSort(arr):
+    if length(arr) == 0: return arr
+    maxVal = maximum value in arr
+    exp = 1
+    while floor(maxVal / exp) > 0:
+        create 10 empty buckets B[0..9]
+        for each x in arr:
+            digit = floor(x / exp) mod 10
+            append x into B[digit]
+        clear arr
+        append all bucket contents B[0..9] into arr in order
+        exp = exp * 10
+    return arr`,
     python: `def radix_sort(arr):
-    if not arr: return arr
+    if len(arr) == 0: return arr
     max_val = max(arr)
     exp = 1
     while max_val // exp > 0:
@@ -67,332 +153,350 @@ export const radixSortModule: AlgorithmModule<number[], RadixSortState> = {
         for num in arr:
             digit = (num // exp) % 10
             buckets[digit].append(num)
-        arr = [num for bucket in buckets for num in bucket]
+        arr = []
+        for bucket in buckets: arr.extend(bucket)
         exp *= 10
     return arr`,
     typescript: `function radixSort(arr: number[]): number[] {
   if (arr.length === 0) return arr;
   const maxVal = Math.max(...arr);
-  for (let exp = 1; Math.floor(maxVal / exp) > 0; exp *= 10) {
+  let exp = 1;
+  while (Math.floor(maxVal / exp) > 0) {
     const buckets: number[][] = Array.from({ length: 10 }, () => []);
     for (const num of arr) {
       const digit = Math.floor(num / exp) % 10;
-      buckets[digit].push(num);
-    }
-    arr = buckets.flat();
-  }
-  return arr;
-}`,
-    cpp: `void radixSort(vector<int>& arr) {
-    if (arr.empty()) return;
+      buckets[digit].push(num); }
+    arr = [];
+    for (const bucket of buckets) arr.push(...bucket);
+    exp *= 10; }
+  return arr; }`,
+    cpp: `vector<int> radixSort(vector<int>& arr) {
+    if (arr.empty()) return arr;
     int maxVal = *max_element(arr.begin(), arr.end());
-    for (int exp = 1; maxVal / exp > 0; exp *= 10) {
-        vector<int> output(arr.size());
-        int count[10] = {0};
-        for (int x : arr) count[(x / exp) % 10]++;
-        for (int i = 1; i < 10; i++) count[i] += count[i - 1];
-        for (int i = arr.size() - 1; i >= 0; i--) {
-            output[count[(arr[i] / exp) % 10] - 1] = arr[i];
-            count[(arr[i] / exp) % 10]--;
-        }
-        arr = output;
-    }
-}`,
-    java: `public static void radixSort(int[] arr) {
-    if (arr.length == 0) return;
+    int exp = 1;
+    while (maxVal / exp > 0) {
+        vector<vector<int>> buckets(10);
+        for (int x : arr) {
+            int digit = (x / exp) % 10;
+            buckets[digit].push_back(x); }
+        arr.clear();
+        for (auto& b : buckets) arr.insert(arr.end(), b.begin(), b.end());
+        exp *= 10; }
+    return arr; }`,
+    java: `int[] radixSort(int[] arr) {
+    if (arr.length == 0) return arr;
     int maxVal = Arrays.stream(arr).max().getAsInt();
-    for (int exp = 1; maxVal / exp > 0; exp *= 10) {
-        int[] output = new int[arr.length];
-        int[] count = new int[10];
-        for (int x : arr) count[(x / exp) % 10]++;
-        for (int i = 1; i < 10; i++) count[i] += count[i - 1];
-        for (int i = arr.length - 1; i >= 0; i--) {
-            output[count[(arr[i] / exp) % 10] - 1] = arr[i];
-            count[(arr[i] / exp) % 10]--;
-        }
-        System.arraycopy(output, 0, arr, 0, arr.length);
-    }
-}`,
-    pseudocode: `function RadixSort(A):
-    maxVal = maximum value in A
-    exp = 1
-    while floor(maxVal / exp) > 0:
-        create 10 empty buckets B[0..9]
-        for each x in A:
-            digit = floor(x / exp) mod 10
-            append x into B[digit]
-        A = concatenate all B[0..9] in order
-        exp = exp * 10
-    return A`,
+    int exp = 1;
+    while (maxVal / exp > 0) {
+        int[][] buckets = new int[10][arr.length]; int[] size = new int[10];
+        for (int x : arr) {
+            int digit = (x / exp) % 10;
+            buckets[digit][size[digit]++] = x; }
+        int k = 0;
+        for (int d = 0; d < 10; d++) for (int t = 0; t < size[d]; t++) arr[k++] = buckets[d][t];
+        exp *= 10; }
+    return arr; }`,
   },
 
   generateTimeline: (input: number[]): ExecutionFrame<RadixSortState>[] => {
-    let arr = Array.isArray(input) && input.length > 0 ? input.map((n) => Math.max(0, Math.floor(n))) : [170, 45, 75, 90, 802, 24, 2, 66];
-    const maxVal = Math.max(...arr, 0);
+    const { array, notes } = normalise(input);
+    const n = array.length;
+    const maxVal = n > 0 ? Math.max(...array) : 0;
     const timeline: ExecutionFrame<RadixSortState>[] = [];
 
-    const baseFrame = (
-      stepIdx: number,
-      state: RadixSortState,
-      codeLine: number,
-      explanation: string,
-      action: string,
-      isMilestone: boolean,
-      scope: Record<string, string | number>,
-      soundCue?: ExecutionFrame<RadixSortState>['soundCue']
-    ): ExecutionFrame<RadixSortState> => ({
-      stepIndex: stepIdx,
-      totalSteps: 0,
-      codeLine,
-      state: {
-        array: [...state.array],
-        exp: state.exp,
-        maxVal: state.maxVal,
-        buckets: state.buckets.map((b) => [...b]),
-        currentIdx: state.currentIdx,
-        activeBucket: state.activeBucket,
-        collectBucket: state.collectBucket,
-        phase: state.phase,
-      },
-      codeHighlights: {
-        python: [codeLine],
-        typescript: [codeLine],
-        cpp: [codeLine],
-        java: [codeLine],
-        pseudocode: [codeLine],
-      },
-      callStack: [
-        {
-          id: 'radix-frame',
-          name: 'radixSort',
-          file: 'radixSort.ts',
-          line: codeLine,
-          params: { n: arr.length, exp: state.exp, maxVal },
-        },
-      ],
-      scopeVariables: scope,
-      explanation,
-      action,
-      isMilestone,
-      soundCue,
-      invariantStatus:
-        state.phase === 'done'
-          ? 'Array is fully sorted across all digit places.'
-          : `Array is stably sorted for all digits < ${state.exp * 10}.`,
-    });
+    let working = [...array];
+    let buckets: number[][] = Array.from({ length: 10 }, () => []);
+    let exp = 1;
+    let currentIdx: number | null = null;
+    let activeBucket: number | null = null;
+    let collectBucket: number | null = null;
+    let phase: RadixSortState['phase'] = 'inspect-digit';
+    const stats = { routes: 0, collects: 0, passes: 0 };
 
-    const state: RadixSortState = {
-      array: [...arr],
-      exp: 1,
-      maxVal,
-      buckets: Array.from({ length: 10 }, () => []),
-      currentIdx: null,
-      activeBucket: null,
-      collectBucket: null,
-      phase: 'inspect-digit',
+    let collectCheckpointAdded = false;
+    let digitCheckpointAdded = false;
+
+    const pushFrame = (opts: {
+      codeLine: number;
+      action: string;
+      explanation: string;
+      pedagogy: { what: string; why: string; whatNext: string };
+      variables?: Record<string, any>;
+      conditionEval?: ExecutionFrame<RadixSortState>['conditionEval'];
+      milestone?: string;
+      soundCue?: ExecutionFrame<RadixSortState>['soundCue'];
+      checkpoint?: ExecutionFrame<RadixSortState>['checkpoint'];
+    }) => {
+      timeline.push({
+        stepIndex: timeline.length,
+        totalSteps: timeline.length + 1,
+        codeLine: opts.codeLine,
+        action: opts.action,
+        state: {
+          array: [...working],
+          exp,
+          maxVal,
+          buckets: buckets.map((b) => [...b]),
+          currentIdx,
+          activeBucket,
+          collectBucket,
+          phase,
+        },
+        callStack: [
+          {
+            name: 'radixSort',
+            params: { n: working.length, exp, maxVal },
+            line: opts.codeLine,
+            isCurrent: true,
+          },
+        ],
+        scopeVariables: opts.variables ?? {},
+        variables: opts.variables,
+        conditionEval: opts.conditionEval,
+        explanation: opts.explanation,
+        metrics: {
+          comparisons: 0,
+          swaps: stats.routes + stats.collects,
+          accesses: stats.routes * 2 + stats.collects * 2,
+          lookups: 0,
+        },
+        invariantStatus: {
+          label:
+            phase === 'done'
+              ? 'the array is fully sorted across all digit places'
+              : `the array is stably sorted by all digits below exp = ${exp * 10}`,
+          isValid: true,
+        },
+        pedagogy: opts.pedagogy,
+        isMilestone: !!opts.milestone,
+        milestoneTitle: opts.milestone,
+        soundCue: opts.soundCue ?? 'step',
+        ...(opts.checkpoint ? { checkpoint: opts.checkpoint } : {}),
+      });
     };
 
-    let step = 0;
-    let checkpointAdded = false;
+    const digitNameFor = (e: number): string =>
+      e === 1 ? '1s' : e === 10 ? '10s' : e === 100 ? '100s' : e === 1000 ? '1000s' : `${e}s`;
 
-    // Initial step
-    timeline.push({
-      ...baseFrame(
-        step++,
-        state,
-        3,
-        `Initialized Radix Sort. Maximum element = ${maxVal}. Starting with Least Significant Digit (exp = 1, 1s place).`,
-        'Initialize Radix Sort',
-        true,
-        { N: arr.length, maxVal, exp: 1 },
-        'start'
-      ),
-      pedagogy: {
-        what: `The largest key is ${maxVal}, so ${maxVal === 0 ? 1 : Math.floor(Math.log10(maxVal)) + 1} digit passes are enough to place every value.`,
-        why: 'LSD radix sort deliberately starts with the least significant digit; later passes only refine order without destroying it.',
-        whatNext: 'Pass 1: route every number into one of ten buckets by its 1s digit.',
-      },
-    });
-
-    let exp = 1;
-    while (Math.floor(maxVal / exp) > 0) {
-      state.exp = exp;
-      state.buckets = Array.from({ length: 10 }, () => []);
-      state.collectBucket = null;
-      const digitName = exp === 1 ? '1s' : exp === 10 ? '10s' : exp === 100 ? '100s' : `${exp}s`;
-
-      timeline.push({
-        ...baseFrame(
-          step++,
-          state,
-          5,
-          `Starting pass for ${digitName} place (divisor exp = ${exp}). Cleared 10 digit buckets (0 to 9).`,
-          `Start pass exp = ${exp}`,
-          true,
-          { exp, place: digitName, activeElements: state.array.length }
-        ),
+    // ── Frame 0: initialisation ─────────────────────────────────────────────
+    if (n > 0) {
+      const digitCount = maxVal === 0 ? 1 : Math.floor(Math.log10(maxVal)) + 1;
+      pushFrame({
+        codeLine: 3,
+        action: 'INIT',
+        explanation:
+          `maxVal = ${maxVal}, so ${digitCount} digit pass(es) are enough. Starting at the 1s place (exp = 1).` +
+          (notes.length ? ` Input adjusted: ${notes.join('; ')}.` : ''),
+        conditionEval: { expr: 'length(arr) == 0', condition: `${n} == 0`, result: false },
+        variables: { N: n, maxVal, digitPasses: digitCount },
+        soundCue: 'start',
         pedagogy: {
-          what: `Pass for the ${digitName} place begins with exp = ${exp}; all ten buckets are empty.`,
-          why: 'Buckets must be cleared every pass or items from the previous digit would leak into this pass.',
-          whatNext: `For each number compute digit = (value ÷ ${exp}) mod 10 and append it to that bucket.`,
+          what: `The largest key is ${maxVal}, so ${digitCount} digit passes are enough to place every value.`,
+          why: 'LSD radix sort deliberately starts with the least significant digit; later passes only refine order without destroying it.',
+          whatNext: 'Pass 1: route every number into one of ten buckets by its 1s digit.',
         },
       });
 
-      // Phase 1: Distribute numbers into buckets
-      state.phase = 'place-bucket';
-      for (let i = 0; i < state.array.length; i++) {
-        const val = state.array[i];
-        const digit = Math.floor(val / exp) % 10;
-        state.currentIdx = i;
-        state.activeBucket = digit;
+      while (Math.floor(maxVal / exp) > 0) {
+        const digitName = digitNameFor(exp);
+        buckets = Array.from({ length: 10 }, () => []);
+        collectBucket = null;
+        stats.passes += 1;
+        phase = 'place-bucket';
 
-        timeline.push({
-          ...baseFrame(
-            step++,
-            state,
-            8,
-            `Inspecting ${val}: (${val} // ${exp}) % 10 = ${digit}. Routing ${val} into bucket [${digit}].`,
-            `Route ${val} -> bucket ${digit}`,
-            false,
-            { i, val, exp, digit },
-            'compare'
-          ),
+        pushFrame({
+          codeLine: 6,
+          action: 'PASS_START',
+          explanation: `Starting the ${digitName} pass (exp = ${exp}): ten fresh buckets [0..9] are cleared.`,
+          variables: { exp, place: digitName, elements: working.length },
+          soundCue: 'step',
           pedagogy: {
-            what: `Value ${val} exposes digit ${digit} at the ${digitName} place: (${val} ÷ ${exp}) mod 10.`,
-            why: 'A single arithmetic formula extracts the digit for any place value — no comparisons between keys are needed.',
-            whatNext: `Append ${val} at the tail of bucket [${digit}] so equal digits keep their arrival order.`,
+            what: `Pass for the ${digitName} place begins with exp = ${exp}; all ten buckets are empty.`,
+            why: 'Buckets must be cleared every pass or items from the previous digit would leak into this pass.',
+            whatNext: `For each number compute digit = (value ÷ ${exp}) mod 10 and append it to that bucket.`,
           },
         });
 
-        state.buckets[digit].push(val);
+        for (let i = 0; i < working.length; i++) {
+          const val = working[i];
+          const digit = Math.floor(val / exp) % 10;
+          currentIdx = i;
+          activeBucket = digit;
+          buckets[digit].push(val);
+          stats.routes += 1;
 
-        timeline.push({
-          ...baseFrame(
-            step++,
-            state,
-            9,
-            `Placed ${val} into bucket [${digit}]. Bucket [${digit}] now has ${state.buckets[digit].length} items.`,
-            `Placed in bucket ${digit}`,
-            false,
-            { val, bucket: digit, bucketSize: state.buckets[digit].length },
-            'step'
-          ),
+          const digitCheckpoint: ExecutionFrame<RadixSortState>['checkpoint'] | undefined =
+            !digitCheckpointAdded
+              ? {
+                  id: 'radix-digit-formula',
+                  question: `${val} is routed by (val ÷ ${exp}) mod 10 = ${digit}. Which digit of ${val} decides its bucket in this pass?`,
+                  options: [
+                    'The most significant (leftmost) digit',
+                    `The ${digitName}-place digit — position ${digit} from the right, 0-indexed`,
+                    'A random digit, different every pass',
+                  ],
+                  correctIndex: 1,
+                  explanation: `LSD passes read one fixed place: (${val} ÷ ${exp}) mod 10 isolates the ${digitName} digit, here ${digit}.`,
+                  hint: 'exp = 1 means divide by 1 — which digit survives the mod 10?',
+                }
+              : undefined;
+
+          pushFrame({
+            codeLine: 9,
+            action: 'DIGIT_PLACE',
+            explanation: `(${val} ÷ ${exp}) % 10 = ${digit}: ${val} is appended to bucket [${digit}] (now ${buckets[digit].length} item(s)).`,
+            variables: { i, val, exp, digit, bucketSize: buckets[digit].length },
+            conditionEval: {
+              expr: `(val ÷ exp) % 10`,
+              condition: `(${val} ÷ ${exp}) % 10 = ${digit}`,
+              result: digit,
+            },
+            soundCue: 'compare',
+            checkpoint: digitCheckpoint,
+            pedagogy: {
+              what: `Value ${val} exposes digit ${digit} at the ${digitName} place and joins bucket [${digit}].`,
+              why: 'A single arithmetic formula extracts the digit for any place value — no comparisons between keys are needed.',
+              whatNext:
+                i < working.length - 1
+                  ? `Route the next value arr[${i + 1}] = ${working[i + 1]}.`
+                  : 'All values are bucketed — gather the buckets next.',
+            },
+          });
+          if (digitCheckpoint) digitCheckpointAdded = true;
+        }
+        currentIdx = null;
+        activeBucket = null;
+
+        phase = 'collect';
+        const nextArr: number[] = [];
+        const nonEmptyBuckets: number[] = [];
+        for (let b = 0; b < 10; b++) {
+          if (buckets[b].length > 0) nonEmptyBuckets.push(b);
+        }
+
+        nonEmptyBuckets.forEach((b, drainOrder) => {
+          const drainedItems = [...buckets[b]];
+          buckets[b] = []; // the bucket is genuinely empty once drained
+          collectBucket = b;
+          for (const item of drainedItems) nextArr.push(item);
+          working = [...nextArr];
+          stats.collects += 1;
+
+          const nextBucket = nonEmptyBuckets[drainOrder + 1];
+          const collectCheckpoint: ExecutionFrame<RadixSortState>['checkpoint'] | undefined =
+            !collectCheckpointAdded && drainOrder === 0
+              ? {
+                  id: 'radix-collect-order',
+                  question: 'When rebuilding the array, in which order are the buckets drained?',
+                  options: [
+                    'Descending: bucket [9] → bucket [0]',
+                    'Ascending: bucket [0] → bucket [9]',
+                  ],
+                  correctIndex: 1,
+                  explanation:
+                    'Ascending order sorts by this digit, and stable appends preserve the ordering established by all lower-digit passes.',
+                  hint: 'Which bucket holds the smallest current digit?',
+                }
+              : undefined;
+
+          pushFrame({
+            codeLine: 11,
+            action: 'COLLECT_BUCKET',
+            explanation: `Gathering bucket [${b}] (${drainedItems.length} item(s)): append [${drainedItems.join(', ')}] → rebuilt array [${working.join(', ')}].`,
+            variables: { exp, bucket: b, drained: drainedItems.length, rebuilt: working.join(', ') },
+            soundCue: 'step',
+            checkpoint: collectCheckpoint,
+            pedagogy: {
+              what: `Bucket [${b}] is drained in arrival order and appended to the rebuilt array.`,
+              why: 'Draining from bucket [0] upward puts all smaller digits first, and appending preserves each bucket\'s arrival order — that is the stability every earlier pass relies on.',
+              whatNext:
+                nextBucket !== undefined
+                  ? `Drain bucket [${nextBucket}] next.`
+                  : `All buckets drained — the ${digitName} pass is complete.`,
+            },
+          });
+          if (collectCheckpoint) collectCheckpointAdded = true;
+        });
+        collectBucket = null;
+
+        pushFrame({
+          codeLine: 12,
+          action: 'PASS_COMPLETE',
+          explanation: `${digitName} pass complete: [${working.join(', ')}] is stably sorted by the lowest ${exp === 1 ? 1 : Math.floor(Math.log10(exp)) + 1} digit(s).`,
+          variables: { exp, result: working.join(', ') },
+          conditionEval: {
+            expr: 'floor(maxVal / exp) > 0',
+            condition: `${Math.floor(maxVal / exp)} > 0`,
+            result: Math.floor(maxVal / exp) > 0,
+          },
+          soundCue: 'success',
+          milestone: `${digitName} Pass Sorted`,
           pedagogy: {
-            what: `${val} joined bucket [${digit}]; the bucket now holds ${state.buckets[digit].length} item(s).`,
-            why: 'Items are always appended at the tail: within one bucket, earlier-arriving equal-digit keys stay ahead (stability).',
+            what: `The ${digitName} pass is complete; the rebuilt array is [${working.join(', ')}].`,
+            why: `The array is now stably sorted by its lowest ${exp === 1 ? 1 : Math.floor(Math.log10(exp)) + 1} digit(s) — later passes may reorder by higher digits but will not break this.`,
             whatNext:
-              i < state.array.length - 1
-                ? `Route the next array value at index ${i + 1}.`
-                : 'All values are bucketed — gather the buckets next.',
+              Math.floor(maxVal / (exp * 10)) > 0
+                ? `Advance exp to ${exp * 10} and repeat with the next digit.`
+                : 'All digit places processed — the array must be fully sorted.',
           },
         });
+
+        exp *= 10;
       }
 
-      // Phase 2: Collect numbers from buckets 0 to 9 — one frame per non-empty
-      // bucket so the stable drain order is never hidden in a single jump.
-      state.phase = 'collect';
-      state.currentIdx = null;
-      state.activeBucket = null;
-
-      const nextArr: number[] = [];
-      const nonEmptyBuckets: number[] = [];
-      for (let b = 0; b < 10; b++) {
-        if (state.buckets[b].length > 0) nonEmptyBuckets.push(b);
-      }
-
-      nonEmptyBuckets.forEach((b, drainOrder) => {
-        const drainedItems = [...state.buckets[b]];
-        state.buckets[b] = []; // the bucket is genuinely empty once drained
-        state.collectBucket = b;
-        for (const item of drainedItems) nextArr.push(item);
-        state.array = [...nextArr];
-
-        const nextBucket = nonEmptyBuckets[drainOrder + 1];
-        const attachCheckpoint = !checkpointAdded && drainOrder === 0;
-
-        timeline.push({
-          ...baseFrame(
-            step++,
-            state,
-            10,
-            `Gathering bucket [${b}] (${drainedItems.length} item(s)): append [${drainedItems.join(', ')}] → rebuilt array [${state.array.join(', ')}].`,
-            `Gather bucket ${b}`,
-            false,
-            { exp, bucket: b, drained: drainedItems.length, rebuilt: state.array.join(', ') }
-          ),
-          pedagogy: {
-            what: `Bucket [${b}] is drained in arrival order and appended to the rebuilt array.`,
-            why: 'Draining from bucket [0] upward puts all smaller digits first, and appending preserves each bucket\'s arrival order — that is the stability every earlier pass relies on.',
-            whatNext:
-              nextBucket !== undefined
-                ? `Drain bucket [${nextBucket}] next.`
-                : `All buckets drained — the ${digitName} pass is complete.`,
-          },
-          checkpoint: attachCheckpoint
-            ? {
-                id: 'radix-collect-order',
-                question: 'When rebuilding the array, in which order are the buckets drained?',
-                options: [
-                  'Ascending: bucket [0] → bucket [9]',
-                  'Descending: bucket [9] → bucket [0]',
-                ],
-                correctIndex: 0,
-                explanation:
-                  'Ascending order sorts by this digit, and stable appends preserve the ordering established by all lower-digit passes.',
-              }
-            : undefined,
-        });
-        if (attachCheckpoint) checkpointAdded = true;
-      });
-
-      state.collectBucket = null;
-
-      timeline.push({
-        ...baseFrame(
-          step++,
-          state,
-          10,
-          `Gathered all buckets in stable order for ${digitName} place: [${state.array.join(', ')}].`,
-          `Gather buckets for exp = ${exp}`,
-          true,
-          { exp, result: state.array.join(', ') },
-          'success'
-        ),
+      phase = 'done';
+      pushFrame({
+        codeLine: 13,
+        action: 'DONE',
+        explanation: `Radix Sort complete: [${working.join(', ')}] is sorted after ${stats.passes} pass(es), ${stats.routes} route(s) and ${stats.collects} bucket gather(s) — zero element-to-element comparisons.`,
+        conditionEval: { expr: 'array is sorted', condition: working.join(', '), result: isSorted(working) },
+        variables: {
+          result: n,
+          passes: stats.passes,
+          routes: stats.routes,
+          collects: stats.collects,
+        },
+        soundCue: 'complete',
+        milestone: 'Radix Sort Complete',
         pedagogy: {
-          what: `The ${digitName} pass is complete; the rebuilt array is [${state.array.join(', ')}].`,
-          why: `The array is now stably sorted by its lowest ${exp === 1 ? 1 : Math.floor(Math.log10(exp)) + 1} digit(s) — later passes may reorder by higher digits but will not break this.`,
-          whatNext:
-            Math.floor(maxVal / (exp * 10)) > 0
-              ? `Advance exp to ${exp * 10} and repeat with the next digit.`
-              : 'All digit places processed — the array must be fully sorted.',
+          what: `Final array: [${working.join(', ')}] — fully sorted after one pass per digit place.`,
+          why: 'Each pass was stable for one digit, so the ordering from lower digits survived every higher-digit pass.',
+          whatNext: 'Try the 3-digit preset and watch how the array becomes sorted by the 10s pass and only perfected by the 100s pass.',
         },
       });
-
-      exp *= 10;
+    } else {
+      // Explicitly empty input: a valid two-frame run, not a fallback.
+      pushFrame({
+        codeLine: 2,
+        action: 'INIT',
+        explanation:
+          'n = length(arr) = 0: the guard returns the array immediately — no digit passes run.' +
+          (notes.length ? ` Input adjusted: ${notes.join('; ')}.` : ''),
+        conditionEval: { expr: 'length(arr) == 0', condition: '0 == 0', result: true },
+        variables: { N: 0, maxVal: null, digitPasses: 0 },
+        soundCue: 'start',
+        pedagogy: {
+          what: 'The array is empty, so there is no maximum and no digit pass to run.',
+          why: 'max(arr) would be undefined on an empty input — the length guard exists precisely to avoid that.',
+          whatNext: 'Return the empty array; nothing is routed or gathered.',
+        },
+      });
+      phase = 'done';
+      pushFrame({
+        codeLine: 13,
+        action: 'DONE',
+        explanation: 'Radix Sort complete on an empty array: zero passes, zero routes, zero gathers.',
+        conditionEval: { expr: 'array is sorted', condition: '', result: true },
+        variables: { result: 0, passes: 0, routes: 0, collects: 0 },
+        soundCue: 'complete',
+        milestone: 'Nothing to Sort',
+        pedagogy: {
+          what: 'An empty array is sorted by definition.',
+          why: 'The guard short-circuits before any bucket is allocated.',
+          whatNext: 'Load a preset such as Classic 3-Digit Keys to watch the digit passes run.',
+        },
+      });
     }
-
-    state.phase = 'done';
-    state.currentIdx = null;
-    state.activeBucket = null;
-    state.collectBucket = null;
-
-    timeline.push({
-      ...baseFrame(
-        step++,
-        state,
-        12,
-        `Radix Sort complete! All digit places processed. Final sorted array: [${state.array.join(', ')}].`,
-        'Sort Complete',
-        true,
-        { finalArray: state.array.join(', ') },
-        'complete'
-      ),
-      pedagogy: {
-        what: `Final array: [${state.array.join(', ')}] — fully sorted after one pass per digit place.`,
-        why: 'Each pass was stable for one digit, so the ordering from lower digits survived every higher-digit pass.',
-        whatNext: 'Try the 3-digit preset and watch how the array becomes sorted by the 10s pass and only perfected by the 100s pass.',
-      },
-    });
 
     const total = timeline.length;
     timeline.forEach((f) => {
