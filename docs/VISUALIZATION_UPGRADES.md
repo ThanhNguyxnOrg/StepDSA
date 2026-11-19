@@ -299,6 +299,16 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **selection-sort ✅ (2026-11-19):** full rebuild — one operation per frame
+  (INIT → PASS_START → SCAN_START → COMPARE → MIN_UPDATE → SWAP / NO_SWAP →
+  INDEX_LOCKED → DONE), 53 frames on the default input with WHAT/WHY/NEXT on
+  all of them, 2 checkpoints (first scan compare with a dynamic correct index +
+  first swap guard), 3 real milestones + auto Start (First Index Locked, Half
+  the Array Locked, Complete — no per-pass noise), five 10-line snippets with
+  the same statement per line and exact code-line mapping (mapBad 249 → 0),
+  honest input normalisation, write-minimality regression (swaps ≤ passes;
+  sorted input = full O(N²) compares, 0 swaps). 6 regression tests added
+  (677 total).
 - **heapsort ✅ (2026-11-18):** full rebuild on top of the existing heap stage —
   named actions on every frame (INIT → BUILD_SIFT → INSPECT → LEFT_COMPARE →
   RIGHT_COMPARE → SWAP_DECISION → SIFT_SWAP → SIFT_CONTINUE → HEAP_READY →
