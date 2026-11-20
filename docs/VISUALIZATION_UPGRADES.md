@@ -299,6 +299,16 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **timsort ✅ (2026-11-19):** rebuild — named actions on every frame (INIT →
+  SCAN_RUN (with run-direction checkpoint) → REVERSE_RUN → EXTEND_RUN/SHIFT →
+  RUN_PUSHED → MERGE_START/COMPARE/COPY → MERGED → DONE), 21 frames on the
+  default input with WHAT/WHY/NEXT on all of them, 2 checkpoints (run
+  direction with dynamic correct index + first merge compare), 4 real
+  milestones + auto Start (First Run Finalized, All Runs Stacked, First Merge
+  Complete, Complete — per-run/per-merge noise removed), five 11-line
+  snippets with the same statement per line and exact code-line mapping
+  (mapBad 60 → 0), honest input normalisation, best-case regression (one
+  natural run, zero merges). 6 regression tests added (726 total).
 - **introsort ✅ (2026-11-19):** rebuild — named actions on every frame (INIT →
   PIVOT_SELECTED → COMPARE → SWAP → PIVOT_PLACED → CALL_LEFT/CALL_RIGHT →
   INSERTION_ENTRY/SHIFT/DONE → HEAPSORT_ENTRY/SIFT/EXTRACT → DONE), 38 frames
