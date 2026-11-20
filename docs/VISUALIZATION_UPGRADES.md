@@ -299,6 +299,15 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **z-algorithm ✅ (2026-11-20):** rebuild — pedagogy on every frame (was
+  0%), 3 checkpoints (delimiter role, match position with non-zero correct
+  index, box reuse), named actions (INIT → BOX_CHECK → Z_BOX_SHIFT →
+  MATCH_FOUND → DONE), 3 real milestones (First Z-Box Shift, First Match
+  Found, Search Complete), five 17-line snippets with the same statement per
+  line and exact code-line mapping (mapBad 239 → 0), honest normalisation
+  for {text, pattern} (delimiter clash substituted with a safe character and
+  noted, overlong inputs truncated with a note, empty pattern = valid
+  2-frame run with 0 matches). 6 regression tests added (786 total).
 - **kmp-search ✅ (2026-11-20):** rebuild — pedagogy on every frame (was 0%),
   2 checkpoints (LPS meaning with non-zero correct index + mismatch action
   with non-zero correct index), named actions (INIT → MATCH_CHAR →

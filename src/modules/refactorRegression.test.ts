@@ -10392,3 +10392,133 @@ describe('KMP rebuild regressions', () => {
     }
   });
 });
+
+describe('z-algorithm rebuild regressions', () => {
+  const mod = () => moduleById('z-algorithm');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+
+  it('frames box reuse, shifts and matches with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('BOX_CHECK');
+    expect(actions).toContain('Z_BOX_SHIFT');
+    expect(actions).toContain('MATCH_FOUND');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(3);
+    expect(checkpoints[0].checkpoint!.id).toBe('zalgorithm-delimiter-role');
+    expect(checkpoints[0].checkpoint!.correctIndex).toBe(0);
+    expect(checkpoints[1].checkpoint!.id).toBe('zalgorithm-match-position');
+    expect(checkpoints[2].checkpoint!.id).toBe('zalgorithm-box-reuse');
+  });
+
+  it('finds all overlapping occurrences via the concatenated string', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const matches = timeline.filter((frame) => frame.action === 'MATCH_FOUND');
+    const starts = matches.map((frame) => frame.variables?.matchIndexInText);
+    // "aba" occurs at text indices 0, 4 and 8 in "abacabaeaba"
+    expect(starts).toEqual([0, 4, 8]);
+
+    // the Z-box right boundary never moves backwards
+    let prevR = -1;
+    for (const frame of timeline) {
+      expect(frame.state.boxR).toBeGreaterThanOrEqual(prevR);
+      prevR = frame.state.boxR;
+    }
+
+    const last = timeline[timeline.length - 1];
+    expect(last.variables?.totalMatches).toBe(3);
+  });
+
+  it('marks the first box shift and first match as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Z-Box Shift',
+      'First Match Found',
+      'Search Complete',
+    ]);
+    const shiftFrames = timeline.filter((frame) => frame.action === 'Z_BOX_SHIFT');
+    expect(shiftFrames.filter((frame) => frame.isMilestone)).toHaveLength(1);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, module.presets[1].data]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /S = P \+ "\$" \+ T|s = pattern \+ "\$" \+ text|String s = pattern \+ "\$" \+ text|string s = pattern \+ "\$" \+ text/,
+        5: /L = 0, R = 0|l = r = 0|let l = 0, r = 0|int l = 0, r = 0/,
+        6: /matches = \[\]|const matches|vector<int> matches|List<Integer> matches/,
+        9: /Z\[i\] = min\(R - i \+ 1, Z\[i - L\]\)|z\[i\] = min\(r - i \+ 1, z\[i - l\]\)|z\[i\] = Math.min\(r - i \+ 1, z\[i - l\]\)|z\[i\] = min\(r - i \+ 1, z\[i - l\]\)/,
+        11: /Z\[i\] = Z\[i\] \+ 1|z\[i\] \+= 1|z\[i\]\+\+/,
+        14: /R = i \+ Z\[i\] - 1|r = i \+ z\[i\] - 1/,
+        16: /record match at|matches.append|matches.push|matches.push_back|matches.add/,
+        17: /return matches/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(17);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty pattern, delimiter clash and oversized input honestly', () => {
+    const module = mod();
+
+    const emptyPattern = module.generateTimeline({ pattern: '', text: 'abc' } as any);
+    expect(emptyPattern).toHaveLength(2);
+    expect(emptyPattern[0].conditionEval?.result).toBe(false);
+    expect(emptyPattern[1].variables?.totalMatches).toBe(0);
+    expect(auditTimeline(module, { pattern: '', text: 'abc' } as any).errorCount).toBe(0);
+
+    const clash = module.generateTimeline({ pattern: 'a$b', text: 'ab$ab' } as any);
+    expect(clash[0].explanation).toMatch(/input contains the delimiter/);
+    // 'a$b' becomes 'a§b' which does not occur in 'ab§ab' — zero matches is the honest result
+    expect(clash[clash.length - 1].variables?.totalMatches).toBe(0);
+
+    const oversized = module.generateTimeline({ pattern: 'ab', text: 'ababababababababababababababababababab' } as any);
+    expect(oversized[0].explanation).toMatch(/text truncated/);
+
+    for (const data of [module.defaultInput, { pattern: '', text: 'abc' }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correct on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
