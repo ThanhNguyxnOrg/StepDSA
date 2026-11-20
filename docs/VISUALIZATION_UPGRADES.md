@@ -299,6 +299,15 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **quicksort-partition-tree ✅ (2026-11-20):** rebuild — pedagogy on every
+  frame (was 0%), 2 checkpoints (last-element-pivot degeneracy with non-zero
+  correct index + compose-around-pivot), named actions (init → call →
+  choose-pivot → partition → base → sorted → complete), 2 real milestones +
+  auto Start (First Base Case, Complete), five 7-line snippets with the same
+  statement per line and exact code-line mapping (mapBad 263 → 0), honest
+  normalisation for {array} (non-numeric dropped, values clamped ±999, >8
+  truncated so the tree stays readable; empty array = valid short run).
+  6 regression tests added (768 total).
 - **backtracking-decision-tree ✅ (2026-11-20):** rebuild — pedagogy on every
   frame (was 0%), 2 checkpoints (include-vs-exclude order with non-zero
   correct index + prune soundness with non-negative items), named actions
