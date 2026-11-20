@@ -299,6 +299,14 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **drop-sort ✅ (2026-11-20):** rebuild — named actions on every frame (INIT →
+  COMPARE → RETAIN / DROP → DONE), 14 frames on the default input with
+  WHAT/WHY/NEXT on all of them, 1 checkpoint (survival decision with dynamic
+  correct index — the honest count for a two-outcome scan), 2 real milestones
+  + auto Start (First Drop, Complete), five 6-line snippets with the same
+  statement per line and exact code-line mapping (mapBad 87 → 0), honest
+  input normalisation, loss accounting regression (drops 1,2,3 / retains
+  4,5,6; reversed input = 1 survivor). 6 regression tests added (732 total).
 - **timsort ✅ (2026-11-19):** rebuild — named actions on every frame (INIT →
   SCAN_RUN (with run-direction checkpoint) → REVERSE_RUN → EXTEND_RUN/SHIFT →
   RUN_PUSHED → MERGE_START/COMPARE/COPY → MERGED → DONE), 21 frames on the

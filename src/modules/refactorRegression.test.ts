@@ -9195,3 +9195,138 @@ describe('timsort rebuild regressions', () => {
     }
   });
 });
+
+describe('drop sort rebuild regressions', () => {
+  const mod = () => moduleById('drop-sort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames every keep-or-drop decision with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('COMPARE');
+    expect(actions).toContain('RETAIN');
+    expect(actions).toContain('DROP');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(1);
+    expect(checkpoints[0].checkpoint!.id).toBe('dropsort-survival');
+  });
+
+  it('drops exactly the chain-breaking elements and never moves a survivor', () => {
+    const module = mod();
+    const timeline = module.generateTimeline([3, 1, 4, 2, 5, 3, 6]);
+
+    const drops = timeline.filter((frame) => frame.action === 'DROP');
+    const retains = timeline.filter((frame) => frame.action === 'RETAIN');
+    // drops 1, 2, 3; retains 3, 4, 5, 6
+    expect(drops.map((frame) => frame.variables?.droppedValue)).toEqual([1, 2, 3]);
+    expect(retains.map((frame) => frame.variables?.value)).toEqual([4, 5, 6]);
+    // every drop frame is highlighted as discarded in the very same frame
+    for (const frame of drops) {
+      expect(frame.state.array[frame.variables?.index].status).toBe('discarded');
+    }
+
+    const last = timeline[timeline.length - 1];
+    // the final frame shows only survivors
+    expect(values(last)).toEqual([3, 4, 5, 6]);
+    expect(last.variables?.survivingCount).toBe(4);
+    expect(last.variables?.droppedCount).toBe(3);
+    expect(last.variables?.originalCount).toBe(7);
+  });
+
+  it('marks the first drop as a milestone but not every drop', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Drop',
+      'Drop Sort Complete',
+    ]);
+    const dropFrames = timeline.filter((frame) => frame.action === 'DROP');
+    expect(dropFrames.length).toBeGreaterThan(1);
+    expect(dropFrames.filter((frame) => frame.isMilestone)).toHaveLength(1);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, [1, 2, 3, 4, 5]]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /result = \[arr\[0\]\]|const result: number\[\] = \[arr\[0\]\]|vector<int> result = \{arr\[0\]\}|List<Integer> result/,
+        3: /for i|for \(int i|for \(let i|for \(size_t i/,
+        4: /arr\[i\] >= |arr\[i\] === /,
+        5: /append arr\[i\]|result\.append\(arr\[i\]\)|result\.push\(arr\[i\]\)|result\.push_back\(arr\[i\]\)|result\.add\(arr\[i\]\)/,
+        6: /return result/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(6);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.survivingCount).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(values(invalid[invalid.length - 1])).toEqual([3, 8]);
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([3, 1, 4, 2, 5, 3, 6]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean on every preset including total loss', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+    // reversed input: everything but the first element is dropped
+    const worst = module.generateTimeline([8, 7, 6, 5, 4, 3]);
+    expect(worst[worst.length - 1].variables?.survivingCount).toBe(1);
+    expect(worst[worst.length - 1].variables?.droppedCount).toBe(5);
+  });
+});
