@@ -299,6 +299,16 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **sleep-sort ✅ (2026-11-20):** rebuild — named actions on every frame
+  (INIT → DISPATCH → TICK_WAKE → WAKE_APPEND → TICK_IDLE → DONE), 17 frames
+  on the default input with WHAT/WHY/NEXT on all of them, 2 checkpoints
+  (wake order with non-zero correct index + tie handling at t=2 with the
+  duplicates preset), 3 real milestones + auto Start (First Wakeup, Half
+  Awake, Complete — per-wakeup milestones removed), five 8-line snippets
+  with the same statement per line and exact code-line mapping (mapBad 8 →
+  0), honest normalisation (tick domain [1..15] with clamp notes, >8
+  truncated; empty = valid 2-frame run), DONE frame shows the sorted output.
+  6 regression tests added (750 total).
 - **stooge-sort ✅ (2026-11-20):** rebuild — named actions on every frame
   (INIT → BOUNDARY_COMPARE/SWAP → BASE_CASE → BRANCH_FIRST / BRANCH_LAST /
   BRANCH_FIRST_AGAIN → DONE), 111 frames on the default input with

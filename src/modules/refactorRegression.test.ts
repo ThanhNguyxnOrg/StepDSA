@@ -9606,3 +9606,139 @@ describe('stooge sort rebuild regressions', () => {
     }
   });
 });
+
+describe('sleep sort rebuild regressions', () => {
+  const mod = () => moduleById('sleep-sort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames dispatch, ticks and appends with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('DISPATCH');
+    expect(actions).toContain('TICK_WAKE');
+    expect(actions).toContain('WAKE_APPEND');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    // default input has no ties, so only the wake-order checkpoint fires
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(1);
+    expect(checkpoints[0].checkpoint!.id).toBe('sleepsort-wake-order');
+  });
+
+  it('wakes threads in ascending tick order and appends stably on ties', () => {
+    const module = mod();
+
+    const timeline = module.generateTimeline([4, 2, 2, 5, 1]);
+    const ticks = timeline.find((frame) => frame.action === 'TICK_WAKE');
+    expect(ticks).toBeTruthy();
+    const wakes = timeline.filter((frame) => frame.action === 'WAKE_APPEND');
+    expect(wakes.length).toBeGreaterThan(0);
+    // the two 2s wake at the SAME tick and are appended in input order
+    const tied = timeline.find((frame) => frame.action === 'TICK_WAKE' && frame.variables?.currentTick === 2);
+    expect(tied, 'the t=2 tick must fire').toBeTruthy();
+    expect(tied!.variables?.expiredThreadCount).toBe(2);
+    expect(tied!.checkpoint?.id).toBe('sleepsort-tie-wake');
+
+    const last = timeline[timeline.length - 1];
+    expect(values(last)).toEqual([1, 2, 2, 4, 5]);
+    expect(last.variables?.totalTicks).toBe(5);
+  });
+
+  it('marks the first wakeup and the halfway point as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Wakeup',
+      'Half Awake',
+      'Sleep Sort Complete',
+    ]);
+    const wakeFrames = timeline.filter((frame) => frame.action === 'WAKE_APPEND');
+    expect(wakeFrames.length).toBeGreaterThan(milestones.length);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, [4, 2, 2, 5, 1]]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /result = \[\]|const result: number\[\] = \[\]|vector<thread> threads|Thread\[\] threads/,
+        3: /for each|for x in arr|for \(const x of arr\)|for \(int x : arr\)|for \(int i = 0/,
+        4: /spawn_thread|spawnThread|new Promise|threads.emplace_back|threads\[i\] = new Thread/,
+        5: /sleep\(x\)|this_thread::sleep_for|Thread.sleep|worker sleeps|sleep x ticks/,
+        6: /append x to result|result.append\(x\)|result.push\(x\)|cout << x|System.out.print|thread.start\(\)/,
+        7: /wait_for_all_threads|join_all_threads|Promise.all\(result\)|t.join\(\)|threads\[i\].start\(\)/,
+        8: /return result|return arr/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(8);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, clamped and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.totalTicks).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expect(values(invalid[invalid.length - 1])).toEqual([3, 8]);
+
+    const clamped = module.generateTimeline([-5, 3, 99] as any);
+    expect(clamped[0].explanation).toMatch(/clamped to 1|clamped to 15/);
+    expect(values(clamped[clamped.length - 1])).toEqual([1, 3, 15]);
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([3, 1, 4, 2, 5]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 8/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(8);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
