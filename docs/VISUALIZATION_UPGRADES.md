@@ -299,6 +299,18 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **introsort ✅ (2026-11-19):** rebuild — named actions on every frame (INIT →
+  PIVOT_SELECTED → COMPARE → SWAP → PIVOT_PLACED → CALL_LEFT/CALL_RIGHT →
+  INSERTION_ENTRY/SHIFT/DONE → HEAPSORT_ENTRY/SIFT/EXTRACT → DONE), 38 frames
+  on the default input with WHAT/WHY/NEXT on all of them, 2 checkpoints
+  (engine dispatch + size cutoff with non-zero correct index), 3 real
+  milestones + auto Start (First Pivot Locked, Heapsort Fallback Triggered
+  when it fires, Complete — per-partition double milestones removed), five
+  11-line snippets with the same statement per line and exact code-line
+  mapping (mapBad 136 → 0), honest input normalisation, engine-behaviour
+  regression (ideal = no fallback; adversarial sorted input fires the
+  Heapsort rescue; 4-element input is pure insertion). 6 regression tests
+  added (719 total).
 - **linear-search / jump-search / ternary-search / rotated-sorted-array ✅
   (2026-11-19):** snippet-only re-alignment (frames were already semantically
   correct) — five language snippets rebuilt to shared 5-line, 13-line, 11-line

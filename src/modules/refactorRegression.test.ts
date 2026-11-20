@@ -8893,3 +8893,147 @@ describe('quickselect rebuild regressions', () => {
     }
   });
 });
+
+describe('introsort rebuild regressions', () => {
+  const mod = () => moduleById('introsort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames the engine dispatch with named actions and pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('PIVOT_SELECTED');
+    expect(actions).toContain('COMPARE');
+    expect(actions).toContain('INSERTION_ENTRY');
+    expect(actions).toContain('INSERTION_DONE');
+    expect(actions).toContain('CALL_LEFT');
+    expect(actions).toContain('CALL_RIGHT');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('introsort-engine-dispatch');
+    expect(checkpoints[1].checkpoint!.id).toBe('introsort-size-cutoff');
+    expect(checkpoints[1].checkpoint!.correctIndex).toBe(1);
+  });
+
+  it('fires the heapsort fallback only when the depth budget is exhausted', () => {
+    const module = mod();
+
+    // ideal preset: quicksort + insertion, no fallback
+    const ideal = module.generateTimeline([24, 9, 29, 14, 19, 27, 4, 30]);
+    expect(ideal.some((frame) => frame.action === 'HEAPSORT_ENTRY')).toBe(false);
+    expectSorted(values(ideal[ideal.length - 1]));
+
+    // adversarial sorted input: the fallback fires and rescues the tail
+    const adversarial = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8]);
+    const fallback = adversarial.find((frame) => frame.action === 'HEAPSORT_ENTRY');
+    expect(fallback, 'fallback must fire on the adversarial preset').toBeTruthy();
+    expect(adversarial.some((frame) => frame.action === 'HEAPSORT_EXTRACT')).toBe(true);
+    expectSorted(values(adversarial[adversarial.length - 1]));
+
+    // small array: pure insertion path — [8, 3, 5, 1] needs one shift
+    const small = module.generateTimeline([8, 3, 5, 1]);
+    expect(small.some((frame) => frame.action === 'INSERTION_ENTRY')).toBe(true);
+    expect(small.some((frame) => frame.action === 'INSERTION_SHIFT')).toBe(true);
+    expect(small.some((frame) => frame.action === 'PIVOT_SELECTED')).toBe(false);
+    expectSorted(values(small[small.length - 1]));
+
+    const last = ideal[ideal.length - 1];
+    expect(last.variables?.result).toBe(8);
+  });
+
+  it('marks real turning points as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Pivot Locked',
+      'Introsort Complete',
+    ]);
+    // per-partition double milestones are gone: only the FIRST placement is a milestone
+    const pivotFrames = timeline.filter((frame) => frame.action === 'PIVOT_PLACED');
+    expect(pivotFrames.length).toBeGreaterThan(0);
+    expect(pivotFrames.filter((frame) => frame.isMilestone)).toHaveLength(1);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, [1, 2, 3, 4, 5, 6, 7, 8]]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        1: /introsort\(/,
+        2: /size = high - low \+ 1|const size = high - low \+ 1|int size = high - low \+ 1/,
+        4: /insertionSort\(|insertion_sort\(/,
+        7: /heapsort\(/,
+        9: /p = partition|const p = partition|int p = partition/,
+        10: /introsort\(arr, low, p - 1|introsort\(arr, low, p_idx - 1/,
+        11: /introsort\(arr, p \+ 1/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(11);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.compares).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallbackCase = module.generateTimeline(['a'] as any);
+    expect(fallbackCase[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallbackCase[0])).toEqual([24, 9, 29, 14, 19, 27, 4, 30]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 12/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(12);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
