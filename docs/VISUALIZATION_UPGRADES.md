@@ -299,6 +299,15 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **kmp-search ✅ (2026-11-20):** rebuild — pedagogy on every frame (was 0%),
+  2 checkpoints (LPS meaning with non-zero correct index + mismatch action
+  with non-zero correct index), named actions (INIT → MATCH_CHAR →
+  MATCH_FOUND → SHIFT_LPS → ADVANCE_I → DONE), 3 real milestones (LPS Table
+  Ready, First Full Match, Search Complete), five 16-line snippets with the
+  same statement per line and exact code-line mapping (mapBad 246 → 0),
+  honest normalisation for {text, pattern} (overlong inputs truncated with a
+  note; empty text/pattern = valid short runs). 6 regression tests added
+  (780 total).
 - **mergesort-recursion-tree ✅ (2026-11-20):** rebuild — pedagogy on every
   frame (was 0%), 2 checkpoints (log₂N depth with non-zero correct index +
   both-halves-already-sorted invariant), named actions (init → call → split →

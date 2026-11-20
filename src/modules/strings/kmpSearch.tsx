@@ -21,6 +21,35 @@ const defaultKMPInput: KMPInput = {
   pattern: 'ABABCABAB',
 };
 
+const MAX_TEXT_LEN = 40;
+const MAX_PAT_LEN = 12;
+
+interface NormalisedInput {
+  text: string;
+  pattern: string;
+  notes: string[];
+}
+
+/** Truncate overlong inputs so the sliding-pattern stage stays readable. */
+function normalise(input: KMPInput | undefined): NormalisedInput {
+  const notes: string[] = [];
+  const raw = input && typeof input === 'object' ? input : defaultKMPInput;
+
+  let text = typeof raw.text === 'string' ? raw.text : defaultKMPInput.text;
+  let pattern = typeof raw.pattern === 'string' ? raw.pattern : defaultKMPInput.pattern;
+
+  if (text.length > MAX_TEXT_LEN) {
+    notes.push(`text truncated from ${text.length} to ${MAX_TEXT_LEN} characters for readability`);
+    text = text.slice(0, MAX_TEXT_LEN);
+  }
+  if (pattern.length > MAX_PAT_LEN) {
+    notes.push(`pattern truncated from ${pattern.length} to ${MAX_PAT_LEN} characters for readability`);
+    pattern = pattern.slice(0, MAX_PAT_LEN);
+  }
+
+  return { text, pattern, notes };
+}
+
 export const kmpModule: AlgorithmModule<KMPInput, KMPState> = {
   id: 'kmp-search',
   title: 'Knuth-Morris-Pratt (KMP Pattern Match)',
@@ -67,134 +96,90 @@ export const kmpModule: AlgorithmModule<KMPInput, KMPState> = {
   ],
   defaultInput: defaultKMPInput,
   codeSnippets: {
+    pseudocode: `function kmpSearch(T, P):
+    lps = computeLPSArray(P)
+    i = 0, j = 0
+    while i < length(T):
+        if T[i] == P[j]:
+            i = i + 1
+            j = j + 1
+        if j == length(P):
+            record match at (i - j)
+            j = lps[j - 1]
+        else if i < length(T) and T[i] != P[j]:
+            if j != 0:
+                j = lps[j - 1]
+            else:
+                i = i + 1
+    return matches`,
     python: `def kmp_search(text, pattern):
-    n, m = len(text), len(pattern)
-    if m == 0: return []
-    # Build LPS (Longest Prefix Suffix) table
-    lps = [0] * m
-    prev_lps, i = 0, 1
-    while i < m:
-        if pattern[i] == pattern[prev_lps]:
-            prev_lps += 1
-            lps[i] = prev_lps
-            i += 1
-        elif prev_lps != 0:
-            prev_lps = lps[prev_lps - 1]
-        else:
-            lps[i] = 0
-            i += 1
-    # Search text
-    matches = []
-    i = j = 0
-    while i < n:
+    lps = compute_lps_array(pattern)
+    i, j = 0, 0
+    while i < len(text):
         if text[i] == pattern[j]:
             i += 1
             j += 1
-        if j == m:
+        if j == len(pattern):
             matches.append(i - j)
             j = lps[j - 1]
-        elif i < n and text[i] != pattern[j]:
+        elif i < len(text) and text[i] != pattern[j]:
             if j != 0:
                 j = lps[j - 1]
             else:
                 i += 1
     return matches`,
     typescript: `function kmpSearch(text: string, pattern: string): number[] {
-  const n = text.length, m = pattern.length;
-  if (m === 0) return [];
-  const lps = new Array(m).fill(0);
-  let len = 0, i = 1;
-  while (i < m) {
-    if (pattern[i] === pattern[len]) {
-      len++;
-      lps[i++] = len;
-    } else if (len !== 0) {
-      len = lps[len - 1];
-    } else {
-      lps[i++] = 0;
-    }
-  }
-  const matches: number[] = [];
-  let ti = 0, pi = 0;
-  while (ti < n) {
-    if (text[ti] === pattern[pi]) {
-      ti++; pi++;
-    }
-    if (pi === m) {
-      matches.push(ti - pi);
-      pi = lps[pi - 1];
-    } else if (ti < n && text[ti] !== pattern[pi]) {
-      if (pi !== 0) pi = lps[pi - 1];
-      else ti++;
-    }
-  }
-  return matches;
-}`,
+  const lps = computeLPSArray(pattern);
+  let i = 0, j = 0;
+  while (i < text.length) {
+    if (text[i] === pattern[j]) {
+      i++;
+      j++; }
+    if (j === pattern.length) {
+      matches.push(i - j);
+      j = lps[j - 1]; }
+    else if (i < text.length && text[i] !== pattern[j]) {
+      if (j !== 0) {
+        j = lps[j - 1]; }
+      else {
+        i++; } } }
+  return matches; }`,
     cpp: `vector<int> KMPSearch(string text, string pat) {
-    int n = text.size(), m = pat.size();
-    vector<int> lps(m, 0);
-    int len = 0, i = 1;
-    while (i < m) {
-        if (pat[i] == pat[len]) lps[i++] = ++len;
-        else if (len != 0) len = lps[len - 1];
-        else lps[i++] = 0;
-    }
-    vector<int> matches;
-    int ti = 0, pi = 0;
-    while (ti < n) {
-        if (text[ti] == pat[pi]) { ti++; pi++; }
-        if (pi == m) {
-            matches.push_back(ti - pi);
-            pi = lps[pi - 1];
-        } else if (ti < n && text[ti] != pat[pi]) {
-            if (pi != 0) pi = lps[pi - 1];
-            else ti++;
-        }
-    }
-    return matches;
-}`,
-    java: `public static List<Integer> KMPSearch(String text, String pat) {
-    int n = text.length(), m = pat.length();
-    int[] lps = new int[m];
-    int len = 0, i = 1;
-    while (i < m) {
-        if (pat.charAt(i) == pat.charAt(len)) lps[i++] = ++len;
-        else if (len != 0) len = lps[len - 1];
-        else lps[i++] = 0;
-    }
-    List<Integer> matches = new ArrayList<>();
-    int ti = 0, pi = 0;
-    while (ti < n) {
-        if (text.charAt(ti) == pat.charAt(pi)) { ti++; pi++; }
-        if (pi == m) {
-            matches.add(ti - pi);
-            pi = lps[pi - 1];
-        } else if (ti < n && text.charAt(ti) != pat.charAt(pi)) {
-            if (pi != 0) pi = lps[pi - 1];
-            else ti++;
-        }
-    }
-    return matches;
-}`,
-    pseudocode: `function KMPSearch(T, P):
-    lps = computeLPSArray(P)
-    i = 0, j = 0
-    while i < length(T):
-        if T[i] == P[j]:
-            i = i + 1, j = j + 1
-        if j == length(P):
-            print "Pattern found at index " + (i - j)
-            j = lps[j - 1]
-        else if i < length(T) and T[i] != P[j]:
-            if j != 0:
-                j = lps[j - 1]
-            else:
-                i = i + 1`,
+  vector<int> lps = computeLPSArray(pat);
+  int i = 0, j = 0;
+  while (i < (int)text.size()) {
+    if (text[i] == pat[j]) {
+      i++;
+      j++; }
+    if (j == (int)pat.size()) {
+      matches.push_back(i - j);
+      j = lps[j - 1]; }
+    else if (i < (int)text.size() && text[i] != pat[j]) {
+      if (j != 0) {
+        j = lps[j - 1]; }
+      else {
+        i++; } } }
+  return matches; }`,
+    java: `static List<Integer> KMPSearch(String text, String pat) {
+  int[] lps = computeLPSArray(pat);
+  int i = 0, j = 0;
+  while (i < text.length()) {
+    if (text.charAt(i) == pat.charAt(j)) {
+      i++;
+      j++; }
+    if (j == pat.length()) {
+      matches.add(i - j);
+      j = lps[j - 1]; }
+    else if (i < text.length() && text.charAt(i) != pat.charAt(j)) {
+      if (j != 0) {
+        j = lps[j - 1]; }
+      else {
+        i++; } } }
+  return matches; }`,
   },
 
   generateTimeline: (input: KMPInput): ExecutionFrame<KMPState>[] => {
-    const text = input?.text || defaultKMPInput.text;
-    const pattern = input?.pattern || defaultKMPInput.pattern;
+    const { text, pattern, notes } = normalise(input);
     const m = pattern.length;
     const n = text.length;
 
@@ -217,55 +202,67 @@ export const kmpModule: AlgorithmModule<KMPInput, KMPState> = {
 
     const timeline: ExecutionFrame<KMPState>[] = [];
 
-    const baseFrame = (
-      stepIdx: number,
-      state: KMPState,
-      codeLine: number,
-      explanation: string,
-      action: string,
-      isMilestone: boolean,
-      scope: Record<string, string | number>,
-      soundCue?: ExecutionFrame<KMPState>['soundCue']
-    ): ExecutionFrame<KMPState> => ({
-      stepIndex: stepIdx,
-      totalSteps: 0,
-      codeLine,
-      state: {
-        text: state.text,
-        pattern: state.pattern,
-        lps: [...state.lps],
-        textIdx: state.textIdx,
-        patternIdx: state.patternIdx,
-        phase: state.phase,
-        matchedIndices: [...state.matchedIndices],
-        charMatch: state.charMatch,
-      },
-      codeHighlights: {
-        python: [codeLine],
-        typescript: [codeLine],
-        cpp: [codeLine],
-        java: [codeLine],
-        pseudocode: [codeLine],
-      },
-      callStack: [
-        {
-          id: 'kmp-frame',
-          name: 'kmpSearch',
-          file: 'kmpSearch.ts',
-          line: codeLine,
-          params: { textLen: n, patLen: m, i: state.textIdx, j: state.patternIdx },
+    const pushFrame = (opts: {
+      codeLine: number;
+      action: string;
+      explanation: string;
+      pedagogy: { what: string; why: string; whatNext: string };
+      state: KMPState;
+      variables?: Record<string, any>;
+      conditionEval?: ExecutionFrame<KMPState>['conditionEval'];
+      milestone?: string;
+      soundCue?: ExecutionFrame<KMPState>['soundCue'];
+      checkpoint?: ExecutionFrame<KMPState>['checkpoint'];
+    }) => {
+      timeline.push({
+        stepIndex: timeline.length,
+        totalSteps: timeline.length + 1,
+        codeLine: opts.codeLine,
+        action: opts.action,
+        state: {
+          text: opts.state.text,
+          pattern: opts.state.pattern,
+          lps: [...opts.state.lps],
+          textIdx: opts.state.textIdx,
+          patternIdx: opts.state.patternIdx,
+          phase: opts.state.phase,
+          matchedIndices: [...opts.state.matchedIndices],
+          charMatch: opts.state.charMatch,
         },
-      ],
-      scopeVariables: scope,
-      explanation,
-      action,
-      isMilestone,
-      soundCue,
-      invariantStatus:
-        state.phase === 'done'
-          ? `KMP completed. Found ${state.matchedIndices.length} occurrences.`
-          : 'Text pointer i strictly monotonic forward; skips rewind via LPS table.',
-    });
+        codeHighlights: {
+          python: [opts.codeLine],
+          typescript: [opts.codeLine],
+          cpp: [opts.codeLine],
+          java: [opts.codeLine],
+          pseudocode: [opts.codeLine],
+        },
+        callStack: [
+          {
+            id: 'kmp-frame',
+            name: 'kmpSearch',
+            file: 'kmpSearch.ts',
+            line: opts.codeLine,
+            params: { textLen: n, patLen: m, i: opts.state.textIdx, j: opts.state.patternIdx },
+          },
+        ],
+        scopeVariables: opts.variables ?? {},
+        variables: opts.variables,
+        conditionEval: opts.conditionEval,
+        explanation: opts.explanation,
+        pedagogy: opts.pedagogy,
+        isMilestone: !!opts.milestone,
+        milestoneTitle: opts.milestone,
+        soundCue: opts.soundCue ?? 'step',
+        invariantStatus: {
+          label:
+            opts.state.phase === 'done'
+              ? `KMP completed. Found ${opts.state.matchedIndices.length} occurrences.`
+              : 'Text pointer i strictly monotonic forward; skips rewind via LPS table.',
+          isValid: true,
+        },
+        ...(opts.checkpoint ? { checkpoint: opts.checkpoint } : {}),
+      });
+    };
 
     const state: KMPState = {
       text,
@@ -278,22 +275,44 @@ export const kmpModule: AlgorithmModule<KMPInput, KMPState> = {
       charMatch: null,
     };
 
-    let step = 0;
+    let firstMatchMilestoneUsed = false;
+    let lpsCheckpointAdded = false;
+    let shiftCheckpointAdded = false;
 
-    // Step 0: Initial LPS table overview
-    timeline.push(
-      baseFrame(
-        step++,
-        state,
-        5,
-        `Constructed LPS (Longest Proper Prefix which is also Suffix) table for pattern "${pattern}": [${lps.join(', ')}].`,
-        'Initialize KMP & LPS',
-        true,
-        { textLen: n, patLen: m, lpsTable: lps.join(',') },
-        'start'
-      )
-    );
+    // ── Frame 0: initialisation (LPS table overview) ────────────────────────
+    pushFrame({
+      codeLine: 4,
+      action: 'INIT',
+      explanation:
+        `Constructed LPS (Longest Proper Prefix which is also Suffix) table for pattern "${pattern}": [${lps.join(', ')}].` +
+        (notes.length ? ` Input adjusted: ${notes.join('; ')}.` : ''),
+      variables: { textLen: n, patLen: m, lpsTable: lps.join(',') },
+      conditionEval: { expr: 'pattern.length > 0', condition: `${m} > 0`, result: m > 0 },
+      soundCue: 'start',
+      milestone: 'LPS Table Ready',
+      state,
+      pedagogy: {
+        what: `The LPS table for "${pattern}" is [${lps.join(', ')}] — each entry is the longest proper prefix that is also a suffix.`,
+        why: 'Knowing this fallback lets KMP skip redundant comparisons: on a mismatch we slide the pattern to the longest self-overlap instead of rewinding the text pointer.',
+        whatNext: `Start matching at text[0] with pattern[0].`,
+      },
+      checkpoint: m > 0 && lps.length > 0 && !lpsCheckpointAdded
+        ? {
+            id: 'kmp-lps-meaning',
+            question: `For pattern "${pattern}", the LPS entry lps[${lps.length - 1}] = ${lps[lps.length - 1]}. What does that number represent?`,
+            options: [
+              'The length of the longest proper prefix that is also a suffix of the pattern',
+              'The number of times the pattern occurs in the text',
+              'The index of the next match in the text',
+            ],
+            correctIndex: 0,
+            explanation: `lps[j] is the length of the longest proper prefix of pattern[0..j] that is also a suffix of pattern[0..j]. That overlap is exactly what lets KMP avoid rechecking matched characters.`,
+            hint: 'LPS = Longest Prefix which is also Suffix.',
+          }
+        : undefined,
+    });
 
+    if (m > 0 && lps.length > 0 && !lpsCheckpointAdded) lpsCheckpointAdded = true;
     state.phase = 'matching';
     let i = 0;
     let j = 0;
@@ -307,18 +326,20 @@ export const kmpModule: AlgorithmModule<KMPInput, KMPState> = {
 
       if (tChar === pChar) {
         state.charMatch = true;
-        timeline.push(
-          baseFrame(
-            step++,
-            state,
-            16,
-            `Match found at text[${i}] ('${tChar}') == pattern[${j}] ('${pChar}'). Advancing both pointers i = ${i + 1}, j = ${j + 1}.`,
-            `Char Match '${tChar}'`,
-            false,
-            { i, j, char: tChar, match: 'yes' },
-            'compare'
-          )
-        );
+        pushFrame({
+          codeLine: 6,
+          action: 'MATCH_CHAR',
+          explanation: `Match at text[${i}] ('${tChar}') == pattern[${j}] ('${pChar}'). Advancing both pointers i = ${i + 1}, j = ${j + 1}.`,
+          variables: { i, j, char: tChar, match: 'yes' },
+          conditionEval: { expr: 'T[i] == P[j]', condition: `'${tChar}' == '${pChar}'`, result: true },
+          soundCue: 'compare',
+          state,
+          pedagogy: {
+            what: `Characters match at text[${i}] and pattern[${j}]: '${tChar}'.`,
+            why: 'Matching characters advance both pointers by one — the text pointer never moves backwards.',
+            whatNext: j + 1 === m ? 'A full pattern match is about to complete.' : 'Compare the next pair.',
+          },
+        });
 
         i++;
         j++;
@@ -330,18 +351,24 @@ export const kmpModule: AlgorithmModule<KMPInput, KMPState> = {
           state.matchedIndices.push(matchStart);
           state.phase = 'match-found';
 
-          timeline.push(
-            baseFrame(
-              step++,
-              state,
-              19,
-              `Full pattern match found at text index ${matchStart}! Resetting j to lps[${j - 1}] = ${lps[j - 1]} to search for further occurrences.`,
-              `Pattern found at [${matchStart}]`,
-              true,
-              { matchStart, matchedCount: state.matchedIndices.length, nextJ: lps[j - 1] },
-              'success'
-            )
-          );
+          const matchMilestone = !firstMatchMilestoneUsed ? 'First Full Match' : undefined;
+          if (matchMilestone) firstMatchMilestoneUsed = true;
+
+          pushFrame({
+            codeLine: 9,
+            action: 'MATCH_FOUND',
+            explanation: `Full pattern match found at text index ${matchStart}! Resetting j to lps[${j - 1}] = ${lps[j - 1]} to search for further occurrences.`,
+            variables: { matchStart, matchedCount: state.matchedIndices.length, nextJ: lps[j - 1] },
+            conditionEval: { expr: 'j == m', condition: `${j} == ${m}`, result: true },
+            soundCue: 'success',
+            milestone: matchMilestone,
+            state,
+            pedagogy: {
+              what: `The whole pattern matched starting at text index ${matchStart}.`,
+              why: 'Recording the start index, then resetting j to lps[j - 1] (not 0) lets KMP continue finding overlapping occurrences without missing any.',
+              whatNext: 'Continue the scan from the current text position for more matches.',
+            },
+          });
 
           j = lps[j - 1];
           state.patternIdx = j;
@@ -354,34 +381,55 @@ export const kmpModule: AlgorithmModule<KMPInput, KMPState> = {
           const oldJ = j;
           const newJ = lps[j - 1];
 
-          timeline.push(
-            baseFrame(
-              step++,
-              state,
-              23,
-              `Mismatch at text[${i}] ('${tChar}') != pattern[${j}] ('${pChar}'). Shifting pattern without rewinding text i: j = lps[${oldJ - 1}] (${newJ}).`,
-              `Shift j to lps[${oldJ - 1}] = ${newJ}`,
-              true,
-              { i, oldJ, newJ, textChar: tChar, patChar: pChar },
-              'step'
-            )
-          );
+          const shiftCheckpoint: ExecutionFrame<KMPState>['checkpoint'] | undefined = !shiftCheckpointAdded
+            ? {
+                id: 'kmp-mismatch-action',
+                question: `Mismatch at text[${i}] ('${tChar}') against pattern[${j}] ('${pChar}') with j = ${j} > 0. What does KMP do next?`,
+                options: [
+                  `Set j = lps[${j - 1}] = ${newJ} — the text pointer never rewinds`,
+                  'Advance the text pointer i immediately and keep j unchanged',
+                  'Reset j to 0 and start the whole pattern over',
+                ],
+                correctIndex: 0,
+                explanation: `On a mismatch, the LPS fallback moves the pattern to its longest self-overlap (${newJ}), so the text pointer i stays exactly where it is — no re-checking of already-matched characters.`,
+                hint: 'Which pointer does the LPS table control?',
+              }
+            : undefined;
+
+          pushFrame({
+            codeLine: 13,
+            action: 'SHIFT_LPS',
+            explanation: `Mismatch at text[${i}] ('${tChar}') != pattern[${j}] ('${pChar}'). Shifting pattern without rewinding text i: j = lps[${oldJ - 1}] (${newJ}).`,
+            variables: { i, oldJ, newJ, textChar: tChar, patChar: pChar },
+            conditionEval: { expr: 'j = lps[j - 1]', condition: `${newJ}`, result: newJ },
+            soundCue: 'step',
+            checkpoint: shiftCheckpoint,
+            state,
+            pedagogy: {
+              what: `A mismatch shifts the pattern using its own structure: j = lps[${oldJ - 1}] = ${newJ}.`,
+              why: 'The text pointer never moves backwards — that is exactly the O(N) guarantee KMP buys with the LPS table.',
+              whatNext: 'Re-compare the same text character against the shifted pattern.',
+            },
+          });
+          if (shiftCheckpoint) shiftCheckpointAdded = true;
 
           j = newJ;
           state.patternIdx = j;
         } else {
-          timeline.push(
-            baseFrame(
-              step++,
-              state,
-              25,
-              `Mismatch at pattern index 0 ('${pChar}' != '${tChar}'). Incrementing text index i to ${i + 1}.`,
-              `Advance text pointer i to ${i + 1}`,
-              false,
-              { i, nextI: i + 1, textChar: tChar, patChar: pChar },
-              'discard'
-            )
-          );
+          pushFrame({
+            codeLine: 15,
+            action: 'ADVANCE_I',
+            explanation: `Mismatch at pattern index 0 ('${pChar}' != '${tChar}'). Incrementing text index i to ${i + 1}.`,
+            variables: { i, nextI: i + 1, textChar: tChar, patChar: pChar },
+            conditionEval: { expr: 'j == 0', condition: `${j} == 0`, result: true },
+            soundCue: 'discard',
+            state,
+            pedagogy: {
+              what: `The very first pattern character mismatches, so there is no self-overlap to fall back on.`,
+              why: 'With j = 0, lps has no fallback value, so the only correct move is to advance the text pointer by one.',
+              whatNext: 'Compare the next text character against pattern[0] again.',
+            },
+          });
 
           i++;
           state.textIdx = i;
@@ -392,18 +440,21 @@ export const kmpModule: AlgorithmModule<KMPInput, KMPState> = {
     state.phase = 'done';
     state.charMatch = null;
 
-    timeline.push(
-      baseFrame(
-        step++,
-        state,
-        27,
-        `KMP Search completed across entire text! Total matches found: ${state.matchedIndices.length} at indices [${state.matchedIndices.join(', ')}].`,
-        'Search Complete',
-        true,
-        { totalMatches: state.matchedIndices.length, matches: state.matchedIndices.join(',') },
-        'complete'
-      )
-    );
+    pushFrame({
+      codeLine: 16,
+      action: 'DONE',
+      explanation: `KMP Search completed across entire text! Total matches found: ${state.matchedIndices.length} at indices [${state.matchedIndices.join(', ')}].`,
+      variables: { totalMatches: state.matchedIndices.length, matches: state.matchedIndices.join(',') },
+      conditionEval: { expr: 'scan finished', condition: `${n} characters scanned`, result: true },
+      soundCue: 'complete',
+      milestone: 'Search Complete',
+      state,
+      pedagogy: {
+        what: `The full text was scanned; ${state.matchedIndices.length} match(es) recorded.`,
+        why: 'Every character was examined at most a constant number of times, so total work is O(N + M) regardless of repetition.',
+        whatNext: 'Try the repetitive preset: the LPS fallback keeps the scan linear even on highly repetitive input.',
+      },
+    });
 
     const total = timeline.length;
     timeline.forEach((f) => {

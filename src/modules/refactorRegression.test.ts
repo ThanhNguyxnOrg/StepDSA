@@ -10274,3 +10274,121 @@ describe('mergesort recursion tree rebuild regressions', () => {
     }
   });
 });
+
+describe('KMP rebuild regressions', () => {
+  const mod = () => moduleById('kmp-search');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+
+  it('frames every character decision with pedagogy and two checkpoints', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('MATCH_CHAR');
+    expect(actions).toContain('MATCH_FOUND');
+    expect(actions).toContain('SHIFT_LPS');
+    expect(actions).toContain('ADVANCE_I');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('kmp-lps-meaning');
+    expect(checkpoints[0].checkpoint!.correctIndex).toBe(0);
+    expect(checkpoints[1].checkpoint!.id).toBe('kmp-mismatch-action');
+  });
+
+  it('finds all overlapping occurrences and never rewinds the text pointer', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const matches = timeline.filter((frame) => frame.action === 'MATCH_FOUND');
+    expect(matches.length).toBeGreaterThan(0);
+    const starts = matches.map((frame) => frame.variables?.matchStart);
+    // the canonical example finds ABABCABAB at index 10 only
+    expect(starts).toContain(10);
+
+    // the text pointer never decreases
+    let prev = -1;
+    for (const frame of timeline) {
+      expect(frame.state.textIdx).toBeGreaterThanOrEqual(prev);
+      prev = frame.state.textIdx;
+    }
+  });
+
+  it('marks the first full match as a milestone', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'LPS Table Ready',
+      'First Full Match',
+      'Search Complete',
+    ]);
+    const matchFrames = timeline.filter((frame) => frame.action === 'MATCH_FOUND');
+    expect(matchFrames.filter((frame) => frame.isMilestone)).toHaveLength(1);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, module.presets[1].data]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /lps = compute|const lps = compute|vector<int> lps = compute|int\[\] lps = compute/,
+        5: /T\[i\] == P\[j\]|text\[i\] == pattern\[j\]|text\[i\] === pattern\[j\]|text\[i\] == pat\[j\]|text.charAt\(i\) == pat.charAt\(j\)/,
+        6: /i = i \+ 1|i\+\+|i \+= 1/,
+        7: /j = j \+ 1|j\+\+|j \+= 1/,
+        9: /record match|matches.append|matches.push|matches.push_back|matches.add/,
+        13: /j = lps\[j - 1\]/,
+        15: /i = i \+ 1|i\+\+|i \+= 1/,
+        16: /return matches/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(16);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles not-found and repetitive presets without losing linearity', () => {
+    const module = mod();
+
+    const notFound = module.generateTimeline({ text: 'ABCDEFG', pattern: 'XYZ' });
+    expect(notFound[notFound.length - 1].state.matchedIndices).toHaveLength(0);
+    // the text pointer still advances monotonically to the end
+    let prev = -1;
+    for (const frame of notFound) {
+      expect(frame.state.textIdx).toBeGreaterThanOrEqual(prev);
+      prev = frame.state.textIdx;
+    }
+
+    const repetitive = module.generateTimeline({ text: 'AAAAABAAABA', pattern: 'AAAA' });
+    expect(repetitive[repetitive.length - 1].state.matchedIndices.length).toBeGreaterThan(0);
+  });
+
+  it('stays audit-clean on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
