@@ -12,6 +12,63 @@ export interface BinarySearchAnswerState {
   phase: 'search' | 'verify' | 'found';
 }
 
+const MAX_LEN = 8;
+const MAX_PILE = 999;
+const DEFAULT_INPUT = { piles: [3, 6, 7, 11], h: 8 };
+
+interface NormalisedInput {
+  piles: number[];
+  h: number;
+  notes: string[];
+}
+
+/**
+ * Koko Eating Bananas needs positive integer piles: non-numeric entries and
+ * non-positive piles are dropped, pile sizes are clamped to MAX_PILE, and the
+ * input is truncated to MAX_LEN piles. Every adjustment is reported as a note
+ * so the INIT frame can state it honestly. Empty piles are a valid run with
+ * zero required hours, not an error.
+ */
+function normalise(input: { piles: number[]; h: number } | undefined): NormalisedInput {
+  const notes: string[] = [];
+  const raw = input && typeof input === 'object' ? input : DEFAULT_INPUT;
+  const rawPiles = Array.isArray(raw.piles) ? raw.piles : DEFAULT_INPUT.piles;
+
+  const usable = rawPiles.filter(
+    (value): value is number => typeof value === 'number' && Number.isFinite(value) && Math.round(value) > 0
+  );
+
+  if (rawPiles.length > 0 && usable.length === 0) {
+    notes.push('no positive piles in the input, so the default piles are used');
+    return { piles: [...DEFAULT_INPUT.piles], h: Math.max(1, Math.round(raw.h) || DEFAULT_INPUT.h), notes };
+  }
+  if (usable.length < rawPiles.length) {
+    notes.push(`${rawPiles.length - usable.length} non-positive or non-numeric pile(s) dropped`);
+  }
+
+  const clamped = usable.map((value) => {
+    const rounded = Math.min(MAX_PILE, Math.round(value));
+    if (rounded !== Math.round(value)) {
+      notes.push(`pile ${Math.round(value)} clamped to ${rounded} (max ${MAX_PILE})`);
+    }
+    return rounded;
+  });
+
+  let piles = clamped;
+  if (piles.length > MAX_LEN) {
+    notes.push(`${piles.length} piles truncated to ${MAX_LEN} for a readable strip`);
+    piles = piles.slice(0, MAX_LEN);
+  }
+
+  let h = typeof raw.h === 'number' && Number.isFinite(raw.h) ? Math.round(raw.h) : DEFAULT_INPUT.h;
+  if (h < 1) {
+    notes.push('h was non-positive, so it is clamped to 1 hour');
+    h = 1;
+  }
+
+  return { piles, h, notes };
+}
+
 export const binarySearchAnswerModule: AlgorithmModule<
   { piles: number[]; h: number },
   BinarySearchAnswerState
@@ -55,17 +112,31 @@ export const binarySearchAnswerModule: AlgorithmModule<
     {
       id: 'generous-time',
       label: 'Generous Deadline: [30, 11, 23, 4, 20], H = 10',
-      description: 'Speed drops significantly to k = 12',
+      description: 'Minimum speed is k = 11 (exactly 10 hours)',
       data: { piles: [30, 11, 23, 4, 20], h: 10 },
     },
   ],
   defaultInput: { piles: [3, 6, 7, 11], h: 8 },
   codeSnippets: {
+    pseudocode: `function minEatingSpeed(piles, h):
+    define hours_needed(k):
+        return sum over p of ceil(p / k)
+    low = 1
+    high = max(piles)
+    ans = high
+    while low <= high:
+        mid = (low + high) / 2
+        if hours_needed(mid) <= h:
+            ans = mid
+            high = mid - 1
+        else:
+            low = mid + 1
+    return ans`,
     python: `def minEatingSpeed(piles, h):
     def hours_needed(k):
         return sum((p + k - 1) // k for p in piles)
-
-    low, high = 1, max(piles)
+    low = 1
+    high = max(piles)
     ans = high
     while low <= high:
         mid = (low + high) // 2
@@ -78,148 +149,189 @@ export const binarySearchAnswerModule: AlgorithmModule<
     typescript: `function minEatingSpeed(piles: number[], h: number): number {
   const hoursNeeded = (k: number) =>
     piles.reduce((acc, p) => acc + Math.ceil(p / k), 0);
-
-  let low = 1, high = Math.max(...piles);
+  let low = 1;
+  let high = Math.max(...piles);
   let ans = high;
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
     if (hoursNeeded(mid) <= h) {
       ans = mid;
-      high = mid - 1;
-    } else {
-      low = mid + 1;
-    }
-  }
-  return ans;
-}`,
+      high = mid - 1; }
+    else {
+      low = mid + 1; } }
+  return ans; }`,
     cpp: `int minEatingSpeed(vector<int>& piles, int h) {
-    auto hoursNeeded = [&](long long k) {
-        long long hours = 0;
-        for (int p : piles) hours += (p + k - 1) / k;
-        return hours;
-    };
-    int low = 1, high = *max_element(piles.begin(), piles.end());
+    auto hoursNeeded = [&](int k) {
+        long long hours = 0; for (int p : piles) hours += (p + k - 1) / k; return hours; };
+    int low = 1;
+    int high = *max_element(piles.begin(), piles.end());
     int ans = high;
     while (low <= high) {
         int mid = low + (high - low) / 2;
         if (hoursNeeded(mid) <= h) {
             ans = mid;
-            high = mid - 1;
-        } else {
-            low = mid + 1;
-        }
-    }
-    return ans;
-}`,
-    java: `public int minEatingSpeed(int[] piles, int h) {
-    int maxP = 0;
-    for (int p : piles) maxP = Math.max(maxP, p);
-    int low = 1, high = maxP, ans = high;
+            high = mid - 1; }
+        else {
+            low = mid + 1; } }
+    return ans; }`,
+    java: `int minEatingSpeed(int[] piles, int h) {
+    java.util.function.IntUnaryOperator hoursNeeded = k -> {
+        int hours = 0; for (int p : piles) hours += (p + k - 1) / k; return hours; };
+    int low = 1;
+    int high = 0; for (int p : piles) high = Math.max(high, p);
+    int ans = high;
     while (low <= high) {
         int mid = low + (high - low) / 2;
-        long hours = 0;
-        for (int p : piles) hours += (p + mid - 1) / mid;
-        if (hours <= h) {
+        if (hoursNeeded(mid) <= h) {
             ans = mid;
-            high = mid - 1;
-        } else {
-            low = mid + 1;
-        }
-    }
-    return ans;
-}`,
-    pseudocode: `function minEatingSpeed(piles, h):
-    low = 1, high = max(piles)
-    ans = high
-    while low <= high:
-        mid = (low + high) / 2
-        hours = calculate_hours(piles, mid)
-        if hours <= h:
-            ans = mid
-            high = mid - 1 // Search for smaller feasible speed
-        else:
-            low = mid + 1  // Speed too slow, increase low
-    return ans`,
+            high = mid - 1; }
+        else {
+            low = mid + 1; } }
+    return ans; }`,
   },
 
   generateTimeline: (input: { piles: number[]; h: number }): ExecutionFrame<BinarySearchAnswerState>[] => {
-    const piles = input.piles.length > 0 ? input.piles : [3, 6, 7, 11];
-    const h = Math.max(piles.length, input.h || 8);
-    const maxPile = Math.max(...piles);
+    const { piles, h, notes } = normalise(input);
+    const n = piles.length;
+    const maxPile = n > 0 ? Math.max(...piles) : 0;
 
     const calcHours = (speed: number) =>
       piles.reduce((acc, p) => acc + Math.ceil(p / speed), 0);
 
     const frames: ExecutionFrame<BinarySearchAnswerState>[] = [];
-
-    // Frame 0: Initialization
-    let low = 1;
-    let high = maxPile;
-    let bestSpeed = maxPile;
     let checkpointAdded = false;
+    let firstFeasibleMilestoneUsed = false;
+    let halfMilestoneUsed = false;
 
-    frames.push({
-      stepIndex: 0,
-      totalSteps: 1,
-      codeLine: 2,
-      isMilestone: true,
-      milestoneTitle: `Init Binary Search on Answer [1..${maxPile}]`,
-      explanation: `Set search boundaries for speed k: low = 1 (minimum possible speed), high = max(piles) = ${maxPile} (guaranteed finish in ${piles.length} hours). Total time allowance H = ${h}.`,
-      variables: { low, high, maxPile, targetHours: h, bestSpeed },
-      conditionEval: { expr: 'low <= high', result: true },
-      pedagogy: {
-        what: `Binary search on the answer: the search space is not an array but the range of possible eating speeds [1..${maxPile}].`,
-        why: `Feasibility is monotone — if speed k finishes within ${h} hours, every speed > k also does. So the feasible speeds form a suffix, and its first element can be binary-searched.`,
-        whatNext: `Test the midpoint speed and count the hours it needs.`,
-      },
-      soundCue: { type: 'step' },
-      callStack: [
-        { name: `minEatingSpeed(piles, ${h})`, params: { h, maxPile }, line: 2, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
-      state: {
-        piles,
-        h,
-        low,
-        high,
-        mid: Math.floor((low + high) / 2),
-        hoursNeeded: calcHours(Math.floor((low + high) / 2)),
-        isFeasible: false,
-        bestSpeed,
-        phase: 'search',
-      },
-    });
+    let actionType: 'INIT' | 'ITERATION' | 'EVALUATE' | 'FEASIBLE' | 'TOO_SLOW' | 'DONE' = 'INIT';
 
-    let iter = 1;
-    while (low <= high) {
-      // Loop condition frame
+    const pushFrame = (opts: {
+      codeLine: number;
+      explanation: string;
+      pedagogy?: { what: string; why: string; whatNext: string };
+      variables?: Record<string, any>;
+      conditionEval?: ExecutionFrame<BinarySearchAnswerState>['conditionEval'];
+      milestone?: string;
+      soundCue?: ExecutionFrame<BinarySearchAnswerState>['soundCue'];
+      checkpoint?: ExecutionFrame<BinarySearchAnswerState>['checkpoint'];
+      mid: number;
+      hoursNeeded: number;
+      isFeasible: boolean;
+      low: number;
+      high: number;
+      bestSpeed: number;
+      phase: BinarySearchAnswerState['phase'];
+    }) => {
       frames.push({
         stepIndex: frames.length,
-        totalSteps: 1,
-        codeLine: 4,
-        explanation: `Iteration #${iter}: Checking loop condition low (${low}) <= high (${high}). Search space contains ${high - low + 1} candidate speeds.`,
-        variables: { iteration: iter, low, high, rangeSize: high - low + 1, currentBest: bestSpeed },
-        conditionEval: { expr: `low (${low}) <= high (${high})`, result: true },
-        pedagogy: {
-          what: `${high - low + 1} candidate speed(s) remain in [${low}..${high}]; best recorded so far is ${bestSpeed}.`,
-          why: 'The answer is the smallest feasible speed, so the window shrinks toward the feasibility boundary.',
-          whatNext: 'Evaluate the midpoint speed.',
-        },
-        soundCue: { type: 'step' },
+        totalSteps: frames.length + 1,
+        codeLine: opts.codeLine,
+        action: actionType,
+        explanation: opts.explanation,
+        variables: opts.variables,
+        conditionEval: opts.conditionEval,
+        pedagogy: opts.pedagogy,
+        isMilestone: !!opts.milestone,
+        milestoneTitle: opts.milestone,
+        soundCue: opts.soundCue ?? 'step',
+        ...(opts.checkpoint ? { checkpoint: opts.checkpoint } : {}),
         callStack: [
-          { name: `searchIteration(${iter})`, params: { low, high }, line: 7, isCurrent: true },
+          { name: `minEatingSpeed(piles, ${h})`, params: { h, maxPile }, line: opts.codeLine, isCurrent: true },
           { name: 'main()', params: {}, line: 1 },
         ],
         state: {
           piles,
           h,
-          low,
-          high,
-          mid: Math.floor((low + high) / 2),
-          hoursNeeded: calcHours(Math.floor((low + high) / 2)),
-          isFeasible: false,
-          bestSpeed,
-          phase: 'search',
+          low: opts.low,
+          high: opts.high,
+          mid: opts.mid,
+          hoursNeeded: opts.hoursNeeded,
+          isFeasible: opts.isFeasible,
+          bestSpeed: opts.bestSpeed,
+          phase: opts.phase,
+        },
+      });
+    };
+
+    let low = 1;
+    let high = maxPile;
+    let bestSpeed = maxPile;
+
+    // ── Frame 0: initialisation ─────────────────────────────────────────────
+    pushFrame({
+      codeLine: 4,
+      explanation:
+        (n > 0
+          ? `Set search boundaries for speed k: low = 1 (minimum possible speed), high = max(piles) = ${maxPile} (guaranteed finish in ${n} hours). Total time allowance H = ${h}.`
+          : 'n = length(piles) = 0: there is nothing to eat, so the answer is trivially 0 required hours.') +
+        (notes.length ? ` Input adjusted: ${notes.join('; ')}.` : ''),
+      conditionEval: { expr: 'length(piles) > 0', condition: `${n} > 0`, result: n > 0 },
+      variables: { low, high, maxPile, targetHours: h, bestSpeed },
+      milestone: n > 0 ? undefined : 'Nothing to Eat',
+      soundCue: 'start',
+      mid: 0,
+      hoursNeeded: 0,
+      isFeasible: false,
+      low,
+      high,
+      bestSpeed,
+      phase: n > 0 ? 'search' : 'found',
+      pedagogy: {
+        what:
+          n > 0
+            ? `Binary search on the answer: the search space is not an array but the range of possible eating speeds [1..${maxPile}].`
+            : 'An empty pile list needs zero hours, so the optimal speed is undefined-but-trivially-satisfied.',
+        why: `Feasibility is monotone — if speed k finishes within ${h} hours, every speed > k also does. So the feasible speeds form a suffix, and its first element can be binary-searched.`,
+        whatNext: n > 0 ? 'Test the midpoint speed and count the hours it needs.' : 'Return the empty result.',
+      },
+    });
+
+    if (n === 0) {
+      actionType = 'DONE';
+      pushFrame({
+        codeLine: 14,
+        explanation: 'No piles: zero hours are needed, so the optimal minimum speed is 0 (nothing to eat).',
+        conditionEval: { expr: 'hoursNeeded(k) <= h', condition: '0 <= ' + h, result: true },
+        variables: { optimalSpeed: 0, finalHours: 0, limitH: h },
+        milestone: 'Nothing to Eat',
+        soundCue: 'complete',
+        mid: 0,
+        hoursNeeded: 0,
+        isFeasible: true,
+        low,
+        high,
+        bestSpeed: 0,
+        phase: 'found',
+        pedagogy: {
+          what: 'With no piles, the predicate is satisfied at any speed — including 0.',
+          why: 'There is no food to consume, so the deadline can never be missed.',
+          whatNext: 'Load a preset such as Standard Piles to watch the binary search run.',
+        },
+      });
+      const totalEarly = frames.length;
+      return frames.map((f, idx) => ({ ...f, stepIndex: idx, totalSteps: totalEarly }));
+    }
+
+    let iter = 1;
+    while (low <= high) {
+      // Loop condition frame
+      actionType = 'ITERATION';
+      pushFrame({
+        codeLine: 7,
+        explanation: `Iteration #${iter}: Checking loop condition low (${low}) <= high (${high}). Search space contains ${high - low + 1} candidate speeds.`,
+        variables: { iteration: iter, low, high, rangeSize: high - low + 1, currentBest: bestSpeed },
+        conditionEval: { expr: 'low <= high', condition: `${low} <= ${high}`, result: true },
+        mid: Math.floor((low + high) / 2),
+        hoursNeeded: calcHours(Math.floor((low + high) / 2)),
+        isFeasible: false,
+        low,
+        high,
+        bestSpeed,
+        phase: 'search',
+        pedagogy: {
+          what: `${high - low + 1} candidate speed(s) remain in [${low}..${high}]; best recorded so far is ${bestSpeed}.`,
+          why: 'The answer is the smallest feasible speed, so the window shrinks toward the feasibility boundary.',
+          whatNext: 'Evaluate the midpoint speed.',
         },
       });
 
@@ -229,157 +341,155 @@ export const binarySearchAnswerModule: AlgorithmModule<
       const feasible = hours <= h;
 
       // Evaluate predicate with pile breakdown
-      frames.push({
-        stepIndex: frames.length,
-        totalSteps: 1,
-        codeLine: 6,
-        explanation: `Test candidate speed k = ${mid}: Compute ceil(pile / ${mid}) for each pile -> [${pileHours.join(' + ')}] = ${hours} total hours needed (Budget H = ${h}).`,
-        variables: { candidateSpeed: mid, hoursNeeded: hours, allowedHours: h, feasible: String(feasible), pileBreakdown: pileHours.join('+') },
-        conditionEval: {
-          expr: `hoursNeeded(${mid}) [${hours}] <= H [${h}]`,
-          result: feasible,
-        },
-        soundCue: { type: 'compare' },
-        callStack: [
-          { name: `checkFeasibility(k=${mid})`, params: { speed: mid, hours, target: h }, line: 6, isCurrent: true },
-          { name: 'main()', params: {}, line: 1 },
-        ],
-        pedagogy: {
-          what: `Predicate check: at speed ${mid}, each pile takes ⌈pile/${mid}⌉ hours — total ${hours} vs budget ${h}.`,
-          why: 'Each pile is eaten sequentially, so hours add up; a pile is never split across hours.',
-          whatNext: feasible ? 'Feasible: record it and try smaller speeds.' : 'Too slow: every speed ≤ this one fails, so move up.',
-        },
-        checkpoint: !checkpointAdded
+      actionType = 'EVALUATE';
+      const monotoneCheckpoint: ExecutionFrame<BinarySearchAnswerState>['checkpoint'] | undefined =
+        !checkpointAdded
           ? {
               id: 'binary-search-answer-monotone',
               question: `k = ${mid} needs ${hours} hrs against budget ${h}. Since feasibility is monotone, where is the minimum feasible speed?`,
               options: [
                 feasible
-                  ? `At k = ${mid} or below — record ${mid} and move high down`
-                  : `Strictly above k = ${mid} — every speed ≤ ${mid} is also too slow`,
-                feasible
                   ? `Strictly above k = ${mid} — larger speeds are always safer`
                   : `At k = ${mid} or below — smaller speeds save time`,
+                feasible
+                  ? `At k = ${mid} or below — record ${mid} and move high down`
+                  : `Strictly above k = ${mid} — every speed ≤ ${mid} is also too slow`,
               ],
-              correctIndex: 0,
+              correctIndex: 1,
               explanation: feasible
                 ? `Speed ${mid} already works, so the optimum is ≤ ${mid}; keep it as best and search lower.`
                 : `Speed ${mid} misses the deadline, and any slower speed misses it too, so the optimum is > ${mid}.`,
+              hint: 'If a speed works, do larger speeds work too?',
             }
-          : undefined,
-        state: {
-          piles,
-          h,
-          low,
-          high,
-          mid,
-          hoursNeeded: hours,
-          isFeasible: feasible,
-          bestSpeed,
-          phase: 'verify',
+          : undefined;
+
+      pushFrame({
+        codeLine: 9,
+        explanation: `Test candidate speed k = ${mid}: Compute ceil(pile / ${mid}) for each pile -> [${pileHours.join(' + ')}] = ${hours} total hours needed (Budget H = ${h}).`,
+        variables: { candidateSpeed: mid, hoursNeeded: hours, allowedHours: h, feasible: String(feasible), pileBreakdown: pileHours.join('+') },
+        conditionEval: {
+          expr: 'hoursNeeded(mid) <= h',
+          condition: `${hours} <= ${h}`,
+          result: feasible,
+        },
+        soundCue: 'compare',
+        checkpoint: monotoneCheckpoint,
+        mid,
+        hoursNeeded: hours,
+        isFeasible: feasible,
+        low,
+        high,
+        bestSpeed,
+        phase: 'verify',
+        pedagogy: {
+          what: `Predicate check: at speed ${mid}, each pile takes ⌈pile/${mid}⌉ hours — total ${hours} vs budget ${h}.`,
+          why: 'Each pile is eaten sequentially, so hours add up; a pile is never split across hours.',
+          whatNext: feasible ? 'Feasible: record it and try smaller speeds.' : 'Too slow: every speed ≤ this one fails, so move up.',
         },
       });
-      checkpointAdded = true;
+      if (monotoneCheckpoint) checkpointAdded = true;
 
       if (feasible) {
         bestSpeed = mid;
         high = mid - 1;
+        actionType = 'FEASIBLE';
 
-        frames.push({
-          stepIndex: frames.length,
-          totalSteps: 1,
-          codeLine: 8,
-          isMilestone: true,
-          milestoneTitle: `Feasible Speed Found (k = ${mid})`,
-          explanation: `Speed k = ${mid} succeeds (${hours} hrs <= ${h} hrs). Record bestSpeed = ${mid}. Narrow upper bound: high = mid - 1 = ${high} to search for smaller feasible speeds.`,
+        const feasibleMilestone = !firstFeasibleMilestoneUsed ? 'First Feasible Found' : undefined;
+        if (feasibleMilestone) firstFeasibleMilestoneUsed = true;
+
+        pushFrame({
+          codeLine: 11,
+          explanation: `Speed k = ${mid} succeeds (${hours} hrs ≤ ${h} hrs). Record bestSpeed = ${mid}. Narrow upper bound: high = mid - 1 = ${high} to search for smaller feasible speeds.`,
           variables: { bestSpeed, newHigh: high, low, verified: true },
-          conditionEval: { expr: `${hours} <= ${h}`, result: true },
-          soundCue: { type: 'swap' },
-          callStack: [
-            { name: `recordOptimal(${mid})`, params: { best: mid, newHigh: high }, line: 8, isCurrent: true },
-            { name: 'main()', params: {}, line: 1 },
-          ],
+          conditionEval: { expr: 'hoursNeeded(mid) <= h', condition: `${hours} <= ${h}`, result: true },
+          milestone: feasibleMilestone,
+          soundCue: 'swap',
+          mid,
+          hoursNeeded: hours,
+          isFeasible: true,
+          low,
+          high,
+          bestSpeed,
+          phase: 'search',
           pedagogy: {
             what: `Speed ${mid} finishes in ${hours} ≤ ${h} hours, so it is a valid answer; best becomes ${mid}.`,
             why: 'We are minimizing, so a feasible candidate only proves the optimum is at most mid — search below it.',
             whatNext: `Set high = ${high} and keep looking for a smaller feasible speed.`,
           },
-          state: {
-            piles,
-            h,
-            low,
-            high,
-            mid,
-            hoursNeeded: hours,
-            isFeasible: true,
-            bestSpeed,
-            phase: 'search',
-          },
         });
       } else {
         low = mid + 1;
+        actionType = 'TOO_SLOW';
 
-        frames.push({
-          stepIndex: frames.length,
-          totalSteps: 1,
-          codeLine: 11,
+        pushFrame({
+          codeLine: 13,
           explanation: `Speed k = ${mid} is too slow (${hours} hrs > ${h} hrs). Discard speed <= ${mid}. Narrow lower bound: low = mid + 1 = ${low}.`,
           variables: { speedTooSlow: mid, newLow: low, high, tooSlow: true },
-          conditionEval: { expr: `${hours} <= ${h}`, result: false },
-          soundCue: { type: 'compare' },
-          callStack: [
-            { name: `increaseSpeed(low=${low})`, params: { low, high }, line: 11, isCurrent: true },
-            { name: 'main()', params: {}, line: 1 },
-          ],
+          conditionEval: { expr: 'hoursNeeded(mid) <= h', condition: `${hours} <= ${h}`, result: false },
+          soundCue: 'compare',
+          mid,
+          hoursNeeded: hours,
+          isFeasible: false,
+          low,
+          high,
+          bestSpeed,
+          phase: 'search',
           pedagogy: {
             what: `Speed ${mid} needs ${hours} > ${h} hours — infeasible; every speed ≤ ${mid} is also infeasible.`,
             why: 'Slower speeds can only increase each pile\'s hours, so the entire lower half is eliminated at once.',
             whatNext: `Set low = ${low} and test faster speeds.`,
           },
-          state: {
-            piles,
-            h,
-            low,
-            high,
-            mid,
-            hoursNeeded: hours,
-            isFeasible: false,
-            bestSpeed,
-            phase: 'search',
+        });
+      }
+
+      // The answer-space elimination milestone: once the window drops below half the original range.
+      const originalRange = maxPile;
+      const eliminated = originalRange - (high - low + 1);
+      if (!halfMilestoneUsed && eliminated >= Math.ceil(originalRange / 2)) {
+        halfMilestoneUsed = true;
+        actionType = 'ITERATION';
+        pushFrame({
+          codeLine: 7,
+          explanation: `Answer-space milestone: over half of the original range [1..${originalRange}] has been eliminated. Remaining window: [${low}..${high}].`,
+          variables: { low, high, remaining: high - low + 1, eliminated },
+          milestone: 'Half Answer Space Eliminated',
+          mid,
+          hoursNeeded: hours,
+          isFeasible: feasible,
+          low,
+          high,
+          bestSpeed,
+          phase: 'search',
+          pedagogy: {
+            what: `The candidate window [${low}..${high}] has shrunk to less than half of [1..${originalRange}].`,
+            why: 'Each predicate test discards one whole side of the speed range — that is the O(log(maxPile)) cost model at work.',
+            whatNext: 'Continue testing the midpoint until the window is empty.',
           },
         });
       }
+
       iter++;
     }
 
     // Final result frame
-    frames.push({
-      stepIndex: frames.length,
-      totalSteps: 1,
-      codeLine: 12,
-      isMilestone: true,
-      milestoneTitle: `Optimal Minimum Speed: k = ${bestSpeed}`,
-      explanation: `Search space exhausted (low ${low} > high ${high}). Optimal minimum speed is k = ${bestSpeed} (finishes in ${calcHours(bestSpeed)} hrs <= ${h} hrs).`,
+    actionType = 'DONE';
+    pushFrame({
+      codeLine: 14,
+      explanation: `Search space exhausted (low ${low} > high ${high}). Optimal minimum speed is k = ${bestSpeed} (finishes in ${calcHours(bestSpeed)} hrs ≤ ${h} hrs).`,
       variables: { optimalSpeed: bestSpeed, finalHours: calcHours(bestSpeed), limitH: h },
-      callStack: [
-        { name: 'complete()', params: { optimalK: bestSpeed }, line: 12, isCurrent: true },
-        { name: 'main()', params: {}, line: 1 },
-      ],
+      milestone: `Optimal Minimum Speed: k = ${bestSpeed}`,
+      soundCue: 'complete',
+      mid: bestSpeed,
+      hoursNeeded: calcHours(bestSpeed),
+      isFeasible: true,
+      low,
+      high,
+      bestSpeed,
+      phase: 'found',
       pedagogy: {
         what: `The window is empty; bestSpeed = ${bestSpeed} is the smallest speed that meets the ${h}-hour deadline.`,
         why: 'The loop moved past the feasibility boundary: every speed below bestSpeed was tested and failed, every speed ≥ it is feasible.',
         whatNext: 'Return bestSpeed.',
-      },
-      state: {
-        piles,
-        h,
-        low,
-        high,
-        mid: bestSpeed,
-        hoursNeeded: calcHours(bestSpeed),
-        isFeasible: true,
-        bestSpeed,
-        phase: 'found',
       },
     });
 

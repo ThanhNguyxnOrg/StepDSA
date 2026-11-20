@@ -9742,3 +9742,136 @@ describe('sleep sort rebuild regressions', () => {
     }
   });
 });
+
+describe('binary-search-answer rebuild regressions', () => {
+  const mod = () => moduleById('binary-search-answer');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+
+  it('frames iterations, predicate checks and window moves with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('ITERATION');
+    expect(actions).toContain('EVALUATE');
+    expect(actions).toContain('FEASIBLE');
+    expect(actions).toContain('TOO_SLOW');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(1);
+    expect(checkpoints[0].checkpoint!.id).toBe('binary-search-answer-monotone');
+    expect(checkpoints[0].checkpoint!.correctIndex).toBe(1);
+  });
+
+  it('returns the true minimum feasible speed on every preset', () => {
+    const module = mod();
+    const standard = module.generateTimeline({ piles: [3, 6, 7, 11], h: 8 });
+    expect(standard[standard.length - 1].variables?.optimalSpeed).toBe(4);
+    expect(standard[standard.length - 1].variables?.finalHours).toBe(8);
+
+    const tight = module.generateTimeline({ piles: [30, 11, 23, 4, 20], h: 5 });
+    expect(tight[tight.length - 1].variables?.optimalSpeed).toBe(30);
+    expect(tight[tight.length - 1].variables?.finalHours).toBe(5);
+
+    // k = 11 is the true minimum here (10 hours exactly) — the old preset prose
+    // claiming k = 12 was wrong and is now corrected in the module itself.
+    const generous = module.generateTimeline({ piles: [30, 11, 23, 4, 20], h: 10 });
+    expect(generous[generous.length - 1].variables?.optimalSpeed).toBe(11);
+    expect(generous[generous.length - 1].variables?.finalHours).toBe(10);
+  });
+
+  it('marks real turning points as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Feasible Found',
+      'Half Answer Space Eliminated',
+      'Optimal Minimum Speed: k = 4',
+    ]);
+    const feasibleFrames = timeline.filter((frame) => frame.action === 'FEASIBLE');
+    expect(feasibleFrames.filter((frame) => frame.isMilestone)).toHaveLength(1);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, module.presets[1].data]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /hours_needed|hoursNeeded/,
+        4: /low = 1|let low = 1|int low = 1/,
+        7: /while low <= high|while \(low <= high\)/,
+        9: /hours_needed\(mid\) <= h|hoursNeeded\(mid\) <= h/,
+        11: /high = mid - 1/,
+        13: /low = mid \+ 1/,
+        14: /return ans/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(14);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, clamped and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ piles: [], h: 3 } as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[1].variables?.optimalSpeed).toBe(0);
+    expect(empty[1].variables?.finalHours).toBe(0);
+    expect(auditTimeline(module, { piles: [], h: 3 } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ piles: ['x', 3, null, 8], h: 4 } as any);
+    expect(invalid[0].explanation).toMatch(/2 non-positive or non-numeric pile\(s\) dropped/);
+    expect(invalid[invalid.length - 1].variables?.optimalSpeed).toBe(3);
+
+    const clamped = module.generateTimeline({ piles: [2000, 5], h: -2 } as any);
+    expect(clamped[0].explanation).toMatch(/pile 2000 clamped to 999/);
+    expect(clamped[0].explanation).toMatch(/h was non-positive, so it is clamped to 1 hour/);
+
+    const fallback = module.generateTimeline({ piles: ['a'], h: 8 } as any);
+    expect(fallback[0].explanation).toMatch(/no positive piles/);
+    expect(fallback[0].state.piles).toEqual([3, 6, 7, 11]);
+
+    const oversized = module.generateTimeline({ piles: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], h: 2 } as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 8/);
+    expect(oversized[oversized.length - 1].state.piles).toHaveLength(8);
+
+    for (const data of [module.defaultInput, { piles: [], h: 3 }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correct on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});

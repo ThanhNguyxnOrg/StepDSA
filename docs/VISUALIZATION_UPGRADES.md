@@ -299,6 +299,18 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **binary-search-answer ✅ (2026-11-20):** rebuild — named actions on every
+  frame (INIT → ITERATION → EVALUATE → FEASIBLE / TOO_SLOW → DONE) around the
+  existing answer-space slider + pile-breakdown stage, 12 frames on the
+  default input with WHAT/WHY/NEXT on all of them, 1 checkpoint (monotonic
+  feasibility direction with non-zero correct index), 3 real milestones +
+  auto Start (First Feasible Found, Half Answer Space Eliminated, Optimal
+  Minimum Speed), five 14-line snippets with the same statement per line and
+  exact code-line mapping (mapBad 48 → 0), honest normalisation for
+  {piles, h} (non-positive piles dropped, h clamped to ≥ 1, >8 truncated;
+  empty piles = valid 2-frame run with result 0). Also fixed the generous
+  preset prose: the true minimum there is k = 11, not k = 12. 6 regression
+  tests added (756 total).
 - **sleep-sort ✅ (2026-11-20):** rebuild — named actions on every frame
   (INIT → DISPATCH → TICK_WAKE → WAKE_APPEND → TICK_IDLE → DONE), 17 frames
   on the default input with WHAT/WHY/NEXT on all of them, 2 checkpoints
