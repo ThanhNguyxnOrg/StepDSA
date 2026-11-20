@@ -9875,3 +9875,136 @@ describe('binary-search-answer rebuild regressions', () => {
     }
   });
 });
+
+describe('backtracking decision tree rebuild regressions', () => {
+  const mod = () => moduleById('backtracking-decision-tree');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+
+  it('frames every node action with pedagogy and two checkpoints', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('init');
+    expect(actions).toContain('explore');
+    expect(actions).toContain('include');
+    expect(actions).toContain('restore');
+    expect(actions).toContain('exclude');
+    expect(actions).toContain('prune');
+    expect(actions).toContain('solution');
+    expect(actions[timeline.length - 1]).toBe('complete');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('backtracking-include-vs-exclude');
+    expect(checkpoints[0].checkpoint!.correctIndex).toBe(1);
+    expect(checkpoints[1].checkpoint!.id).toBe('backtracking-prune-rule');
+  });
+
+  it('explores include/exclude branches and prunes only dead ends', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const solutions = timeline.filter((frame) => frame.action === 'solution');
+    expect(solutions.length).toBeGreaterThan(0);
+    // [2, 5] and [7] are the two subsets that sum to 7
+    const foundValues = solutions.map((frame) => frame.state.nodes.find((n: any) => n.id === frame.state.activeNodeId)?.label);
+    expect(foundValues).toContain('Σ=7');
+
+    const prunes = timeline.filter((frame) => frame.action === 'prune');
+    expect(prunes.length).toBeGreaterThan(0);
+    for (const frame of prunes) {
+      expect(frame.conditionEval?.result).toBe(false);
+    }
+
+    // restore frames must appear between include and exclude
+    const restores = timeline.filter((frame) => frame.action === 'restore');
+    expect(restores.length).toBeGreaterThan(0);
+  });
+
+  it('marks the first solution and first prune as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Prune',
+      'First Solution Found',
+      'Complete Exploration',
+    ]);
+    const pruneFrames = timeline.filter((frame) => frame.action === 'prune');
+    expect(pruneFrames.filter((frame) => frame.isMilestone)).toHaveLength(1);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, module.presets[1].data]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /sum == target|current_sum == target|sum === target/,
+        3: /record included|solutions.append|solutions.push|solutions.push_back|solutions.add/,
+        5: /sum > target or idx >= N|current_sum > target or idx >= len\(items\)|sum > target \|\| idx >= items|idx >= \(int\)items.size\(\)/,
+        8: /included = included \+ \[items\[idx\]\]|included.append\(items\[idx\]\)|included.push\(items\[idx\]\)|included.push_back\(items\[idx\]\)|included.add\(items\[idx\]\)/,
+        10: /remove items\[idx\] from included|included.pop\(\)|included.pop_back\(\)|included.remove\(included.size\(\) - 1\)/,
+        12: /backtrack\(idx \+ 1, included, sum\)|backtrack\(idx \+ 1, included, current_sum\)/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(12);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ items: [], target: 0 } as any);
+    // empty items: only the empty subset exists (sum 0) — a valid short run
+    expect(empty.length).toBeGreaterThanOrEqual(2);
+    expect(auditTimeline(module, { items: [], target: 0 } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ items: ['x', 3, null, 8], target: 5 } as any);
+    expect(invalid[0].explanation).toMatch(/2 negative or non-numeric item\(s\) dropped/);
+
+    const fallback = module.generateTimeline({ items: ['a'], target: 7 } as any);
+    expect(fallback[0].explanation).toMatch(/no non-negative items/);
+    expect(fallback[0].state.items).toEqual([2, 3, 5, 7]);
+
+    const oversized = module.generateTimeline({ items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], target: 5 } as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 6/);
+    expect(oversized[0].state.items).toHaveLength(6);
+
+    for (const data of [module.defaultInput, { items: [], target: 0 }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});

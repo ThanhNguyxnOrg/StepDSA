@@ -29,25 +29,130 @@ function cloneNodes(ns: DecisionNode[]): DecisionNode[] {
 }
 
 /* ─── timeline ─── */
+const MAX_LEN = 6; // 2^6 = 64 decision nodes max — keeps the tree watchable
+const MAX_ABS = 99;
+const DEFAULT_INPUT: BDTInput = { items: [2, 3, 5, 7], target: 7 };
+
+interface NormalisedInput {
+  items: number[];
+  target: number;
+  notes: string[];
+}
+
+/**
+ * Subset-sum pruning (sum > target) is only sound with non-negative items:
+ * negative values are dropped, items are clamped to ±MAX_ABS, and the input is
+ * truncated to MAX_LEN items so the decision tree stays watchable. Every
+ * adjustment is reported as a note so the INIT frame can state it honestly.
+ * An empty item list is a valid run: only the empty subset exists.
+ */
+function normalise(input: BDTInput | undefined): NormalisedInput {
+  const notes: string[] = [];
+  const raw = input && typeof input === 'object' ? input : DEFAULT_INPUT;
+  const rawItems = Array.isArray(raw.items) ? raw.items : DEFAULT_INPUT.items;
+
+  const usable = rawItems.filter(
+    (value): value is number => typeof value === 'number' && Number.isFinite(value) && Math.round(value) >= 0
+  );
+
+  if (rawItems.length > 0 && usable.length === 0) {
+    notes.push('no non-negative items in the input, so the default items are used');
+    return { items: [...DEFAULT_INPUT.items], target: Math.round(raw.target) || DEFAULT_INPUT.target, notes };
+  }
+  if (usable.length < rawItems.length) {
+    notes.push(`${rawItems.length - usable.length} negative or non-numeric item(s) dropped (pruning assumes non-negative items)`);
+  }
+
+  const clamped = usable.map((value) => {
+    const rounded = Math.min(MAX_ABS, Math.round(value));
+    if (rounded !== Math.round(value)) {
+      notes.push(`item ${Math.round(value)} clamped to ${rounded} (max ${MAX_ABS})`);
+    }
+    return rounded;
+  });
+
+  let items = clamped;
+  if (items.length > MAX_LEN) {
+    notes.push(`${items.length} items truncated to ${MAX_LEN} so the decision tree stays watchable`);
+    items = items.slice(0, MAX_LEN);
+  }
+
+  const target = typeof raw.target === 'number' && Number.isFinite(raw.target)
+    ? Math.round(raw.target)
+    : DEFAULT_INPUT.target;
+
+  return { items, target, notes };
+}
+
 function generateTimeline(input: BDTInput): ExecutionFrame<BDTState>[] {
+  const { items, target, notes } = normalise(input);
   const frames: ExecutionFrame<BDTState>[] = [];
   const nodes: DecisionNode[] = [];
   let nextId = 0;
   let step = 0;
-  const { items, target } = input;
+
+  let pruneCheckpointAdded = false;
+  let branchCheckpointAdded = false;
+  let firstSolutionMilestoneUsed = false;
+  let firstPruneMilestoneUsed = false;
 
   function push(
     codeLine: number,
     explanation: string,
     action: string,
     phase: string,
-    activeId?: number,
+    activeId: number | undefined,
     callStack: string[] = ['backtrackingDecisionTree()'],
     variables: Record<string, string | number | boolean | null> = {},
     conditionEval?: { condition: string; result: boolean },
     soundCue?: 'step' | 'swap' | 'compare' | 'pop' | 'fail' | 'finish',
-    isMilestone?: boolean
+    isMilestone?: boolean,
+    checkpoint?: ExecutionFrame<BDTState>['checkpoint'],
+    milestoneTitle?: string
   ) {
+    const pedagogyByAction: Record<string, { what: string; why: string; whatNext: string }> = {
+      init: {
+        what: `The full item list [${items.join(', ')}] must be searched for a subset summing exactly to ${target}.`,
+        why: 'Backtracking explores include/exclude choices one item at a time; the running sum makes pruning sound only because items are non-negative.',
+        whatNext: `Start at idx = 0 with an empty included list and sum = 0.`,
+      },
+      explore: {
+        what: `A new node opens: included = [${variables.included}], running sum = ${variables.sum}.`,
+        why: 'Each node first checks the goal test — matching the target ends this branch successfully before any further choice.',
+        whatNext: 'If the sum does not match, check the prune guard, then choose include or exclude.',
+      },
+      solution: {
+        what: `This branch reached a valid subset: [${variables.solution}].`,
+        why: 'The running sum equals the target exactly, so the node is a genuine solution — no further recursion is needed here.',
+        whatNext: 'Return to the parent and explore the sibling branch.',
+      },
+      prune: {
+        what: 'This branch is cut: it can never reach the target.',
+        why: 'With non-negative items, a running sum above the target can only grow, so every descendant of this node is guaranteed to fail.',
+        whatNext: 'Return to the parent; the sibling branch may still succeed.',
+      },
+      include: {
+        what: `Branch LEFT: include the current item, then recurse one level deeper.`,
+        why: 'Depth-first search must try the item present before trying the item absent — this ordering is what makes the tree complete.',
+        whatNext: 'Recurse with the enlarged sum, then backtrack (restore) before excluding.',
+      },
+      restore: {
+        what: 'Backtrack: remove the item just added before trying the exclude branch.',
+        why: 'Restoring the parent state is what makes backtracking correct — each branch must see the same included list as its parent had.',
+        whatNext: 'Now try the exclude branch with the restored state.',
+      },
+      exclude: {
+        what: `Branch RIGHT: exclude the current item and recurse with the same sum.`,
+        why: 'Excluding is the complementary decision; both must be tried for the search to be exhaustive.',
+        whatNext: 'Return to the parent after both children complete.',
+      },
+      complete: {
+        what: 'Every node has been visited: the whole decision tree is explored.',
+        why: 'Depth-first include/exclude enumeration plus sound pruning guarantees no solution was skipped.',
+        whatNext: 'Review the solution nodes (green) versus pruned nodes (red) in the tree.',
+      },
+    };
+
     frames.push({
       stepIndex: step++,
       totalSteps: 0,
@@ -59,6 +164,9 @@ function generateTimeline(input: BDTInput): ExecutionFrame<BDTState>[] {
       conditionEval,
       soundCue,
       isMilestone,
+      milestoneTitle,
+      pedagogy: pedagogyByAction[action] ?? pedagogyByAction.explore,
+      ...(checkpoint ? { checkpoint } : {}),
       state: { nodes: cloneNodes(nodes), message: explanation, phase, activeNodeId: activeId, target, items },
     });
   }
@@ -71,7 +179,7 @@ function generateTimeline(input: BDTInput): ExecutionFrame<BDTState>[] {
     const currentStack = [...stack, `backtrack(idx=${idx}, sum=${sum})`];
 
     push(
-      1,
+      2,
       `Explore: included=[${included}], sum=${sum}, depth=${depth}`,
       'explore',
       'explore',
@@ -84,8 +192,10 @@ function generateTimeline(input: BDTInput): ExecutionFrame<BDTState>[] {
 
     if (sum === target) {
       nodes[nodeIdx].status = 'solution';
+      const solutionMilestone = !firstSolutionMilestoneUsed ? 'First Solution Found' : undefined;
+      if (solutionMilestone) firstSolutionMilestoneUsed = true;
       push(
-        2,
+        3,
         `✓ Solution found! [${included}] = ${target}`,
         'solution',
         'solution',
@@ -94,31 +204,70 @@ function generateTimeline(input: BDTInput): ExecutionFrame<BDTState>[] {
         { sum, target, solution: JSON.stringify(included) },
         { condition: 'sum === target (match found)', result: true },
         'pop',
-        true
+        !!solutionMilestone,
+        undefined,
+        solutionMilestone
       );
       return nodeIdx;
     }
 
     if (sum > target || idx >= items.length) {
       nodes[nodeIdx].status = 'pruned';
+      const pruneMilestone = !firstPruneMilestoneUsed ? 'First Prune' : undefined;
+      if (pruneMilestone) firstPruneMilestoneUsed = true;
+
+      const pruneCheckpoint: ExecutionFrame<BDTState>['checkpoint'] | undefined = !pruneCheckpointAdded
+        ? {
+            id: 'backtracking-prune-rule',
+            question: `This node has sum = ${sum} against target ${target}. Why is it pruned?`,
+            options: [
+              'The item list is exhausted — no more choices',
+              'A running sum above the target can only grow, so every descendant fails',
+              'Pruning is random and depends on luck',
+            ],
+            correctIndex: 1,
+            explanation:
+              'Because items are non-negative, adding more items can never decrease the sum — once it passes the target, the whole subtree is dead.',
+            hint: 'Could a later include ever bring the sum back down?',
+          }
+        : undefined;
+
       push(
-        3,
-        sum > target ? `✗ Pruned: sum ${sum} > target ${target}` : `✗ No more items`,
+        5,
+        sum > target ? `✗ Pruned: sum ${sum} > target ${target}` : `✗ No more items at idx ${idx}`,
         'prune',
         'prune',
         id,
         currentStack,
         { sum, target, idx, limit: items.length },
         { condition: sum > target ? 'sum > target (overflow)' : 'idx >= items.length (exhausted)', result: false },
-        'fail'
+        'fail',
+        !!pruneMilestone,
+        pruneCheckpoint,
+        pruneMilestone
       );
+      if (pruneCheckpoint) pruneCheckpointAdded = true;
       return nodeIdx;
     }
 
     // include items[idx]
     const nextIncluded = [...included, items[idx]];
+    const includeCheckpoint: ExecutionFrame<BDTState>['checkpoint'] | undefined = !branchCheckpointAdded
+      ? {
+          id: 'backtracking-include-vs-exclude',
+          question: `At idx = ${idx} (item ${items[idx]}), which branch does the search try FIRST?`,
+          options: [
+            'Exclude — skip the item, then include later',
+            'Include — take the item, then exclude on the way back',
+          ],
+          correctIndex: 1,
+          explanation: `Depth-first search takes the item first (left branch), then backtracks and excludes it. That ordering is what makes the tree complete.`,
+          hint: 'Which branch is the LEFT child in this tree?',
+        }
+      : undefined;
+
     push(
-      4,
+      8,
       `Include ${items[idx]} → sum=${sum + items[idx]}`,
       'include',
       'explore',
@@ -126,16 +275,32 @@ function generateTimeline(input: BDTInput): ExecutionFrame<BDTState>[] {
       currentStack,
       { nextItem: items[idx], projectedSum: sum + items[idx] },
       { condition: 'try branch including items[idx]', result: true },
-      'swap'
+      'swap',
+      undefined,
+      includeCheckpoint
     );
+    if (includeCheckpoint) branchCheckpointAdded = true;
     const leftIdx = backtrack(idx + 1, nextIncluded, sum + items[idx], depth + 1, currentStack);
     nodes[nodeIdx].left = leftIdx;
+
+    // restore the parent state before excluding — the essence of backtracking
+    push(
+      10,
+      `Backtrack: remove ${items[idx]} from included (restore sum = ${sum})`,
+      'restore',
+      'backtrack',
+      id,
+      currentStack,
+      { restoredItem: items[idx], restoredSum: sum },
+      { condition: 'restore parent state before excluding', result: true },
+      'step'
+    );
 
     // exclude items[idx]
     nodes[nodeIdx].status = 'backtrack';
     push(
-      6,
-      `Backtrack: exclude ${items[idx]}`,
+      12,
+      `Exclude ${items[idx]}: recurse with sum = ${sum} unchanged`,
       'exclude',
       'backtrack',
       id,
@@ -155,9 +320,20 @@ function generateTimeline(input: BDTInput): ExecutionFrame<BDTState>[] {
     return nodeIdx;
   }
 
-  push(1, `Backtracking: find subsets of [${items}] that sum to ${target}`, 'init', 'init', undefined, ['backtrackingDecisionTree()'], { items: JSON.stringify(items), target }, { condition: 'start', result: true }, 'step');
+  push(
+    1,
+    `Backtracking: find subsets of [${items.join(', ')}] that sum to ${target}` +
+      (notes.length ? ` Input adjusted: ${notes.join('; ')}.` : ''),
+    'init',
+    'init',
+    undefined,
+    ['backtrackingDecisionTree()'],
+    { items: JSON.stringify(items), target },
+    { condition: 'start', result: true },
+    'step'
+  );
   backtrack(0, [], 0, 0);
-  push(9, 'State-space exploration complete', 'complete', 'complete', undefined, ['backtrackingDecisionTree()'], { target }, { condition: 'complete', result: true }, 'finish', true);
+  push(12, 'State-space exploration complete', 'complete', 'complete', undefined, ['backtrackingDecisionTree()'], { target }, { condition: 'complete', result: true }, 'finish', true, undefined, 'Complete Exploration');
 
   const total = frames.length;
   frames.forEach((f, i) => { f.stepIndex = i; f.totalSteps = total; });
@@ -302,49 +478,67 @@ export const backtrackingDecisionTreeModule: AlgorithmModule<BDTInput, BDTState>
   },
   codeSnippets: {
     pseudocode: `function backtrack(idx, included, sum):
-  if sum == target: FOUND solution
-  if sum > target or idx >= N: PRUNE
-  backtrack(idx+1, included+[items[idx]], sum+items[idx])  // include
-  backtrack(idx+1, included, sum)                           // exclude`,
+    if sum == target:
+        record included as a solution
+        return
+    if sum > target or idx >= N:
+        return  (prune)
+    include items[idx]:
+        included = included + [items[idx]]
+        backtrack(idx + 1, included, sum + items[idx])
+        remove items[idx] from included
+    exclude items[idx]:
+        backtrack(idx + 1, included, sum)`,
     python: `def backtrack(idx, included, current_sum):
     if current_sum == target:
         solutions.append(included[:])
         return
     if current_sum > target or idx >= len(items):
         return  # prune
-    # Include items[idx]
+    # include items[idx]
     included.append(items[idx])
     backtrack(idx + 1, included, current_sum + items[idx])
     included.pop()
-    # Exclude items[idx]
+    # exclude items[idx]
     backtrack(idx + 1, included, current_sum)`,
     typescript: `function backtrack(idx: number, included: number[], sum: number): void {
-  if (sum === target) { solutions.push([...included]); return; }
-  if (sum > target || idx >= items.length) return; // prune
-  // Include
+  if (sum === target) {
+    solutions.push([...included]);
+    return; }
+  if (sum > target || idx >= items.length) {
+    return; }
+  // include items[idx]
   included.push(items[idx]);
   backtrack(idx + 1, included, sum + items[idx]);
   included.pop();
-  // Exclude
-  backtrack(idx + 1, included, sum);
-}`,
+  // exclude items[idx]
+  backtrack(idx + 1, included, sum); }`,
     cpp: `void backtrack(int idx, vector<int>& included, int sum) {
-  if (sum == target) { solutions.push_back(included); return; }
-  if (sum > target || idx >= items.size()) return;
+  if (sum == target) {
+    solutions.push_back(included);
+    return; }
+  if (sum > target || idx >= (int)items.size()) {
+    return; }
+  // include items[idx]
   included.push_back(items[idx]);
   backtrack(idx + 1, included, sum + items[idx]);
   included.pop_back();
-  backtrack(idx + 1, included, sum);
-}`,
+  // exclude items[idx]
+  backtrack(idx + 1, included, sum); }`,
     java: `void backtrack(int idx, List<Integer> included, int sum) {
-  if (sum == target) { solutions.add(new ArrayList<>(included)); return; }
-  if (sum > target || idx >= items.length) return;
+  if (sum == target) {
+    solutions.add(new ArrayList<>(included));
+    return; }
+  if (sum > target || idx >= items.length) {
+    return; }
+  // include items[idx]
   included.add(items[idx]);
   backtrack(idx + 1, included, sum + items[idx]);
   included.remove(included.size() - 1);
-  backtrack(idx + 1, included, sum);
-}`,
+  // exclude items[idx]
+  backtrack(idx + 1, included, sum); }`,
   },
+
   presets: [
     { id: 'small', label: 'Small (4 items, target 7)', description: 'Small set for clear tree', data: { items: [2, 3, 5, 7], target: 7 } },
     { id: 'medium', label: 'Medium (5 items, target 10)', description: 'More branches and pruning', data: { items: [3, 4, 5, 2, 8], target: 10 } },

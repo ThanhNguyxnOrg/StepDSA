@@ -299,6 +299,16 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **backtracking-decision-tree ✅ (2026-11-20):** rebuild — pedagogy on every
+  frame (was 0%), 2 checkpoints (include-vs-exclude order with non-zero
+  correct index + prune soundness with non-negative items), named actions
+  (init → explore → include → restore → exclude → prune / solution →
+  complete), 3 real milestones + auto Start (First Prune, First Solution
+  Found, Complete Exploration), five 12-line snippets with the same
+  statement per line and exact code-line mapping (mapBad 774 → 0), honest
+  normalisation for {items, target} (negative items dropped because pruning
+  assumes non-negative items, items clamped to ±99, >6 truncated; empty item
+  list = valid short run). 6 regression tests added (762 total).
 - **binary-search-answer ✅ (2026-11-20):** rebuild — named actions on every
   frame (INIT → ITERATION → EVALUATE → FEASIBLE / TOO_SLOW → DONE) around the
   existing answer-space slider + pile-breakdown stage, 12 frames on the
