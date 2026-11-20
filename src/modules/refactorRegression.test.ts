@@ -179,7 +179,7 @@ describe('pedagogical timeline regressions', () => {
     const stooge = moduleById('stooge-sort');
     const stoogeTimeline = stooge.generateTimeline([5, 2, 4, 1, 3]);
     expect(
-      stoogeTimeline.some((frame) => frame.codeLine === 3 && frame.conditionEval?.result === false)
+      stoogeTimeline.some((frame) => frame.codeLine === 4 && frame.conditionEval?.result === false)
     ).toBe(true);
     expect(stoogeTimeline.some((frame) => frame.checkpoint?.id === 'stooge-third-branch')).toBe(
       true
@@ -9463,5 +9463,146 @@ describe('bogosort rebuild regressions', () => {
     const best = module.generateTimeline([1, 2, 3, 4]);
     expect(best.some((frame) => frame.action === 'SHUFFLED')).toBe(false);
     expect(best[best.length - 1].variables?.totalAttempts).toBe(1);
+  });
+});
+
+describe('stooge sort rebuild regressions', () => {
+  const mod = () => moduleById('stooge-sort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames the three overlapping branches with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('BOUNDARY_COMPARE');
+    expect(actions).toContain('BOUNDARY_SWAP');
+    expect(actions).toContain('BASE_CASE');
+    expect(actions).toContain('BRANCH_FIRST');
+    expect(actions).toContain('BRANCH_LAST');
+    expect(actions).toContain('BRANCH_FIRST_AGAIN');
+    expect(actions[timeline.length - 1]).toBe('DONE');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('stooge-third-branch');
+    expect(checkpoints[0].checkpoint!.correctIndex).toBe(1);
+    expect(checkpoints[1].checkpoint!.id).toBe('stooge-why-overlap');
+  });
+
+  it('sorts by three overlapping two-thirds branches', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    // exactly one first-2/3, one last-2/3, one first-2/3-again call frame at the top level
+    const topBranches = timeline.filter(
+      (frame) =>
+        frame.action === 'BRANCH_FIRST' ||
+        frame.action === 'BRANCH_LAST' ||
+        frame.action === 'BRANCH_FIRST_AGAIN'
+    );
+    expect(topBranches.length).toBeGreaterThanOrEqual(3);
+    // the first trisection announces the 2/3 split with t = 1
+    const first = topBranches.find((frame) => frame.action === 'BRANCH_FIRST')!;
+    expect(first.variables?.t).toBe(1);
+
+    const last = timeline[timeline.length - 1];
+    expectSorted(values(last));
+    expect(last.variables?.result).toBe(5);
+    expect(last.variables?.calls).toBeGreaterThan(3);
+  });
+
+  it('marks the first trisection as the only branch milestone', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Trisection',
+      'Stooge Sort Complete',
+    ]);
+    const branchFrames = timeline.filter(
+      (frame) => frame.action === 'BRANCH_LAST' || frame.action === 'BRANCH_FIRST_AGAIN'
+    );
+    expect(branchFrames.every((frame) => !frame.isMilestone)).toBe(true);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, [3, 1, 2]]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        1: /stoogeSort\(|stoogesort\(/,
+        2: /arr\[i\] > arr\[j\]/,
+        3: /swap arr\[i\], arr\[j\]|arr\[j\], arr\[i\]|swap\(arr\[i\], arr\[j\]\)|arr\[i\] = arr\[j\]/,
+        4: /j - i \+ 1\) > 2|j - i \+ 1 > 2/,
+        5: /t = |const t = |int t = /,
+        6: /stoogeSort\(arr, i, j - t\)|stoogesort\(arr, i, j - t\)/,
+        7: /stoogeSort\(arr, i \+ t, j\)|stoogesort\(arr, i \+ t, j\)/,
+        8: /stoogeSort\(arr, i, j - t\)|stoogesort\(arr, i, j - t\)/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(9);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(empty[1].variables?.calls).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([5, 2, 4, 1, 3]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 6/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(6);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean and correctly sorted on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expectSorted(values(timeline[timeline.length - 1]));
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
   });
 });

@@ -299,6 +299,17 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **stooge-sort ✅ (2026-11-20):** rebuild — named actions on every frame
+  (INIT → BOUNDARY_COMPARE/SWAP → BASE_CASE → BRANCH_FIRST / BRANCH_LAST /
+  BRANCH_FIRST_AGAIN → DONE), 111 frames on the default input with
+  WHAT/WHY/NEXT on all of them (was 97%), 2 checkpoints (third-branch
+  necessity + why the overlap guarantees the maximum reaches j, both with
+  non-zero correct index), 2 real milestones + auto Start (First Trisection,
+  Complete), five 9-line snippets with the same statement per line and exact
+  code-line mapping (mapBad 70 → 0; previously line 9 pointed past the
+  8-line pseudocode), honest normalisation (input capped at 6 elements so the
+  3-branch recursion tree stays watchable; empty = valid 2-frame run).
+  6 regression tests added (744 total).
 - **bogosort ✅ (2026-11-20):** rebuild — named actions on every frame (INIT →
   VERIFY per adjacent pair → REJECTED on first violation → SHUFFLED → SORTED),
   12 frames on the default input with WHAT/WHY/NEXT on all of them (was 50%),
