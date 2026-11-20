@@ -9330,3 +9330,138 @@ describe('drop sort rebuild regressions', () => {
     expect(worst[worst.length - 1].variables?.droppedCount).toBe(5);
   });
 });
+
+describe('bogosort rebuild regressions', () => {
+  const mod = () => moduleById('bogosort');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+  const values = (frame: any) => (frame.state?.array ?? []).map((el: any) => el.value);
+
+  it('frames verification and shuffling with pedagogy on all frames', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('INIT');
+    expect(actions).toContain('VERIFY');
+    expect(actions).toContain('REJECTED');
+    expect(actions).toContain('SHUFFLED');
+    expect(actions).toContain('SORTED');
+    expect(actions[timeline.length - 1]).toBe('SORTED');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    // exactly one shuffle-independence checkpoint; verification pairs stay plain
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(1);
+    expect(checkpoints[0].checkpoint!.id).toBe('bogosort-shuffle-independence');
+  });
+
+  it('verifies adjacent pairs, rejects on the first violation, then shuffles', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const verifies = timeline.filter((frame) => frame.action === 'VERIFY');
+    expect(verifies.length).toBeGreaterThan(0);
+    // verification exposes BOTH outcomes across the run
+    expect(verifies.some((frame) => frame.conditionEval?.result === true)).toBe(true);
+    expect(verifies.some((frame) => frame.conditionEval?.result === false)).toBe(true);
+
+    const sortedAt = timeline.find((frame) => frame.action === 'SORTED')!;
+    expectSorted(values(sortedAt));
+    expect(sortedAt.variables?.totalAttempts).toBeGreaterThan(0);
+    expect(sortedAt.variables?.result).toBe(sortedAt.variables?.totalAttempts);
+  });
+
+  it('marks the first rejection and the forced rail as milestones, not every shuffle', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Rejection',
+      'Sorted in 3 Attempt(s)',
+    ]);
+    const shuffles = timeline.filter((frame) => frame.action === 'SHUFFLED');
+    expect(shuffles.length).toBeGreaterThan(0);
+    expect(shuffles.filter((frame) => frame.isMilestone)).toHaveLength(0);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, [3, 2, 1]]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /for i/,
+        3: /arr\[i\] > arr\[i \+ 1\]/,
+        4: /return false|return False/,
+        5: /return true/,
+        6: /bogosort\(/,
+        8: /while not isSorted|while \(!isSorted/,
+        9: /random_shuffle|randomShuffle/,
+        10: /attempts = attempts \+ 1|attempts \+= 1|attempts\+\+/,
+        11: /return arr/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(11);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline([] as any);
+    expect(empty).toHaveLength(2);
+    expect(empty[1].variables?.totalAttempts).toBe(0);
+    expect(empty[1].variables?.result).toBe(0);
+    expect(auditTimeline(module, []).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline(['x', 3, null, 8] as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+    expectSorted(values(invalid[invalid.length - 1]));
+
+    const fallback = module.generateTimeline(['a'] as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(values(fallback[0])).toEqual([4, 1, 3, 2]);
+
+    const oversized = module.generateTimeline([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 4/);
+    expect(oversized[oversized.length - 1].state.array).toHaveLength(4);
+
+    for (const data of [module.defaultInput, [], ['x', 3, null, 8]]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[Math.floor(timeline.length / 2)], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean on every preset including the best case', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+    // best case: already sorted — one verification pass, zero shuffles
+    const best = module.generateTimeline([1, 2, 3, 4]);
+    expect(best.some((frame) => frame.action === 'SHUFFLED')).toBe(false);
+    expect(best[best.length - 1].variables?.totalAttempts).toBe(1);
+  });
+});

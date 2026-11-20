@@ -299,6 +299,17 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **bogosort ✅ (2026-11-20):** rebuild — named actions on every frame (INIT →
+  VERIFY per adjacent pair → REJECTED on first violation → SHUFFLED → SORTED),
+  12 frames on the default input with WHAT/WHY/NEXT on all of them (was 50%),
+  1 checkpoint (shuffle independence — the honest count for one shuffle
+  decision per run), 2 real milestones + auto Start (First Rejection, Sorted
+  in N Attempts — per-shuffle milestones removed from ~24 to 0), five 11-line
+  snippets (isSorted helper + bogosort) with the same statement per line and
+  exact code-line mapping (mapBad 109 → 0; previously lines 8/10/12 pointed
+  past the 4-line pseudocode), honest normalisation (input capped at 4
+  elements with an explicit N! warning note, empty = valid 2-frame run).
+  6 regression tests added (738 total).
 - **drop-sort ✅ (2026-11-20):** rebuild — named actions on every frame (INIT →
   COMPARE → RETAIN / DROP → DONE), 14 frames on the default input with
   WHAT/WHY/NEXT on all of them, 1 checkpoint (survival decision with dynamic
