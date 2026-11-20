@@ -10141,3 +10141,136 @@ describe('quicksort partition tree rebuild regressions', () => {
     }
   });
 });
+
+describe('mergesort recursion tree rebuild regressions', () => {
+  const mod = () => moduleById('mergesort-recursion-tree');
+  const languages = ['pseudocode', 'python', 'typescript', 'cpp', 'java'] as const;
+
+  it('frames every node action with pedagogy and two checkpoints', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const actions = timeline.map((frame) => frame.action);
+
+    expect(actions[0]).toBe('init');
+    expect(actions).toContain('call');
+    expect(actions).toContain('split');
+    expect(actions).toContain('merge');
+    expect(actions).toContain('base');
+    expect(actions).toContain('merged');
+    expect(actions[timeline.length - 1]).toBe('complete');
+
+    for (const frame of timeline) {
+      expect(frame.pedagogy?.what, `frame ${frame.stepIndex} what`).toBeTruthy();
+      expect(frame.pedagogy?.why, `frame ${frame.stepIndex} why`).toBeTruthy();
+      expect(frame.pedagogy?.whatNext, `frame ${frame.stepIndex} whatNext`).toBeTruthy();
+    }
+
+    const checkpoints = timeline.filter((frame) => frame.checkpoint);
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].checkpoint!.id).toBe('mergesort-tree-depth');
+    expect(checkpoints[0].checkpoint!.correctIndex).toBe(0);
+    expect(checkpoints[1].checkpoint!.id).toBe('mergesort-merge-invariant');
+  });
+
+  it('builds the recursion tree with sorted leaves and a sorted root', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+
+    const splits = timeline.filter((frame) => frame.action === 'split');
+    expect(splits.length).toBeGreaterThan(0);
+    for (const frame of splits) {
+      expect(frame.conditionEval?.result).toBe(true);
+    }
+
+    const bases = timeline.filter((frame) => frame.action === 'base');
+    expect(bases.length).toBeGreaterThan(0);
+
+    const merges = timeline.filter((frame) => frame.action === 'merge');
+    expect(merges.length).toBeGreaterThan(0);
+    // the root holds the fully sorted array after the final merge
+    const last = timeline[timeline.length - 1];
+    const root = last.state.nodes[0];
+    const expected = [...mod().defaultInput.array].sort((a, b) => a - b);
+    expect(root.arr).toEqual(expected);
+  });
+
+  it('marks the first base case and first merge as milestones', () => {
+    const module = mod();
+    const timeline = module.generateTimeline(module.defaultInput);
+    const milestones = timeline.filter((frame) => frame.isMilestone || frame.milestoneTitle);
+    expect(milestones.map((frame) => frame.milestoneTitle)).toEqual([
+      'Start',
+      'First Base Case',
+      'First Merge Complete',
+      'Complete',
+    ]);
+    const mergeFrames = timeline.filter((frame) => frame.action === 'merge');
+    expect(mergeFrames.filter((frame) => frame.isMilestone)).toHaveLength(1);
+  });
+
+  it('maps every frame to the same authored line in all five languages', () => {
+    const module = mod();
+    for (const data of [module.defaultInput, module.presets[0].data]) {
+      const timeline = module.generateTimeline(data);
+      const matchers: Record<number, RegExp> = {
+        2: /len\(arr\) <= 1|arr.length <= 1|arr.size\(\) <= 1/,
+        3: /return arr/,
+        4: /mid = |const mid = |int mid = /,
+        5: /left = mergesort|const left = mergesort|auto left = mergesort|int\[\] left = mergesort/,
+        6: /right = mergesort|const right = mergesort|auto right = mergesort|int\[\] right = mergesort/,
+        7: /return merge\(left, right\)/,
+      };
+      for (const lang of languages) {
+        const raw = module.codeSnippets[lang];
+        const lines = raw.split('\n');
+        expect(lines, `${lang} snippet line count`).toHaveLength(7);
+        for (const frame of timeline) {
+          const line = resolveActiveCodeLine(raw, frame, timeline);
+          expect(line, `${lang} ${frame.action} line ${line}: ${lines[line - 1]}`).toBe(frame.codeLine);
+          if (matchers[frame.codeLine]) {
+            expect(lines[line - 1]).toMatch(matchers[frame.codeLine]);
+          }
+        }
+      }
+    }
+  });
+
+  it('handles empty, invalid, fallback and oversized input honestly', () => {
+    const module = mod();
+
+    const empty = module.generateTimeline({ array: [] } as any);
+    // empty input: base case fires immediately — a valid short run
+    expect(empty.length).toBeGreaterThanOrEqual(2);
+    expect(auditTimeline(module, { array: [] } as any).errorCount).toBe(0);
+
+    const invalid = module.generateTimeline({ array: ['x', 3, null, 8] } as any);
+    expect(invalid[0].explanation).toMatch(/2 non-numeric value\(s\) dropped/);
+
+    const fallback = module.generateTimeline({ array: ['a'] } as any);
+    expect(fallback[0].explanation).toMatch(/no usable numbers/);
+    expect(fallback[1].state.nodes[0]?.arr ?? []).toEqual(expect.arrayContaining([38, 27, 43, 3, 9, 82, 10, 45]));
+
+    const oversized = module.generateTimeline({ array: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] } as any);
+    expect(oversized[0].explanation).toMatch(/truncated to 8/);
+    expect(oversized[1].state.nodes[0]?.arr ?? []).toHaveLength(8);
+
+    for (const data of [module.defaultInput, { array: [] }]) {
+      const timeline = module.generateTimeline(data as any);
+      for (const frame of [timeline[0], timeline[timeline.length - 1]]) {
+        expect(() => module.renderStage(frame, '2d')).not.toThrow();
+      }
+    }
+  });
+
+  it('stays audit-clean on every preset', () => {
+    const module = mod();
+    for (const preset of module.presets) {
+      const timeline = module.generateTimeline(preset.data);
+      const result = auditTimeline(module, preset.data);
+      expect(result.errorCount, `${preset.id} errors`).toBe(0);
+      expect(result.warningCount, `${preset.id} warnings`).toBe(0);
+      expect(result.pedagogyFrameCount).toBe(timeline.length);
+      expect(timeline.some((frame) => frame.isMilestone), `${preset.id} milestones`).toBe(true);
+    }
+  });
+});
