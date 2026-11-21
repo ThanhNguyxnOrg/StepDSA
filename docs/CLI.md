@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/Payload-lz--string_URI-06b6d4?style=for-the-badge" alt="lz-string" />
 </p>
 
-The **StepDSA CLI (`cli/stepdsa.js`)** enables developers and competitive programmers to write custom algorithms locally in **C++**, **Python**, **JavaScript/TypeScript**, or **`.stepdsa`**, trace memory mutations deterministically, and launch the browser visualizer with **zero remote servers**.
+The **StepDSA CLI (`cli/stepdsa.js`)** traces array operations in **JavaScript**, JavaScript-compatible **TypeScript**, and **`.stepdsa`** files. It also offers a built-in C++ model for `generateParenthesis`, not a general C++ execution tracer.
 
 </div>
 
@@ -23,8 +23,10 @@ The **StepDSA CLI (`cli/stepdsa.js`)** enables developers and competitive progra
 | :--- | :--- | :--- |
 | **`stepdsa doctor`** | Inspects local Node.js runtime, `g++`/`clang++` compiler, `python3`, and `lz-string` compressor status. | `node cli/stepdsa.js doctor` |
 | **`stepdsa init`** | Scaffolds a new `solution.stepdsa` template and `README.md` in the current working directory (never overwrites existing files). | `node cli/stepdsa.js init` |
-| **`stepdsa run <file>`** | Traces `<file>`, compresses the timeline into `#trace=...`, and launches the StepDSA browser workbench. | `node cli/stepdsa.js run cli/sample_bubble_sort.cpp` |
+| **`stepdsa run <file>`** | Traces `<file>`, compresses the timeline into `#trace=...`, and launches the StepDSA browser workbench. | `node cli/stepdsa.js run cli/sample_quicksort.stepdsa` |
 | **`stepdsa trace <file>`** | Traces `<file>` and writes a portable `.stepdsa.json` snapshot file to disk without opening a browser. | `node cli/stepdsa.js trace cli/sample_quicksort.stepdsa --out trace.json` |
+
+If the CLI cannot trace the source, both commands exit with an error, without writing a snapshot or opening the viewer. Python files are not supported by the local tracer, even if `doctor` finds Python installed. Use [Personal Code Studio](STUDIO_GUIDE.md) for Python instead.
 
 ---
 
@@ -55,11 +57,8 @@ npx stepdsa init
 # Trace a StepDSA / JS script and open in browser
 node cli/stepdsa.js run cli/sample_quicksort.stepdsa
 
-# Trace a native C++ solution with local g++ syntax validation
-node cli/stepdsa.js run cli/sample_bubble_sort.cpp --dev
-
-# Print the compressed #trace= URL without auto-opening a browser window
-node cli/stepdsa.js run cli/sample_bubble_sort.cpp --no-open
+# Target the local workbench without auto-opening a browser window
+node cli/stepdsa.js run cli/sample_quicksort.stepdsa --dev --no-open
 ```
 
 ### 4. Export an Offline JSON Snapshot (`stepdsa trace`)
