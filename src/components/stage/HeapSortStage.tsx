@@ -73,10 +73,10 @@ const CELL_STATUS_CLS: Record<ElementStatus, string> = {
 };
 
 const POINTER_BADGE_CLS: Record<string, string> = {
-  pivot: 'bg-[#8B5CF6] text-white border-[#A78BFA]',
-  target: 'bg-[#F59E0B] text-[#0B0F19] border-[#FBBF24]',
-  left: 'bg-[#06B6D4] text-[#0B0F19] border-[#22D3EE]',
-  right: 'bg-[#10B981] text-[#0B0F19] border-[#34D399]',
+  pivot: 'theme-solid-badge bg-[#8B5CF6] text-white border-[#A78BFA]',
+  target: 'theme-solid-badge bg-[#F59E0B] text-[#0B0F19] border-[#FBBF24]',
+  left: 'theme-solid-badge bg-[#06B6D4] text-[#0B0F19] border-[#22D3EE]',
+  right: 'theme-solid-badge bg-[#10B981] text-[#0B0F19] border-[#34D399]',
 };
 
 interface HeapSortStageProps {
@@ -235,16 +235,43 @@ export const HeapSortStage: React.FC<HeapSortStageProps> = ({ state, projection 
                   view.rightChild === idx ||
                   view.currentNode === idx ||
                   view.swapping?.includes(idx));
+              const midX = (p.x + c.x) / 2;
+              const midY = (p.y + c.y) / 2;
+              const isLeftChild = idx === 2 * parent + 1;
               return (
-                <line
-                  key={`edge-${idx}`}
-                  x1={p.x}
-                  y1={p.y}
-                  x2={c.x}
-                  y2={c.y}
-                  stroke={active ? '#F59E0B' : '#334155'}
-                  strokeWidth={active ? 2.5 : 2}
-                />
+                <g key={`edge-${idx}`}>
+                  <line
+                    x1={p.x}
+                    y1={p.y}
+                    x2={c.x}
+                    y2={c.y}
+                    style={{ stroke: active ? 'var(--sem-comparing-solid)' : 'var(--svg-edge-default)' }}
+                    strokeWidth={active ? 2.75 : 2}
+                  />
+                  {active && (
+                    <g>
+                      <rect
+                        x={midX - 10}
+                        y={midY - 7}
+                        width={20}
+                        height={13}
+                        rx={3}
+                        style={{ fill: 'var(--svg-badge-bg)', stroke: 'var(--sem-comparing-border)' }}
+                      />
+                      <text
+                        x={midX}
+                        y={midY + 2.5}
+                        textAnchor="middle"
+                        style={{ fill: 'var(--svg-label-amber)' }}
+                        fontSize="7.5"
+                        fontWeight="bold"
+                        fontFamily="'JetBrains Mono', monospace"
+                      >
+                        {isLeftChild ? '2i+1' : '2i+2'}
+                      </text>
+                    </g>
+                  )}
+                </g>
               );
             })}
 
@@ -252,26 +279,36 @@ export const HeapSortStage: React.FC<HeapSortStageProps> = ({ state, projection 
               const pos = coords[idx];
               if (!pos) return null;
               const role = nodeRole(idx);
-              const fill =
+              const fillVar =
                 role === 'chosen'
-                  ? '#E11D48'
+                  ? 'var(--sem-swapping-solid)'
                   : role === 'current'
-                  ? '#0891B2'
+                  ? 'var(--sem-active-solid)'
                   : role === 'child'
-                  ? '#B45309'
+                  ? 'var(--sem-comparing-solid)'
                   : role === 'root'
-                  ? '#065F46'
-                  : '#1E293B';
-              const stroke =
+                  ? 'var(--sem-sorted-solid)'
+                  : 'var(--svg-node-bg)';
+              const strokeVar =
                 role === 'chosen'
-                  ? '#FDA4AF'
+                  ? 'var(--sem-swapping-border)'
                   : role === 'current'
-                  ? '#67E8F9'
+                  ? 'var(--sem-active-border)'
                   : role === 'child'
-                  ? '#FDE047'
+                  ? 'var(--sem-comparing-border)'
                   : role === 'root'
-                  ? '#10B981'
-                  : '#475569';
+                  ? 'var(--sem-sorted-border)'
+                  : 'var(--svg-node-border)';
+              const textVar =
+                role === 'chosen'
+                  ? 'var(--sem-swapping-on-solid)'
+                  : role === 'current'
+                  ? 'var(--sem-active-on-solid)'
+                  : role === 'child'
+                  ? 'var(--sem-comparing-on-solid)'
+                  : role === 'root'
+                  ? 'var(--sem-sorted-on-solid)'
+                  : 'var(--svg-node-text)';
               return (
                 <g
                   key={`node-${idx}`}
@@ -279,12 +316,19 @@ export const HeapSortStage: React.FC<HeapSortStageProps> = ({ state, projection 
                   data-role={role}
                   className="transition-all duration-200"
                 >
-                  <circle cx={pos.x} cy={pos.y} r="17" fill={fill} stroke={stroke} strokeWidth="2" />
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r="17"
+                    style={{ fill: fillVar, stroke: strokeVar }}
+                    strokeWidth={role === 'plain' ? '2' : '2.5'}
+                  />
                   <text
                     x={pos.x}
                     y={pos.y + 4}
                     textAnchor="middle"
-                    fill="#F1F5F9"
+                    className={role === 'plain' ? undefined : 'svg-on-solid'}
+                    style={{ fill: textVar }}
                     fontSize="11"
                     fontWeight="700"
                     fontFamily="'JetBrains Mono', monospace"
@@ -295,7 +339,7 @@ export const HeapSortStage: React.FC<HeapSortStageProps> = ({ state, projection 
                     x={pos.x}
                     y={pos.y + 28}
                     textAnchor="middle"
-                    fill="#64748B"
+                    style={{ fill: 'var(--theme-text-muted)' }}
                     fontSize="9"
                     fontFamily="'JetBrains Mono', monospace"
                   >

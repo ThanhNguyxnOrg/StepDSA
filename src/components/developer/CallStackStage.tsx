@@ -153,7 +153,7 @@ export const CallStackStage: React.FC<CallStackStageProps> = ({ frame }) => {
                       <span
                         className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
                           isTop
-                            ? 'bg-cyan-500 text-[#0B0F19]'
+                            ? 'theme-solid-badge bg-cyan-500 text-[#0B0F19]'
                             : 'bg-slate-800 text-slate-400'
                         }`}
                       >

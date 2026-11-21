@@ -35,6 +35,7 @@ function printHelp() {
     stepdsa init                         Scaffold a new algorithm project folder
     stepdsa run <file> [options]         Trace & open visualizer in browser
     stepdsa trace <file> [options]       Trace & save .stepdsa.json snapshot file
+    stepdsa doctor                       Verify Node.js, g++/clang++, and Python runtimes
 
   Supported Languages:
     • StepDSA Script (.stepdsa)

@@ -146,6 +146,24 @@ describe('MergeSortStage', () => {
     expect(cell?.className).toContain('border-[#06B6D4]');
   });
 
+  it('renders the embedded live merge arena with left, right, and temp buffer during merge', () => {
+    const { getByTestId } = render(
+      <MergeSortStage
+        state={{
+          ...baseState,
+          auxiliary: { type: 'buffer', name: 'temp', data: [27, 38], activeIndex: 1 },
+        }}
+        projection="2d"
+      />
+    );
+    const arena = getByTestId('ms-merge-arena');
+    expect(arena.textContent).toContain('LEFT:');
+    expect(arena.textContent).toContain('RIGHT:');
+    expect(arena.textContent).toContain('TEMP:');
+    expect(arena.textContent).toContain('27');
+    expect(arena.textContent).toContain('38');
+  });
+
   it('falls back to a hint when no merge view is available', () => {
     const { container } = render(
       <MergeSortStage state={{ array: [] }} projection="2d" />

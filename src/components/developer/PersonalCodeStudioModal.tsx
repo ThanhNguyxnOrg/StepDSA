@@ -347,7 +347,18 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                 <ListOrdered className="w-3.5 h-3.5" />
                 <span>Trace Inspector</span>
                 {previewFrames.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-mono">
+                  <span
+                    style={
+                      activeTab === 'inspector'
+                        ? { backgroundColor: 'rgba(15, 23, 42, 0.30)', color: '#FFFFFF' }
+                        : undefined
+                    }
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      activeTab === 'inspector'
+                        ? 'theme-solid-badge'
+                        : 'bg-slate-800 text-slate-200'
+                    }`}
+                  >
                     {previewFrames.length}
                   </span>
                 )}
@@ -525,7 +536,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                     type="button"
                     onClick={handleRunAlgorithm}
                     disabled={isRunning}
-                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-xs shadow-lg shadow-emerald-600/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none transition-all cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl theme-accent-bg font-semibold text-xs shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none transition-all cursor-pointer"
                   >
                     {isRunning ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -778,7 +789,7 @@ export const PersonalCodeStudioModal: React.FC<PersonalCodeStudioModalProps> = (
                   <button
                     type="button"
                     onClick={handleRunAlgorithm}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-semibold shadow-md cursor-pointer"
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl theme-accent-bg text-xs font-semibold shadow-md cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>Launch in Workbench</span>

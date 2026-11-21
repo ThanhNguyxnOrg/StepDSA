@@ -61,4 +61,55 @@ describe('theme CSS regressions', () => {
     expect(daylight).toContain(escapeTailwindClass('bg-[#0E1420]'));
     expect(daylight).toContain('#FFFFFF');
   });
+
+  it('defines complete semantic status and SVG tokens for all 4 dynamic themes', () => {
+    const requiredTokens = [
+      '--theme-canvas',
+      '--theme-surface',
+      '--theme-accent',
+      '--theme-on-accent',
+      '--sem-comparing-bg',
+      '--sem-swapping-bg',
+      '--sem-sorted-bg',
+      '--sem-active-bg',
+      '--sem-pivot-bg',
+      '--svg-node-bg',
+      '--svg-node-text',
+      '--svg-edge-default',
+    ];
+    for (const theme of ['midnight', 'daylight', 'visualgo', 'dracula']) {
+      const start = css.indexOf(`html[data-theme="${theme}"] {`);
+      expect(start, `missing token declaration for ${theme}`).toBeGreaterThanOrEqual(0);
+      const end = css.indexOf('}', start);
+      const block = css.slice(start, end);
+      for (const token of requiredTokens) {
+        expect(block, `${theme} missing ${token}`).toContain(token);
+      }
+    }
+  });
+
+  it('covers high-frequency module dark surfaces across Daylight, VisuAlgo, and Dracula', () => {
+    const darkClasses = [
+      'bg-slate-900/70',
+      'bg-slate-800/40',
+      'bg-slate-950/60',
+      'bg-slate-700',
+      'from-[#0E1525]',
+    ];
+    for (const theme of ['daylight', 'visualgo', 'dracula']) {
+      const block = themeBlock(theme);
+      for (const cls of darkClasses) {
+        const escaped = cls.replace(/[\[\]#\/]/g, (c) => `\\${c}`);
+        expect(block.includes(escaped), `${theme} missing override for ${cls}`).toBe(true);
+      }
+    }
+
+    // Daylight must also convert dark semantic -950 tints and protect solid badges
+    const daylight = themeBlock('daylight');
+    for (const semTint of ['bg-emerald-950/60', 'bg-cyan-950/60', 'bg-amber-950/60', 'bg-rose-950/80', 'bg-violet-950/40']) {
+      const escaped = semTint.replace(/[\[\]#\/]/g, (c) => `\\${c}`);
+      expect(daylight.includes(escaped), `daylight missing semantic tint override for ${semTint}`).toBe(true);
+    }
+    expect(daylight).toContain(':not(.theme-solid-badge)');
+  });
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface ListNode {
@@ -281,56 +282,199 @@ public ListNode insertAtTail(ListNode head, int val) {
   },
   renderStage: (frame: ExecutionFrame<LinkedListState>) => {
     const { nodes, activePointer } = frame.state;
+    // Deterministic simulated non-contiguous heap addresses so learners see why linked lists aren't indexed contiguously
+    const heapAddr = (i: number) => `0x${(0x104 + i * 0x38 + (i % 2) * 0x14).toString(16).toUpperCase()}`;
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6">
-        <div className="flex flex-wrap items-center justify-center gap-3 max-w-4xl py-12">
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 sm:p-6 gap-5 select-none">
+        {/* Compact Memory Topology Header */}
+        <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono">
+          <span className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-slate-300">
+            Nodes: <strong className="text-cyan-400 tabular-nums">{nodes.length}</strong>
+          </span>
+          <span className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-slate-300">
+            HEAD: <strong className="text-emerald-400 tabular-nums">{nodes[0] ? `${nodes[0].val} (${heapAddr(0)})` : 'NULL'}</strong>
+          </span>
+          {activePointer && nodes[activePointer.nodeIndex] && (
+            <span
+              style={{
+                backgroundColor: 'var(--sem-comparing-bg)',
+                borderColor: 'var(--sem-comparing-border)',
+                color: 'var(--sem-comparing-text)',
+              }}
+              className="px-2.5 py-1 rounded-lg border font-bold tabular-nums"
+            >
+              {activePointer.name} → node[{activePointer.nodeIndex}] ({nodes[activePointer.nodeIndex].val})
+            </span>
+          )}
+        </div>
+
+        {/* Textbook Memory-Cell Diagram ([ DATA | next → ] -> ... -> NULL) */}
+        <div className="flex flex-wrap items-center justify-center gap-y-10 gap-x-2 max-w-5xl py-6 px-2">
           {nodes.map((node, i) => {
             const isActive = activePointer?.nodeIndex === i;
+            const isNew = node.status === 'comparing';
+            const isSettled = node.status === 'sorted';
+            const nextAddr = i < nodes.length - 1 ? heapAddr(i + 1) : 'NULL';
+
+            const boxStyle: React.CSSProperties = isActive
+              ? {
+                  backgroundColor: 'var(--sem-comparing-bg)',
+                  borderColor: 'var(--sem-comparing-border)',
+                  color: 'var(--sem-comparing-text)',
+                }
+              : isNew
+              ? {
+                  backgroundColor: 'var(--sem-pivot-bg)',
+                  borderColor: 'var(--sem-pivot-border)',
+                  color: 'var(--sem-pivot-text)',
+                }
+              : isSettled
+              ? {
+                  backgroundColor: 'var(--sem-sorted-bg)',
+                  borderColor: 'var(--sem-sorted-border)',
+                  color: 'var(--sem-sorted-text)',
+                }
+              : {
+                  backgroundColor: 'var(--sem-default-cell-bg)',
+                  borderColor: 'var(--sem-default-border)',
+                  color: 'var(--sem-default-text)',
+                };
+
             return (
               <React.Fragment key={node.id}>
-                {/* Node Box */}
-                <div className="flex flex-col items-center">
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, scale: 0.85, y: -10 }}
+                  animate={{ opacity: 1, scale: isActive || isNew ? 1.05 : 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+                  className="flex flex-col items-center relative"
+                >
+                  {/* Top Role Tag (HEAD / TAIL / NEW) */}
+                  <div className="h-5 flex items-end justify-center gap-1 mb-1">
+                    {i === 0 && (
+                      <span
+                        style={{
+                          backgroundColor: 'var(--sem-active-solid)',
+                          color: 'var(--sem-active-on-solid)',
+                        }}
+                        className="theme-solid-badge px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold uppercase tracking-wider leading-none"
+                      >
+                        HEAD
+                      </span>
+                    )}
+                    {isNew && (
+                      <span
+                        style={{
+                          backgroundColor: 'var(--sem-pivot-solid)',
+                          color: 'var(--sem-pivot-on-solid)',
+                        }}
+                        className="theme-solid-badge px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold uppercase tracking-wider leading-none"
+                      >
+                        NEW
+                      </span>
+                    )}
+                    {i === nodes.length - 1 && !isNew && (
+                      <span className="px-1.5 py-0.5 rounded bg-[#1E293B] border border-[#334155] text-[8.5px] font-mono text-slate-400 uppercase leading-none">
+                        TAIL
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Two-Compartment Struct Box: [ val | next ] */}
                   <div
-                    className={`flex items-stretch rounded-xl border-2 shadow-lg transition-all duration-300 ${
-                      isActive
-                        ? 'border-emerald-400 bg-emerald-950/40 shadow-emerald-500/20 scale-105 ring-2 ring-emerald-400/30'
-                        : node.status === 'comparing'
-                        ? 'border-amber-400 bg-amber-950/40 shadow-amber-500/20 scale-105'
-                        : 'border-blue-500/40 bg-slate-900/90'
+                    style={boxStyle}
+                    className={`flex items-stretch rounded-xl border-2 shadow-md overflow-hidden transition-shadow ${
+                      isActive ? 'ring-2 ring-[#F59E0B]/40 shadow-lg' : ''
                     }`}
                   >
-                    {/* Value cell */}
-                    <div className="px-4 py-3 min-w-[56px] text-center font-mono font-bold text-base text-white border-r border-slate-700/60 flex items-center justify-center">
-                      {node.val}
+                    <div className="px-3.5 py-2.5 min-w-[56px] flex flex-col items-center justify-center border-r border-current/20">
+                      <span className="text-[8px] font-mono uppercase opacity-65 leading-none mb-1">val</span>
+                      <span className="font-mono font-extrabold text-base tabular-nums leading-none">
+                        {node.val}
+                      </span>
                     </div>
-                    {/* Next pointer pointer-bullet */}
-                    <div className="px-3 py-3 bg-slate-800/60 flex items-center justify-center">
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          isActive ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'
-                        }`}
-                      />
+                    <div className="px-2.5 py-2.5 flex flex-col items-center justify-center bg-black/5 min-w-[54px]">
+                      <span className="text-[8px] font-mono uppercase opacity-65 leading-none mb-1">next</span>
+                      <span className="text-[9.5px] font-mono font-bold tabular-nums leading-none opacity-90">
+                        {nextAddr}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Pointer Label */}
-                  {isActive && (
-                    <div className="mt-2 text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40 shadow-sm animate-bounce">
-                      {activePointer.name}
-                    </div>
-                  )}
-                </div>
+                  {/* Heap Address & Node Index */}
+                  <span className="mt-1 text-[9.5px] font-mono text-slate-500 tabular-nums">
+                    #{i} · {heapAddr(i)}
+                  </span>
 
-                {/* Arrow to Next Node */}
+                  {/* Gliding Active Pointer Pill */}
+                  <div className="h-6 mt-1 flex items-start justify-center">
+                    {isActive && (
+                      <motion.div
+                        layoutId="sll-active-ptr"
+                        transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                        style={{
+                          backgroundColor: 'var(--sem-comparing-solid)',
+                          color: 'var(--sem-comparing-on-solid)',
+                        }}
+                        className="theme-solid-badge px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold uppercase tracking-wide shadow-sm whitespace-nowrap"
+                      >
+                        ▲ {activePointer.name}
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* Directional Link Arrow */}
                 {i < nodes.length - 1 ? (
-                  <div className="flex items-center text-blue-400">
-                    <span className="font-mono text-lg font-bold">→</span>
+                  <div className="flex items-center self-center -mt-3">
+                    <svg width="32" height="16" viewBox="0 0 32 16" className="overflow-visible">
+                      <line
+                        x1="2"
+                        y1="8"
+                        x2="24"
+                        y2="8"
+                        style={{
+                          stroke:
+                            isActive || nodes[i + 1]?.status === 'comparing'
+                              ? 'var(--sem-comparing-solid)'
+                              : isSettled
+                              ? 'var(--sem-sorted-solid)'
+                              : 'var(--svg-edge-default)',
+                        }}
+                        strokeWidth={isActive ? 2.5 : 2}
+                        strokeDasharray={nodes[i + 1]?.status === 'comparing' ? '4 2' : undefined}
+                      />
+                      <polygon
+                        points="22,3.5 30,8 22,12.5"
+                        style={{
+                          fill:
+                            isActive || nodes[i + 1]?.status === 'comparing'
+                              ? 'var(--sem-comparing-solid)'
+                              : isSettled
+                              ? 'var(--sem-sorted-solid)'
+                              : 'var(--svg-edge-default)',
+                        }}
+                      />
+                    </svg>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 text-slate-500 font-mono text-xs">
-                    <span>→</span>
-                    <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-400">
+                  <div className="flex items-center gap-1 self-center -mt-3 font-mono text-xs">
+                    <svg width="24" height="16" viewBox="0 0 24 16">
+                      <line
+                        x1="2"
+                        y1="8"
+                        x2="17"
+                        y2="8"
+                        style={{ stroke: 'var(--svg-edge-default)' }}
+                        strokeWidth="2"
+                      />
+                      <polygon
+                        points="15,4 22,8 15,12"
+                        style={{ fill: 'var(--svg-edge-default)' }}
+                      />
+                    </svg>
+                    <span className="px-2 py-1 rounded-md bg-[#1E293B] border border-dashed border-[#334155] text-[10px] font-bold text-slate-400">
                       NULL
                     </span>
                   </div>

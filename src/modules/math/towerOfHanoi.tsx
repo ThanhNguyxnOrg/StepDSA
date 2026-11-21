@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface HanoiInput {
@@ -275,56 +276,102 @@ export const towerOfHanoiModule: AlgorithmModule<HanoiInput, HanoiState> = {
   renderStage: (frame: ExecutionFrame<HanoiState>) => {
     const { rods, moveCount, totalMovesNeeded, movingDisk } = frame.state;
     const rodNames: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
+    const rodRole: Record<'A' | 'B' | 'C', string> = { A: 'Source', B: 'Auxiliary', C: 'Target' };
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6 select-none">
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 sm:p-6 gap-6 select-none">
         {/* Top HUD */}
-        <div className="flex items-center gap-6 mb-8">
-          <div className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300 shadow-md">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="px-3.5 py-1.5 rounded-xl bg-[#111827] border border-[#1F293D] text-xs font-mono text-slate-300 shadow-sm">
             Moves:{' '}
-            <span className="text-cyan-400 font-bold">
+            <span className="text-cyan-400 font-bold tabular-nums">
               {moveCount} / {totalMovesNeeded}
             </span>
           </div>
           {movingDisk && (
-            <div className="px-4 py-2 rounded-xl bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold shadow-md animate-pulse">
-              Transfer: Disk {movingDisk.size} ({movingDisk.from} → {movingDisk.to})
+            <div
+              style={{
+                backgroundColor: 'var(--sem-comparing-bg)',
+                borderColor: 'var(--sem-comparing-border)',
+                color: 'var(--sem-comparing-text)',
+              }}
+              className="px-3.5 py-1.5 rounded-xl border text-xs font-mono font-bold shadow-sm"
+            >
+              Disk {movingDisk.size}: Rod {movingDisk.from} → Rod {movingDisk.to}
             </div>
           )}
         </div>
 
-        {/* 3 Pegs Stage */}
-        <div className="flex items-end justify-center gap-12 max-w-4xl w-full h-[260px] pb-6 border-b-4 border-slate-700/80">
+        {/* 3 Pegs Stage with Smooth Flying Disks via Framer Motion layoutId */}
+        <div className="flex items-end justify-center gap-6 sm:gap-12 max-w-4xl w-full h-[250px] pb-3 border-b-4 border-[#334155]">
           {rodNames.map((rodKey) => {
             const diskStack = rods[rodKey];
+            const isFrom = movingDisk?.from === rodKey;
+            const isTo = movingDisk?.to === rodKey;
 
             return (
-              <div key={rodKey} className="relative flex flex-col items-center justify-end w-48 h-full">
+              <div key={rodKey} className="relative flex flex-col items-center justify-end flex-1 max-w-[190px] h-full">
                 {/* Vertical Rod Spindle */}
-                <div className="absolute bottom-0 w-3 h-52 bg-slate-700 rounded-t-md shadow-inner" />
+                <div
+                  style={{
+                    backgroundColor: isTo
+                      ? 'var(--sem-sorted-solid)'
+                      : isFrom
+                      ? 'var(--sem-comparing-solid)'
+                      : 'var(--svg-edge-default)',
+                  }}
+                  className="absolute bottom-0 w-3 h-48 rounded-t-full opacity-75 transition-colors"
+                />
 
                 {/* Disk Stack (rendered bottom to top) */}
-                <div className="relative z-10 flex flex-col-reverse items-center gap-1 w-full">
+                <div className="relative z-10 flex flex-col-reverse items-center gap-1 w-full pb-0.5">
                   {diskStack.map((disk) => {
-                    const widthPx = 40 + disk.size * 26;
+                    const widthPx = 44 + disk.size * 24;
+                    const isMovingNow = movingDisk?.size === disk.size;
 
                     return (
-                      <div
+                      <motion.div
                         key={disk.size}
+                        layoutId={`hanoi-disk-${disk.size}`}
+                        transition={{ type: 'spring', stiffness: 320, damping: 26 }}
                         style={{ width: `${widthPx}px`, backgroundColor: disk.color }}
-                        className="h-7 rounded-lg shadow-lg flex items-center justify-center font-mono font-bold text-xs text-slate-950 border border-white/20 transition-all duration-300"
+                        className={`h-7 rounded-lg shadow-md flex items-center justify-center font-mono font-extrabold text-xs text-slate-950 border border-white/30 ${
+                          isMovingNow ? 'ring-2 ring-amber-300 shadow-lg' : ''
+                        }`}
                       >
-                        {disk.size}
-                      </div>
+                        D{disk.size}
+                      </motion.div>
                     );
                   })}
                 </div>
 
                 {/* Peg Label */}
-                <div className="absolute -bottom-9 flex flex-col items-center">
-                  <span className="w-8 h-8 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center font-mono font-bold text-sm text-cyan-400 shadow-md">
-                    {rodKey}
+                <div className="absolute -bottom-11 flex flex-col items-center">
+                  <span
+                    style={
+                      isTo
+                        ? {
+                            backgroundColor: 'var(--sem-sorted-solid)',
+                            color: 'var(--sem-sorted-on-solid)',
+                            borderColor: 'var(--sem-sorted-border)',
+                          }
+                        : isFrom
+                        ? {
+                            backgroundColor: 'var(--sem-comparing-solid)',
+                            color: 'var(--sem-comparing-on-solid)',
+                            borderColor: 'var(--sem-comparing-border)',
+                          }
+                        : undefined
+                    }
+                    className={`px-2.5 py-0.5 rounded-full border font-mono font-bold text-xs shadow-xs ${
+                      isTo || isFrom
+                        ? 'theme-solid-badge'
+                        : 'bg-[#111827] border-[#334155] text-cyan-400'
+                    }`}
+                  >
+                    Rod {rodKey}
                   </span>
+                  <span className="text-[9px] font-mono text-slate-500 mt-0.5">{rodRole[rodKey]}</span>
                 </div>
               </div>
             );

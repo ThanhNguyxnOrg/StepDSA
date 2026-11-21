@@ -204,33 +204,33 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
       </div>
 
       {/* 2. Dock Tab Switcher (Code & State | Step History | Theory & Proof) */}
-      <div className="h-8 px-2 border-b border-[#1F293D] flex items-center justify-between bg-[#0B0F19] shrink-0">
-        <div className="flex items-center gap-1 w-full">
+      <div className="h-8 px-1.5 border-b border-[#1F293D] flex items-center justify-between bg-[#0B0F19] shrink-0">
+        <div className="flex items-center gap-1 w-full min-w-0">
           <button
             type="button"
             onClick={() => setTab('code')}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[11px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-1.5 py-1 rounded text-[10.5px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${
               currentTab === 'code'
                 ? 'bg-[#111827] text-white border border-[#1F293D]'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Code2 className="w-3.5 h-3.5 text-[#06B6D4]" />
-            <span>Code & State</span>
+            <Code2 className="w-3 h-3 text-[#06B6D4] shrink-0" />
+            <span className="truncate">Code & State</span>
           </button>
 
           {timeline.length > 0 && onSeekTo && (
             <button
               type="button"
               onClick={() => setTab('trace')}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[11px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+              className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-1.5 py-1 rounded text-[10.5px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                 currentTab === 'trace'
                   ? 'bg-[#111827] text-white border border-[#1F293D]'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ListOrdered className="w-3.5 h-3.5 text-[#10B981]" />
-              <span>Trace ({timeline.length})</span>
+              <ListOrdered className="w-3 h-3 text-[#10B981] shrink-0" />
+              <span className="truncate">Trace ({timeline.length})</span>
             </button>
           )}
 
@@ -238,14 +238,14 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
             <button
               type="button"
               onClick={() => setTab('theory')}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[11px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+              className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-1.5 py-1 rounded text-[10.5px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                 currentTab === 'theory'
                   ? 'bg-[#111827] text-white border border-[#1F293D]'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-              <span>Theory & Proof</span>
+              <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
+              <span className="truncate">Theory & Proof</span>
             </button>
           )}
         </div>
@@ -255,8 +255,8 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
       {currentTab === 'code' && (
         <>
           {/* Language Selector Bar */}
-          <div className="px-2.5 py-1 border-b border-[#1F293D] bg-[#111827] flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <div className="px-2 py-1 border-b border-[#1F293D] bg-[#111827] flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0 flex-1">
               {LANGUAGES.map((lang) => {
                 const isSelected = selectedLang === lang.id;
                 return (
@@ -264,9 +264,9 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
                     key={lang.id}
                     type="button"
                     onClick={() => setSelectedLang(lang.id)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium transition-colors cursor-pointer ${
+                    className={`px-1.5 py-0.5 rounded text-[10.5px] font-mono font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                       isSelected
-                        ? 'bg-[#10B981] text-[#0B0F19] font-bold'
+                        ? 'theme-accent-bg font-bold'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -276,15 +276,15 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
               })}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-slate-400 tabular-nums">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] font-mono text-slate-400 tabular-nums whitespace-nowrap">
                 L{resolvedActiveLine}/{lines.length}
               </span>
               <button
                 type="button"
                 onClick={handleCopy}
                 title="Copy Source Code"
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono text-slate-300 hover:text-white bg-[#1F2937] transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10.5px] font-mono text-slate-300 hover:text-white bg-[#1F2937] transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 {copied ? (
                   <>
@@ -315,13 +315,18 @@ export const CodeInspector: React.FC<CodeInspectorProps> = ({
                     ref={isHighlighted ? activeLineRef : null}
                     className={`flex items-start px-3 py-0.5 transition-colors relative ${
                       isHighlighted
-                        ? 'text-white font-semibold bg-[#10B981]/15 border-l-2 border-[#10B981]'
+                        ? 'text-white font-semibold border-l-2 theme-accent-border-l'
                         : 'text-slate-400 hover:bg-[#111827]/60'
                     }`}
+                    style={
+                      isHighlighted
+                        ? { backgroundColor: 'var(--theme-accent-soft)' }
+                        : undefined
+                    }
                   >
                     <span
                       className={`w-7 shrink-0 text-right pr-3 select-none text-[10px] tabular-nums ${
-                        isHighlighted ? 'text-[#10B981] font-bold' : 'text-slate-600'
+                        isHighlighted ? 'theme-accent-text font-bold' : 'text-slate-600'
                       }`}
                     >
                       {lineNum}

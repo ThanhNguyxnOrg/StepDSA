@@ -200,32 +200,65 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
   const guardExpr = frame.conditionEval?.expr || frame.conditionEval?.condition;
 
   if (compact) {
+    const actionLower = (frame.action || subtitle).toLowerCase();
+    const badgeTone =
+      actionLower.includes('swap') || actionLower.includes('reject') || actionLower.includes('drop')
+        ? {
+            bg: 'var(--sem-swapping-bg)',
+            border: 'var(--sem-swapping-border)',
+            color: 'var(--sem-swapping-text)',
+          }
+        : actionLower.includes('sort') ||
+          actionLower.includes('done') ||
+          actionLower.includes('found') ||
+          actionLower.includes('match') ||
+          actionLower.includes('verified')
+        ? {
+            bg: 'var(--sem-sorted-bg)',
+            border: 'var(--sem-sorted-border)',
+            color: 'var(--sem-sorted-text)',
+          }
+        : actionLower.includes('pivot') || actionLower.includes('partition')
+        ? {
+            bg: 'var(--sem-pivot-bg)',
+            border: 'var(--sem-pivot-border)',
+            color: 'var(--sem-pivot-text)',
+          }
+        : actionLower.includes('compare') || actionLower.includes('guard') || actionLower.includes('check')
+        ? {
+            bg: 'var(--sem-comparing-bg)',
+            border: 'var(--sem-comparing-border)',
+            color: 'var(--sem-comparing-text)',
+          }
+        : {
+            bg: 'var(--sem-active-bg)',
+            border: 'var(--sem-active-border)',
+            color: 'var(--sem-active-text)',
+          };
+
     return (
       <div className="w-full shrink-0 bg-[#111827]/90 border-b border-[#1F293D] px-3 sm:px-4 py-1.5 flex flex-col gap-1 select-none">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
-          {/* Left: Step Counter + Phase Action + Narrative Sentence */}
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="font-mono font-bold tabular-nums text-[#10B981] shrink-0">
+        {/* Row 1: Step Counter + Unclipped Action Pill + Live Guard + Invariant + Why & Next Toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-mono font-bold tabular-nums theme-accent-text shrink-0 whitespace-nowrap">
               Step {frame.stepIndex + 1}/{frame.totalSteps}
             </span>
-            <span className="text-slate-600 shrink-0" aria-hidden="true">
-              ·
-            </span>
-            <span className="font-mono font-semibold text-amber-300 shrink-0 hidden sm:inline">
+            <span
+              style={{
+                backgroundColor: badgeTone.bg,
+                borderColor: badgeTone.border,
+                color: badgeTone.color,
+              }}
+              className="px-2 py-0.5 rounded-md border font-mono text-[10.5px] font-bold shrink-0 whitespace-nowrap hidden sm:inline-block leading-tight"
+            >
               {subtitle}
             </span>
-            <span className="text-slate-600 shrink-0 hidden sm:inline" aria-hidden="true">
-              —
-            </span>
-            <p className="text-slate-100 font-medium truncate" title={frame.explanation}>
-              {frame.explanation}
-            </p>
           </div>
 
-          {/* Right: Live Guard Pill + Invariant Status + Why Toggle */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 ml-auto shrink-0">
             {guardExpr && (
-              <span className="px-2 py-0.5 rounded bg-[#0B0F19] border border-[#1F293D] text-[11px] font-mono flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded bg-[#0B0F19] border border-[#1F293D] text-[10.5px] font-mono flex items-center gap-1 whitespace-nowrap">
                 <code className="text-slate-300">{guardExpr}</code>
                 <span className="text-slate-500">→</span>
                 <strong
@@ -248,7 +281,7 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
                     : frame.invariantStatus;
                 return (
                   <span
-                    className={`hidden lg:flex items-center gap-1 text-[11px] font-mono ${
+                    className={`hidden xl:flex items-center gap-1 text-[10.5px] font-mono ${
                       inv.isValid ? 'text-[#10B981]' : 'text-[#F59E0B]'
                     }`}
                   >
@@ -257,7 +290,7 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
                     ) : (
                       <AlertTriangle className="w-3 h-3 shrink-0" />
                     )}
-                    <span className="max-w-[220px] truncate">{inv.label}</span>
+                    <span className="max-w-[200px] truncate">{inv.label}</span>
                   </span>
                 );
               })()}
@@ -265,7 +298,7 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
             <button
               type="button"
               onClick={() => setShowIntuition(!showIntuition)}
-              title="Show or hide why this step happens"
+              title="Show or hide step breakdown (What / Why / Next)"
               className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border transition-colors cursor-pointer whitespace-nowrap ${
                 showIntuition
                   ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
@@ -273,13 +306,33 @@ export const StepNarrationBanner: React.FC<StepNarrationBannerProps> = ({
               }`}
             >
               <Lightbulb className="w-3 h-3 text-cyan-400" />
-              <span>Why this step</span>
+              <span>{showIntuition ? 'Less' : 'Why & Next'}</span>
             </button>
           </div>
         </div>
 
+        {/* Row 2: Full-width Unclipped Explanation + Inline Why/Next Cue */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[11.5px] leading-snug">
+          <p className="text-slate-100 font-medium min-w-0" title={frame.explanation}>
+            {frame.explanation}
+          </p>
+          {!showIntuition && pedagogy?.why && (
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-300 min-w-0">
+              <strong className="font-mono text-cyan-400 shrink-0">Why:</strong>
+              <span className="truncate max-w-[60ch]">{pedagogy.why}</span>
+            </span>
+          )}
+          {!showIntuition && pedagogy?.whatNext && (
+            <span className="hidden xl:flex items-center gap-1 text-[11px] text-slate-400 min-w-0">
+              <ArrowRight className="w-3 h-3 text-emerald-400 shrink-0" />
+              <strong className="font-mono text-emerald-300 shrink-0">Next:</strong>
+              <span className="truncate max-w-[42ch]">{pedagogy.whatNext}</span>
+            </span>
+          )}
+        </div>
+
         {showIntuition && (
-          <div className="flex flex-col gap-0.5 pl-0.5">
+          <div className="flex flex-col gap-0.5 pl-0.5 pt-0.5 border-t border-[#1F293D]/60">
             {pedagogy?.what && <PedagogyLine label="What" text={pedagogy.what} tone="what" />}
             <div className="flex items-start gap-1.5 text-[11px] text-slate-300">
               <strong className="font-mono text-cyan-400 shrink-0">

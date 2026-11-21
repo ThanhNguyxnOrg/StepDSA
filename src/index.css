@@ -22,67 +22,425 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SEMANTIC THEME TOKENS (Midnight · Daylight Paper · VisuAlgo Ocean · Dracula)
+   DYNAMIC SEMANTIC THEME TOKENS
+   (Midnight Studio · Daylight Paper · VisuAlgo Ocean · Dracula Cyber)
    ═══════════════════════════════════════════════════════════════════════════ */
 :root,
 html[data-theme="midnight"] {
   --theme-canvas: #0B0F19;
   --theme-surface: #111827;
+  --theme-surface-alt: #0E1420;
   --theme-elevated: #1E293B;
+  --theme-elevated-hover: #293548;
   --theme-thumb-bg: #0D1424;
-  --theme-thumb-grid: rgba(148, 163, 184, 0.07);
+  --theme-thumb-grid: rgba(148, 163, 184, 0.08);
+  --theme-stage-bg: #0B0F19;
+  --theme-stage-dot: rgba(148, 163, 184, 0.14);
   --theme-border: #1F293D;
   --theme-border-strong: #334155;
   --theme-text-primary: #F8FAFC;
   --theme-text-secondary: #CBD5E1;
   --theme-text-muted: #94A3B8;
+  --theme-text-subtle: #64748B;
+
+  /* Dynamic Primary & Secondary Brand Accents */
   --theme-accent: #10B981;
+  --theme-accent-hover: #059669;
+  --theme-accent-soft: rgba(16, 185, 129, 0.16);
+  --theme-accent-border: rgba(16, 185, 129, 0.42);
+  --theme-accent-text: #34D399;
+  --theme-on-accent: #0B0F19;
+  --theme-secondary: #06B6D4;
+  --theme-secondary-soft: rgba(6, 182, 212, 0.15);
+  --theme-secondary-border: rgba(6, 182, 212, 0.38);
+  --theme-secondary-text: #22D3EE;
+
+  /* Semantic Algorithm Status Palette */
+  --sem-default-bg: #1E293B;
+  --sem-default-cell-bg: #111827;
+  --sem-default-border: #334155;
+  --sem-default-text: #E2E8F0;
+
+  --sem-comparing-bg: rgba(245, 158, 11, 0.24);
+  --sem-comparing-border: #F59E0B;
+  --sem-comparing-text: #FDE68A;
+  --sem-comparing-solid: #F59E0B;
+  --sem-comparing-on-solid: #0B0F19;
+
+  --sem-swapping-bg: rgba(244, 63, 94, 0.24);
+  --sem-swapping-border: #F43F5E;
+  --sem-swapping-text: #FECDD3;
+  --sem-swapping-solid: #F43F5E;
+  --sem-swapping-on-solid: #FFFFFF;
+
+  --sem-sorted-bg: rgba(16, 185, 129, 0.24);
+  --sem-sorted-border: #10B981;
+  --sem-sorted-text: #A7F3D0;
+  --sem-sorted-solid: #10B981;
+  --sem-sorted-on-solid: #0B0F19;
+
+  --sem-active-bg: rgba(6, 182, 212, 0.24);
+  --sem-active-border: #06B6D4;
+  --sem-active-text: #A5F3FC;
+  --sem-active-solid: #06B6D4;
+  --sem-active-on-solid: #0B0F19;
+
+  --sem-pivot-bg: rgba(139, 92, 246, 0.24);
+  --sem-pivot-border: #8B5CF6;
+  --sem-pivot-text: #DDD6FE;
+  --sem-pivot-solid: #8B5CF6;
+  --sem-pivot-on-solid: #FFFFFF;
+
+  --sem-discarded-bg: rgba(31, 41, 55, 0.3);
+  --sem-discarded-border: #374151;
+  --sem-discarded-text: #64748B;
+
+  /* SVG Stage Tokens */
+  --svg-node-bg: #1E293B;
+  --svg-node-border: #475569;
+  --svg-node-text: #F8FAFC;
+  --svg-edge-default: #475569;
+  --svg-edge-muted: #334155;
+  --svg-badge-bg: #0B0F19;
+  --svg-label-cyan: #67E8F9;
+  --svg-label-emerald: #34D399;
+  --svg-label-amber: #FCD34D;
+  --svg-label-violet: #C4B5FD;
+
+  /* 3D Isometric Deck Tokens */
+  --theme-iso-slab: rgba(15, 23, 42, 0.92);
+  --theme-iso-border: rgba(6, 182, 212, 0.30);
+  --theme-iso-grid-x: rgba(16, 185, 129, 0.08);
+  --theme-iso-grid-y: rgba(6, 182, 212, 0.08);
+  --theme-iso-shadow: rgba(2, 6, 23, 0.82);
+  --theme-iso-drop: rgba(2, 6, 23, 0.62);
+  --theme-iso-highlight: rgba(255, 255, 255, 0.12);
   color-scheme: dark;
 }
 
 html[data-theme="daylight"] {
   --theme-canvas: #F8FAFC;
   --theme-surface: #FFFFFF;
-  --theme-elevated: #F1F5F9;
-  --theme-thumb-bg: #0F172A;
-  --theme-thumb-grid: rgba(255, 255, 255, 0.06);
-  --theme-border: #E2E8F0;
-  --theme-border-strong: #CBD5E1;
+  --theme-surface-alt: #F1F5F9;
+  --theme-elevated: #E2E8F0;
+  --theme-elevated-hover: #CBD5E1;
+  --theme-thumb-bg: #F1F5F9;
+  --theme-thumb-grid: rgba(15, 23, 42, 0.06);
+  --theme-stage-bg: #F8FAFC;
+  --theme-stage-dot: rgba(15, 23, 42, 0.10);
+  --theme-border: #CBD5E1;
+  --theme-border-strong: #94A3B8;
   --theme-text-primary: #0F172A;
   --theme-text-secondary: #334155;
-  --theme-text-muted: #64748B;
+  --theme-text-muted: #475569;
+  --theme-text-subtle: #64748B;
+
+  /* Dynamic Primary & Secondary Brand Accents */
   --theme-accent: #059669;
+  --theme-accent-hover: #047857;
+  --theme-accent-soft: rgba(5, 150, 105, 0.12);
+  --theme-accent-border: rgba(5, 150, 105, 0.38);
+  --theme-accent-text: #047857;
+  --theme-on-accent: #FFFFFF;
+  --theme-secondary: #0284C7;
+  --theme-secondary-soft: rgba(2, 132, 199, 0.12);
+  --theme-secondary-border: rgba(2, 132, 199, 0.35);
+  --theme-secondary-text: #0369A1;
+
+  /* Semantic Algorithm Status Palette (High-Contrast Textbook Light) */
+  --sem-default-bg: #E2E8F0;
+  --sem-default-cell-bg: #FFFFFF;
+  --sem-default-border: #94A3B8;
+  --sem-default-text: #0F172A;
+
+  --sem-comparing-bg: rgba(245, 158, 11, 0.22);
+  --sem-comparing-border: #D97706;
+  --sem-comparing-text: #92400E;
+  --sem-comparing-solid: #D97706;
+  --sem-comparing-on-solid: #FFFFFF;
+
+  --sem-swapping-bg: rgba(244, 63, 94, 0.20);
+  --sem-swapping-border: #E11D48;
+  --sem-swapping-text: #9F1239;
+  --sem-swapping-solid: #E11D48;
+  --sem-swapping-on-solid: #FFFFFF;
+
+  --sem-sorted-bg: rgba(16, 185, 129, 0.20);
+  --sem-sorted-border: #059669;
+  --sem-sorted-text: #065F46;
+  --sem-sorted-solid: #059669;
+  --sem-sorted-on-solid: #FFFFFF;
+
+  --sem-active-bg: rgba(2, 132, 199, 0.18);
+  --sem-active-border: #0284C7;
+  --sem-active-text: #075985;
+  --sem-active-solid: #0284C7;
+  --sem-active-on-solid: #FFFFFF;
+
+  --sem-pivot-bg: rgba(124, 58, 237, 0.18);
+  --sem-pivot-border: #7C3AED;
+  --sem-pivot-text: #5B21B6;
+  --sem-pivot-solid: #7C3AED;
+  --sem-pivot-on-solid: #FFFFFF;
+
+  --sem-discarded-bg: rgba(226, 232, 240, 0.55);
+  --sem-discarded-border: #CBD5E1;
+  --sem-discarded-text: #94A3B8;
+
+  /* SVG Stage Tokens (Paper Light) */
+  --svg-node-bg: #FFFFFF;
+  --svg-node-border: #94A3B8;
+  --svg-node-text: #0F172A;
+  --svg-edge-default: #94A3B8;
+  --svg-edge-muted: #CBD5E1;
+  --svg-badge-bg: #FFFFFF;
+  --svg-label-cyan: #0369A1;
+  --svg-label-emerald: #047857;
+  --svg-label-amber: #B45309;
+  --svg-label-violet: #6D28D9;
+
+  /* 3D Isometric Deck Tokens (Paper Light) */
+  --theme-iso-slab: rgba(226, 232, 240, 0.96);
+  --theme-iso-border: rgba(2, 132, 199, 0.35);
+  --theme-iso-grid-x: rgba(15, 23, 42, 0.06);
+  --theme-iso-grid-y: rgba(2, 132, 199, 0.07);
+  --theme-iso-shadow: rgba(15, 23, 42, 0.18);
+  --theme-iso-drop: rgba(15, 23, 42, 0.16);
+  --theme-iso-highlight: rgba(255, 255, 255, 0.9);
   color-scheme: light;
 }
 
 html[data-theme="visualgo"] {
   --theme-canvas: #061325;
   --theme-surface: #0B1F3A;
+  --theme-surface-alt: #08182E;
   --theme-elevated: #133158;
+  --theme-elevated-hover: #1B4172;
   --theme-thumb-bg: #081930;
-  --theme-thumb-grid: rgba(56, 189, 248, 0.08);
+  --theme-thumb-grid: rgba(56, 189, 248, 0.09);
+  --theme-stage-bg: #061325;
+  --theme-stage-dot: rgba(56, 189, 248, 0.16);
   --theme-border: #1D4477;
   --theme-border-strong: #2A5C9A;
   --theme-text-primary: #F0F9FF;
   --theme-text-secondary: #BAE6FD;
   --theme-text-muted: #7DD3FC;
+  --theme-text-subtle: #60A5FA;
+
+  /* Dynamic Primary & Secondary Brand Accents (Ocean Cyan & Amber) */
   --theme-accent: #06B6D4;
+  --theme-accent-hover: #0891B2;
+  --theme-accent-soft: rgba(6, 182, 212, 0.18);
+  --theme-accent-border: rgba(6, 182, 212, 0.48);
+  --theme-accent-text: #22D3EE;
+  --theme-on-accent: #041222;
+  --theme-secondary: #F59E0B;
+  --theme-secondary-soft: rgba(245, 158, 11, 0.16);
+  --theme-secondary-border: rgba(245, 158, 11, 0.42);
+  --theme-secondary-text: #FBBF24;
+
+  /* Semantic Algorithm Status Palette */
+  --sem-default-bg: #133158;
+  --sem-default-cell-bg: #0B1F3A;
+  --sem-default-border: #2A5C9A;
+  --sem-default-text: #E0F2FE;
+
+  --sem-comparing-bg: rgba(245, 158, 11, 0.26);
+  --sem-comparing-border: #F59E0B;
+  --sem-comparing-text: #FEF08A;
+  --sem-comparing-solid: #F59E0B;
+  --sem-comparing-on-solid: #061325;
+
+  --sem-swapping-bg: rgba(244, 63, 94, 0.26);
+  --sem-swapping-border: #FB7185;
+  --sem-swapping-text: #FFE4E6;
+  --sem-swapping-solid: #F43F5E;
+  --sem-swapping-on-solid: #FFFFFF;
+
+  --sem-sorted-bg: rgba(16, 185, 129, 0.26);
+  --sem-sorted-border: #34D399;
+  --sem-sorted-text: #A7F3D0;
+  --sem-sorted-solid: #10B981;
+  --sem-sorted-on-solid: #061325;
+
+  --sem-active-bg: rgba(56, 189, 248, 0.26);
+  --sem-active-border: #38BDF8;
+  --sem-active-text: #E0F2FE;
+  --sem-active-solid: #38BDF8;
+  --sem-active-on-solid: #061325;
+
+  --sem-pivot-bg: rgba(168, 85, 247, 0.26);
+  --sem-pivot-border: #C084FC;
+  --sem-pivot-text: #F3E8FF;
+  --sem-pivot-solid: #A855F7;
+  --sem-pivot-on-solid: #FFFFFF;
+
+  --sem-discarded-bg: rgba(11, 31, 58, 0.45);
+  --sem-discarded-border: #1D4477;
+  --sem-discarded-text: #60A5FA;
+
+  /* SVG Stage Tokens */
+  --svg-node-bg: #102B50;
+  --svg-node-border: #2A5C9A;
+  --svg-node-text: #F0F9FF;
+  --svg-edge-default: #366BA8;
+  --svg-edge-muted: #1D4477;
+  --svg-badge-bg: #061325;
+  --svg-label-cyan: #67E8F9;
+  --svg-label-emerald: #34D399;
+  --svg-label-amber: #FDE047;
+  --svg-label-violet: #D8B4FE;
+
+  /* 3D Isometric Deck Tokens */
+  --theme-iso-slab: rgba(11, 31, 58, 0.95);
+  --theme-iso-border: rgba(56, 189, 248, 0.36);
+  --theme-iso-grid-x: rgba(56, 189, 248, 0.09);
+  --theme-iso-grid-y: rgba(245, 158, 11, 0.07);
+  --theme-iso-shadow: rgba(2, 10, 24, 0.88);
+  --theme-iso-drop: rgba(2, 10, 24, 0.65);
+  --theme-iso-highlight: rgba(186, 230, 253, 0.14);
   color-scheme: dark;
 }
 
 html[data-theme="dracula"] {
   --theme-canvas: #13111C;
   --theme-surface: #1C1829;
+  --theme-surface-alt: #171424;
   --theme-elevated: #28223B;
+  --theme-elevated-hover: #352D4F;
   --theme-thumb-bg: #171422;
-  --theme-thumb-grid: rgba(168, 85, 247, 0.08);
+  --theme-thumb-grid: rgba(168, 85, 247, 0.10);
+  --theme-stage-bg: #13111C;
+  --theme-stage-dot: rgba(192, 132, 252, 0.16);
   --theme-border: #362E4F;
   --theme-border-strong: #4C3F6E;
   --theme-text-primary: #F8FAFC;
   --theme-text-secondary: #E2E8F0;
   --theme-text-muted: #A1A1AA;
+  --theme-text-subtle: #7E7499;
+
+  /* Dynamic Primary & Secondary Brand Accents (Cyber Violet & Pink) */
   --theme-accent: #A855F7;
+  --theme-accent-hover: #9333EA;
+  --theme-accent-soft: rgba(168, 85, 247, 0.20);
+  --theme-accent-border: rgba(168, 85, 247, 0.48);
+  --theme-accent-text: #C084FC;
+  --theme-on-accent: #FFFFFF;
+  --theme-secondary: #EC4899;
+  --theme-secondary-soft: rgba(236, 72, 153, 0.16);
+  --theme-secondary-border: rgba(236, 72, 153, 0.42);
+  --theme-secondary-text: #F472B6;
+
+  /* Semantic Algorithm Status Palette */
+  --sem-default-bg: #28223B;
+  --sem-default-cell-bg: #1C1829;
+  --sem-default-border: #4C3F6E;
+  --sem-default-text: #F1F5F9;
+
+  --sem-comparing-bg: rgba(251, 191, 36, 0.24);
+  --sem-comparing-border: #FBBF24;
+  --sem-comparing-text: #FEF3C7;
+  --sem-comparing-solid: #F59E0B;
+  --sem-comparing-on-solid: #13111C;
+
+  --sem-swapping-bg: rgba(244, 63, 94, 0.26);
+  --sem-swapping-border: #FB7185;
+  --sem-swapping-text: #FFE4E6;
+  --sem-swapping-solid: #F43F5E;
+  --sem-swapping-on-solid: #FFFFFF;
+
+  --sem-sorted-bg: rgba(52, 211, 153, 0.24);
+  --sem-sorted-border: #34D399;
+  --sem-sorted-text: #D1FAE5;
+  --sem-sorted-solid: #10B981;
+  --sem-sorted-on-solid: #13111C;
+
+  --sem-active-bg: rgba(34, 211, 238, 0.24);
+  --sem-active-border: #22D3EE;
+  --sem-active-text: #CFFAFE;
+  --sem-active-solid: #06B6D4;
+  --sem-active-on-solid: #13111C;
+
+  --sem-pivot-bg: rgba(192, 132, 252, 0.28);
+  --sem-pivot-border: #C084FC;
+  --sem-pivot-text: #F3E8FF;
+  --sem-pivot-solid: #A855F7;
+  --sem-pivot-on-solid: #FFFFFF;
+
+  --sem-discarded-bg: rgba(28, 24, 41, 0.45);
+  --sem-discarded-border: #362E4F;
+  --sem-discarded-text: #7E7499;
+
+  /* SVG Stage Tokens */
+  --svg-node-bg: #26203B;
+  --svg-node-border: #52447A;
+  --svg-node-text: #F8FAFC;
+  --svg-edge-default: #5C4F82;
+  --svg-edge-muted: #362E4F;
+  --svg-badge-bg: #13111C;
+  --svg-label-cyan: #67E8F9;
+  --svg-label-emerald: #50FA7B;
+  --svg-label-amber: #F1FA8C;
+  --svg-label-violet: #BD93F9;
+
+  /* 3D Isometric Deck Tokens */
+  --theme-iso-slab: rgba(28, 24, 41, 0.95);
+  --theme-iso-border: rgba(168, 85, 247, 0.38);
+  --theme-iso-grid-x: rgba(168, 85, 247, 0.10);
+  --theme-iso-grid-y: rgba(236, 72, 153, 0.08);
+  --theme-iso-shadow: rgba(9, 7, 15, 0.88);
+  --theme-iso-drop: rgba(9, 7, 15, 0.68);
+  --theme-iso-highlight: rgba(216, 180, 254, 0.14);
   color-scheme: dark;
+}
+
+/* Prevent mid-fade white/gray color flash when switching between Light & Dark themes */
+.theme-transition-instant,
+.theme-transition-instant * {
+  transition-property: none !important;
+}
+
+/* Off-screen rendering virtualization for silky 60fps scrolling on 162+ cards & long trace logs */
+.algo-card-virtual {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 310px;
+  contain: layout style paint;
+}
+
+.trace-row-virtual {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 60px;
+  contain: layout style paint;
+}
+
+/* Crisp engineering dot-grid canvas behind every visualization stage */
+.stage-blueprint-canvas {
+  background-color: var(--theme-stage-bg);
+  background-image: radial-gradient(var(--theme-stage-dot) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Dynamic accent utilities bound to active theme */
+.theme-accent-bg {
+  background-color: var(--theme-accent) !important;
+  color: var(--theme-on-accent) !important;
+}
+.theme-accent-bg:hover {
+  background-color: var(--theme-accent-hover) !important;
+}
+.theme-accent-soft {
+  background-color: var(--theme-accent-soft) !important;
+  border-color: var(--theme-accent-border) !important;
+  color: var(--theme-accent-text) !important;
+}
+.theme-accent-text {
+  color: var(--theme-accent-text) !important;
+}
+.theme-accent-dot {
+  background-color: var(--theme-accent) !important;
+}
+.theme-accent-border-l {
+  border-left-color: var(--theme-accent) !important;
 }
 
 /* Custom scrollbars */
@@ -109,29 +467,30 @@ html[data-theme="dracula"] {
   scrollbar-width: none;
 }
 
-/* 2.5D / 3D Isometric Stage Projection (Universal across all 162 modules) */
+/* 2.5D / 3D Isometric Stage Projection (Theme-Adaptive across all 162 modules) */
 .stage-isometric-plane {
   position: relative;
   transform: perspective(1150px) rotateX(26deg) rotateY(-9deg) rotateZ(3deg) scale(0.91);
   transform-style: preserve-3d;
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
+  background-color: var(--theme-surface);
   background-image:
-    linear-gradient(to right, rgba(16, 185, 129, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(6, 182, 212, 0.08) 1px, transparent 1px);
+    linear-gradient(to right, var(--theme-iso-grid-x) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--theme-iso-grid-y) 1px, transparent 1px);
   background-size: 28px 28px;
   border-radius: 20px;
-  border: 1px solid rgba(6, 182, 212, 0.28);
+  border: 1px solid var(--theme-iso-border);
   box-shadow:
-    -14px 22px 0 -2px rgba(15, 23, 42, 0.92),
-    -14px 22px 0 -1px rgba(6, 182, 212, 0.32),
-    0 32px 64px -12px rgba(2, 6, 23, 0.85),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    -14px 22px 0 -2px var(--theme-iso-slab),
+    -14px 22px 0 -1px var(--theme-iso-border),
+    0 32px 64px -12px var(--theme-iso-shadow),
+    inset 0 1px 0 0 var(--theme-iso-highlight);
 }
 
 .stage-isometric-plane > * {
   transform: translateZ(18px);
   transform-style: preserve-3d;
-  filter: drop-shadow(-6px 12px 10px rgba(2, 6, 23, 0.65));
+  filter: drop-shadow(-6px 12px 10px var(--theme-iso-drop));
 }
 
 .stage-flat-plane {
@@ -157,9 +516,8 @@ html[data-theme="dracula"] {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   GLANCEABLE MOTION STAGE THUMBNAILS (Architectural Blueprint Stage)
-   Preserves a high-contrast dark blueprint viewport across all 4 themes so
-   active algorithmic bars, pointers, and SVG nodes remain razor-sharp.
+   GLANCEABLE MOTION STAGE THUMBNAILS (Dynamic Theme-Adaptive Blueprint Stage)
+   Adapts cleanly across Midnight, Daylight Paper, VisuAlgo Ocean & Dracula!
    ═══════════════════════════════════════════════════════════════════════════ */
 .algo-card-thumbnail > div {
   background-image:
@@ -185,7 +543,7 @@ html[data-theme="dracula"] {
   letter-spacing: -0.01em !important;
   font-weight: 600 !important;
   font-size: 10.5px !important;
-  color: #94A3B8 !important;
+  color: var(--theme-text-muted) !important;
 }
 
 /* Keep the bottom invariant caption inside every algorithm card thumbnail on a single clean line */
@@ -202,29 +560,139 @@ html[data-theme="dracula"] {
   animation-play-state: running;
 }
 
-/* In Daylight Paper mode, keep the embedded thumbnail stage as a crisp dark slate
-   oscilloscope viewport (#0F172A) with a slate border so semantic bar/node colors stay vivid */
+/* Daylight Paper Thumbnail Blueprint — Crisp textbook paper aesthetic instead of dark slab */
 html[data-theme="daylight"] .algo-card-thumbnail > div {
-  background-color: #0F172A !important;
+  background-color: #F1F5F9 !important;
   border-color: #CBD5E1 !important;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.85) !important;
+}
+html[data-theme="daylight"] .algo-card-thumbnail > div > div:first-child {
+  color: #334155 !important;
+}
+html[data-theme="daylight"] .algo-card-thumbnail > div > div:last-child {
+  color: #334155 !important;
+}
+html[data-theme="daylight"] .algo-card-thumbnail {
+  .bg-black\/30,
+  .bg-black\/35,
+  .bg-black\/40,
+  .bg-black\/50,
+  .bg-slate-900\/80,
+  .bg-slate-900\/90,
+  .bg-slate-900 {
+    background-color: rgba(255, 255, 255, 0.86) !important;
+    border-color: #CBD5E1 !important;
+  }
+  .bg-slate-800,
+  .bg-slate-800\/85,
+  .bg-slate-800\/90,
+  .bg-slate-800\/50,
+  .bg-slate-700,
+  .bg-slate-700\/80,
+  .bg-slate-700\/90,
+  .bg-purple-900\/60,
+  .bg-teal-900\/80,
+  .bg-indigo-800 {
+    background-color: #E2E8F0 !important;
+    border-color: #94A3B8 !important;
+    color: #1E293B !important;
+  }
+  .border-slate-700\/80,
+  .border-slate-600\/60,
+  .border-slate-500\/60,
+  .border-slate-500\/50 {
+    border-color: #CBD5E1 !important;
+  }
+  .text-white:not(.bg-rose-400):not(.bg-rose-500):not(.bg-rose-500\/70):not(.bg-rose-500\/80),
+  .text-slate-100,
+  .text-slate-200,
+  .text-slate-300,
+  .text-emerald-100,
+  .text-emerald-200,
+  .text-sky-100,
+  .text-sky-200,
+  .text-blue-100,
+  .text-blue-200,
+  .text-indigo-100,
+  .text-indigo-200,
+  .text-purple-100,
+  .text-purple-200,
+  .text-teal-100,
+  .text-teal-200,
+  .text-cyan-100,
+  .text-cyan-200,
+  .text-amber-100,
+  .text-amber-200,
+  .text-rose-100,
+  .text-rose-200 {
+    color: #1E293B !important;
+  }
+  .text-amber-300,
+  .text-amber-400 {
+    color: #B45309 !important;
+  }
+  .text-cyan-300,
+  .text-sky-300 {
+    color: #0369A1 !important;
+  }
+  .text-emerald-300,
+  .text-teal-300 {
+    color: #047857 !important;
+  }
+  .text-rose-300 {
+    color: #BE123C !important;
+  }
+  .text-purple-300,
+  .text-indigo-300,
+  .text-violet-300 {
+    color: #5B21B6 !important;
+  }
+  svg rect[fill="#042F2E"],
+  svg rect[fill="#0F172A"],
+  svg rect[fill="#0B0F19"] {
+    fill: #FFFFFF !important;
+    stroke: #94A3B8 !important;
+  }
+  svg text[fill="#67E8F9"],
+  svg text[fill="#A5F3FC"],
+  svg text[fill="#38BDF8"] {
+    fill: #0369A1 !important;
+  }
+  svg text[fill="#34D399"] {
+    fill: #047857 !important;
+  }
+  svg text[fill="#FDE047"] {
+    fill: #B45309 !important;
+  }
+  svg text[fill="#A78BFA"] {
+    fill: #6D28D9 !important;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    1. DAYLIGHT PAPER THEME (Academic Paper & High-Contrast Textbook Light Mode)
    ═══════════════════════════════════════════════════════════════════════════ */
 html[data-theme="daylight"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail *) {
+  /* Canvas-tier dark surfaces -> Academic Paper (#F8FAFC) */
   &.bg-\[\#0B0F19\],
   &.bg-\[\#0B0F19\]\/95,
   &.bg-\[\#0B0F19\]\/90,
   &.bg-\[\#0B0F19\]\/80,
   &.bg-\[\#0B0F19\]\/60,
+  &.bg-\[\#0B0F19\]\/40,
+  &.bg-\[\#0E1525\],
   &.bg-slate-950,
+  &.bg-slate-950\/95,
   &.bg-slate-950\/90,
   &.bg-slate-950\/80,
-  &.bg-slate-950\/70 {
+  &.bg-slate-950\/70,
+  &.bg-slate-950\/60,
+  &.bg-slate-950\/50,
+  &.bg-slate-950\/40 {
     background-color: #F8FAFC !important;
   }
 
+  /* Card / Panel-tier dark surfaces -> Pure Crisp Paper (#FFFFFF) */
   &.bg-\[\#0F172A\],
   &.bg-\[\#0F172A\]\/95,
   &.bg-\[\#0F172A\]\/90,
@@ -237,44 +705,177 @@ html[data-theme="daylight"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail 
   &.bg-\[\#111827\]\/90,
   &.bg-\[\#111827\]\/80,
   &.bg-\[\#111827\]\/70,
+  &.bg-\[\#111827\]\/60,
   &.bg-\[\#111827\]\/50,
   &.bg-\[\#111827\]\/40,
   &.bg-slate-900,
   &.bg-slate-900\/95,
   &.bg-slate-900\/90,
+  &.bg-slate-900\/85,
   &.bg-slate-900\/80,
+  &.bg-slate-900\/70,
   &.bg-slate-900\/60,
-  &.bg-slate-900\/40 {
+  &.bg-slate-900\/50,
+  &.bg-slate-900\/40,
+  &.bg-slate-900\/30,
+  &.bg-slate-900\/20,
+  &.bg-slate-900\/10 {
     background-color: #FFFFFF !important;
   }
 
+  /* Elevated / Control / Pill surfaces -> Soft Slate (#F1F5F9) */
   &.bg-\[\#1F2937\],
   &.bg-\[\#1F2937\]\/60,
   &.bg-\[\#1F2937\]\/50,
   &.bg-\[\#1F2937\]\/40,
   &.bg-\[\#1F2937\]\/30,
+  &.bg-\[\#1F2937\]\/25,
   &.bg-\[\#1E293B\],
   &.bg-\[\#1E293B\]\/90,
+  &.bg-\[\#1E293B\]\/80,
+  &.bg-\[\#1E293B\]\/70,
   &.bg-\[\#1E293B\]\/60,
   &.bg-\[\#131D31\],
+  &.bg-\[\#334155\],
+  &.bg-\[\#374151\],
   &.bg-slate-800,
   &.bg-slate-800\/90,
+  &.bg-slate-800\/85,
   &.bg-slate-800\/80,
   &.bg-slate-800\/70,
   &.bg-slate-800\/60,
-  &.bg-black\/60,
-  &.bg-black\/40 {
+  &.bg-slate-800\/50,
+  &.bg-slate-800\/40,
+  &.bg-slate-800\/30,
+  &.bg-slate-700,
+  &.bg-slate-700\/90,
+  &.bg-slate-700\/80,
+  &.bg-slate-700\/60,
+  &.bg-slate-700\/50,
+  &.bg-black\/40,
+  &.bg-black\/35,
+  &.bg-black\/30,
+  &.bg-black\/25 {
     background-color: #F1F5F9 !important;
   }
 
+  /* Modal backdrop overlays remain translucent dark scrims */
+  &.bg-black\/60,
+  &.bg-black\/75,
+  &.bg-black\/80 {
+    background-color: rgba(15, 23, 42, 0.45) !important;
+  }
+
+  /* Dark semantic tinted surfaces (-950 / -900) -> Crisp Light Academic Tints */
+  &.bg-emerald-950,
+  &.bg-emerald-950\/90,
+  &.bg-emerald-950\/80,
+  &.bg-emerald-950\/70,
+  &.bg-emerald-950\/60,
+  &.bg-emerald-950\/50,
+  &.bg-emerald-950\/40,
+  &.bg-emerald-950\/30,
+  &.bg-emerald-950\/20,
+  &.bg-emerald-900\/40 {
+    background-color: #ECFDF5 !important;
+    border-color: #6EE7B7 !important;
+  }
+
+  &.bg-cyan-950,
+  &.bg-cyan-950\/90,
+  &.bg-cyan-950\/80,
+  &.bg-cyan-950\/70,
+  &.bg-cyan-950\/60,
+  &.bg-cyan-950\/50,
+  &.bg-cyan-950\/40,
+  &.bg-cyan-950\/30,
+  &.bg-cyan-950\/20,
+  &.bg-cyan-900\/80,
+  &.bg-cyan-900\/60,
+  &.bg-teal-900\/80,
+  &.bg-teal-900\/60 {
+    background-color: #ECFEFF !important;
+    border-color: #67E8F9 !important;
+  }
+
+  &.bg-sky-950,
+  &.bg-sky-950\/80,
+  &.bg-sky-950\/60,
+  &.bg-sky-900 {
+    background-color: #F0F9FF !important;
+    border-color: #7DD3FC !important;
+  }
+
+  &.bg-amber-950,
+  &.bg-amber-950\/95,
+  &.bg-amber-950\/80,
+  &.bg-amber-950\/70,
+  &.bg-amber-950\/60,
+  &.bg-amber-950\/50,
+  &.bg-amber-950\/40,
+  &.bg-amber-950\/30,
+  &.bg-amber-950\/20,
+  &.bg-amber-900 {
+    background-color: #FFFBEB !important;
+    border-color: #FCD34D !important;
+  }
+
+  &.bg-rose-950,
+  &.bg-rose-950\/95,
+  &.bg-rose-950\/90,
+  &.bg-rose-950\/80,
+  &.bg-rose-950\/70,
+  &.bg-rose-950\/60,
+  &.bg-rose-950\/50,
+  &.bg-rose-950\/40,
+  &.bg-rose-950\/30,
+  &.bg-rose-950\/20 {
+    background-color: #FFF1F2 !important;
+    border-color: #FDA4AF !important;
+  }
+
+  &.bg-indigo-950,
+  &.bg-indigo-950\/90,
+  &.bg-indigo-950\/80,
+  &.bg-indigo-950\/70,
+  &.bg-indigo-950\/60,
+  &.bg-indigo-950\/50,
+  &.bg-indigo-950\/40,
+  &.bg-indigo-950\/20,
+  &.bg-indigo-900\/60,
+  &.bg-indigo-900\/40 {
+    background-color: #EEF2FF !important;
+    border-color: #A5B4FC !important;
+  }
+
+  &.bg-violet-950,
+  &.bg-violet-950\/50,
+  &.bg-violet-950\/40,
+  &.bg-violet-950\/20,
+  &.bg-purple-950\/70,
+  &.bg-purple-950\/60,
+  &.bg-purple-950\/40,
+  &.bg-purple-950\/20,
+  &.bg-purple-900,
+  &.bg-purple-900\/60,
+  &.bg-purple-900\/40 {
+    background-color: #F5F3FF !important;
+    border-color: #C4B5FD !important;
+  }
+
+  /* Gradients -> Light Paper Gradients */
+  &.from-\[\#0E1525\],
   &.from-\[\#111827\]\/40,
   &.from-\[\#111827\],
   &.from-\[\#0F172A\],
+  &.from-\[\#1E293B\],
   &.from-\[\#12192e\] {
-    --tw-gradient-from: #F8FAFC !important;
+    --tw-gradient-from: #FFFFFF !important;
   }
   &.to-\[\#0B0F19\],
-  &.to-\[\#0F172A\] {
+  &.to-\[\#0F172A\],
+  &.to-\[\#020617\],
+  &.to-slate-900 {
     --tw-gradient-to: #F1F5F9 !important;
   }
   &.via-\[\#0f172a\],
@@ -282,24 +883,45 @@ html[data-theme="daylight"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail 
     --tw-gradient-via: #F8FAFC !important;
   }
 
+  /* Borders -> Crisp Slate Hairlines */
   &.border-\[\#1F293D\],
   &.border-\[\#1F293D\]\/80,
+  &.border-\[\#1F293D\]\/70,
   &.border-\[\#1F293D\]\/60,
   &.border-\[\#1F293D\]\/50,
+  &.border-\[\#1F293D\]\/40,
+  &.border-\[\#1F2937\],
   &.border-\[\#1E293B\],
   &.border-\[\#334155\],
   &.border-\[\#374151\],
+  &.border-\[\#374151\]\/50,
+  &.border-\[\#475569\],
+  &.border-slate-900,
+  &.border-slate-900\/60,
   &.border-slate-800,
   &.border-slate-800\/90,
   &.border-slate-800\/80,
+  &.border-slate-800\/70,
+  &.border-slate-800\/60,
+  &.border-slate-800\/40,
   &.border-slate-700,
+  &.border-slate-700\/90,
   &.border-slate-700\/80,
-  &.border-slate-700\/60 {
+  &.border-slate-700\/70,
+  &.border-slate-700\/60,
+  &.border-slate-700\/50,
+  &.border-slate-600,
+  &.border-slate-600\/80,
+  &.border-slate-600\/70,
+  &.border-slate-600\/60,
+  &.border-slate-600\/50 {
     border-color: #CBD5E1 !important;
   }
 
-  &.text-white,
+  /* Typography -> High-Contrast Ink (NEVER invert white text on solid saturated buttons/badges!) */
+  &.text-white:not(.bg-\[\#8B5CF6\]):not(.bg-\[\#10B981\]):not(.bg-\[\#059669\]):not(.bg-\[\#06B6D4\]):not(.bg-\[\#F43F5E\]):not(.bg-emerald-500):not(.bg-emerald-600):not(.bg-blue-500):not(.bg-blue-600):not(.bg-indigo-500):not(.bg-indigo-600):not(.bg-purple-500):not(.bg-purple-600):not(.bg-purple-600\/60):not(.bg-violet-500):not(.bg-violet-600):not(.bg-violet-600\/90):not(.bg-rose-500):not(.bg-rose-600):not(.bg-sky-500):not(.bg-cyan-600):not(.bg-teal-600):not(.theme-solid-badge):not(.theme-accent-bg),
   &.text-\[\#F9FAFB\],
+  &.text-\[\#F1F5F9\],
   &.text-slate-100,
   &.text-slate-200 {
     color: #0F172A !important;
@@ -314,6 +936,7 @@ html[data-theme="daylight"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail 
     color: #475569 !important;
   }
 
+  &.text-emerald-100,
   &.text-emerald-200,
   &.text-emerald-300,
   &.text-emerald-400,
@@ -321,6 +944,14 @@ html[data-theme="daylight"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail 
     color: #047857 !important;
   }
 
+  &.text-teal-100,
+  &.text-teal-200,
+  &.text-teal-300,
+  &.text-teal-400 {
+    color: #0F766E !important;
+  }
+
+  &.text-cyan-100,
   &.text-cyan-200,
   &.text-cyan-300,
   &.text-cyan-400,
@@ -328,6 +959,21 @@ html[data-theme="daylight"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail 
     color: #0E7490 !important;
   }
 
+  &.text-sky-100,
+  &.text-sky-200,
+  &.text-sky-300,
+  &.text-sky-400 {
+    color: #0369A1 !important;
+  }
+
+  &.text-blue-100,
+  &.text-blue-200,
+  &.text-blue-300,
+  &.text-blue-400 {
+    color: #1D4ED8 !important;
+  }
+
+  &.text-amber-100,
   &.text-amber-200,
   &.text-amber-300,
   &.text-amber-400,
@@ -335,39 +981,189 @@ html[data-theme="daylight"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail 
     color: #B45309 !important;
   }
 
+  &.text-purple-100,
   &.text-purple-200,
   &.text-purple-300,
-  &.text-purple-400 {
+  &.text-purple-400,
+  &.text-violet-100,
+  &.text-violet-200,
+  &.text-violet-300,
+  &.text-violet-400,
+  &.text-\[\#A78BFA\] {
     color: #6D28D9 !important;
   }
 
+  &.text-fuchsia-200,
+  &.text-fuchsia-300 {
+    color: #A21CAF !important;
+  }
+
+  &.text-indigo-100,
   &.text-indigo-200,
   &.text-indigo-300,
   &.text-indigo-400 {
     color: #4338CA !important;
   }
 
+  &.text-rose-100,
   &.text-rose-200,
   &.text-rose-300,
   &.text-rose-400,
+  &.text-red-300,
   &.text-\[\#F43F5E\] {
     color: #BE123C !important;
   }
 }
 
-/* SVG Node & Edge contrast adjustments in Daylight Paper Mode */
-html[data-theme="daylight"] :not(.algo-card-thumbnail) svg circle[fill="#1E293B"],
-html[data-theme="daylight"] :not(.algo-card-thumbnail) svg circle[fill="#1e293b"],
-html[data-theme="daylight"] :not(.algo-card-thumbnail) svg circle[fill="#020617"],
-html[data-theme="daylight"] :not(.algo-card-thumbnail) svg rect[fill="#0B0F19"],
-html[data-theme="daylight"] :not(.algo-card-thumbnail) svg rect[fill="#0f172a"] {
-  fill: #F1F5F9 !important;
-  stroke: #64748B !important;
-}
-html[data-theme="daylight"] :not(.algo-card-thumbnail) svg text[fill="#FFFFFF"],
-html[data-theme="daylight"] :not(.algo-card-thumbnail) svg text[fill="#f8fafc"],
-html[data-theme="daylight"] :not(.algo-card-thumbnail) svg text[fill="#e2e8f0"] {
-  fill: #0F172A !important;
+/* SVG Node, Edge & Label contrast adjustments in Daylight Paper Mode */
+html[data-theme="daylight"] :not(.algo-card-thumbnail) svg {
+  circle[fill="#1E293B"],
+  circle[fill="#1e293b"],
+  circle[fill="#0F172A"],
+  circle[fill="#0f172a"],
+  circle[fill="#111827"],
+  circle[fill="#0B0F19"],
+  circle[fill="#0b0f19"],
+  circle[fill="#020617"],
+  circle[fill="#1F2937"],
+  circle[fill="#1f2937"],
+  circle[fill="#334155"],
+  circle[fill="#374151"],
+  circle[fill="#4b5563"],
+  circle[fill="#1c1917"],
+  rect[fill="#1E293B"],
+  rect[fill="#1e293b"],
+  rect[fill="#0B0F19"],
+  rect[fill="#0b0f19"],
+  rect[fill="#0F172A"],
+  rect[fill="#0f172a"],
+  rect[fill="#111827"],
+  rect[fill="#1F2937"],
+  rect[fill="#1f2937"],
+  rect[fill="#334155"],
+  rect[fill="#374151"],
+  rect[fill="#4b5563"],
+  rect[fill="#1c1917"] {
+    fill: #FFFFFF !important;
+    stroke: #94A3B8 !important;
+  }
+  /* Dark tinted SVG node fills -> light academic paper fills */
+  rect[fill="#78350F"],
+  rect[fill="#78350f"],
+  circle[fill="#78350F"],
+  circle[fill="#78350f"],
+  circle[fill="#B45309"],
+  circle[fill="#b45309"] {
+    fill: #FEF3C7 !important;
+    stroke: #D97706 !important;
+  }
+  rect[fill="#064E3B"],
+  rect[fill="#064e3b"],
+  rect[fill="#022c22"],
+  rect[fill="#052e16"],
+  rect[fill="#065f46"],
+  circle[fill="#064E3B"],
+  circle[fill="#064e3b"],
+  circle[fill="#065F46"],
+  circle[fill="#065f46"],
+  circle[fill="#022c22"],
+  circle[fill="#052e16"] {
+    fill: #D1FAE5 !important;
+    stroke: #059669 !important;
+  }
+  rect[fill="#0C4A6E"],
+  rect[fill="#0c4a6e"],
+  rect[fill="#082f49"],
+  rect[fill="#1e3a8a"],
+  rect[fill="#0369a1"],
+  circle[fill="#0C4A6E"],
+  circle[fill="#0c4a6e"],
+  circle[fill="#082f49"],
+  circle[fill="#1e3a8a"],
+  circle[fill="#0891B2"],
+  circle[fill="#0891b2"],
+  circle[fill="#0369a1"] {
+    fill: #E0F2FE !important;
+    stroke: #0284C7 !important;
+  }
+  rect[fill="#2e1065"],
+  rect[fill="#1e1b4b"],
+  circle[fill="#2e1065"],
+  circle[fill="#1e1b4b"] {
+    fill: #EDE9FE !important;
+    stroke: #7C3AED !important;
+  }
+  rect[fill="#4c0519"],
+  rect[fill="#7f1d1d"],
+  circle[fill="#4c0519"],
+  circle[fill="#7f1d1d"],
+  circle[fill="#E11D48"],
+  circle[fill="#e11d48"] {
+    fill: #FFE4E6 !important;
+    stroke: #E11D48 !important;
+  }
+  line[stroke="#334155"],
+  line[stroke="#475569"],
+  line[stroke="#1E293B"],
+  line[stroke="#1e293b"],
+  line[stroke="#374151"],
+  line[stroke="#4b5563"],
+  path[stroke="#334155"],
+  path[stroke="#475569"],
+  path[stroke="#1E293B"],
+  path[stroke="#1e293b"],
+  path[stroke="#374151"],
+  path[stroke="#4b5563"] {
+    stroke: #94A3B8 !important;
+  }
+  text[fill="#FFFFFF"]:not(.svg-on-solid),
+  text[fill="#ffffff"]:not(.svg-on-solid),
+  text[fill="#F8FAFC"]:not(.svg-on-solid),
+  text[fill="#f8fafc"]:not(.svg-on-solid),
+  text[fill="#F1F5F9"]:not(.svg-on-solid),
+  text[fill="#f1f5f9"]:not(.svg-on-solid),
+  text[fill="#E2E8F0"]:not(.svg-on-solid),
+  text[fill="#e2e8f0"]:not(.svg-on-solid),
+  text[fill="#CBD5E1"]:not(.svg-on-solid),
+  text[fill="#cbd5e1"]:not(.svg-on-solid) {
+    fill: #0F172A !important;
+  }
+  text[fill="#67E8F9"],
+  text[fill="#67e8f9"],
+  text[fill="#38BDF8"],
+  text[fill="#38bdf8"] {
+    fill: #0369A1 !important;
+  }
+  text[fill="#34D399"],
+  text[fill="#34d399"],
+  text[fill="#a7f3d0"],
+  text[fill="#A7F3D0"] {
+    fill: #047857 !important;
+  }
+  text[fill="#A78BFA"],
+  text[fill="#a78bfa"],
+  text[fill="#C4B5FD"],
+  text[fill="#c4b5fd"],
+  text[fill="#ddd6fe"],
+  text[fill="#d8b4fe"],
+  text[fill="#c7d2fe"] {
+    fill: #6D28D9 !important;
+  }
+  text[fill="#FDE047"],
+  text[fill="#fde047"],
+  text[fill="#FCD34D"],
+  text[fill="#fcd34d"],
+  text[fill="#fef08a"] {
+    fill: #B45309 !important;
+  }
+  text[fill="#fca5a5"],
+  text[fill="#fecaca"] {
+    fill: #BE123C !important;
+  }
+  text[fill="#94A3B8"],
+  text[fill="#94a3b8"] {
+    fill: #475569 !important;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -379,15 +1175,22 @@ html[data-theme="visualgo"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail 
   &.bg-\[\#0B0F19\]\/90,
   &.bg-\[\#0B0F19\]\/80,
   &.bg-\[\#0B0F19\]\/60,
+  &.bg-\[\#0B0F19\]\/40,
+  &.bg-\[\#0E1525\],
   &.bg-slate-950,
+  &.bg-slate-950\/95,
   &.bg-slate-950\/90,
   &.bg-slate-950\/80,
-  &.bg-slate-950\/70 {
+  &.bg-slate-950\/70,
+  &.bg-slate-950\/60,
+  &.bg-slate-950\/50,
+  &.bg-slate-950\/40 {
     background-color: #061325 !important;
   }
 
   &.bg-\[\#0F172A\],
   &.bg-\[\#0F172A\]\/95,
+  &.bg-\[\#0F172A\]\/90,
   &.bg-\[\#0E1420\],
   &.bg-\[\#0E1420\]\/95,
   &.bg-\[\#0E1420\]\/90,
@@ -397,43 +1200,108 @@ html[data-theme="visualgo"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail 
   &.bg-\[\#111827\]\/90,
   &.bg-\[\#111827\]\/80,
   &.bg-\[\#111827\]\/70,
+  &.bg-\[\#111827\]\/60,
   &.bg-\[\#111827\]\/50,
   &.bg-\[\#111827\]\/40,
   &.bg-slate-900,
+  &.bg-slate-900\/95,
   &.bg-slate-900\/90,
-  &.bg-slate-900\/80 {
+  &.bg-slate-900\/85,
+  &.bg-slate-900\/80,
+  &.bg-slate-900\/70,
+  &.bg-slate-900\/60,
+  &.bg-slate-900\/50,
+  &.bg-slate-900\/40,
+  &.bg-slate-900\/30,
+  &.bg-slate-900\/20,
+  &.bg-slate-900\/10 {
     background-color: #0B1F3A !important;
   }
 
   &.bg-\[\#1F2937\],
   &.bg-\[\#1F2937\]\/60,
   &.bg-\[\#1F2937\]\/50,
+  &.bg-\[\#1F2937\]\/40,
+  &.bg-\[\#1F2937\]\/30,
+  &.bg-\[\#1F2937\]\/25,
   &.bg-\[\#1E293B\],
+  &.bg-\[\#1E293B\]\/90,
+  &.bg-\[\#1E293B\]\/70,
+  &.bg-\[\#1E293B\]\/60,
   &.bg-\[\#131D31\],
+  &.bg-\[\#334155\],
+  &.bg-\[\#374151\],
   &.bg-slate-800,
-  &.bg-slate-800\/80 {
+  &.bg-slate-800\/90,
+  &.bg-slate-800\/85,
+  &.bg-slate-800\/80,
+  &.bg-slate-800\/70,
+  &.bg-slate-800\/60,
+  &.bg-slate-800\/50,
+  &.bg-slate-800\/40,
+  &.bg-slate-800\/30,
+  &.bg-slate-700,
+  &.bg-slate-700\/90,
+  &.bg-slate-700\/80,
+  &.bg-slate-700\/60,
+  &.bg-slate-700\/50 {
     background-color: #133158 !important;
   }
 
+  &.from-\[\#0E1525\],
   &.from-\[\#111827\]\/40,
   &.from-\[\#111827\],
   &.from-\[\#0F172A\],
+  &.from-\[\#1E293B\],
   &.from-\[\#12192e\] {
     --tw-gradient-from: #0B1F3A !important;
   }
   &.to-\[\#0B0F19\],
-  &.to-\[\#0F172A\] {
+  &.to-\[\#0F172A\],
+  &.to-\[\#020617\],
+  &.to-slate-900 {
     --tw-gradient-to: #061325 !important;
   }
 
   &.border-\[\#1F293D\],
   &.border-\[\#1F293D\]\/80,
+  &.border-\[\#1F293D\]\/70,
   &.border-\[\#1F293D\]\/60,
   &.border-\[\#1F293D\]\/50,
+  &.border-\[\#1F293D\]\/40,
+  &.border-\[\#1F2937\],
   &.border-\[\#1E293B\],
+  &.border-\[\#334155\],
+  &.border-\[\#374151\],
+  &.border-\[\#475569\],
+  &.border-slate-900,
   &.border-slate-800,
-  &.border-slate-700 {
+  &.border-slate-800\/90,
+  &.border-slate-800\/80,
+  &.border-slate-800\/70,
+  &.border-slate-800\/60,
+  &.border-slate-700,
+  &.border-slate-700\/80,
+  &.border-slate-700\/60,
+  &.border-slate-600 {
     border-color: #1D4477 !important;
+  }
+}
+
+html[data-theme="visualgo"] :not(.algo-card-thumbnail) svg {
+  circle[fill="#1E293B"],
+  circle[fill="#1e293b"],
+  rect[fill="#111827"],
+  rect[fill="#0F172A"],
+  rect[fill="#0B0F19"] {
+    fill: #102B50 !important;
+    stroke: #2A5C9A !important;
+  }
+  line[stroke="#334155"],
+  line[stroke="#475569"],
+  path[stroke="#334155"],
+  path[stroke="#475569"] {
+    stroke: #366BA8 !important;
   }
 }
 
@@ -446,15 +1314,22 @@ html[data-theme="dracula"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail *
   &.bg-\[\#0B0F19\]\/90,
   &.bg-\[\#0B0F19\]\/80,
   &.bg-\[\#0B0F19\]\/60,
+  &.bg-\[\#0B0F19\]\/40,
+  &.bg-\[\#0E1525\],
   &.bg-slate-950,
+  &.bg-slate-950\/95,
   &.bg-slate-950\/90,
   &.bg-slate-950\/80,
-  &.bg-slate-950\/70 {
+  &.bg-slate-950\/70,
+  &.bg-slate-950\/60,
+  &.bg-slate-950\/50,
+  &.bg-slate-950\/40 {
     background-color: #13111C !important;
   }
 
   &.bg-\[\#0F172A\],
   &.bg-\[\#0F172A\]\/95,
+  &.bg-\[\#0F172A\]\/90,
   &.bg-\[\#0E1420\],
   &.bg-\[\#0E1420\]\/95,
   &.bg-\[\#0E1420\]\/90,
@@ -464,43 +1339,108 @@ html[data-theme="dracula"] :not(.algo-card-thumbnail):not(.algo-card-thumbnail *
   &.bg-\[\#111827\]\/90,
   &.bg-\[\#111827\]\/80,
   &.bg-\[\#111827\]\/70,
+  &.bg-\[\#111827\]\/60,
   &.bg-\[\#111827\]\/50,
   &.bg-\[\#111827\]\/40,
   &.bg-slate-900,
+  &.bg-slate-900\/95,
   &.bg-slate-900\/90,
-  &.bg-slate-900\/80 {
+  &.bg-slate-900\/85,
+  &.bg-slate-900\/80,
+  &.bg-slate-900\/70,
+  &.bg-slate-900\/60,
+  &.bg-slate-900\/50,
+  &.bg-slate-900\/40,
+  &.bg-slate-900\/30,
+  &.bg-slate-900\/20,
+  &.bg-slate-900\/10 {
     background-color: #1C1829 !important;
   }
 
   &.bg-\[\#1F2937\],
   &.bg-\[\#1F2937\]\/60,
   &.bg-\[\#1F2937\]\/50,
+  &.bg-\[\#1F2937\]\/40,
+  &.bg-\[\#1F2937\]\/30,
+  &.bg-\[\#1F2937\]\/25,
   &.bg-\[\#1E293B\],
+  &.bg-\[\#1E293B\]\/90,
+  &.bg-\[\#1E293B\]\/70,
+  &.bg-\[\#1E293B\]\/60,
   &.bg-\[\#131D31\],
+  &.bg-\[\#334155\],
+  &.bg-\[\#374151\],
   &.bg-slate-800,
-  &.bg-slate-800\/80 {
+  &.bg-slate-800\/90,
+  &.bg-slate-800\/85,
+  &.bg-slate-800\/80,
+  &.bg-slate-800\/70,
+  &.bg-slate-800\/60,
+  &.bg-slate-800\/50,
+  &.bg-slate-800\/40,
+  &.bg-slate-800\/30,
+  &.bg-slate-700,
+  &.bg-slate-700\/90,
+  &.bg-slate-700\/80,
+  &.bg-slate-700\/60,
+  &.bg-slate-700\/50 {
     background-color: #28223B !important;
   }
 
+  &.from-\[\#0E1525\],
   &.from-\[\#111827\]\/40,
   &.from-\[\#111827\],
   &.from-\[\#0F172A\],
+  &.from-\[\#1E293B\],
   &.from-\[\#12192e\] {
     --tw-gradient-from: #1C1829 !important;
   }
   &.to-\[\#0B0F19\],
-  &.to-\[\#0F172A\] {
+  &.to-\[\#0F172A\],
+  &.to-\[\#020617\],
+  &.to-slate-900 {
     --tw-gradient-to: #13111C !important;
   }
 
   &.border-\[\#1F293D\],
   &.border-\[\#1F293D\]\/80,
+  &.border-\[\#1F293D\]\/70,
   &.border-\[\#1F293D\]\/60,
   &.border-\[\#1F293D\]\/50,
+  &.border-\[\#1F293D\]\/40,
+  &.border-\[\#1F2937\],
   &.border-\[\#1E293B\],
+  &.border-\[\#334155\],
+  &.border-\[\#374151\],
+  &.border-\[\#475569\],
+  &.border-slate-900,
   &.border-slate-800,
-  &.border-slate-700 {
+  &.border-slate-800\/90,
+  &.border-slate-800\/80,
+  &.border-slate-800\/70,
+  &.border-slate-800\/60,
+  &.border-slate-700,
+  &.border-slate-700\/80,
+  &.border-slate-700\/60,
+  &.border-slate-600 {
     border-color: #362E4F !important;
+  }
+}
+
+html[data-theme="dracula"] :not(.algo-card-thumbnail) svg {
+  circle[fill="#1E293B"],
+  circle[fill="#1e293b"],
+  rect[fill="#111827"],
+  rect[fill="#0F172A"],
+  rect[fill="#0B0F19"] {
+    fill: #26203B !important;
+    stroke: #52447A !important;
+  }
+  line[stroke="#334155"],
+  line[stroke="#475569"],
+  path[stroke="#334155"],
+  path[stroke="#475569"] {
+    stroke: #5C4F82 !important;
   }
 }
 

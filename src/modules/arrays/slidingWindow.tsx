@@ -1,3 +1,5 @@
+import React from 'react';
+import { motion } from 'motion/react';
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface SlidingWindowInput {
@@ -273,52 +275,182 @@ export const slidingWindowModule: AlgorithmModule<SlidingWindowInput, SlidingWin
     return frames;
   },
   renderStage: (frame: ExecutionFrame<SlidingWindowState>) => {
-    const { array, k, windowStart, windowEnd, currentSum, maxSum, bestStart } = frame.state;
+    const { array, k, windowStart, windowEnd, currentSum, maxSum, bestStart, phase } = frame.state;
+    const leavingIdx = phase === 'slide' && windowStart > 0 ? windowStart - 1 : null;
+    const enteringIdx = phase === 'slide' ? windowEnd : null;
+    const maxVal = Math.max(...array.map((v) => Math.abs(v)), 1);
 
     return (
-      <div className="flex flex-col items-center justify-center p-6 w-full min-h-[380px] gap-6">
-        {/* Metric Badges */}
-        <div className="flex items-center gap-6 bg-slate-900/80 border border-slate-700 px-6 py-3 rounded-2xl">
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-mono text-slate-400">WINDOW SIZE (K)</span>
-            <span className="text-xl font-bold font-mono text-amber-400">{k}</span>
+      <div className="flex flex-col items-center justify-center p-4 sm:p-6 w-full min-h-[360px] gap-5 select-none">
+        {/* Metric HUD + O(1) Sliding Delta Formula */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex items-center gap-5 bg-[#111827] border border-[#1F293D] px-5 py-2.5 rounded-2xl shadow-sm">
+            <div className="flex flex-col items-center">
+              <span className="text-[9.5px] font-mono text-slate-400 uppercase">Window Size (k)</span>
+              <span className="text-lg font-extrabold font-mono text-amber-400 tabular-nums">{k}</span>
+            </div>
+            <div className="w-px h-7 bg-[#1F293D]" />
+            <div className="flex flex-col items-center">
+              <span className="text-[9.5px] font-mono text-slate-400 uppercase">Window Sum</span>
+              <span className="text-lg font-extrabold font-mono text-cyan-400 tabular-nums">{currentSum}</span>
+            </div>
+            <div className="w-px h-7 bg-[#1F293D]" />
+            <div className="flex flex-col items-center">
+              <span className="text-[9.5px] font-mono text-slate-400 uppercase">Best Max Sum</span>
+              <span className="text-lg font-extrabold font-mono text-emerald-400 tabular-nums">{maxSum}</span>
+            </div>
           </div>
-          <div className="w-px h-8 bg-slate-700"></div>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-mono text-slate-400">CURRENT WINDOW SUM</span>
-            <span className="text-xl font-bold font-mono text-sky-400">{currentSum}</span>
-          </div>
-          <div className="w-px h-8 bg-slate-700"></div>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-mono text-slate-400">MAX SUBARRAY SUM</span>
-            <span className="text-xl font-bold font-mono text-emerald-400">{maxSum}</span>
-          </div>
+
+          {leavingIdx !== null && enteringIdx !== null && (
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#111827] border border-[#1F293D] text-xs font-mono">
+              <span className="text-slate-400">O(1) Slide:</span>
+              <span
+                style={{
+                  backgroundColor: 'var(--sem-swapping-bg)',
+                  color: 'var(--sem-swapping-text)',
+                  borderColor: 'var(--sem-swapping-border)',
+                }}
+                className="px-1.5 py-0.5 rounded border font-bold tabular-nums"
+              >
+                -{array[leavingIdx]}
+              </span>
+              <span
+                style={{
+                  backgroundColor: 'var(--sem-sorted-bg)',
+                  color: 'var(--sem-sorted-text)',
+                  borderColor: 'var(--sem-sorted-border)',
+                }}
+                className="px-1.5 py-0.5 rounded border font-bold tabular-nums"
+              >
+                +{array[enteringIdx]}
+              </span>
+              <span className="text-slate-400">=</span>
+              <strong className="text-cyan-400 tabular-nums">{currentSum}</strong>
+            </div>
+          )}
         </div>
 
-        {/* Array Cells with Sliding Frame Highlight */}
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-4xl">
+        {/* Array Cells with Proportional Mini-Bars, Sliding Bracket & Leaving/Entering Badges */}
+        <div className="flex flex-wrap items-end justify-center gap-2 max-w-4xl pt-6 pb-4">
           {array.map((val, idx) => {
             const inCurrentWindow = idx >= windowStart && idx <= windowEnd;
             const inBestWindow = idx >= bestStart && idx < bestStart + k;
+            const isLeaving = idx === leavingIdx;
+            const isEntering = idx === enteringIdx;
+            const miniBarH = Math.max(10, Math.round((Math.abs(val) / maxVal) * 48));
 
-            let borderStyle = 'border-slate-800 bg-slate-900/40 text-slate-400';
-            if (inCurrentWindow) {
-              borderStyle = 'border-sky-400 bg-sky-950/60 text-white ring-2 ring-sky-400 font-bold';
-            } else if (inBestWindow) {
-              borderStyle = 'border-emerald-600 bg-emerald-950/30 text-emerald-200';
-            }
+            const cellStyle: React.CSSProperties = isEntering
+              ? {
+                  backgroundColor: 'var(--sem-sorted-bg)',
+                  borderColor: 'var(--sem-sorted-border)',
+                  color: 'var(--sem-sorted-text)',
+                }
+              : inCurrentWindow
+              ? {
+                  backgroundColor: 'var(--sem-active-bg)',
+                  borderColor: 'var(--sem-active-border)',
+                  color: 'var(--sem-active-text)',
+                }
+              : isLeaving
+              ? {
+                  backgroundColor: 'var(--sem-swapping-bg)',
+                  borderColor: 'var(--sem-swapping-border)',
+                  color: 'var(--sem-swapping-text)',
+                }
+              : inBestWindow
+              ? {
+                  backgroundColor: 'var(--sem-sorted-bg)',
+                  borderColor: 'var(--sem-sorted-border)',
+                  color: 'var(--sem-sorted-text)',
+                }
+              : {
+                  backgroundColor: 'var(--sem-default-cell-bg)',
+                  borderColor: 'var(--sem-default-border)',
+                  color: 'var(--sem-default-text)',
+                };
 
             return (
-              <div key={idx} className="flex flex-col items-center gap-1">
-                <div className={`relative flex flex-col items-center justify-center w-14 h-20 rounded-xl border-2 transition-all ${borderStyle}`}>
-                  <span className="text-xl font-mono">{val}</span>
-                  <span className="text-[10px] font-mono text-slate-500 mt-1">[{idx}]</span>
-                  {idx === windowStart && (
-                    <span className="absolute -top-3 bg-sky-500 text-slate-950 text-[8px] px-1 rounded font-mono font-bold">START</span>
+              <div key={idx} className="flex flex-col items-center gap-1.5 relative">
+                {/* Leaving / Entering Delta Indicator */}
+                <div className="h-5 flex items-center justify-center">
+                  {isLeaving && (
+                    <span
+                      style={{
+                        backgroundColor: 'var(--sem-swapping-solid)',
+                        color: 'var(--sem-swapping-on-solid)',
+                      }}
+                      className="theme-solid-badge px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold whitespace-nowrap"
+                    >
+                      OUT -{val}
+                    </span>
                   )}
-                  {idx === windowEnd && (
-                    <span className="absolute -bottom-3 bg-sky-500 text-slate-950 text-[8px] px-1 rounded font-mono font-bold">END</span>
+                  {isEntering && (
+                    <span
+                      style={{
+                        backgroundColor: 'var(--sem-sorted-solid)',
+                        color: 'var(--sem-sorted-on-solid)',
+                      }}
+                      className="theme-solid-badge px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold whitespace-nowrap"
+                    >
+                      IN +{val}
+                    </span>
                   )}
+                  {!isLeaving && !isEntering && idx === windowStart && (
+                    <span
+                      style={{
+                        backgroundColor: 'var(--sem-active-solid)',
+                        color: 'var(--sem-active-on-solid)',
+                      }}
+                      className="theme-solid-badge px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold"
+                    >
+                      L={idx}
+                    </span>
+                  )}
+                </div>
+
+                {/* Proportional Mini-Bar */}
+                <div className="h-12 w-14 flex items-end justify-center px-2">
+                  <motion.div
+                    initial={false}
+                    animate={{ height: miniBarH }}
+                    transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                    style={{
+                      backgroundColor: inCurrentWindow
+                        ? 'var(--sem-active-solid)'
+                        : isLeaving
+                        ? 'var(--sem-swapping-solid)'
+                        : inBestWindow
+                        ? 'var(--sem-sorted-solid)'
+                        : 'var(--sem-default-border)',
+                    }}
+                    className="w-7 rounded-t-md opacity-80"
+                  />
+                </div>
+
+                {/* Memory Cell */}
+                <motion.div
+                  layout
+                  animate={{ scale: inCurrentWindow ? 1.04 : 1 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                  style={cellStyle}
+                  className={`relative flex flex-col items-center justify-center w-14 h-16 rounded-xl border-2 font-mono font-bold transition-shadow ${
+                    inCurrentWindow ? 'ring-2 ring-[#06B6D4]/40 shadow-md' : ''
+                  } ${isLeaving ? 'border-dashed opacity-75' : ''}`}
+                >
+                  <span className="text-lg font-extrabold tabular-nums leading-none">{val}</span>
+                  <span className="text-[10px] opacity-65 mt-1 tabular-nums">[{idx}]</span>
+                </motion.div>
+
+                {/* Active Window Range Bar */}
+                <div className="h-5 flex items-center justify-center w-full">
+                  {inCurrentWindow ? (
+                    <div
+                      style={{ backgroundColor: 'var(--sem-active-solid)' }}
+                      className="w-full h-1.5 rounded-full"
+                    />
+                  ) : inBestWindow ? (
+                    <span className="text-[8.5px] font-mono font-bold text-emerald-400">BEST</span>
+                  ) : null}
                 </div>
               </div>
             );

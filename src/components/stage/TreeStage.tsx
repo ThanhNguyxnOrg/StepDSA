@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { ElementStatus } from '../../core/types';
 import { resolveTreeNodesOverlap } from '../../utils/stageLayout';
 
@@ -122,15 +123,15 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
                 <g key={`${node.id}-${left.id}`}>
                   <path
                     d={pathD}
-                    stroke={isHighlighted ? '#06B6D4' : '#334155'}
-                    strokeWidth={isHighlighted ? '2.5' : '2'}
-                    strokeOpacity={isHighlighted ? 0.35 : 1}
+                    style={{ stroke: isHighlighted ? 'var(--sem-active-solid)' : 'var(--svg-edge-default)' }}
+                    strokeWidth={isHighlighted ? '2.75' : '2'}
+                    strokeOpacity={isHighlighted ? 0.45 : 0.85}
                     fill="none"
                   />
                   {isHighlighted && (
                     <path
                       d={pathD}
-                      stroke="#38BDF8"
+                      style={{ stroke: 'var(--sem-active-border)' }}
                       strokeWidth="2.5"
                       strokeDasharray="6 4"
                       fill="none"
@@ -150,14 +151,16 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
                     width={16}
                     height={15}
                     rx={4}
-                    fill="#0B0F19"
-                    stroke={isHighlighted ? '#06B6D4' : '#1E293B'}
+                    style={{
+                      fill: 'var(--svg-badge-bg)',
+                      stroke: isHighlighted ? 'var(--sem-active-border)' : 'var(--svg-node-border)',
+                    }}
                   />
                   <text
                     x={midX}
                     y={midY + 3}
                     textAnchor="middle"
-                    fill="#38BDF8"
+                    style={{ fill: 'var(--svg-label-cyan)' }}
                     fontSize="9"
                     fontFamily="monospace"
                     fontWeight="bold"
@@ -180,15 +183,15 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
                 <g key={`${node.id}-${right.id}`}>
                   <path
                     d={pathD}
-                    stroke={isHighlighted ? '#10B981' : '#334155'}
-                    strokeWidth={isHighlighted ? '2.5' : '2'}
-                    strokeOpacity={isHighlighted ? 0.35 : 1}
+                    style={{ stroke: isHighlighted ? 'var(--sem-sorted-solid)' : 'var(--svg-edge-default)' }}
+                    strokeWidth={isHighlighted ? '2.75' : '2'}
+                    strokeOpacity={isHighlighted ? 0.45 : 0.85}
                     fill="none"
                   />
                   {isHighlighted && (
                     <path
                       d={pathD}
-                      stroke="#34D399"
+                      style={{ stroke: 'var(--sem-sorted-border)' }}
                       strokeWidth="2.5"
                       strokeDasharray="6 4"
                       fill="none"
@@ -208,14 +211,16 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
                     width={16}
                     height={15}
                     rx={4}
-                    fill="#0B0F19"
-                    stroke={isHighlighted ? '#10B981' : '#1E293B'}
+                    style={{
+                      fill: 'var(--svg-badge-bg)',
+                      stroke: isHighlighted ? 'var(--sem-sorted-border)' : 'var(--svg-node-border)',
+                    }}
                   />
                   <text
                     x={midX}
                     y={midY + 3}
                     textAnchor="middle"
-                    fill="#34D399"
+                    style={{ fill: 'var(--svg-label-emerald)' }}
                     fontSize="9"
                     fontFamily="monospace"
                     fontWeight="bold"
@@ -229,28 +234,48 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
           })}
         </svg>
 
-        {/* Render Non-Overlapping Tree Nodes */}
+        {/* Render Non-Overlapping Smoothly Animated Tree Nodes */}
         {layoutNodes.map((node) => {
-          let bgClass = 'bg-[#1E293B] border-[#475569] text-slate-100';
+          let nodeStyle: React.CSSProperties = {
+            backgroundColor: 'var(--svg-node-bg)',
+            borderColor: 'var(--svg-node-border)',
+            color: 'var(--svg-node-text)',
+          };
           let ringClass = '';
 
           switch (node.status) {
             case 'active':
             case 'comparing':
-              bgClass = 'bg-[#F59E0B]/25 border-[#F59E0B] text-amber-200';
-              ringClass = 'ring-4 ring-[#F59E0B]/25 scale-105';
+              nodeStyle = {
+                backgroundColor: 'var(--sem-comparing-bg)',
+                borderColor: 'var(--sem-comparing-border)',
+                color: 'var(--sem-comparing-text)',
+              };
+              ringClass = 'ring-4 ring-[#F59E0B]/25';
               break;
             case 'swapping':
-              bgClass = 'bg-[#F43F5E]/25 border-[#F43F5E] text-rose-200';
-              ringClass = 'ring-4 ring-[#F43F5E]/25 scale-105';
+              nodeStyle = {
+                backgroundColor: 'var(--sem-swapping-bg)',
+                borderColor: 'var(--sem-swapping-border)',
+                color: 'var(--sem-swapping-text)',
+              };
+              ringClass = 'ring-4 ring-[#F43F5E]/25';
               break;
             case 'sorted':
             case 'selected':
-              bgClass = 'bg-[#10B981]/25 border-[#10B981] text-emerald-200';
+              nodeStyle = {
+                backgroundColor: 'var(--sem-sorted-bg)',
+                borderColor: 'var(--sem-sorted-border)',
+                color: 'var(--sem-sorted-text)',
+              };
               ringClass = 'ring-4 ring-[#10B981]/25';
               break;
             case 'pivot':
-              bgClass = 'bg-[#8B5CF6]/25 border-[#8B5CF6] text-purple-200';
+              nodeStyle = {
+                backgroundColor: 'var(--sem-pivot-bg)',
+                borderColor: 'var(--sem-pivot-border)',
+                color: 'var(--sem-pivot-text)',
+              };
               ringClass = 'ring-4 ring-[#8B5CF6]/25';
               break;
           }
@@ -260,27 +285,33 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
             targetValue !== undefined &&
             targetValue !== node.value;
 
+          const isFocused = node.status === 'comparing' || node.status === 'active' || node.status === 'swapping';
+
           return (
-            <div
+            <motion.div
               key={node.id}
+              initial={false}
+              animate={{
+                left: node.x - 21,
+                top: node.y - 21,
+                scale: isFocused ? 1.08 : 1,
+              }}
+              transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               onMouseEnter={() => setInspectedNodeId(node.id)}
               onMouseLeave={() => setInspectedNodeId((prev) => (prev === node.id ? null : prev))}
               onClick={() => setInspectedNodeId((prev) => (prev === node.id ? null : node.id))}
-              style={{
-                left: `${node.x - 21}px`,
-                top: `${node.y - 21}px`,
-              }}
-              className={`absolute w-[42px] h-[42px] rounded-full border-2 flex flex-col items-center justify-center font-mono text-xs font-bold tabular-nums shadow-lg transition-all duration-200 cursor-pointer ${bgClass} ${ringClass}`}
+              style={nodeStyle}
+              className={`absolute w-[42px] h-[42px] rounded-full border-2 flex flex-col items-center justify-center font-mono text-xs font-bold tabular-nums shadow-lg cursor-pointer ${ringClass}`}
             >
               {node.childRole === 'root' && (
-                <span className="absolute -top-4 px-1 py-0.2 rounded bg-slate-900 border border-slate-700 text-[8px] font-mono text-cyan-400 uppercase tracking-wider leading-none">
+                <span className="absolute -top-4 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[8px] font-mono text-cyan-400 uppercase tracking-wider leading-none shadow-xs">
                   ROOT
                 </span>
               )}
               {node.annotation && (
                 <span
                   title={node.annotation}
-                  className="absolute -top-2.5 -right-2 px-1 py-0.2 rounded bg-slate-900/95 border border-slate-600 text-[7.5px] font-mono text-slate-300 whitespace-nowrap leading-none"
+                  className="absolute -top-2.5 -right-2 px-1 py-0.5 rounded bg-slate-900/95 border border-slate-600 text-[7.5px] font-mono text-slate-300 whitespace-nowrap leading-none shadow-xs"
                 >
                   {node.annotation}
                 </span>
@@ -288,16 +319,16 @@ export const TreeStage: React.FC<TreeStageProps> = ({ state, projection }) => {
               <span>{node.value}</span>
               {showTargetRelation && (
                 <span
-                  className={`absolute -bottom-4 px-1.5 py-0.2 rounded bg-[#0B0F19] border text-[8px] font-mono whitespace-nowrap leading-none ${
+                  className={`absolute -bottom-5 px-1.5 py-0.5 rounded bg-[#0B0F19] border text-[8.5px] font-mono font-bold whitespace-nowrap leading-none shadow-sm ${
                     targetValue! < node.value
-                      ? 'border-cyan-500/40 text-cyan-300'
-                      : 'border-emerald-500/40 text-emerald-300'
+                      ? 'border-cyan-500/50 text-cyan-300'
+                      : 'border-emerald-500/50 text-emerald-300'
                   }`}
                 >
                   {targetValue! < node.value ? `${targetValue}<${node.value} → L` : `${targetValue}>${node.value} → R`}
                 </span>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>

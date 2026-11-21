@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useDeferredValue } from 'react';
 import { motion } from 'motion/react';
 import {
   Search,
@@ -10,6 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
+  X,
+  Clock,
 } from 'lucide-react';
 import { AlgorithmModule } from '../../core/types';
 import { AlgorithmCardThumbnail } from './AlgorithmCardThumbnail';
@@ -21,6 +23,8 @@ interface DashboardViewProps {
   onSelectModule: (module: AlgorithmModule) => void;
   onOpenPersonalStudio?: () => void;
   onOpenShortcuts?: () => void;
+  recentModuleIds?: string[];
+  onClearRecent?: () => void;
 }
 
 /**
@@ -134,6 +138,42 @@ const ALGO_METADATA: Record<
     subtitle: '3D Spatial Partitioning',
     tags: ['3D-space', 'octants', 'collision-detection'],
     themeColor: 'indigo',
+  },
+  'dutch-national-flag': {
+    shortTitle: 'Dutch National Flag',
+    subtitle: '3-Way In-Place Partition',
+    tags: ['3-pointers', 'sort-colors', 'O(N)', 'in-place'],
+    themeColor: 'indigo',
+  },
+  'trapping-rain-water': {
+    shortTitle: 'Trapping Rain Water',
+    subtitle: 'Two Pointers Elevation Fill',
+    tags: ['two-pointers', 'leetcode-42', 'O(1)-space', 'interview'],
+    themeColor: 'cyan',
+  },
+  'lru-cache': {
+    shortTitle: 'LRU Cache',
+    subtitle: 'O(1) Hash Map + Doubly Linked List',
+    tags: ['system-design', 'cache', 'leetcode-146', 'O(1)'],
+    themeColor: 'blue',
+  },
+  'prefix-sum': {
+    shortTitle: 'Prefix Sum',
+    subtitle: 'O(1) Range Sum Queries',
+    tags: ['prefix-sum', 'range-query', 'O(N+Q)', 'subarray'],
+    themeColor: 'emerald',
+  },
+  'lca-binary-tree': {
+    shortTitle: 'Lowest Common Ancestor',
+    subtitle: 'Binary Tree DFS Bubbling',
+    tags: ['LCA', 'binary-tree', 'post-order', 'interview'],
+    themeColor: 'emerald',
+  },
+  'bloom-filter': {
+    shortTitle: 'Bloom Filter',
+    subtitle: 'Probabilistic Bit Array + k Hashes',
+    tags: ['probabilistic', 'hashing', 'system-design', 'bit-vector'],
+    themeColor: 'purple',
   },
   'linear-search': {
     shortTitle: 'Linear Search',
@@ -674,6 +714,12 @@ export const INTERVIEW_MODULE_IDS = new Set([
   'coin-change',
   'edit-distance',
   'longest-palindromic-substring',
+  'lru-cache',
+  'trapping-rain-water',
+  'dutch-national-flag',
+  'prefix-sum',
+  'lca-binary-tree',
+  'bloom-filter',
 ]);
 
 export const DEFAULT_CATEGORY_LABELS: Record<string, string> = {
@@ -771,21 +817,15 @@ export function computeRegistryStats(modules: AlgorithmModule[]): RegistryStats 
   };
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({
-  modules,
-  onSelectModule,
-  onOpenPersonalStudio,
-  onOpenShortcuts,
-}) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
-  const [selectedPath, setSelectedPath] = useState<'all' | 'essentials' | 'interview' | 'icpc'>('all');
-  const [viewMode, setViewMode] = useState<'topics' | 'grid' | 'table'>('grid');
-  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
-  const shortcuts = usePlatformShortcuts();
-
-  // Interactive Hero Live Stepper state
+/**
+ * Isolated Hero Live Preview component.
+ * Keeping the 2.4s playback interval strictly inside this memoized component
+ * prevents the entire 162-card Algorithm Index from re-rendering every 2.4 seconds!
+ */
+const HeroLivePreview = React.memo<{
+  onOpenModuleById: (moduleId: string) => void;
+  onDemoModuleChange?: (moduleId: string) => void;
+}>(({ onOpenModuleById, onDemoModuleChange }) => {
   const [heroDemoIdx, setHeroDemoIdx] = useState(0);
   const [heroFrameIdx, setHeroFrameIdx] = useState(0);
   const [heroPlaying, setHeroPlaying] = useState(true);
@@ -795,6 +835,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     activeHeroDemo.frames[heroFrameIdx % activeHeroDemo.frames.length] || activeHeroDemo.frames[0];
 
   useEffect(() => {
+    onDemoModuleChange?.(activeHeroDemo.moduleId);
+  }, [activeHeroDemo.moduleId, onDemoModuleChange]);
+
+  useEffect(() => {
     if (!heroPlaying) return;
     const timer = setInterval(() => {
       setHeroFrameIdx((prev) => (prev + 1) % activeHeroDemo.frames.length);
@@ -802,9 +846,381 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return () => clearInterval(timer);
   }, [heroPlaying, activeHeroDemo.frames.length]);
 
+  return (
+    <div
+      data-ui="true"
+      className="md:col-span-6 lg:col-span-5 rounded-xl bg-[#111827] border border-[#1F293D] overflow-hidden flex flex-col justify-between shadow-xl"
+    >
+      {/* Mini-Workbench Top Bar */}
+      <div className="px-2.5 py-2 border-b border-[#1F293D] bg-[#0B0F19] flex flex-wrap items-center justify-between gap-1.5">
+        <div className="flex flex-wrap items-center gap-1 min-w-0">
+          {HERO_LIVE_DEMOS.map((demo, idx) => {
+            const isSelected = idx === heroDemoIdx;
+            return (
+              <button
+                key={demo.id}
+                type="button"
+                onClick={() => {
+                  setHeroDemoIdx(idx);
+                  setHeroFrameIdx(0);
+                }}
+                className={`px-2 py-1 rounded text-[10.5px] font-mono transition-colors cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-[#1E293B] text-white font-semibold border border-slate-700/80'
+                    : 'text-slate-400 hover:text-white hover:bg-[#1F2937]/60'
+                }`}
+              >
+                {isSelected && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] shrink-0" />
+                )}
+                <span>{demo.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <span className="text-[10.5px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded tabular-nums whitespace-nowrap shrink-0">
+          {activeHeroDemo.complexity}
+        </span>
+      </div>
+
+      {/* Live Interactive Array & Pointer Stage */}
+      <div className="p-3.5 bg-[#0B0F19]/60 flex-1 flex flex-col justify-between gap-2.5">
+        {/* Active Invariant Formula + Interactive Step Scrubber Dots */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+            <span className="truncate">
+              Invariant: <strong className="text-[#10B981]">{activeHeroFrame.invariant}</strong>
+            </span>
+            <span className="shrink-0 tabular-nums px-1.5 py-0.5 rounded bg-[#111827] border border-[#1F293D] text-slate-300">
+              Step {activeHeroFrame.step}/{activeHeroDemo.frames.length}
+            </span>
+          </div>
+
+          {/* Live Scope Pointers + Step Timeline Pills */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#1F293D]/60">
+            <div className="flex flex-wrap items-center gap-1 text-[10px] font-mono">
+              {Object.entries(activeHeroFrame.pointers).map(([pName, pIdx]) => (
+                <span
+                  key={pName}
+                  className="px-1.5 py-0.5 rounded bg-[#111827] border border-[#1F293D] text-slate-300"
+                >
+                  <strong className="text-cyan-300">{pName}</strong>={pIdx}
+                  {activeHeroFrame.values[pIdx] !== undefined
+                    ? ` (${activeHeroFrame.values[pIdx]})`
+                    : ''}
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {activeHeroDemo.frames.map((f, fIdx) => {
+                const isCurrent = fIdx === heroFrameIdx % activeHeroDemo.frames.length;
+                return (
+                  <button
+                    key={f.step}
+                    type="button"
+                    onClick={() => {
+                      setHeroPlaying(false);
+                      setHeroFrameIdx(fIdx);
+                    }}
+                    title={`Jump to Step ${f.step}`}
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'w-4 bg-[#10B981]'
+                        : 'w-1.5 bg-slate-700 hover:bg-slate-500'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Array Bars + Cells + Pointers */}
+        <div className="grid grid-cols-6 gap-2 py-1">
+          {(() => {
+            const maxVal = Math.max(...activeHeroFrame.values, 1);
+            return activeHeroFrame.values.map((val, idx) => {
+              const st = activeHeroFrame.statuses[idx] || 'default';
+              const activePointers = Object.entries(activeHeroFrame.pointers)
+                .filter(([, pIdx]) => pIdx === idx)
+                .map(([label]) => label);
+
+              const barHeightPx = Math.max(12, Math.round((val / maxVal) * 48));
+
+              const barFill =
+                st === 'sorted'
+                  ? 'bg-[#10B981] border-[#34D399]'
+                  : st === 'pivot'
+                  ? 'bg-amber-400 border-amber-300'
+                  : st === 'swapping'
+                  ? 'bg-rose-500 border-rose-400'
+                  : st === 'comparing'
+                  ? 'bg-cyan-400 border-cyan-300'
+                  : 'bg-slate-600/80 border-slate-500';
+
+              const cellStyle =
+                st === 'sorted'
+                  ? 'bg-[#10B981]/20 border-[#10B981] text-[#10B981]'
+                  : st === 'pivot'
+                  ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                  : st === 'swapping'
+                  ? 'bg-rose-500/20 border-rose-400 text-rose-300'
+                  : st === 'comparing'
+                  ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                  : 'bg-[#111827] border-[#1F293D] text-slate-200';
+
+              return (
+                <div key={idx} className="flex flex-col items-center gap-1">
+                  {/* Proportional vertical bar */}
+                  <div className="w-full h-13 flex items-end justify-center px-1.5 border-b border-slate-800/80">
+                    <motion.div
+                      initial={false}
+                      animate={{ height: barHeightPx }}
+                      transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+                      className={`w-full max-w-[28px] rounded-t border-t ${barFill}`}
+                    />
+                  </div>
+                  <motion.div
+                    layout
+                    transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                    className={`w-full h-9 rounded-lg border flex flex-col items-center justify-center font-mono tabular-nums ${cellStyle}`}
+                  >
+                    <span className="text-xs sm:text-sm font-bold leading-none">{val}</span>
+                    <span className="text-[9px] opacity-60 mt-0.5">[{idx}]</span>
+                  </motion.div>
+                  <div className="h-3.5 flex items-center justify-center">
+                    {activePointers.length > 0 && (
+                      <span
+                        className={`text-[9px] font-mono font-bold uppercase ${
+                          st === 'pivot'
+                            ? 'text-amber-300'
+                            : st === 'swapping'
+                            ? 'text-rose-400'
+                            : st === 'sorted'
+                            ? 'text-emerald-400'
+                            : 'text-[#06B6D4]'
+                        }`}
+                      >
+                        ↑{activePointers.join(',')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            });
+          })()}
+        </div>
+
+        {/* Synchronized Code Trace & Step Explanation */}
+        <div className="pt-2 border-t border-[#1F293D] space-y-1.5">
+          <div className="rounded-lg bg-[#111827] border border-[#1F293D] overflow-hidden font-mono text-[10.5px]">
+            <div className="px-2.5 py-1 border-b border-[#1F293D] bg-[#0B0F19]/80 flex items-center justify-between text-[10px] text-slate-400">
+              <span>Synchronized Execution Trace</span>
+              <span className="text-[#10B981] font-semibold">Line {activeHeroFrame.codeLine}</span>
+            </div>
+            <div className="px-2.5 py-1.5 bg-[#10B981]/12 border-l-2 border-[#10B981] text-white font-semibold truncate">
+              {activeHeroFrame.codeText}
+            </div>
+          </div>
+          <p className="text-xs text-slate-300 leading-snug">
+            {activeHeroFrame.explanation}
+          </p>
+        </div>
+      </div>
+
+      {/* Interactive Transport Controls in Hero */}
+      <div className="px-3.5 py-2.5 border-t border-[#1F293D] bg-[#111827] flex items-center justify-between gap-2 text-xs font-mono">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setHeroPlaying(false);
+              setHeroFrameIdx(0);
+            }}
+            title="Reset demo trace"
+            aria-label="Reset demo trace"
+            className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setHeroPlaying(false);
+              setHeroFrameIdx(
+                (prev) =>
+                  (prev - 1 + activeHeroDemo.frames.length) % activeHeroDemo.frames.length
+              );
+            }}
+            title="Previous step"
+            aria-label="Previous step"
+            className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setHeroPlaying((p) => !p)}
+            title={heroPlaying ? 'Pause live preview' : 'Play live preview'}
+            aria-label={heroPlaying ? 'Pause live preview' : 'Play live preview'}
+            className="px-2.5 py-1 rounded bg-[#1E293B] hover:bg-slate-700 text-white border border-slate-700 font-semibold flex items-center gap-1.5 cursor-pointer"
+          >
+            {heroPlaying ? (
+              <>
+                <Pause className="w-3 h-3 text-[#10B981] fill-current" />
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3 h-3 text-[#10B981] fill-current" />
+                <span>Play</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setHeroPlaying(false);
+              setHeroFrameIdx((prev) => (prev + 1) % activeHeroDemo.frames.length);
+            }}
+            title="Next step"
+            aria-label="Next step"
+            className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onOpenModuleById(activeHeroDemo.moduleId)}
+          className="text-[11px] font-sans font-semibold text-[#10B981] hover:underline transition-colors cursor-pointer"
+        >
+          Inspect in workbench
+        </button>
+      </div>
+    </div>
+  );
+});
+HeroLivePreview.displayName = 'HeroLivePreview';
+
+/**
+ * Memoized, content-visibility-virtualized Algorithm Card for 60fps scrolling across 162+ modules.
+ */
+const AlgorithmCatalogCard = React.memo<{
+  mod: AlgorithmModule;
+  onSelect: (mod: AlgorithmModule) => void;
+}>(({ mod, onSelect }) => {
+  const meta = getModuleDisplayMeta(mod);
+  const palette = getCardThemePalette(mod.category, meta.themeColor);
+  const isBeginner = mod.difficulty === 'Beginner';
+  const compactTime = formatCompactBigO(mod.complexity.timeAverage);
+  const compactSpace = formatCompactBigO(mod.complexity.spaceAuxiliary);
+
+  return (
+    <div
+      onClick={() => onSelect(mod)}
+      className={`algo-card-virtual group rounded-xl bg-[#111827] border border-[#1F293D] ${palette.borderHover} p-4 flex flex-col justify-between transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer`}
+    >
+      <div>
+        <div className="mb-3.5">
+          <AlgorithmCardThumbnail moduleId={mod.id} category={mod.category} />
+        </div>
+
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="min-w-0 flex-1">
+            <h3
+              className={`text-base font-semibold text-white ${palette.titleHover} transition-colors leading-snug truncate`}
+              title={mod.title}
+            >
+              {meta.shortTitle}
+            </h3>
+            <p className="text-xs text-slate-400 truncate mt-0.5" title={meta.subtitle}>
+              {meta.subtitle}
+            </p>
+          </div>
+          <span
+            className={`text-[11px] font-mono shrink-0 whitespace-nowrap mt-0.5 ${
+              isBeginner
+                ? 'text-[#10B981]'
+                : mod.difficulty === 'Intermediate'
+                ? 'text-[#F59E0B]'
+                : 'text-purple-400'
+            }`}
+          >
+            {mod.difficulty}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mt-2 mb-3.5">
+          {mod.theory.overview}
+        </p>
+      </div>
+
+      <div className="pt-3 border-t border-[#1F293D] flex items-center justify-between gap-2 text-[11px] font-mono tabular-nums">
+        <div className="flex items-center gap-2 text-slate-300 truncate">
+          <span title={`Average Time: ${mod.complexity.timeAverage}`}>
+            Time <strong className="text-white">{compactTime}</strong>
+          </span>
+          <span className="text-slate-600" aria-hidden="true">
+            ·
+          </span>
+          <span
+            className="text-slate-400"
+            title={`Auxiliary Space: ${mod.complexity.spaceAuxiliary}`}
+          >
+            Space {compactSpace}
+          </span>
+        </div>
+
+        <span className="font-sans font-medium text-xs text-slate-400 group-hover:text-[#10B981] transition-colors shrink-0">
+          Inspect trace
+        </span>
+      </div>
+    </div>
+  );
+});
+AlgorithmCatalogCard.displayName = 'AlgorithmCatalogCard';
+
+export const DashboardView: React.FC<DashboardViewProps> = ({
+  modules,
+  onSelectModule,
+  onOpenPersonalStudio,
+  onOpenShortcuts,
+  recentModuleIds = [],
+  onClearRecent,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
+  const [selectedPath, setSelectedPath] = useState<'all' | 'essentials' | 'interview' | 'icpc'>('all');
+  const [viewMode, setViewMode] = useState<'topics' | 'grid' | 'table'>('grid');
+  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
+  const [activeHeroModuleId, setActiveHeroModuleId] = useState<string>(HERO_LIVE_DEMOS[0].moduleId);
+  const shortcuts = usePlatformShortcuts();
+
+  // Defer expensive filtering across 162 modules so typing & clicking stay 60fps
+  const deferredSearch = useDeferredValue(searchQuery);
+  const deferredCategory = useDeferredValue(selectedCategory);
+  const deferredDifficulty = useDeferredValue(selectedDifficulty);
+  const deferredPath = useDeferredValue(selectedPath);
+  const isStaleFilter =
+    deferredSearch !== searchQuery ||
+    deferredCategory !== selectedCategory ||
+    deferredDifficulty !== selectedDifficulty ||
+    deferredPath !== selectedPath;
+
   // Dynamically derive all counts, categories, languages, and presets from `modules`
   const registryStats = useMemo(() => computeRegistryStats(modules), [modules]);
   const categories = registryStats.categories;
+
+  const recentModules = useMemo(() => {
+    if (!recentModuleIds.length) return [];
+    const byId = new Map(modules.map((m) => [m.id, m]));
+    return recentModuleIds
+      .map((id) => byId.get(id))
+      .filter((m): m is AlgorithmModule => Boolean(m));
+  }, [modules, recentModuleIds]);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { all: modules.length };
@@ -815,38 +1231,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [modules.length, registryStats.categories]);
 
   const filteredModules = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase();
     return modules.filter((mod) => {
       const meta = getModuleDisplayMeta(mod);
       const shortName = meta.shortTitle;
       const subtitle = meta.subtitle;
       const tagsStr = meta.tags.join(' ');
 
-      const matchesCategory = selectedCategory === 'all' || mod.category === selectedCategory;
+      const matchesCategory = deferredCategory === 'all' || mod.category === deferredCategory;
       const matchesDifficulty =
-        selectedDifficulty === 'all' || mod.difficulty === selectedDifficulty;
+        deferredDifficulty === 'all' || mod.difficulty === deferredDifficulty;
       const matchesPath =
-        selectedPath === 'all'
+        deferredPath === 'all'
           ? true
-          : selectedPath === 'essentials'
+          : deferredPath === 'essentials'
           ? ESSENTIAL_MODULE_IDS.has(mod.id)
-          : selectedPath === 'interview'
+          : deferredPath === 'interview'
           ? INTERVIEW_MODULE_IDS.has(mod.id)
           : mod.difficulty === 'Advanced';
 
       const matchesSearch =
-        shortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mod.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        subtitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tagsStr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mod.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mod.complexity.timeAverage.toLowerCase().includes(searchQuery.toLowerCase());
+        q === '' ||
+        shortName.toLowerCase().includes(q) ||
+        mod.title.toLowerCase().includes(q) ||
+        subtitle.toLowerCase().includes(q) ||
+        tagsStr.toLowerCase().includes(q) ||
+        mod.category.toLowerCase().includes(q) ||
+        mod.complexity.timeAverage.toLowerCase().includes(q);
       return matchesCategory && matchesDifficulty && matchesPath && matchesSearch;
     });
-  }, [modules, selectedCategory, selectedDifficulty, selectedPath, searchQuery]);
+  }, [modules, deferredCategory, deferredDifficulty, deferredPath, deferredSearch]);
+
+  const handleOpenModuleById = React.useCallback(
+    (moduleId: string) => {
+      const found = modules.find((m) => m.id === moduleId) || modules[0];
+      if (found) onSelectModule(found);
+    },
+    [modules, onSelectModule]
+  );
 
   const handleOpenHeroModule = () => {
-    const found = modules.find((m) => m.id === activeHeroDemo.moduleId) || modules[0];
-    if (found) onSelectModule(found);
+    handleOpenModuleById(activeHeroModuleId);
   };
 
   return (
@@ -977,7 +1402,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={handleOpenHeroModule}
-                className="px-4 py-2 rounded-lg bg-[#10B981] hover:bg-[#059669] text-[#0B0F19] font-semibold text-xs sm:text-sm transition-colors cursor-pointer whitespace-nowrap"
+                className="px-4 py-2 rounded-lg theme-accent-bg font-semibold text-xs sm:text-sm transition-colors cursor-pointer whitespace-nowrap shadow-sm"
               >
                 Open workbench
               </button>
@@ -1010,265 +1435,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Right Column (6 cols on md, 5 cols on lg): Interactive Live Micro-Trace ("One Live Thing" on First Screen) */}
-          <div
-            data-ui="true"
-            className="md:col-span-6 lg:col-span-5 rounded-xl bg-[#111827] border border-[#1F293D] overflow-hidden flex flex-col justify-between shadow-xl"
-          >
-            {/* Mini-Workbench Top Bar */}
-            <div className="px-2.5 py-2 border-b border-[#1F293D] bg-[#0B0F19] flex items-center justify-between gap-1.5">
-              <div className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
-                {HERO_LIVE_DEMOS.map((demo, idx) => {
-                  const isSelected = idx === heroDemoIdx;
-                  return (
-                    <button
-                      key={demo.id}
-                      type="button"
-                      onClick={() => {
-                        setHeroDemoIdx(idx);
-                        setHeroFrameIdx(0);
-                      }}
-                      className={`px-2 py-1 rounded text-[10.5px] font-mono transition-colors cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
-                        isSelected
-                          ? 'bg-[#1E293B] text-white font-semibold border border-slate-700/80'
-                          : 'text-slate-400 hover:text-white hover:bg-[#1F2937]/60'
-                      }`}
-                    >
-                      {isSelected && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] shrink-0" />
-                      )}
-                      <span>{demo.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-[10.5px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded tabular-nums whitespace-nowrap shrink-0">
-                {activeHeroDemo.complexity}
-              </span>
-            </div>
-
-            {/* Live Interactive Array & Pointer Stage */}
-            <div className="p-3.5 bg-[#0B0F19]/60 flex-1 flex flex-col justify-between gap-2.5">
-              {/* Active Invariant Formula + Interactive Step Scrubber Dots */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
-                  <span className="truncate">
-                    Invariant: <strong className="text-[#10B981]">{activeHeroFrame.invariant}</strong>
-                  </span>
-                  <span className="shrink-0 tabular-nums px-1.5 py-0.5 rounded bg-[#111827] border border-[#1F293D] text-slate-300">
-                    Step {activeHeroFrame.step}/{activeHeroDemo.frames.length}
-                  </span>
-                </div>
-
-                {/* Live Scope Pointers + Step Timeline Pills */}
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#1F293D]/60">
-                  <div className="flex flex-wrap items-center gap-1 text-[10px] font-mono">
-                    {Object.entries(activeHeroFrame.pointers).map(([pName, pIdx]) => (
-                      <span
-                        key={pName}
-                        className="px-1.5 py-0.5 rounded bg-[#111827] border border-[#1F293D] text-slate-300"
-                      >
-                        <strong className="text-cyan-300">{pName}</strong>={pIdx}
-                        {activeHeroFrame.values[pIdx] !== undefined
-                          ? ` (${activeHeroFrame.values[pIdx]})`
-                          : ''}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {activeHeroDemo.frames.map((f, fIdx) => {
-                      const isCurrent = fIdx === heroFrameIdx % activeHeroDemo.frames.length;
-                      return (
-                        <button
-                          key={f.step}
-                          type="button"
-                          onClick={() => {
-                            setHeroPlaying(false);
-                            setHeroFrameIdx(fIdx);
-                          }}
-                          title={`Jump to Step ${f.step}`}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            isCurrent
-                              ? 'w-4 bg-[#10B981]'
-                              : 'w-1.5 bg-slate-700 hover:bg-slate-500'
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Array Bars + Cells + Pointers */}
-              <div className="grid grid-cols-6 gap-2 py-1">
-                {(() => {
-                  const maxVal = Math.max(...activeHeroFrame.values, 1);
-                  return activeHeroFrame.values.map((val, idx) => {
-                    const st = activeHeroFrame.statuses[idx] || 'default';
-                    const activePointers = Object.entries(activeHeroFrame.pointers)
-                      .filter(([, pIdx]) => pIdx === idx)
-                      .map(([label]) => label);
-
-                    const barHeightPx = Math.max(12, Math.round((val / maxVal) * 48));
-
-                    const barFill =
-                      st === 'sorted'
-                        ? 'bg-[#10B981] border-[#34D399]'
-                        : st === 'pivot'
-                        ? 'bg-amber-400 border-amber-300'
-                        : st === 'swapping'
-                        ? 'bg-rose-500 border-rose-400'
-                        : st === 'comparing'
-                        ? 'bg-cyan-400 border-cyan-300'
-                        : 'bg-slate-600/80 border-slate-500';
-
-                    const cellStyle =
-                      st === 'sorted'
-                        ? 'bg-[#10B981]/20 border-[#10B981] text-[#10B981]'
-                        : st === 'pivot'
-                        ? 'bg-amber-500/20 border-amber-400 text-amber-300'
-                        : st === 'swapping'
-                        ? 'bg-rose-500/20 border-rose-400 text-rose-300'
-                        : st === 'comparing'
-                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
-                        : 'bg-[#111827] border-[#1F293D] text-slate-200';
-
-                    return (
-                      <div key={idx} className="flex flex-col items-center gap-1">
-                        {/* Proportional vertical bar */}
-                        <div className="w-full h-13 flex items-end justify-center px-1.5 border-b border-slate-800/80">
-                          <motion.div
-                            initial={false}
-                            animate={{ height: barHeightPx }}
-                            transition={{ type: 'spring', stiffness: 360, damping: 26 }}
-                            className={`w-full max-w-[28px] rounded-t border-t ${barFill}`}
-                          />
-                        </div>
-                        <motion.div
-                          layout
-                          transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                          className={`w-full h-9 rounded-lg border flex flex-col items-center justify-center font-mono tabular-nums ${cellStyle}`}
-                        >
-                          <span className="text-xs sm:text-sm font-bold leading-none">{val}</span>
-                          <span className="text-[9px] opacity-60 mt-0.5">[{idx}]</span>
-                        </motion.div>
-                        <div className="h-3.5 flex items-center justify-center">
-                          {activePointers.length > 0 && (
-                            <span
-                              className={`text-[9px] font-mono font-bold uppercase ${
-                                st === 'pivot'
-                                  ? 'text-amber-300'
-                                  : st === 'swapping'
-                                  ? 'text-rose-400'
-                                  : st === 'sorted'
-                                  ? 'text-emerald-400'
-                                  : 'text-[#06B6D4]'
-                              }`}
-                            >
-                              ↑{activePointers.join(',')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-
-              {/* Synchronized Code Trace & Step Explanation */}
-              <div className="pt-2 border-t border-[#1F293D] space-y-1.5">
-                <div className="rounded-lg bg-[#111827] border border-[#1F293D] overflow-hidden font-mono text-[10.5px]">
-                  <div className="px-2.5 py-1 border-b border-[#1F293D] bg-[#0B0F19]/80 flex items-center justify-between text-[10px] text-slate-400">
-                    <span>Synchronized Execution Trace</span>
-                    <span className="text-[#10B981] font-semibold">Line {activeHeroFrame.codeLine}</span>
-                  </div>
-                  <div className="px-2.5 py-1.5 bg-[#10B981]/12 border-l-2 border-[#10B981] text-white font-semibold truncate">
-                    {activeHeroFrame.codeText}
-                  </div>
-                </div>
-                <p className="text-xs text-slate-300 leading-snug">
-                  {activeHeroFrame.explanation}
-                </p>
-              </div>
-            </div>
-
-            {/* Interactive Transport Controls in Hero */}
-            <div className="px-3.5 py-2.5 border-t border-[#1F293D] bg-[#111827] flex items-center justify-between gap-2 text-xs font-mono">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHeroPlaying(false);
-                    setHeroFrameIdx(0);
-                  }}
-                  title="Reset demo trace"
-                  aria-label="Reset demo trace"
-                  className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHeroPlaying(false);
-                    setHeroFrameIdx(
-                      (prev) =>
-                        (prev - 1 + activeHeroDemo.frames.length) % activeHeroDemo.frames.length
-                    );
-                  }}
-                  title="Previous step"
-                  aria-label="Previous step"
-                  className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHeroPlaying((p) => !p)}
-                  title={heroPlaying ? 'Pause live preview' : 'Play live preview'}
-                  aria-label={heroPlaying ? 'Pause live preview' : 'Play live preview'}
-                  className="px-2.5 py-1 rounded bg-[#1E293B] hover:bg-slate-700 text-white border border-slate-700 font-semibold flex items-center gap-1.5 cursor-pointer"
-                >
-                  {heroPlaying ? (
-                    <>
-                      <Pause className="w-3 h-3 text-[#10B981] fill-current" />
-                      <span>Pause</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-3 h-3 text-[#10B981] fill-current" />
-                      <span>Play</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHeroPlaying(false);
-                    setHeroFrameIdx((prev) => (prev + 1) % activeHeroDemo.frames.length);
-                  }}
-                  title="Next step"
-                  aria-label="Next step"
-                  className="p-1.5 rounded bg-[#1F2937] text-slate-300 hover:text-white cursor-pointer"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleOpenHeroModule}
-                className="text-[11px] font-sans font-semibold text-[#10B981] hover:underline transition-colors cursor-pointer"
-              >
-                Inspect in workbench
-              </button>
-            </div>
-          </div>
+          {/* Right Column (6 cols on md, 5 cols on lg): Isolated Memoized Hero Live Micro-Trace */}
+          <HeroLivePreview
+            onOpenModuleById={handleOpenModuleById}
+            onDemoModuleChange={setActiveHeroModuleId}
+          />
         </div>
       </section>
 
       {/* 2. Algorithm Catalog: Architectural Index Bar + Interactive Specimen Cards */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-7 pb-6">
+        {/* Recently Studied Quick-Resume Bar (persisted locally) */}
+        {recentModules.length > 0 && (
+          <div className="mb-4 px-3 py-2 rounded-xl bg-[#111827]/90 border border-[#1F293D] flex flex-wrap items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-400 shrink-0">
+              <Clock className="w-3.5 h-3.5 theme-accent-text" />
+              <span>Continue studying:</span>
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+              {recentModules.map((mod) => {
+                const meta = getModuleDisplayMeta(mod);
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    onClick={() => onSelectModule(mod)}
+                    className="px-2.5 py-1 rounded-lg bg-[#0B0F19] hover:bg-[#1E293B] border border-[#1F293D] hover:border-[#10B981]/50 text-[11px] font-mono text-slate-200 hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    {meta.shortTitle}
+                  </button>
+                );
+              })}
+            </div>
+            {onClearRecent && (
+              <button
+                type="button"
+                onClick={onClearRecent}
+                title="Clear recent history"
+                className="text-[10px] font-mono text-slate-500 hover:text-slate-300 cursor-pointer shrink-0"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
         {/* Row 1: Section Heading + Curated Learning Tracks (Left, 100% Dynamic Counts) | Search + View Mode (Right) */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-3.5 pb-3.5 border-b border-[#1F293D]">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -1311,8 +1521,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search algorithm, Big-O, topic..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#111827] border border-[#1F293D] focus:border-[#10B981] text-xs text-white placeholder-slate-500 font-sans outline-none transition-colors"
+                className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-[#111827] border border-[#1F293D] focus:border-[#10B981] text-xs text-white placeholder-slate-500 font-sans outline-none transition-colors"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {/* View Mode Switcher */}
@@ -1493,86 +1713,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 );
               })}
           </div>
-        ) : viewMode === 'grid' || (viewMode === 'topics' && searchQuery.trim() !== '') ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredModules.map((mod) => {
-              const meta = getModuleDisplayMeta(mod);
-              const palette = getCardThemePalette(mod.category, meta.themeColor);
-              const isBeginner = mod.difficulty === 'Beginner';
-              const compactTime = formatCompactBigO(mod.complexity.timeAverage);
-              const compactSpace = formatCompactBigO(mod.complexity.spaceAuxiliary);
-
-              return (
-                <div
-                  key={mod.id}
-                  onClick={() => onSelectModule(mod)}
-                  className={`group rounded-xl bg-[#111827] border border-[#1F293D] ${palette.borderHover} p-4 flex flex-col justify-between transition-colors duration-150 cursor-pointer`}
-                >
-                  <div>
-                    {/* 1. Glanceable Algorithmic Motion Stage (Stationary diagram at rest, live step on hover) */}
-                    <div className="mb-3.5">
-                      <AlgorithmCardThumbnail moduleId={mod.id} category={mod.category} />
-                    </div>
-
-                    {/* 2. Title, Mechanism Subtitle & Plain Difficulty Label */}
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <div className="min-w-0 flex-1">
-                        <h3
-                          className={`text-base font-semibold text-white ${palette.titleHover} transition-colors leading-snug truncate`}
-                          title={mod.title}
-                        >
-                          {meta.shortTitle}
-                        </h3>
-                        <p
-                          className="text-xs text-slate-400 truncate mt-0.5"
-                          title={meta.subtitle}
-                        >
-                          {meta.subtitle}
-                        </p>
-                      </div>
-                      <span
-                        className={`text-[11px] font-mono shrink-0 whitespace-nowrap mt-0.5 ${
-                          isBeginner
-                            ? 'text-[#10B981]'
-                            : mod.difficulty === 'Intermediate'
-                            ? 'text-[#F59E0B]'
-                            : 'text-purple-400'
-                        }`}
-                      >
-                        {mod.difficulty}
-                      </span>
-                    </div>
-
-                    {/* 3. Concise 2-Line Conceptual Summary */}
-                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mt-2 mb-3.5">
-                      {mod.theory.overview}
-                    </p>
-                  </div>
-
-                  {/* 4. Unboxed Typographic Footer: Tabular Complexity + Direct Action */}
-                  <div className="pt-3 border-t border-[#1F293D] flex items-center justify-between gap-2 text-[11px] font-mono tabular-nums">
-                    <div className="flex items-center gap-2 text-slate-300 truncate">
-                      <span title={`Average Time: ${mod.complexity.timeAverage}`}>
-                        Time <strong className="text-white">{compactTime}</strong>
-                      </span>
-                      <span className="text-slate-600" aria-hidden="true">
-                        ·
-                      </span>
-                      <span
-                        className="text-slate-400"
-                        title={`Auxiliary Space: ${mod.complexity.spaceAuxiliary}`}
-                      >
-                        Space {compactSpace}
-                      </span>
-                    </div>
-
-                    <span className="font-sans font-medium text-xs text-slate-400 group-hover:text-[#10B981] transition-colors shrink-0">
-                      Inspect trace
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+        ) : viewMode === 'grid' || (viewMode === 'topics' && deferredSearch.trim() !== '') ? (
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 transition-opacity duration-150 ${
+              isStaleFilter ? 'opacity-70' : 'opacity-100'
+            }`}
+          >
+            {filteredModules.map((mod) => (
+              <AlgorithmCatalogCard key={mod.id} mod={mod} onSelect={onSelectModule} />
+            ))}
           </div>
         ) : (
           <div className="rounded-xl bg-[#111827] border border-[#1F293D] overflow-hidden">

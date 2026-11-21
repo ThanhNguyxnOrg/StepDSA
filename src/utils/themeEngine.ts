@@ -10,6 +10,14 @@ export interface AppThemeConfig {
   isLight: boolean;
   swatchBg: string;
   swatchAccent: string;
+  swatchSecondary: string;
+  surfaceBg: string;
+  borderHex: string;
+  textPrimaryHex: string;
+  svgNodeBg: string;
+  svgNodeBorder: string;
+  svgNodeText: string;
+  svgEdgeDefault: string;
 }
 
 export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
@@ -21,6 +29,14 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     isLight: false,
     swatchBg: '#0B0F19',
     swatchAccent: '#10B981',
+    swatchSecondary: '#06B6D4',
+    surfaceBg: '#111827',
+    borderHex: '#1F293D',
+    textPrimaryHex: '#F8FAFC',
+    svgNodeBg: '#1E293B',
+    svgNodeBorder: '#475569',
+    svgNodeText: '#F8FAFC',
+    svgEdgeDefault: '#475569',
   },
   daylight: {
     id: 'daylight',
@@ -30,6 +46,14 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     isLight: true,
     swatchBg: '#F8FAFC',
     swatchAccent: '#059669',
+    swatchSecondary: '#0284C7',
+    surfaceBg: '#FFFFFF',
+    borderHex: '#CBD5E1',
+    textPrimaryHex: '#0F172A',
+    svgNodeBg: '#FFFFFF',
+    svgNodeBorder: '#94A3B8',
+    svgNodeText: '#0F172A',
+    svgEdgeDefault: '#94A3B8',
   },
   visualgo: {
     id: 'visualgo',
@@ -37,8 +61,16 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     shortLabel: 'VisuAlgo',
     inspiration: 'NUS VisuAlgo · Deep Ocean & Cyan-Amber',
     isLight: false,
-    swatchBg: '#071426',
+    swatchBg: '#061325',
     swatchAccent: '#06B6D4',
+    swatchSecondary: '#F59E0B',
+    surfaceBg: '#0B1F3A',
+    borderHex: '#1D4477',
+    textPrimaryHex: '#F0F9FF',
+    svgNodeBg: '#0F294D',
+    svgNodeBorder: '#2A5C9A',
+    svgNodeText: '#F0F9FF',
+    svgEdgeDefault: '#366BA8',
   },
   dracula: {
     id: 'dracula',
@@ -48,8 +80,83 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     isLight: false,
     swatchBg: '#13111C',
     swatchAccent: '#A855F7',
+    swatchSecondary: '#EC4899',
+    surfaceBg: '#1C1829',
+    borderHex: '#362E4F',
+    textPrimaryHex: '#F8FAFC',
+    svgNodeBg: '#26203B',
+    svgNodeBorder: '#52447A',
+    svgNodeText: '#F8FAFC',
+    svgEdgeDefault: '#5C4F82',
   },
 };
+
+export interface LegendItem {
+  label: string;
+  colorVar: string;
+  fallbackHex: string;
+}
+
+const CATEGORY_STAGE_LEGENDS: Record<string, LegendItem[]> = {
+  sorting: [
+    { label: 'Comparing', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Swapping', colorVar: 'var(--sem-swapping-solid)', fallbackHex: '#F43F5E' },
+    { label: 'Pivot / Key', colorVar: 'var(--sem-pivot-solid)', fallbackHex: '#8B5CF6' },
+    { label: 'Sorted', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+  ],
+  searching: [
+    { label: 'Active Window', colorVar: 'var(--sem-active-solid)', fallbackHex: '#06B6D4' },
+    { label: 'Probe / Mid', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Found', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+    { label: 'Pruned / Eliminated', colorVar: 'var(--sem-discarded-border)', fallbackHex: '#64748B' },
+  ],
+  'arrays-pointers': [
+    { label: 'Active Window', colorVar: 'var(--sem-active-solid)', fallbackHex: '#06B6D4' },
+    { label: 'Evaluating', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Optimal / Match', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+    { label: 'Evicted / Skipped', colorVar: 'var(--sem-swapping-solid)', fallbackHex: '#F43F5E' },
+  ],
+  'linked-lists': [
+    { label: 'Current Pointer', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Linked / Settled', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+    { label: 'Next / Lookahead', colorVar: 'var(--sem-active-solid)', fallbackHex: '#06B6D4' },
+    { label: 'Rewiring Edge', colorVar: 'var(--sem-pivot-solid)', fallbackHex: '#8B5CF6' },
+  ],
+  'stack-queue': [
+    { label: 'Top / Front', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Pushed / Active', colorVar: 'var(--sem-active-solid)', fallbackHex: '#06B6D4' },
+    { label: 'Matched / Ready', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+    { label: 'Popped / Removed', colorVar: 'var(--sem-swapping-solid)', fallbackHex: '#F43F5E' },
+  ],
+  'trees-bst': [
+    { label: 'Inspecting', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Left / Active Path', colorVar: 'var(--sem-active-solid)', fallbackHex: '#06B6D4' },
+    { label: 'Inserted / Balanced', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+    { label: 'Rotating / Rebalancing', colorVar: 'var(--sem-swapping-solid)', fallbackHex: '#F43F5E' },
+  ],
+  graphs: [
+    { label: 'Active Vertex', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Frontier / Queue', colorVar: 'var(--sem-pivot-solid)', fallbackHex: '#8B5CF6' },
+    { label: 'Visited / Tree Edge', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+    { label: 'Skipped / Relaxed', colorVar: 'var(--sem-active-solid)', fallbackHex: '#06B6D4' },
+  ],
+  'dynamic-programming': [
+    { label: 'Current Cell', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Subproblem Input', colorVar: 'var(--sem-active-solid)', fallbackHex: '#06B6D4' },
+    { label: 'Optimal / Include', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+    { label: 'Backtrack Path', colorVar: 'var(--sem-pivot-solid)', fallbackHex: '#8B5CF6' },
+  ],
+  math: [
+    { label: 'Evaluating', colorVar: 'var(--sem-comparing-solid)', fallbackHex: '#F59E0B' },
+    { label: 'Active Bit / Factor', colorVar: 'var(--sem-active-solid)', fallbackHex: '#06B6D4' },
+    { label: 'Prime / Verified', colorVar: 'var(--sem-sorted-solid)', fallbackHex: '#10B981' },
+    { label: 'Eliminated / Conflict', colorVar: 'var(--sem-swapping-solid)', fallbackHex: '#F43F5E' },
+  ],
+};
+
+export function getCategoryStageLegend(category: string): LegendItem[] {
+  return CATEGORY_STAGE_LEGENDS[category] || CATEGORY_STAGE_LEGENDS.sorting;
+}
 
 export const THEME_ORDER: AppThemeId[] = ['midnight', 'daylight', 'visualgo', 'dracula'];
 
@@ -225,7 +332,23 @@ export function useAppTheme() {
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('data-theme', themeId);
+    const root = document.documentElement;
+    const prev = root.getAttribute('data-theme');
+    if (prev && prev !== themeId) {
+      root.classList.add('theme-transition-instant');
+      root.setAttribute('data-theme', themeId);
+      // Force synchronous style flush so CSS variables & overrides apply instantaneously
+      void root.offsetHeight;
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => {
+          root.classList.remove('theme-transition-instant');
+        });
+      } else {
+        root.classList.remove('theme-transition-instant');
+      }
+    } else {
+      root.setAttribute('data-theme', themeId);
+    }
     try {
       window.localStorage.setItem(STORAGE_KEY, themeId);
     } catch {

@@ -4,6 +4,7 @@ import {
   getNextThemeId,
   resolveCategoryThemeColor,
   getCardThemePalette,
+  getCategoryStageLegend,
   THEME_ORDER,
 } from './themeEngine';
 
@@ -46,5 +47,17 @@ describe('themeEngine', () => {
     const overridePalette = getCardThemePalette('graphs', 'rose');
     expect(overridePalette.themeColor).toBe('rose');
     expect(overridePalette.titleHover).toContain('rose');
+  });
+
+  it('provides category-specific semantic legends tailored to each DSA domain', () => {
+    const graphLegend = getCategoryStageLegend('graphs');
+    expect(graphLegend.map((item) => item.label)).toContain('Active Vertex');
+    expect(graphLegend.map((item) => item.label)).not.toContain('Pivot / Key');
+
+    const dpLegend = getCategoryStageLegend('dynamic-programming');
+    expect(dpLegend.map((item) => item.label)).toContain('Current Cell');
+
+    const searchingLegend = getCategoryStageLegend('searching');
+    expect(searchingLegend.map((item) => item.label)).toContain('Pruned / Eliminated');
   });
 });

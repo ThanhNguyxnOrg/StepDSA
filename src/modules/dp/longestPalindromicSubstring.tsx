@@ -1,3 +1,5 @@
+import React from 'react';
+import { motion } from 'motion/react';
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface LPSState {
@@ -253,41 +255,146 @@ export const longestPalindromicSubstringModule: AlgorithmModule<string, LPSState
     return frames;
   },
   renderStage: (frame: ExecutionFrame<LPSState>) => {
-    const { str, bestStart, bestLength, comparingL, comparingR } = frame.state;
+    const { str, centerL, centerR, bestStart, bestLength, comparingL, comparingR, match } = frame.state;
+    const isExpanding = comparingL !== null && comparingR !== null;
 
     return (
-      <div className="flex flex-col items-center justify-center p-6 w-full min-h-[380px] gap-6">
-        {/* Longest Substring Found */}
-        <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-700 px-6 py-2.5 rounded-xl">
-          <span className="text-xs font-mono text-slate-400">BEST PALINDROME:</span>
-          <span className="text-xl font-bold font-mono text-emerald-400">
-            "{str.substring(bestStart, bestStart + bestLength)}"
-          </span>
-          <span className="text-xs font-mono text-slate-500">(len: {bestLength})</span>
+      <div className="flex flex-col items-center justify-center p-4 sm:p-6 w-full min-h-[360px] gap-5 select-none">
+        {/* Best Palindrome + Active Mirror Comparison HUD */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex items-center gap-2.5 bg-[#111827] border border-[#1F293D] px-4 py-2 rounded-xl shadow-sm">
+            <span className="text-[10.5px] font-mono text-slate-400 uppercase">Best Palindrome:</span>
+            <span className="text-lg font-extrabold font-mono text-emerald-400">
+              &quot;{str.substring(bestStart, bestStart + bestLength)}&quot;
+            </span>
+            <span className="text-xs font-mono text-slate-400 tabular-nums">(len {bestLength})</span>
+          </div>
+
+          {isExpanding && (
+            <div
+              style={{
+                backgroundColor: match ? 'var(--sem-sorted-bg)' : 'var(--sem-swapping-bg)',
+                borderColor: match ? 'var(--sem-sorted-border)' : 'var(--sem-swapping-border)',
+                color: match ? 'var(--sem-sorted-text)' : 'var(--sem-swapping-text)',
+              }}
+              className="px-3 py-2 rounded-xl border text-xs font-mono font-bold tabular-nums"
+            >
+              s[{comparingL}]=&apos;{str[comparingL]}&apos; {match ? '==' : '!='} s[{comparingR}]=&apos;{str[comparingR]}&apos;{' '}
+              {match ? '→ Expand ◄ ►' : '→ Stop'}
+            </div>
+          )}
         </div>
 
-        {/* Character String Visualizer */}
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-3xl">
+        {/* Character Tape with Center Anchor & Mirror Expansion Bracket */}
+        <div className="flex flex-wrap items-center justify-center gap-2 max-w-3xl pt-4 pb-2">
           {str.split('').map((char, idx) => {
             const inBest = idx >= bestStart && idx < bestStart + bestLength;
             const isComparingL = comparingL === idx;
             const isComparingR = comparingR === idx;
+            const inCurrentSpan = isExpanding && idx >= comparingL && idx <= comparingR;
+            const isCenter = idx === centerL || idx === centerR;
 
-            let boxClass = 'border-slate-800 bg-slate-900/60';
-            if (isComparingL || isComparingR) boxClass = 'border-amber-400 bg-amber-950/60 ring-2 ring-amber-400';
-            else if (inBest) boxClass = 'border-emerald-500 bg-emerald-950/40';
+            const cellStyle: React.CSSProperties =
+              isComparingL || isComparingR
+                ? match
+                  ? {
+                      backgroundColor: 'var(--sem-sorted-bg)',
+                      borderColor: 'var(--sem-sorted-border)',
+                      color: 'var(--sem-sorted-text)',
+                    }
+                  : {
+                      backgroundColor: 'var(--sem-swapping-bg)',
+                      borderColor: 'var(--sem-swapping-border)',
+                      color: 'var(--sem-swapping-text)',
+                    }
+                : inCurrentSpan
+                ? {
+                    backgroundColor: 'var(--sem-active-bg)',
+                    borderColor: 'var(--sem-active-border)',
+                    color: 'var(--sem-active-text)',
+                  }
+                : inBest
+                ? {
+                    backgroundColor: 'var(--sem-sorted-bg)',
+                    borderColor: 'var(--sem-sorted-border)',
+                    color: 'var(--sem-sorted-text)',
+                  }
+                : {
+                    backgroundColor: 'var(--sem-default-cell-bg)',
+                    borderColor: 'var(--sem-default-border)',
+                    color: 'var(--sem-default-text)',
+                  };
 
             return (
               <div key={idx} className="flex flex-col items-center gap-1">
-                <div className={`relative flex flex-col items-center justify-center w-12 h-16 rounded-xl border-2 transition-all ${boxClass}`}>
-                  <span className="text-xl font-bold font-mono text-white">{char}</span>
-                  <span className="text-[10px] text-slate-400 font-mono">[{idx}]</span>
+                {/* Pointer Tag Row */}
+                <div className="h-5 flex items-center justify-center gap-0.5">
+                  {isComparingL && (
+                    <motion.span
+                      layoutId="lps-ptr-l"
+                      style={{
+                        backgroundColor: 'var(--sem-comparing-solid)',
+                        color: 'var(--sem-comparing-on-solid)',
+                      }}
+                      className="theme-solid-badge text-[8.5px] px-1.5 py-0.5 rounded font-mono font-bold"
+                    >
+                      ←L
+                    </motion.span>
+                  )}
+                  {isComparingR && (
+                    <motion.span
+                      layoutId="lps-ptr-r"
+                      style={{
+                        backgroundColor: 'var(--sem-comparing-solid)',
+                        color: 'var(--sem-comparing-on-solid)',
+                      }}
+                      className="theme-solid-badge text-[8.5px] px-1.5 py-0.5 rounded font-mono font-bold"
+                    >
+                      R→
+                    </motion.span>
+                  )}
+                  {!isComparingL && !isComparingR && isCenter && (
+                    <span
+                      style={{
+                        backgroundColor: 'var(--sem-pivot-solid)',
+                        color: 'var(--sem-pivot-on-solid)',
+                      }}
+                      className="theme-solid-badge text-[8px] px-1 py-0.5 rounded font-mono font-bold"
+                    >
+                      CTR
+                    </span>
+                  )}
+                </div>
 
-                  {/* Indicator labels */}
-                  <div className="absolute -top-3 flex gap-0.5">
-                    {isComparingL && <span className="bg-amber-500 text-slate-950 text-[8px] px-1 py-0.2 rounded font-mono font-bold">L</span>}
-                    {isComparingR && <span className="bg-amber-500 text-slate-950 text-[8px] px-1 py-0.2 rounded font-mono font-bold">R</span>}
-                  </div>
+                {/* Character Cell */}
+                <motion.div
+                  layout
+                  animate={{ scale: isComparingL || isComparingR ? 1.08 : 1 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                  style={cellStyle}
+                  className={`relative flex flex-col items-center justify-center w-12 h-16 rounded-xl border-2 font-mono font-bold shadow-sm ${
+                    isComparingL || isComparingR ? 'ring-2 ring-[#F59E0B]/45' : ''
+                  }`}
+                >
+                  <span className="text-xl font-extrabold leading-none">{char}</span>
+                  <span className="text-[9.5px] opacity-65 mt-1 tabular-nums">[{idx}]</span>
+                </motion.div>
+
+                {/* Active Span / Best Span Bar */}
+                <div className="h-4 flex items-center justify-center w-full">
+                  {inCurrentSpan ? (
+                    <div
+                      style={{
+                        backgroundColor: match ? 'var(--sem-active-solid)' : 'var(--sem-swapping-solid)',
+                      }}
+                      className="w-full h-1.5 rounded-full"
+                    />
+                  ) : inBest ? (
+                    <div
+                      style={{ backgroundColor: 'var(--sem-sorted-solid)' }}
+                      className="w-full h-1 rounded-full opacity-75"
+                    />
+                  ) : null}
                 </div>
               </div>
             );

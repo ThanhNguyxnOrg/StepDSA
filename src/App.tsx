@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import LZString from 'lz-string';
 import { allModules, defaultModule } from './modules/registry';
@@ -17,8 +17,6 @@ import {
   detectStringField,
 } from './components/playground/PlaygroundBar';
 import { DashboardView } from './components/dashboard/DashboardView';
-import { AboutModal } from './components/about/AboutModal';
-import { PersonalCodeStudioModal } from './components/developer/PersonalCodeStudioModal';
 import { soundEngine } from './utils/soundEngine';
 import {
   BookOpen,
@@ -28,13 +26,35 @@ import {
   Box,
   PanelRightOpen,
   Layers,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
-import { VisualLegendModal } from './components/workbench/VisualLegendModal';
-import { KeyboardShortcutsModal } from './components/navigation/KeyboardShortcutsModal';
 import { useOperationalMetrics } from './core/useOperationalMetrics';
 import { OperationalMetricsBar } from './components/stage/OperationalMetricsBar';
 import { usePlatformShortcuts } from './utils/platformShortcuts';
-import { useAppTheme, APP_THEMES } from './utils/themeEngine';
+import { useAppTheme, APP_THEMES, getCategoryStageLegend } from './utils/themeEngine';
+
+// Lazy-loaded heavy modals (parsed only when opened — keeps initial startup crisp and fast)
+const AboutModal = lazy(() =>
+  import('./components/about/AboutModal').then((m) => ({ default: m.AboutModal }))
+);
+const PersonalCodeStudioModal = lazy(() =>
+  import('./components/developer/PersonalCodeStudioModal').then((m) => ({
+    default: m.PersonalCodeStudioModal,
+  }))
+);
+const VisualLegendModal = lazy(() =>
+  import('./components/workbench/VisualLegendModal').then((m) => ({
+    default: m.VisualLegendModal,
+  }))
+);
+const KeyboardShortcutsModal = lazy(() =>
+  import('./components/navigation/KeyboardShortcutsModal').then((m) => ({
+    default: m.KeyboardShortcutsModal,
+  }))
+);
+
+const RECENT_MODULES_KEY = 'stepdsa-recent-modules';
 import {
   buildPermalink,
   clampFrameIndex,
@@ -124,6 +144,32 @@ export default function App() {
   const [legendOpen, setLegendOpen] = useState<boolean>(false);
   const [shortcutsOpen, setShortcutsOpen] = useState<boolean>(false);
   const [showAllSiblings, setShowAllSiblings] = useState<boolean>(false);
+  const [recentModuleIds, setRecentModuleIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(RECENT_MODULES_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string').slice(0, 6) : [];
+    } catch {
+      return [];
+    }
+  });
+  const preFocusStateRef = useRef<{ codeOpen: boolean; theoryOpen: boolean } | null>(null);
+  const isFocusMode = !codeOpen && !theoryOpen;
+  const toggleFocusMode = useCallback(() => {
+    if (!codeOpen && !theoryOpen) {
+      const prev = preFocusStateRef.current;
+      setCodeOpen(prev ? prev.codeOpen : true);
+      setTheoryOpen(prev ? prev.theoryOpen : false);
+      preFocusStateRef.current = null;
+      return false;
+    } else {
+      preFocusStateRef.current = { codeOpen, theoryOpen };
+      setCodeOpen(false);
+      setTheoryOpen(false);
+      return true;
+    }
+  }, [codeOpen, theoryOpen]);
   const [hotkeyHud, setHotkeyHud] = useState<{ keys: string[]; label: string; id: number } | null>(
     null
   );
@@ -138,12 +184,32 @@ export default function App() {
     return allModules.filter((m) => m.category === currentModule.category);
   }, [currentModule.category]);
 
-  // When module changes, update input to module's defaultInput
-  const handleSelectModule = (mod: AlgorithmModule) => {
+  // When module changes, update input to module's defaultInput & record in Recently Studied
+  const handleSelectModule = useCallback((mod: AlgorithmModule) => {
     setCurrentModule(mod);
     setCurrentData(mod.defaultInput);
     setCurrentView('visualizer');
-  };
+    if (allModules.some((m) => m.id === mod.id)) {
+      setRecentModuleIds((prev) => {
+        const next = [mod.id, ...prev.filter((id) => id !== mod.id)].slice(0, 6);
+        try {
+          window.localStorage.setItem(RECENT_MODULES_KEY, JSON.stringify(next));
+        } catch {
+          // ignore storage errors
+        }
+        return next;
+      });
+    }
+  }, []);
+
+  const handleClearRecent = useCallback(() => {
+    setRecentModuleIds([]);
+    try {
+      window.localStorage.removeItem(RECENT_MODULES_KEY);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   // Generate deterministic timeline whenever module or input data changes
   const timeline = useMemo(() => {
@@ -452,6 +518,10 @@ export default function App() {
           triggerHud(['V'], next === 'isometric' ? '3D Isometric Deck' : '2D Flat Canvas');
           return next;
         });
+      } else if (e.code === 'KeyF') {
+        e.preventDefault();
+        const entered = toggleFocusMode();
+        triggerHud(['F'], entered ? 'Focus Canvas ON' : 'Focus Canvas OFF');
       } else if (e.code === 'BracketLeft' && siblingModules.length > 1) {
         e.preventDefault();
         const curIdx = siblingModules.findIndex((m) => m.id === currentModule.id);
@@ -512,6 +582,8 @@ export default function App() {
     controller,
     siblingModules,
     currentModule.id,
+    toggleFocusMode,
+    handleSelectModule,
   ]);
 
   // Auto-load trace snapshot from URL hash (#trace=<compressed>)
@@ -649,6 +721,8 @@ export default function App() {
           onSelectModule={handleSelectModule}
           onOpenPersonalStudio={() => setPersonalStudioOpen(true)}
           onOpenShortcuts={() => setShortcutsOpen(true)}
+          recentModuleIds={recentModuleIds}
+          onClearRecent={handleClearRecent}
         />
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -686,15 +760,16 @@ export default function App() {
                       onClick={() => handleSelectModule(sib)}
                       className={`relative px-2 py-0.5 rounded-md text-[11px] font-mono transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                         isCurrent
-                          ? 'text-[#0B0F19] font-bold'
+                          ? 'font-bold'
                           : 'text-slate-400 hover:text-white hover:bg-[#1E293B]'
                       }`}
+                      style={isCurrent ? { color: 'var(--theme-on-accent)' } : undefined}
                     >
                       {isCurrent && (
                         <motion.div
                           layoutId="active-sibling-pill"
                           transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                          className="absolute inset-0 rounded-md bg-[#10B981] -z-0"
+                          className="absolute inset-0 rounded-md theme-accent-bg -z-0"
                         />
                       )}
                       <span className="relative z-10">{shortLabel}</span>
@@ -789,15 +864,15 @@ export default function App() {
             />
 
             {/* Central Stage & Bottom Transport Controls */}
-            <main className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden bg-radial from-[#111827]/40 to-[#0B0F19]">
+            <main className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden stage-blueprint-canvas">
               {/* Live On-Canvas Cause-and-Effect Narration Strip */}
               <StepNarrationBanner frame={enrichedFrame} compact />
 
-              {/* Auxiliary Memory Shelf for Hash Maps and Temp Buffers (only renders when present) */}
-              <MemoryShelf frame={enrichedFrame} />
+              {/* Auxiliary Memory Shelf for Hash Maps and Temp Buffers (MergeSort embeds temp inside its Merge Arena) */}
+              {currentModule.id !== 'mergesort' && <MemoryShelf frame={enrichedFrame} />}
 
               {/* Expansive Visual Stage Canvas */}
-              <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative overflow-auto px-3 sm:px-4">
+              <div className="flex-1 min-h-0 flex flex-col items-center relative overflow-auto px-3 sm:px-4">
                 {/* 3D Isometric Mode Indicator Pill */}
                 {projection === 'isometric' && (
                   <div className="absolute top-2.5 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-950/90 border border-indigo-500/40 text-indigo-200 text-[10px] font-mono font-bold shadow-lg pointer-events-none">
@@ -843,20 +918,20 @@ export default function App() {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.16, ease: 'easeOut' }}
-                      className="w-full flex-1 flex items-center justify-center"
+                      className="w-full my-auto flex flex-col items-center justify-center"
                     >
                       <div
                         style={{
                           transform: stageZoom !== 1 ? `scale(${stageZoom})` : undefined,
                           transformOrigin: 'center center',
                         }}
-                        className="w-full flex-1 flex items-center justify-center transition-transform duration-150"
+                        className="w-full flex flex-col items-center justify-center transition-transform duration-150"
                       >
                         <div
                           className={`w-full flex items-center justify-center ${
                             projection === 'isometric' && currentModule.id !== 'octree-3d'
                               ? 'stage-isometric-plane p-3 sm:p-5 my-2 max-w-4xl'
-                              : 'stage-flat-plane flex-1'
+                              : 'stage-flat-plane'
                           }`}
                         >
                           {currentModule.renderStage(enrichedFrame, projection)}
@@ -871,28 +946,46 @@ export default function App() {
                 )}
               </div>
 
-              {/* Compact Stage Footer: Inline Color Semantics + Canvas Zoom / 2D-3D Controls */}
+              {/* Compact Stage Footer: Category-Adaptive Color Semantics + Canvas Zoom / 2D-3D Controls */}
               <div className="shrink-0 px-3 sm:px-4 py-1 border-t border-[#1F293D]/50 bg-[#0B0F19]/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400 select-none">
-                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-xs bg-[#F59E0B] inline-block" />
-                    <span>Comparing</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-xs bg-[#F43F5E] inline-block" />
-                    <span>Swapping</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-xs bg-[#8B5CF6] inline-block" />
-                    <span>Pivot</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-xs bg-[#10B981] inline-block" />
-                    <span>Sorted / Found</span>
-                  </span>
+                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3" data-testid="stage-category-legend">
+                  {getCategoryStageLegend(currentModule.category).map((item) => (
+                    <span key={item.label} className="flex items-center gap-1.5">
+                      <span
+                        className="w-2.5 h-2.5 rounded-xs inline-block shrink-0"
+                        style={{ backgroundColor: item.colorVar }}
+                      />
+                      <span>{item.label}</span>
+                    </span>
+                  ))}
                 </div>
 
                 <div className="flex items-center gap-1.5 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const entered = toggleFocusMode();
+                      setHotkeyHud({
+                        keys: ['F'],
+                        label: entered ? 'Focus Canvas ON' : 'Focus Canvas OFF',
+                        id: Date.now(),
+                      });
+                    }}
+                    title="Toggle Full-Width Focus Canvas (Shortcut: F)"
+                    className={`hidden md:flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] transition-colors cursor-pointer whitespace-nowrap ${
+                      isFocusMode
+                        ? 'theme-accent-soft font-bold'
+                        : 'bg-[#111827] border-[#1F293D] text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {isFocusMode ? (
+                      <Minimize2 className="w-3 h-3" />
+                    ) : (
+                      <Maximize2 className="w-3 h-3 text-slate-400" />
+                    )}
+                    <span>{isFocusMode ? 'Exit Focus (F)' : 'Focus (F)'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -984,18 +1077,24 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. Modals */}
-      <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
-      <PersonalCodeStudioModal
-        isOpen={personalStudioOpen}
-        onClose={() => setPersonalStudioOpen(false)}
-        onLoadCustomSnapshot={(customMod) => handleSelectModule(customMod)}
-      />
-      <VisualLegendModal isOpen={legendOpen} onClose={() => setLegendOpen(false)} />
-      <KeyboardShortcutsModal
-        isOpen={shortcutsOpen}
-        onClose={() => setShortcutsOpen(false)}
-      />
+      {/* 3. Lazy-Mounted Modals (Zero cost until opened) */}
+      <Suspense fallback={null}>
+        {aboutOpen && <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />}
+        {personalStudioOpen && (
+          <PersonalCodeStudioModal
+            isOpen={personalStudioOpen}
+            onClose={() => setPersonalStudioOpen(false)}
+            onLoadCustomSnapshot={(customMod) => handleSelectModule(customMod)}
+          />
+        )}
+        {legendOpen && <VisualLegendModal isOpen={legendOpen} onClose={() => setLegendOpen(false)} />}
+        {shortcutsOpen && (
+          <KeyboardShortcutsModal
+            isOpen={shortcutsOpen}
+            onClose={() => setShortcutsOpen(false)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

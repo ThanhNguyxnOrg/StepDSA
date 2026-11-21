@@ -50,10 +50,10 @@ const CELL_STATUS_CLS: Record<ElementStatus, string> = {
 };
 
 const POINTER_BADGE_CLS: Record<string, string> = {
-  pivot: 'bg-[#8B5CF6] text-white border-[#A78BFA]',
-  target: 'bg-[#F59E0B] text-[#0B0F19] border-[#FBBF24]',
-  left: 'bg-[#06B6D4] text-[#0B0F19] border-[#22D3EE]',
-  right: 'bg-[#10B981] text-[#0B0F19] border-[#34D399]',
+  pivot: 'theme-solid-badge bg-[#8B5CF6] text-white border-[#A78BFA]',
+  target: 'theme-solid-badge bg-[#F59E0B] text-[#0B0F19] border-[#FBBF24]',
+  left: 'theme-solid-badge bg-[#06B6D4] text-[#0B0F19] border-[#22D3EE]',
+  right: 'theme-solid-badge bg-[#10B981] text-[#0B0F19] border-[#34D399]',
 };
 
 interface BucketSortStageProps {

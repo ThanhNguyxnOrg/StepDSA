@@ -179,15 +179,16 @@ export const AlgorithmCommandPaletteModal: React.FC<AlgorithmCommandPaletteModal
                   }}
                   className={`relative px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer z-10 ${
                     isSelected
-                      ? 'text-[#0B0F19] font-bold'
+                      ? 'font-bold'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
+                  style={isSelected ? { color: 'var(--theme-on-accent)' } : undefined}
                 >
                   {isSelected && (
                     <motion.div
                       layoutId="cmd-palette-category-pill"
                       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                      className="absolute inset-0 rounded-lg bg-[#10B981] -z-10"
+                      className="absolute inset-0 rounded-lg theme-accent-bg -z-10"
                     />
                   )}
                   <span>{tab.label}</span>
@@ -227,7 +228,7 @@ export const AlgorithmCommandPaletteModal: React.FC<AlgorithmCommandPaletteModal
                     onMouseEnter={() => setSelectedIndex(index)}
                     className={`w-full text-left px-3.5 py-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
                       isSelected
-                        ? 'bg-gradient-to-r from-emerald-950/40 to-slate-900 border border-emerald-500/30 shadow-sm'
+                        ? 'theme-accent-soft border shadow-sm'
                         : isCurrent
                         ? 'bg-slate-900/50 border border-slate-800/80'
                         : 'hover:bg-slate-800/40 border border-transparent'

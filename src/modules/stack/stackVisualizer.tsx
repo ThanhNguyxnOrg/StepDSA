@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'motion/react';
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface StackItem {
@@ -261,79 +262,180 @@ public:
   },
   renderStage: (frame: ExecutionFrame<StackState>) => {
     const { items, topIndex, capacity, recentAction, incomingQueue = [], poppedHistory = [] } = frame.state;
+    const totalSlots = Math.max(capacity, items.length, 4);
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-3">
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-4 select-none">
         {/* Header HUD */}
-        <div className="flex flex-wrap items-center justify-center gap-2.5">
-          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
-            Capacity: <span className="text-cyan-400 font-bold">{capacity}</span>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-xs font-mono text-slate-300">
+            Capacity: <span className="text-cyan-400 font-bold tabular-nums">{capacity}</span>
           </div>
-          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
-            Size: <span className="text-emerald-400 font-bold">{items.length}</span>
+          <div className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-xs font-mono text-slate-300">
+            Size: <span className="text-emerald-400 font-bold tabular-nums">{items.length}/{totalSlots}</span>
           </div>
-          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
-            Top Index: <span className="text-amber-400 font-bold">{topIndex}</span>
+          <div className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-xs font-mono text-slate-300">
+            Top Index: <span className="text-amber-400 font-bold tabular-nums">{topIndex}</span>
           </div>
           {recentAction && (
-            <div className="px-2.5 py-1 rounded bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold">
-              ACTION: {recentAction}
-            </div>
-          )}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/70 border border-slate-800 text-[11px] font-mono text-slate-400">
-            <span>Incoming:</span>
-            {incomingQueue.length === 0 ? (
-              <span className="text-slate-600">exhausted</span>
-            ) : (
-              incomingQueue.map((v, i) => (
-                <span key={i} className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">
-                  {v}
-                </span>
-              ))
-            )}
-          </div>
-          {poppedHistory.length > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-rose-950/30 border border-rose-800/40 text-[11px] font-mono text-rose-300">
-              <span>Popped (LIFO):</span>
-              {poppedHistory.map((v, i) => (
-                <span key={i} className="px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-700/50 text-rose-200 font-bold">
-                  {v}
-                </span>
-              ))}
+            <div
+              style={{
+                backgroundColor:
+                  recentAction === 'POP'
+                    ? 'var(--sem-swapping-bg)'
+                    : recentAction === 'PEEK'
+                    ? 'var(--sem-comparing-bg)'
+                    : 'var(--sem-active-bg)',
+                borderColor:
+                  recentAction === 'POP'
+                    ? 'var(--sem-swapping-border)'
+                    : recentAction === 'PEEK'
+                    ? 'var(--sem-comparing-border)'
+                    : 'var(--sem-active-border)',
+                color:
+                  recentAction === 'POP'
+                    ? 'var(--sem-swapping-text)'
+                    : recentAction === 'PEEK'
+                    ? 'var(--sem-comparing-text)'
+                    : 'var(--sem-active-text)',
+              }}
+              className="px-2.5 py-1 rounded-lg border text-xs font-mono font-bold"
+            >
+              OP: {recentAction}
             </div>
           )}
         </div>
 
-        {/* Vertical Stack Chamber */}
-        <div className="relative flex flex-col-reverse items-center justify-start p-3.5 bg-slate-950/80 border-2 border-b-4 border-slate-700 rounded-b-2xl w-64 min-h-[250px]">
-          {/* Stack Base Indicator */}
-          <div className="absolute -bottom-5 text-[10px] font-mono text-slate-500 font-bold tracking-widest uppercase">
-            Stack Base (Index 0)
+        {/* Main LIFO Chamber + Side I/O Queues */}
+        <div className="flex flex-col md:flex-row items-center md:items-end justify-center gap-6 w-full max-w-4xl">
+          {/* Left: Incoming Stream */}
+          <div className="w-full md:w-44 p-3 rounded-xl bg-[#111827] border border-[#1F293D] flex flex-col gap-1.5">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold">
+              Incoming → Push
+            </span>
+            <div className="flex flex-wrap gap-1.5 min-h-[30px] items-center">
+              {incomingQueue.length === 0 ? (
+                <span className="text-[11px] font-mono text-slate-500 italic">exhausted</span>
+              ) : (
+                incomingQueue.map((v, i) => (
+                  <span
+                    key={`${v}-${i}`}
+                    style={
+                      i === 0
+                        ? {
+                            backgroundColor: 'var(--sem-active-bg)',
+                            borderColor: 'var(--sem-active-border)',
+                            color: 'var(--sem-active-text)',
+                          }
+                        : undefined
+                    }
+                    className={`px-2 py-0.5 rounded-md border text-xs font-mono font-bold tabular-nums ${
+                      i === 0 ? '' : 'bg-[#1E293B] border-[#334155] text-slate-300'
+                    }`}
+                  >
+                    {v}
+                  </span>
+                ))
+              )}
+            </div>
           </div>
 
-          {items.map((item, idx) => {
-            const isTop = idx === topIndex;
-            return (
-              <div
-                key={item.id}
-                className={`w-full h-11 my-1 rounded-xl flex items-center justify-between px-4 font-mono font-bold text-sm shadow-md transition-all duration-300 border-2 ${
-                  isTop
-                    ? 'border-amber-400 bg-amber-950/60 text-amber-200 ring-2 ring-amber-400/40 scale-102'
-                    : 'border-blue-500/40 bg-slate-900/90 text-white'
-                }`}
-              >
-                <span className="text-xs text-slate-400 font-normal">#{idx}</span>
-                <span className="text-base text-cyan-300">{item.val}</span>
-                {isTop ? (
-                  <span className="text-[9px] font-bold bg-amber-900 border border-amber-600 px-1.5 py-0.5 rounded text-amber-200">
-                    ← TOP
+          {/* Center: Open-Top Animated LIFO Stack Chamber with Capacity Slots */}
+          <div className="flex flex-col items-center">
+            <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center gap-1.5">
+              <span>↓ PUSH / ↑ POP (LIFO Top)</span>
+            </div>
+            <div className="relative flex flex-col-reverse items-stretch justify-start p-3 gap-1.5 bg-[#0B0F19]/80 border-x-2 border-b-4 border-t-0 border-[#334155] rounded-b-2xl w-64 shadow-inner">
+              {Array.from({ length: totalSlots }, (_, slotIdx) => {
+                const item = items[slotIdx];
+                const isTop = slotIdx === topIndex && Boolean(item);
+                return (
+                  <div key={`slot-${slotIdx}`} className="relative h-11 w-full">
+                    <AnimatePresence mode="popLayout">
+                      {item ? (
+                        <motion.div
+                          key={item.id}
+                          initial={{ opacity: 0, y: -22, scale: 0.94 }}
+                          animate={{ opacity: 1, y: 0, scale: isTop ? 1.02 : 1 }}
+                          exit={{ opacity: 0, y: -24, scale: 0.9 }}
+                          transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                          style={
+                            isTop
+                              ? {
+                                  backgroundColor: 'var(--sem-comparing-bg)',
+                                  borderColor: 'var(--sem-comparing-border)',
+                                  color: 'var(--sem-comparing-text)',
+                                }
+                              : {
+                                  backgroundColor: 'var(--sem-default-cell-bg)',
+                                  borderColor: 'var(--sem-default-border)',
+                                  color: 'var(--sem-default-text)',
+                                }
+                          }
+                          className={`w-full h-full rounded-xl flex items-center justify-between px-3.5 font-mono font-bold text-sm shadow-sm border-2 ${
+                            isTop ? 'ring-2 ring-[#F59E0B]/40' : ''
+                          }`}
+                        >
+                          <span className="text-[11px] opacity-65 font-normal tabular-nums">
+                            [{slotIdx}]
+                          </span>
+                          <span className="text-base font-extrabold tabular-nums">{item.val}</span>
+                          {isTop ? (
+                            <span
+                              style={{
+                                backgroundColor: 'var(--sem-comparing-solid)',
+                                color: 'var(--sem-comparing-on-solid)',
+                              }}
+                              className="theme-solid-badge text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
+                            >
+                              ← TOP
+                            </span>
+                          ) : (
+                            <span className="w-10" />
+                          )}
+                        </motion.div>
+                      ) : (
+                        <div className="w-full h-full rounded-xl border border-dashed border-[#334155]/60 flex items-center justify-between px-3.5 text-[10px] font-mono text-slate-500/70">
+                          <span>[{slotIdx}]</span>
+                          <span className="italic">empty slot</span>
+                          <span className="w-6" />
+                        </div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-1.5 text-[10px] font-mono text-slate-500 font-bold tracking-wider uppercase">
+              Stack Base (Index 0)
+            </div>
+          </div>
+
+          {/* Right: Popped Output History (LIFO order) */}
+          <div className="w-full md:w-44 p-3 rounded-xl bg-[#111827] border border-[#1F293D] flex flex-col gap-1.5">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-rose-400 font-bold">
+              Popped (LIFO Order)
+            </span>
+            <div className="flex flex-wrap gap-1.5 min-h-[30px] items-center">
+              {poppedHistory.length === 0 ? (
+                <span className="text-[11px] font-mono text-slate-500 italic">none yet</span>
+              ) : (
+                poppedHistory.map((v, i) => (
+                  <span
+                    key={`${v}-${i}`}
+                    style={{
+                      backgroundColor: 'var(--sem-swapping-bg)',
+                      borderColor: 'var(--sem-swapping-border)',
+                      color: 'var(--sem-swapping-text)',
+                    }}
+                    className="px-2 py-0.5 rounded-md border text-xs font-mono font-bold tabular-nums"
+                  >
+                    #{i + 1}: {v}
                   </span>
-                ) : (
-                  <span className="w-8"></span>
-                )}
-              </div>
-            );
-          })}
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

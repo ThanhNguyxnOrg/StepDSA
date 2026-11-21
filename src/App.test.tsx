@@ -1,9 +1,14 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import App from './App';
 import { encodePermalinkInput } from './utils/permalink';
 
 describe('App Full Integration Smoke Test', () => {
+  beforeAll(async () => {
+    // Warm up the lazy-loaded studio chunk in Vitest so parallel test runs don't stall on Vite transform queue
+    await import('./components/developer/PersonalCodeStudioModal');
+  }, 30000);
+
   afterEach(() => {
     window.history.replaceState(null, '', '/');
   });
@@ -66,8 +71,8 @@ describe('App Full Integration Smoke Test', () => {
     const studioBtn = screen.getByTitle(/Personal Code Studio/i);
     fireEvent.click(studioBtn);
 
-    // Verify modal opened with Visualize button
-    const visualizeBtn = screen.getByText(/Visualize Algorithm/i);
+    // Verify lazy-loaded modal opened with Visualize button
+    const visualizeBtn = await screen.findByText(/Visualize Algorithm/i, {}, { timeout: 15000 });
     expect(visualizeBtn).toBeInTheDocument();
 
     // Click Visualize Algorithm

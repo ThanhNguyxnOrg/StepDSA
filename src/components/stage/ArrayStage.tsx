@@ -90,6 +90,7 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
   }, [rawArray, pointers]);
 
   const [colorMode, setColorMode] = React.useState<'classic' | 'spectrum'>('classic');
+  const [viewMode, setViewMode] = React.useState<'bars' | 'cells'>('bars');
   const [inspectedIdx, setInspectedIdx] = React.useState<number | null>(null);
   const stageRef = React.useRef<HTMLDivElement>(null);
   const [arcCoords, setArcCoords] = React.useState<{ x1: number; x2: number } | null>(null);
@@ -215,7 +216,36 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 rounded-lg p-0.5 text-[11px] font-mono shrink-0 ml-auto">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+          {/* Layout Mode Toggle: Bars+Cells vs Compact Cells */}
+          <div className="flex items-center gap-0.5 bg-slate-900/90 border border-slate-800 rounded-lg p-0.5 text-[11px] font-mono">
+            <button
+              type="button"
+              onClick={() => setViewMode('bars')}
+              className={`px-2 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
+                viewMode === 'bars'
+                  ? 'bg-slate-800 border border-slate-700 text-cyan-300 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Proportional Bar Chart + Array Cells"
+            >
+              Bars
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('cells')}
+              className={`px-2 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
+                viewMode === 'cells'
+                  ? 'bg-slate-800 border border-slate-700 text-cyan-300 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Compact Memory Cells Only"
+            >
+              Cells
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 rounded-lg p-0.5 text-[11px] font-mono">
           <button
             type="button"
             onClick={() => setColorMode('classic')}
@@ -256,6 +286,7 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
             <span>Spectrum</span>
           </button>
         </div>
+        </div>
       </div>
 
       {/* Main Stage Container with Fixed Baseline Tracks (Zero Vertical Jumping or Text Overlap) */}
@@ -282,79 +313,95 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
           const barPixelHeight = Math.round((heightPercent / 100) * 156);
           const elPointers = pointersByIndex[idx] || [];
           const isDiscarded =
-            discardedRange && idx >= discardedRange[0] && idx <= discardedRange[1];
+            el.status === 'discarded' ||
+            (discardedRange !== undefined && idx >= discardedRange[0] && idx <= discardedRange[1]);
           const inActiveWindow =
-            activeRangeBounds &&
+            !isDiscarded &&
+            activeRangeBounds !== null &&
             idx >= activeRangeBounds.low &&
             idx <= activeRangeBounds.high;
 
-          // Determine styles based on status and colorMode
-          let bgClass = 'bg-[#1E293B] border-[#334155] text-slate-200';
-          let cellBgClass = 'bg-[#111827] border-[#1F293D] text-slate-200';
-          let glowClass = '';
-          const customStyle: React.CSSProperties = { height: `${barPixelHeight}px` };
-
-          if (isDiscarded) {
-            bgClass = 'bg-[#1F2937]/25 border-dashed border-[#374151] text-slate-600 opacity-35';
-            cellBgClass = 'bg-[#0B0F19] border-dashed border-[#1F293D] text-slate-600 opacity-45';
-          } else if (colorMode === 'spectrum') {
-            const spectrumColor = getElementSpectrumColor(el.value, minValue, maxValue);
-            customStyle.backgroundColor = spectrumColor;
-            customStyle.borderColor = spectrumColor;
-
-            switch (el.status) {
+          // Theme-native semantic token resolution for bar & cell
+          const getSemanticToken = (status: ElementStatus) => {
+            switch (status) {
               case 'comparing':
-                glowClass = 'shadow-lg shadow-[#F59E0B]/35 ring-2 ring-[#F59E0B]';
-                cellBgClass = 'bg-[#F59E0B]/20 border-[#F59E0B] text-amber-200';
-                break;
+                return {
+                  bg: 'var(--sem-comparing-bg)',
+                  border: 'var(--sem-comparing-border)',
+                  text: 'var(--sem-comparing-text)',
+                  solid: 'var(--sem-comparing-solid)',
+                  ring: 'shadow-lg ring-2 ring-[#F59E0B]/55',
+                };
               case 'swapping':
-                glowClass = 'shadow-lg shadow-[#F43F5E]/45 ring-2 ring-[#F43F5E]';
-                cellBgClass = 'bg-[#F43F5E]/20 border-[#F43F5E] text-rose-200';
-                break;
+                return {
+                  bg: 'var(--sem-swapping-bg)',
+                  border: 'var(--sem-swapping-border)',
+                  text: 'var(--sem-swapping-text)',
+                  solid: 'var(--sem-swapping-solid)',
+                  ring: 'shadow-lg ring-2 ring-[#F43F5E]/65',
+                };
               case 'sorted':
-                glowClass = 'shadow-md shadow-[#10B981]/30 ring-2 ring-[#10B981]';
-                cellBgClass = 'bg-[#10B981]/20 border-[#10B981] text-emerald-200';
-                break;
+                return {
+                  bg: 'var(--sem-sorted-bg)',
+                  border: 'var(--sem-sorted-border)',
+                  text: 'var(--sem-sorted-text)',
+                  solid: 'var(--sem-sorted-solid)',
+                  ring: 'shadow-md',
+                };
               case 'pivot':
-                glowClass = 'shadow-lg shadow-[#8B5CF6]/40 ring-2 ring-[#8B5CF6]';
-                cellBgClass = 'bg-[#8B5CF6]/20 border-[#8B5CF6] text-purple-200';
-                break;
+                return {
+                  bg: 'var(--sem-pivot-bg)',
+                  border: 'var(--sem-pivot-border)',
+                  text: 'var(--sem-pivot-text)',
+                  solid: 'var(--sem-pivot-solid)',
+                  ring: 'shadow-lg ring-2 ring-[#8B5CF6]/55',
+                };
               case 'active':
               case 'selected':
-                glowClass = 'shadow-md shadow-[#06B6D4]/30 ring-1 ring-[#06B6D4]';
-                cellBgClass = 'bg-[#06B6D4]/20 border-[#06B6D4] text-cyan-200';
-                break;
+                return {
+                  bg: 'var(--sem-active-bg)',
+                  border: 'var(--sem-active-border)',
+                  text: 'var(--sem-active-text)',
+                  solid: 'var(--sem-active-solid)',
+                  ring: 'shadow-md ring-1 ring-[#06B6D4]/55',
+                };
+              default:
+                return {
+                  bg: 'var(--sem-default-bg)',
+                  border: 'var(--sem-default-border)',
+                  text: 'var(--sem-default-text)',
+                  solid: 'var(--sem-default-border)',
+                  ring: '',
+                };
             }
-          } else {
-            switch (el.status) {
-              case 'comparing':
-                bgClass = 'bg-[#F59E0B]/25 border-[#F59E0B] text-[#F59E0B]';
-                cellBgClass = 'bg-[#F59E0B]/20 border-[#F59E0B] text-amber-200';
-                glowClass = 'shadow-lg shadow-[#F59E0B]/20 ring-1 ring-[#F59E0B]/50';
-                break;
-              case 'swapping':
-                bgClass = 'bg-[#F43F5E]/25 border-[#F43F5E] text-[#F43F5E]';
-                cellBgClass = 'bg-[#F43F5E]/20 border-[#F43F5E] text-rose-200';
-                glowClass = 'shadow-lg shadow-[#F43F5E]/30 ring-2 ring-[#F43F5E]/60';
-                break;
-              case 'sorted':
-                bgClass = 'bg-[#10B981]/25 border-[#10B981] text-[#10B981]';
-                cellBgClass = 'bg-[#10B981]/20 border-[#10B981] text-emerald-300';
-                glowClass = 'shadow-md shadow-[#10B981]/20';
-                break;
-              case 'pivot':
-                bgClass = 'bg-[#8B5CF6]/25 border-[#8B5CF6] text-[#A78BFA]';
-                cellBgClass = 'bg-[#8B5CF6]/20 border-[#8B5CF6] text-purple-200';
-                glowClass = 'shadow-lg shadow-[#8B5CF6]/30 ring-1 ring-[#8B5CF6]/60';
-                break;
-              case 'active':
-              case 'selected':
-                bgClass = 'bg-[#06B6D4]/25 border-[#06B6D4] text-[#06B6D4]';
-                cellBgClass = 'bg-[#06B6D4]/20 border-[#06B6D4] text-cyan-200';
-                glowClass = 'shadow-md shadow-[#06B6D4]/20 ring-1 ring-[#06B6D4]/50';
-                break;
-            }
-          }
+          };
+
+          const sem = getSemanticToken(el.status);
+          const barStyle: React.CSSProperties = {
+            height: `${barPixelHeight}px`,
+            backgroundColor: isDiscarded
+              ? 'var(--sem-discarded-bg)'
+              : colorMode === 'spectrum'
+              ? getElementSpectrumColor(el.value, minValue, maxValue)
+              : sem.bg,
+            borderColor: isDiscarded
+              ? 'var(--sem-discarded-border)'
+              : colorMode === 'spectrum'
+              ? getElementSpectrumColor(el.value, minValue, maxValue)
+              : sem.border,
+          };
+
+          const cellStyle: React.CSSProperties = {
+            backgroundColor: isDiscarded
+              ? 'var(--sem-discarded-bg)'
+              : el.status === 'default'
+              ? 'var(--sem-default-cell-bg)'
+              : sem.bg,
+            borderColor: isDiscarded ? 'var(--sem-discarded-border)' : sem.border,
+            color: isDiscarded ? 'var(--sem-discarded-text)' : sem.text,
+          };
+
+          const glowClass = isDiscarded ? '' : sem.ring;
 
           return (
             <motion.div
@@ -362,64 +409,93 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
               layout
               transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               data-index={idx}
+              data-status={isDiscarded ? 'discarded' : el.status}
               onMouseEnter={() => setInspectedIdx(idx)}
               onMouseLeave={() => setInspectedIdx((prev) => (prev === idx ? null : prev))}
               onClick={() => setInspectedIdx((prev) => (prev === idx ? null : idx))}
-              className="flex flex-col items-center flex-1 max-w-[60px] min-w-[32px] relative group cursor-pointer"
+              className={`flex flex-col items-center flex-1 max-w-[64px] min-w-[34px] relative group cursor-pointer transition-opacity ${
+                isDiscarded ? 'opacity-45' : 'opacity-100'
+              }`}
             >
-              {/* Track 1: Fixed-Height Bar Column Track (184px) so all bars share an exact baseline */}
-              <div className="w-full h-[184px] flex flex-col justify-end items-center border-b border-slate-800/90 pb-1">
-                {/* Value Header above bar */}
-                <motion.span
-                  key={`val-${idx}-${el.value}`}
-                  initial={{ scale: 1.15, opacity: 0.8 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-                  className={`text-[11px] font-mono font-bold tabular-nums mb-1 leading-none transition-colors ${
-                    el.status === 'sorted'
-                      ? 'text-[#10B981]'
-                      : el.status === 'pivot'
-                      ? 'text-[#A78BFA]'
-                      : el.status === 'comparing'
-                      ? 'text-[#F59E0B]'
-                      : el.status === 'swapping'
-                      ? 'text-[#F43F5E]'
-                      : 'text-slate-300'
-                  }`}
-                >
-                  {el.value}
-                </motion.span>
+              {/* Track 1: Fixed-Height Bar Column Track (184px) in Bars mode */}
+              {viewMode === 'bars' && (
+                <div className="w-full h-[184px] flex flex-col justify-end items-center border-b border-slate-800/90 pb-1">
+                  {/* Value Header above bar */}
+                  <motion.span
+                    key={`val-${idx}-${el.value}`}
+                    initial={{ scale: 1.15, opacity: 0.8 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                    style={{
+                      color: isDiscarded
+                        ? 'var(--sem-discarded-text)'
+                        : el.status === 'default'
+                        ? 'var(--theme-text-secondary)'
+                        : sem.text,
+                    }}
+                    className={`text-[11px] font-mono font-bold tabular-nums mb-1 leading-none transition-colors ${
+                      isDiscarded ? 'line-through' : ''
+                    }`}
+                  >
+                    {el.value}
+                  </motion.span>
 
-                {/* Proportional Vertical Bar */}
-                <motion.div
-                  layout
-                  animate={{
-                    height: barPixelHeight,
-                    y: el.status === 'swapping' ? -3 : 0,
-                  }}
-                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                  style={customStyle}
-                  className={`w-full rounded-t-lg border flex flex-col justify-end items-center pb-1.5 transition-colors ${bgClass} ${glowClass}`}
-                >
-                  <div className="w-1/3 h-0.5 rounded-full bg-white/25" />
-                </motion.div>
-              </div>
+                  {/* Proportional Vertical Bar */}
+                  <motion.div
+                    layout
+                    animate={{
+                      height: barPixelHeight,
+                      y: el.status === 'swapping' ? -4 : el.status === 'comparing' ? -2 : 0,
+                    }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                    style={barStyle}
+                    className={`w-full rounded-t-lg border-2 flex flex-col justify-between items-center py-1 transition-colors ${
+                      isDiscarded ? 'border-dashed' : ''
+                    } ${glowClass}`}
+                  >
+                    {!isDiscarded && (el.status === 'sorted' || el.status === 'pivot') ? (
+                      <span
+                        className="text-[9px] font-mono font-extrabold leading-none"
+                        style={{ color: colorMode === 'spectrum' ? '#FFFFFF' : sem.text }}
+                      >
+                        {el.status === 'sorted' ? '✓' : 'P'}
+                      </span>
+                    ) : (
+                      <span className="h-2" />
+                    )}
+                    <div
+                      className="w-1/3 h-0.5 rounded-full opacity-40"
+                      style={{ backgroundColor: isDiscarded ? 'transparent' : sem.border }}
+                    />
+                  </motion.div>
+                </div>
+              )}
 
               {/* Track 2: Crisp Array Memory Cell + Index Subtext + Active Subarray Bracket */}
               <div
-                className={`w-full flex flex-col items-center pt-1.5 pb-0.5 ${
-                  inActiveWindow ? 'border-b-2 border-cyan-500/50' : 'border-b-2 border-transparent'
+                className={`w-full flex flex-col items-center pt-1.5 pb-1 transition-colors ${
+                  inActiveWindow
+                    ? 'border-b-2 border-cyan-500/70'
+                    : 'border-b-2 border-transparent'
                 }`}
               >
                 <motion.div
                   layout
                   animate={{
-                    scale: el.status === 'swapping' ? 1.06 : 1,
+                    scale: el.status === 'swapping' ? 1.08 : 1,
                   }}
                   transition={{ type: 'spring', stiffness: 420, damping: 25 }}
-                  className={`w-full h-6 rounded border flex items-center justify-center text-[11px] font-mono font-bold tabular-nums transition-colors ${cellBgClass}`}
+                  style={cellStyle}
+                  className={`w-full ${
+                    viewMode === 'cells' ? 'h-12 text-sm' : 'h-7 text-[11px]'
+                  } rounded-md border-2 flex items-center justify-center gap-0.5 font-mono font-bold tabular-nums transition-colors ${
+                    isDiscarded ? 'border-dashed line-through' : ''
+                  } ${viewMode === 'cells' ? glowClass : ''}`}
                 >
-                  {el.value}
+                  <span>{el.value}</span>
+                  {el.status === 'sorted' && !isDiscarded && viewMode === 'cells' && (
+                    <span className="text-[9px] opacity-80">✓</span>
+                  )}
                 </motion.div>
                 <span
                   className={`text-[10px] font-mono tabular-nums mt-0.5 leading-none ${
@@ -430,8 +506,8 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
                 </span>
               </div>
 
-              {/* Track 3: Fixed-Height Pointer Stack Track (54px) — Glides horizontally via layoutId! */}
-              <div className="w-full h-[54px] pt-1 flex flex-col items-center justify-start gap-0.5 overflow-visible z-10">
+              {/* Track 3: Fixed-Height Pointer Stack Track (56px) — Glides horizontally via layoutId! */}
+              <div className="w-full h-[56px] pt-1 flex flex-col items-center justify-start gap-0.5 overflow-visible z-10">
                 {elPointers.length > 0 && (
                   <motion.span
                     initial={{ opacity: 0, y: 2 }}
@@ -441,24 +517,43 @@ export const ArrayStage: React.FC<ArrayStageProps> = ({
                     ▲
                   </motion.span>
                 )}
-                {elPointers.slice(0, 3).map((ptr) => (
-                  <motion.div
-                    key={ptr.name}
-                    layoutId={`stage-ptr-${ptr.name}`}
-                    transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-                    className={`px-1.5 py-0.5 rounded text-[9px] leading-none font-mono font-bold uppercase shadow-xs border whitespace-nowrap ${
-                      ptr.role === 'pivot'
-                        ? 'bg-[#8B5CF6] text-white border-[#A78BFA]'
-                        : ptr.role === 'target'
-                        ? 'bg-[#F59E0B] text-[#0B0F19] border-[#FBBF24]'
-                        : ptr.role === 'left'
-                        ? 'bg-[#06B6D4] text-[#0B0F19] border-[#22D3EE]'
-                        : 'bg-[#10B981] text-[#0B0F19] border-[#34D399]'
-                    }`}
-                  >
-                    {ptr.name}
-                  </motion.div>
-                ))}
+                {elPointers.slice(0, 3).map((ptr) => {
+                  const badgeStyle: React.CSSProperties =
+                    ptr.role === 'pivot'
+                      ? {
+                          backgroundColor: 'var(--sem-pivot-solid)',
+                          color: 'var(--sem-pivot-on-solid)',
+                          borderColor: 'var(--sem-pivot-border)',
+                        }
+                      : ptr.role === 'target'
+                      ? {
+                          backgroundColor: 'var(--sem-comparing-solid)',
+                          color: 'var(--sem-comparing-on-solid)',
+                          borderColor: 'var(--sem-comparing-border)',
+                        }
+                      : ptr.role === 'left'
+                      ? {
+                          backgroundColor: 'var(--sem-active-solid)',
+                          color: 'var(--sem-active-on-solid)',
+                          borderColor: 'var(--sem-active-border)',
+                        }
+                      : {
+                          backgroundColor: 'var(--sem-sorted-solid)',
+                          color: 'var(--sem-sorted-on-solid)',
+                          borderColor: 'var(--sem-sorted-border)',
+                        };
+                  return (
+                    <motion.div
+                      key={ptr.name}
+                      layoutId={`stage-ptr-${ptr.name}`}
+                      transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                      style={badgeStyle}
+                      className="theme-solid-badge px-1.5 py-0.5 rounded text-[9px] leading-none font-mono font-bold uppercase shadow-xs border whitespace-nowrap"
+                    >
+                      {ptr.name}
+                    </motion.div>
+                  );
+                })}
               </div>
             </motion.div>
           );

@@ -6,11 +6,12 @@ interface AlgorithmCardThumbnailProps {
   category: string;
 }
 
-export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = (props) => (
+export const AlgorithmCardThumbnail: React.FC<AlgorithmCardThumbnailProps> = React.memo((props) => (
   <div className="algo-card-thumbnail">
     <AlgorithmCardThumbnailInner {...props} />
   </div>
-);
+));
+AlgorithmCardThumbnail.displayName = 'AlgorithmCardThumbnail';
 
 const AlgorithmCardThumbnailInner: React.FC<AlgorithmCardThumbnailProps> = ({ moduleId, category }) => {
   const extra = renderExtraThumbnail(moduleId, category);

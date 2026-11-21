@@ -7,6 +7,164 @@ import React from 'react';
 export function renderExtraThumbnail(moduleId: string, _category?: string): React.JSX.Element | null {
   switch (moduleId) {
     /* ════════════════════════════════════════════════════════════════
+       0. INTERVIEW & SYSTEMS FLAGSHIP MODULES (LRU, Rain Water, DNF, Prefix Sum, LCA, Bloom)
+       ════════════════════════════════════════════════════════════════ */
+    case 'lru-cache':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#1E3A8A] to-[#172554] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-blue-100 uppercase tracking-wider">
+            <span>O(1) HashMap + DLL</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-24 font-mono text-[10px]">
+            <div className="flex items-center gap-1">
+              <span className="px-1.5 py-1 rounded bg-emerald-500/80 text-slate-950 font-extrabold">MRU:1</span>
+              <span className="text-slate-400">⇄</span>
+              <span className="px-1.5 py-1 rounded bg-slate-800 border border-slate-600 text-slate-200 font-bold">3</span>
+              <span className="text-slate-400">⇄</span>
+              <span className="px-1.5 py-1 rounded bg-rose-500/75 text-white font-bold animate-pulse">LRU:2</span>
+            </div>
+            <div className="text-[9.5px] text-cyan-300">
+              get(1) → promote Head · evict Tail
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'trapping-rain-water':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#0E7490] to-[#155E75] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-cyan-100 uppercase tracking-wider">
+            <span>Two Pointers Elevation</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+          </div>
+          <div className="flex items-end justify-center gap-1 h-20 pt-2 pb-0.5 border-b border-slate-700/80 mx-auto px-2 font-mono">
+            <div className="w-4 h-12 bg-slate-600 rounded-t" />
+            <div className="w-4 flex flex-col justify-end h-12">
+              <div className="w-full h-8 bg-cyan-400/70 rounded-t animate-pulse" />
+              <div className="w-full h-4 bg-slate-600" />
+            </div>
+            <div className="w-4 flex flex-col justify-end h-12">
+              <div className="w-full h-12 bg-cyan-400/70 rounded-t animate-pulse" />
+            </div>
+            <div className="w-4 h-16 bg-slate-600 rounded-t" />
+            <div className="w-4 flex flex-col justify-end h-12">
+              <div className="w-full h-7 bg-cyan-400/70 rounded-t animate-pulse" />
+              <div className="w-full h-5 bg-slate-600" />
+            </div>
+            <div className="w-4 h-14 bg-slate-600 rounded-t" />
+          </div>
+          <div className="text-center text-[10px] font-mono text-cyan-200">
+            water += min(leftMax, rightMax) − h[i]
+          </div>
+        </div>
+      );
+
+    case 'dutch-national-flag':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#312E81] to-[#1E1B4B] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-indigo-100 uppercase tracking-wider">
+            <span>3-Way Partition O(N)</span>
+            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center gap-1.5 h-20 font-mono text-xs font-extrabold">
+            <span className="w-7 h-8 rounded bg-cyan-400 text-slate-950 flex items-center justify-center">0</span>
+            <span className="w-7 h-8 rounded bg-cyan-400 text-slate-950 flex items-center justify-center">0</span>
+            <span className="w-7 h-8 rounded bg-emerald-400 text-slate-950 flex items-center justify-center">1</span>
+            <span className="w-7 h-8 rounded bg-slate-700 border border-dashed border-slate-400 text-slate-200 flex items-center justify-center animate-pulse">?</span>
+            <span className="w-7 h-8 rounded bg-amber-400 text-slate-950 flex items-center justify-center">2</span>
+            <span className="w-7 h-8 rounded bg-amber-400 text-slate-950 flex items-center justify-center">2</span>
+          </div>
+          <div className="text-center text-[10px] font-mono text-indigo-200">
+            [0s | low .. 1s | mid .. ? | high .. 2s]
+          </div>
+        </div>
+      );
+
+    case 'prefix-sum':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#065F46] to-[#064E3B] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>O(1) Range Sum Query</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-20 font-mono text-[10px]">
+            <div className="flex gap-1">
+              {[0, 3, 4, 8, 9, 14].map((v, i) => (
+                <span
+                  key={i}
+                  className={`w-7 h-6 rounded flex items-center justify-center font-bold ${
+                    i === 5
+                      ? 'bg-emerald-400 text-slate-950'
+                      : i === 2
+                      ? 'bg-rose-500/80 text-white'
+                      : 'bg-slate-800 text-slate-200'
+                  }`}
+                >
+                  {v}
+                </span>
+              ))}
+            </div>
+            <div className="text-emerald-200">
+              sum(L..R) = <strong className="text-emerald-300">p[R+1]</strong> − <strong className="text-rose-300">p[L]</strong>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'lca-binary-tree':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#1E293B] to-[#0F172A] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-emerald-100 uppercase tracking-wider">
+            <span>DFS Return Bubbling</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+          </div>
+          <div className="flex items-center justify-center h-20">
+            <svg viewBox="0 0 160 72" className="w-40 h-18">
+              <line x1="80" y1="16" x2="42" y2="54" stroke="#10B981" strokeWidth="2.5" />
+              <line x1="80" y1="16" x2="118" y2="54" stroke="#10B981" strokeWidth="2.5" />
+              <circle cx="80" cy="16" r="12" fill="#10B981" />
+              <text x="80" y="20" textAnchor="middle" fill="#0B0F19" fontSize="9" fontWeight="bold" fontFamily="monospace">LCA</text>
+              <circle cx="42" cy="54" r="11" fill="#06B6D4" />
+              <text x="42" y="58" textAnchor="middle" fill="#0B0F19" fontSize="9" fontWeight="bold" fontFamily="monospace">p</text>
+              <circle cx="118" cy="54" r="11" fill="#F59E0B" />
+              <text x="118" y="58" textAnchor="middle" fill="#0B0F19" fontSize="9" fontWeight="bold" fontFamily="monospace">q</text>
+            </svg>
+          </div>
+          <div className="text-center text-[10px] font-mono text-emerald-300">
+            left ≠ null ∧ right ≠ null → LCA ★
+          </div>
+        </div>
+      );
+
+    case 'bloom-filter':
+      return (
+        <div className="w-full h-40 bg-gradient-to-b from-[#4C1D95] to-[#2E1065] rounded-xl flex flex-col justify-between p-4 overflow-hidden relative shadow-lg group-hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-purple-100 uppercase tracking-wider">
+            <span>Probabilistic Bit Set</span>
+            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 h-20 font-mono text-[10px]">
+            <div className="flex gap-1">
+              {[0, 1, 0, 1, 1, 0, 1, 0].map((b, i) => (
+                <span
+                  key={i}
+                  className={`w-5 h-6 rounded flex items-center justify-center font-bold ${
+                    b === 1 ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {b}
+                </span>
+              ))}
+            </div>
+            <div className="text-purple-200">
+              k=3 hashes · <strong className="text-emerald-300">0% False Negatives</strong>
+            </div>
+          </div>
+        </div>
+      );
+
+    /* ════════════════════════════════════════════════════════════════
        1. ARRAYS & ADVANCED POINTER STRUCTURES
        ════════════════════════════════════════════════════════════════ */
     case 'sparse-table':

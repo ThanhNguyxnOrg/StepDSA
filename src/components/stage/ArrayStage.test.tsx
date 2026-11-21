@@ -62,4 +62,24 @@ describe('ArrayStage Component', () => {
     expect(screen.getByTestId('comparison-arc')).toBeInTheDocument();
     expect(screen.getAllByText('20 < 40').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('marks discarded element statuses visually and supports Bars/Cells layout toggle', () => {
+    const state = {
+      array: [
+        { id: 0, value: 10, status: 'discarded' as const },
+        { id: 1, value: 30, status: 'comparing' as const },
+        { id: 2, value: 50, status: 'active' as const },
+      ],
+      pointers: { low: 1, mid: 1, high: 2 },
+    };
+
+    const { container } = render(<ArrayStage state={state} projection="2d" />);
+
+    const discardedCol = container.querySelector('[data-index="0"]');
+    expect(discardedCol).toHaveAttribute('data-status', 'discarded');
+
+    const cellsBtn = screen.getByRole('button', { name: /^cells$/i });
+    fireEvent.click(cellsBtn);
+    expect(cellsBtn).toHaveClass('text-cyan-300');
+  });
 });

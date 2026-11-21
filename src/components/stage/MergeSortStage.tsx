@@ -71,6 +71,13 @@ export interface MergeSortStageState {
   array: ArrayElement[];
   pointers?: Record<string, number>;
   mergeView?: MergeSortView;
+  auxiliary?: {
+    type?: string;
+    name?: string;
+    data?: any[];
+    activeIndex?: number;
+    note?: string;
+  };
 }
 
 /* ── Pure row layout (exported for tests) ─────────────────────────────────── */
@@ -144,14 +151,14 @@ const PHASE_BOX_CLS: Record<MergeSortNodePhase, string> = {
   consumed: 'border-slate-800 bg-slate-900/20',
 };
 
-const PHASE_CHIP: Partial<Record<MergeSortNodePhase, { text: string; cls: string }>> = {
-  splitting: { text: 'SPLIT', cls: 'bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/50' },
-  base: { text: 'BASE ✓', cls: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/50' },
-  left: { text: 'LEFT HALF', cls: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' },
-  right: { text: 'RIGHT HALF', cls: 'bg-amber-500/20 text-amber-200 border-amber-400/50' },
-  merging: { text: 'MERGING', cls: 'bg-violet-500/20 text-violet-200 border-violet-400/50' },
-  sorted: { text: 'MERGED ✓', cls: 'bg-emerald-500/20 text-emerald-100 border-emerald-400/60' },
-  consumed: { text: '✓', cls: 'bg-slate-800/80 text-slate-400 border-slate-600' },
+const PHASE_CHIP: Partial<Record<MergeSortNodePhase, { text: string; shortText: string; cls: string }>> = {
+  splitting: { text: 'SPLIT', shortText: 'SPLIT', cls: 'bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/50' },
+  base: { text: 'BASE ✓', shortText: 'BASE', cls: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/50' },
+  left: { text: 'LEFT HALF', shortText: 'LEFT', cls: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' },
+  right: { text: 'RIGHT HALF', shortText: 'RIGHT', cls: 'bg-amber-500/20 text-amber-200 border-amber-400/50' },
+  merging: { text: 'MERGING', shortText: 'MERGE', cls: 'bg-violet-500/20 text-violet-200 border-violet-400/50' },
+  sorted: { text: 'MERGED ✓', shortText: '✓', cls: 'bg-emerald-500/20 text-emerald-100 border-emerald-400/60' },
+  consumed: { text: '✓', shortText: '✓', cls: 'bg-slate-800/80 text-slate-400 border-slate-600' },
 };
 
 const CELL_STATUS_CLS: Record<ElementStatus, string> = {
@@ -166,10 +173,10 @@ const CELL_STATUS_CLS: Record<ElementStatus, string> = {
 };
 
 const POINTER_BADGE_CLS: Record<string, string> = {
-  pivot: 'bg-[#8B5CF6] text-white border-[#A78BFA]',
-  target: 'bg-[#F59E0B] text-[#0B0F19] border-[#FBBF24]',
-  left: 'bg-[#06B6D4] text-[#0B0F19] border-[#22D3EE]',
-  right: 'bg-[#10B981] text-[#0B0F19] border-[#34D399]',
+  pivot: 'theme-solid-badge bg-[#8B5CF6] text-white border-[#A78BFA]',
+  target: 'theme-solid-badge bg-[#F59E0B] text-[#0B0F19] border-[#FBBF24]',
+  left: 'theme-solid-badge bg-[#06B6D4] text-[#0B0F19] border-[#22D3EE]',
+  right: 'theme-solid-badge bg-[#10B981] text-[#0B0F19] border-[#34D399]',
 };
 
 /** Phases whose boxes may carry pointer badges (keeps other rows calm). */
@@ -213,11 +220,23 @@ export const MergeSortStage: React.FC<MergeSortStageProps> = ({ state, projectio
   }
 
   const statusKind = view.statusKind ?? 'init';
+  const activeStepNum =
+    statusKind === 'init' || statusKind === 'divide' || statusKind === 'base'
+      ? 1
+      : statusKind === 'merge' || statusKind === 'compare' || statusKind === 'append'
+      ? 2
+      : 3;
+
+  const tempBuffer: number[] = Array.isArray(state.auxiliary?.data)
+    ? state.auxiliary!.data.map((x: any) => (typeof x === 'object' && x !== null && 'value' in x ? x.value : x))
+    : [];
+  const tempActiveIdx = state.auxiliary?.activeIndex;
+  const activeMerge = view.merge;
 
   return (
     <div className="w-full flex-1 max-h-full flex flex-col min-h-0 select-none">
-      {/* Status + legend strip */}
-      <div className="shrink-0 px-3 sm:px-4 pt-2 pb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#1F293D]/40">
+      {/* Status + 3-Phase Divide-and-Conquer Progress Strip */}
+      <div className="shrink-0 px-3 sm:px-4 pt-2 pb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[#1F293D]/40">
         {view.statusLabel && (
           <span
             data-testid="ms-status"
@@ -226,7 +245,46 @@ export const MergeSortStage: React.FC<MergeSortStageProps> = ({ state, projectio
             {view.statusLabel}
           </span>
         )}
-        <div className="hidden md:flex items-center gap-2 ml-auto text-[9px] font-mono text-slate-400">
+
+        {/* Macro Divide -> Compare -> Merge Back Flow Indicator */}
+        <div className="hidden sm:flex items-center gap-1 text-[9.5px] font-mono">
+          {[
+            { num: 1, label: '1. Split Apart' },
+            { num: 2, label: '2. Compare → Temp' },
+            { num: 3, label: '3. Merge Back' },
+          ].map((step, i) => {
+            const isActive = activeStepNum === step.num;
+            return (
+              <React.Fragment key={step.num}>
+                {i > 0 && <span className="text-slate-500">→</span>}
+                <span
+                  style={
+                    isActive
+                      ? {
+                          backgroundColor: 'var(--theme-accent-soft)',
+                          borderColor: 'var(--theme-accent-border)',
+                          color: 'var(--theme-accent-text)',
+                        }
+                      : undefined
+                  }
+                  className={`px-1.5 py-0.5 rounded border ${
+                    isActive
+                      ? 'font-bold'
+                      : 'border-transparent text-slate-500'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        <div className="hidden xl:flex items-center gap-2 ml-auto text-[9px] font-mono text-slate-400">
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-xs border border-fuchsia-400/80 bg-fuchsia-500/20 inline-block" />
+            splitting
+          </span>
           <span className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-xs border border-cyan-400/80 bg-cyan-500/20 inline-block" />
             left half
@@ -236,71 +294,275 @@ export const MergeSortStage: React.FC<MergeSortStageProps> = ({ state, projectio
             right half
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-xs border border-violet-400/80 bg-violet-500/20 inline-block" />
-            merging
-          </span>
-          <span className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-xs border border-emerald-400/80 bg-emerald-500/20 inline-block" />
             merged ✓
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-xs border border-slate-700 bg-slate-900/40 inline-block" />
-            waiting
           </span>
         </div>
       </div>
 
-      {/* Depth rows */}
+      {/* Divide & Merge Tree Rows with Physical Separation + Split/Merge SVG Fork Connectors */}
       <div className="flex-1 min-h-0 overflow-auto px-3 pb-3 pt-2">
         <div
-          className={`mx-auto flex flex-col gap-2 ${
+          className={`mx-auto flex flex-col gap-0.5 ${
             projection === 'isometric' ? 'stage-isometric' : 'stage-flat'
           }`}
-          style={{ minWidth: Math.max(520, n * 58) }}
+          style={{ minWidth: Math.max(540, n * 62) }}
         >
-          {rows.map((row) => {
+          {rows.map((row, rowIdx) => {
             const hasBadges = row.items.some(
               (item) =>
                 item.kind === 'node' && item.node && BADGE_PHASES.includes(item.node.phase)
             );
+            const nextRow = rows[rowIdx + 1];
+
+            // Compute SVG parent->child split/merge fork lines between this row and nextRow
+            const connectors: {
+              key: string;
+              px: number;
+              cx: number;
+              mode: 'split' | 'merge-left' | 'merge-right' | 'sorted' | 'idle';
+            }[] = [];
+
+            if (nextRow) {
+              const parentNodes = row.items
+                .filter((it) => it.kind === 'node' && it.node)
+                .map((it) => it.node!);
+              const childNodes = nextRow.items
+                .filter((it) => it.kind === 'node' && it.node)
+                .map((it) => it.node!);
+
+              for (const child of childNodes) {
+                const parent = parentNodes.find(
+                  (p) => child.left >= p.left && child.right <= p.right
+                );
+                if (!parent) continue;
+                const px = ((parent.left + parent.right + 1) / (2 * n)) * 100;
+                const cx = ((child.left + child.right + 1) / (2 * n)) * 100;
+                let mode: 'split' | 'merge-left' | 'merge-right' | 'sorted' | 'idle' = 'idle';
+                if (parent.phase === 'splitting') mode = 'split';
+                else if (parent.phase === 'merging' && child.phase === 'left') mode = 'merge-left';
+                else if (parent.phase === 'merging' && child.phase === 'right') mode = 'merge-right';
+                else if (parent.phase === 'sorted') mode = 'sorted';
+                connectors.push({ key: `${parent.id}->${child.id}`, px, cx, mode });
+              }
+            }
+
             return (
-              <div
-                key={row.depth}
-                data-testid={`ms-row-${row.depth}`}
-                className="flex items-stretch gap-1.5"
-              >
+              <React.Fragment key={row.depth}>
                 <div
-                  className="w-8 shrink-0 pt-0.5 text-right pr-1 text-[10px] font-mono text-slate-500"
-                  title={`Recursion depth ${row.depth}`}
+                  data-testid={`ms-row-${row.depth}`}
+                  className="flex items-stretch gap-1.5"
                 >
-                  d{row.depth}
+                  <div
+                    className="w-8 shrink-0 pt-1 text-right pr-1 text-[10px] font-mono text-slate-500"
+                    title={`Recursion depth ${row.depth}`}
+                  >
+                    d{row.depth}
+                  </div>
+                  <div className="flex-1 flex items-stretch">
+                    {row.items.map((item) =>
+                      item.kind === 'gap' ? (
+                        <div
+                          key={`gap-${item.left}`}
+                          data-placeholder="true"
+                          title={`Range [${item.left}..${item.right}] resolved at a shallower depth`}
+                          style={{ width: `${((item.right - item.left + 1) / n) * 100}%` }}
+                          className="rounded-md border border-dashed border-slate-800/50 bg-slate-900/10 mx-1"
+                        />
+                      ) : (
+                        <MergeSortNodeBox
+                          key={item.node!.id}
+                          node={item.node!}
+                          view={view}
+                          array={array}
+                          n={n}
+                          pointersByIndex={pointersByIndex}
+                          reserveBadges={hasBadges}
+                        />
+                      )
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 flex items-stretch">
-                  {row.items.map((item) =>
-                    item.kind === 'gap' ? (
-                      <div
-                        key={`gap-${item.left}`}
-                        data-placeholder="true"
-                        title={`Range [${item.left}..${item.right}] resolved at a shallower depth`}
-                        style={{ width: `${((item.right - item.left + 1) / n) * 100}%` }}
-                        className="rounded-md border border-dashed border-slate-800/70 bg-slate-900/10 mx-[1px]"
-                      />
-                    ) : (
-                      <MergeSortNodeBox
-                        key={item.node!.id}
-                        node={item.node!}
-                        view={view}
-                        array={array}
-                        n={n}
-                        pointersByIndex={pointersByIndex}
-                        reserveBadges={hasBadges}
-                      />
-                    )
+
+                {/* SVG Fork / Merge Branch Connectors between depth rows */}
+                {nextRow && connectors.length > 0 && (
+                  <div className="flex items-stretch gap-1.5 h-4 pointer-events-none">
+                    <div className="w-8 shrink-0" />
+                    <div className="flex-1 relative">
+                      <svg
+                        viewBox="0 0 100 20"
+                        preserveAspectRatio="none"
+                        className="w-full h-full overflow-visible"
+                      >
+                        {connectors.map((c) => {
+                          const stroke =
+                            c.mode === 'split'
+                              ? '#E879F9'
+                              : c.mode === 'merge-left'
+                              ? 'var(--sem-active-solid)'
+                              : c.mode === 'merge-right'
+                              ? 'var(--sem-comparing-solid)'
+                              : c.mode === 'sorted'
+                              ? 'var(--sem-sorted-solid)'
+                              : 'var(--svg-edge-default)';
+                          const isActiveBranch =
+                            c.mode === 'split' ||
+                            c.mode === 'merge-left' ||
+                            c.mode === 'merge-right';
+                          return (
+                            <path
+                              key={c.key}
+                              d={`M ${c.px} 1 C ${c.px} 11, ${c.cx} 9, ${c.cx} 19`}
+                              fill="none"
+                              style={{ stroke }}
+                              strokeWidth={isActiveBranch ? 1.8 : 1}
+                              strokeOpacity={isActiveBranch ? 0.95 : 0.45}
+                              strokeDasharray={
+                                c.mode === 'split' || c.mode === 'merge-left' || c.mode === 'merge-right'
+                                  ? '3 2'
+                                  : undefined
+                              }
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          );
+                        })}
+                      </svg>
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+
+          {/* Embedded Live Merge Arena: LEFT [i] vs RIGHT [j] -> TEMP BUFFER */}
+          {activeMerge && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              data-testid="ms-merge-arena"
+              className="mt-2 ml-9 rounded-xl border border-[#1F293D] bg-[#111827] px-3 py-2 shadow-sm flex flex-col gap-1.5"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono">
+                <span className="font-bold text-purple-400 uppercase tracking-wide">
+                  Merge Arena · Combining [{activeMerge.left}..{activeMerge.mid}] + [{activeMerge.mid + 1}..{activeMerge.right}]
+                </span>
+                <span className="text-slate-400 tabular-nums">
+                  {activeMerge.phase === 'copy'
+                    ? `Copying temp[] → arr[${activeMerge.copyTo ?? activeMerge.left}]`
+                    : `Comparing front pointers i=${activeMerge.i ?? '—'}, j=${activeMerge.j ?? '—'}`}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 font-mono text-xs">
+                {/* Left sorted half */}
+                <div
+                  style={{
+                    backgroundColor: 'var(--sem-active-bg)',
+                    borderColor: 'var(--sem-active-border)',
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
+                >
+                  <span style={{ color: 'var(--sem-active-text)' }} className="text-[9.5px] font-bold mr-0.5">
+                    LEFT:
+                  </span>
+                  {Array.from(
+                    { length: activeMerge.mid - activeMerge.left + 1 },
+                    (_, offset) => {
+                      const idx = activeMerge.left + offset;
+                      const isFront = activeMerge.i === idx;
+                      const isConsumed =
+                        activeMerge.i !== undefined && idx < activeMerge.i && activeMerge.phase !== 'copy';
+                      return (
+                        <span
+                          key={idx}
+                          className={`px-2 py-0.5 rounded border text-xs font-bold tabular-nums transition-all ${
+                            isFront
+                              ? 'bg-[#06B6D4] text-[#0B0F19] border-[#22D3EE] theme-solid-badge scale-105 shadow-sm'
+                              : isConsumed
+                              ? 'opacity-35 line-through border-dashed border-slate-600 text-slate-400'
+                              : 'bg-[#1E293B] border-[#334155] text-slate-200'
+                          }`}
+                        >
+                          {array[idx]?.value ?? '·'}
+                        </span>
+                      );
+                    }
+                  )}
+                </div>
+
+                <span className="text-[11px] font-bold text-amber-400">
+                  {activeMerge.phase === 'copy' ? '⇒ COPY' : 'vs'}
+                </span>
+
+                {/* Right sorted half */}
+                <div
+                  style={{
+                    backgroundColor: 'var(--sem-comparing-bg)',
+                    borderColor: 'var(--sem-comparing-border)',
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
+                >
+                  <span style={{ color: 'var(--sem-comparing-text)' }} className="text-[9.5px] font-bold mr-0.5">
+                    RIGHT:
+                  </span>
+                  {Array.from(
+                    { length: activeMerge.right - activeMerge.mid },
+                    (_, offset) => {
+                      const idx = activeMerge.mid + 1 + offset;
+                      const isFront = activeMerge.j === idx;
+                      const isConsumed =
+                        activeMerge.j !== undefined && idx < activeMerge.j && activeMerge.phase !== 'copy';
+                      return (
+                        <span
+                          key={idx}
+                          className={`px-2 py-0.5 rounded border text-xs font-bold tabular-nums transition-all ${
+                            isFront
+                              ? 'bg-[#F59E0B] text-[#0B0F19] border-[#FBBF24] theme-solid-badge scale-105 shadow-sm'
+                              : isConsumed
+                              ? 'opacity-35 line-through border-dashed border-slate-600 text-slate-400'
+                              : 'bg-[#1E293B] border-[#334155] text-slate-200'
+                          }`}
+                        >
+                          {array[idx]?.value ?? '·'}
+                        </span>
+                      );
+                    }
+                  )}
+                </div>
+
+                <span className="text-slate-400 font-bold">→</span>
+
+                {/* Live Temp Buffer Output */}
+                <div
+                  style={{
+                    backgroundColor: 'var(--sem-sorted-bg)',
+                    borderColor: 'var(--sem-sorted-border)',
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border min-w-[110px]"
+                >
+                  <span style={{ color: 'var(--sem-sorted-text)' }} className="text-[9.5px] font-bold mr-0.5">
+                    TEMP:
+                  </span>
+                  {tempBuffer.length === 0 ? (
+                    <span className="text-[10px] text-slate-400 italic">empty</span>
+                  ) : (
+                    tempBuffer.map((val, tIdx) => (
+                      <span
+                        key={`${tIdx}-${val}`}
+                        className={`px-2 py-0.5 rounded border text-xs font-bold tabular-nums ${
+                          tempActiveIdx === tIdx
+                            ? 'bg-[#10B981] text-[#0B0F19] border-[#34D399] theme-solid-badge scale-105 shadow-sm'
+                            : 'bg-[#1E293B] border-[#334155] text-emerald-300'
+                        }`}
+                      >
+                        {val}
+                      </span>
+                    ))
                   )}
                 </div>
               </div>
-            );
-          })}
+            </motion.div>
+          )}
         </div>
       </div>
     </div>
@@ -363,26 +625,22 @@ const MergeSortNodeBox: React.FC<MergeSortNodeBoxProps> = ({
       animate={{ opacity: node.phase === 'consumed' ? 0.5 : 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
       style={{ width: `${widthPct}%` }}
-      className={`relative rounded-md border p-[2px] transition-colors duration-300 mx-[1px] ${PHASE_BOX_CLS[node.phase]}`}
+      className={`relative rounded-lg border-2 p-1 transition-all duration-300 ${
+        node.depth === 0 ? 'mx-0.5' : node.depth === 1 ? 'mx-1' : 'mx-1.5'
+      } ${PHASE_BOX_CLS[node.phase]}`}
     >
       {/* Header: range + phase chip / merged check */}
-      <div className="flex items-center justify-between gap-1 px-0.5 leading-none min-h-[13px]">
-        <span className="text-[9px] font-mono tabular-nums text-slate-400 truncate">
+      <div className="flex items-center justify-between gap-1 px-0.5 leading-none min-h-[14px]">
+        <span className="text-[9px] font-mono tabular-nums text-slate-400 shrink-0 whitespace-nowrap">
           [{node.left}..{node.right}]
         </span>
-        {chip && node.right > node.left ? (
+        {chip && (
           <span
-            className={`px-1 py-[1px] rounded-xs border text-[8px] font-mono font-bold tracking-wide whitespace-nowrap ${chip.cls}`}
+            className={`px-1 py-[1px] rounded-xs border text-[8px] font-mono font-bold tracking-wide whitespace-nowrap shrink-0 ${chip.cls}`}
           >
-            {chip.text}
+            {len === 1 ? chip.shortText : chip.text}
           </span>
-        ) : chip ? (
-          <span
-            className={`px-1 py-[1px] rounded-xs border text-[8px] font-mono font-bold ${chip.cls}`}
-          >
-            {chip.text}
-          </span>
-        ) : null}
+        )}
       </div>
 
       {/* Cells */}

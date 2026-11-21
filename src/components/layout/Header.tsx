@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Volume2,
@@ -16,7 +16,11 @@ import {
 } from 'lucide-react';
 import { AlgorithmModule } from '../../core/types';
 import { StepDSALogo } from '../brand/StepDSALogo';
-import { AlgorithmCommandPaletteModal } from '../navigation/AlgorithmCommandPaletteModal';
+const AlgorithmCommandPaletteModal = lazy(() =>
+  import('../navigation/AlgorithmCommandPaletteModal').then((m) => ({
+    default: m.AlgorithmCommandPaletteModal,
+  }))
+);
 import { usePlatformShortcuts } from '../../utils/platformShortcuts';
 import { AppThemeId, AppThemeConfig, APP_THEMES, THEME_ORDER } from '../../utils/themeEngine';
 
@@ -118,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
                 <span
                   className={`w-1.5 h-1.5 rounded-full shrink-0 transition-colors ${
-                    isActive ? 'bg-[#10B981]' : 'bg-transparent'
+                    isActive ? 'theme-accent-dot' : 'bg-transparent'
                   }`}
                 />
                 {view === 'dashboard' ? (
@@ -331,14 +335,18 @@ export const Header: React.FC<HeaderProps> = ({
         </a>
       </div>
 
-      {/* Algorithm Command Palette Modal (Ctrl+K / Cmd+K Quick Switcher) */}
-      <AlgorithmCommandPaletteModal
-        isOpen={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        modules={modules}
-        currentModule={currentModule}
-        onSelectModule={onSelectModule}
-      />
+      {/* Algorithm Command Palette Modal (Ctrl+K / Cmd+K Quick Switcher) — Lazy-mounted only when open */}
+      {paletteOpen && (
+        <Suspense fallback={null}>
+          <AlgorithmCommandPaletteModal
+            isOpen={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
+            modules={modules}
+            currentModule={currentModule}
+            onSelectModule={onSelectModule}
+          />
+        </Suspense>
+      )}
     </header>
   );
 };

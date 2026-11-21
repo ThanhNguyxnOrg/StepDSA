@@ -1,3 +1,5 @@
+import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface QueueItem {
@@ -283,95 +285,160 @@ public:
     const { items, frontIndex, rearIndex, capacity, recentAction, incomingQueue = [], servedHistory = [] } = frame.state;
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-4">
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-5 select-none">
         {/* Header HUD */}
-        <div className="flex flex-wrap items-center justify-center gap-2.5">
-          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
-            Capacity: <span className="text-cyan-400 font-bold">{capacity}</span>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-xs font-mono text-slate-300">
+            Capacity: <span className="text-cyan-400 font-bold tabular-nums">{capacity}</span>
           </div>
-          <div className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
-            Size: <span className="text-emerald-400 font-bold">{items.length}</span>
+          <div className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-xs font-mono text-slate-300">
+            Size: <span className="text-emerald-400 font-bold tabular-nums">{items.length}/{capacity}</span>
           </div>
           {recentAction && (
-            <div className="px-2.5 py-1 rounded bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold">
-              ACTION: {recentAction}
+            <div
+              style={{
+                backgroundColor:
+                  recentAction === 'DEQUEUE' ? 'var(--sem-swapping-bg)' : 'var(--sem-active-bg)',
+                borderColor:
+                  recentAction === 'DEQUEUE' ? 'var(--sem-swapping-border)' : 'var(--sem-active-border)',
+                color:
+                  recentAction === 'DEQUEUE' ? 'var(--sem-swapping-text)' : 'var(--sem-active-text)',
+              }}
+              className="px-2.5 py-1 rounded-lg border text-xs font-mono font-bold"
+            >
+              OP: {recentAction}
             </div>
           )}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/70 border border-slate-800 text-[11px] font-mono text-slate-400">
-            <span>Arriving Stream:</span>
-            {incomingQueue.length === 0 ? (
-              <span className="text-slate-600">exhausted</span>
+        </div>
+
+        {/* Open-Ended FIFO Pipeline Container */}
+        <div className="relative flex items-center justify-between py-6 px-4 sm:px-6 bg-[#111827] border-y-2 border-x-0 border-[#334155] rounded-2xl max-w-4xl w-full shadow-inner gap-3">
+          {/* Outflow Label (Front / Dequeue) */}
+          <div className="flex flex-col items-center text-rose-400 font-mono text-xs font-bold shrink-0">
+            <span>← EXIT</span>
+            <span className="text-[9.5px] text-slate-500 font-normal">DEQUEUE (FRONT)</span>
+          </div>
+
+          {/* Animated Queue Items */}
+          <div className="flex items-center justify-center gap-2.5 overflow-x-auto py-2 px-2 flex-1 min-h-[96px]">
+            <AnimatePresence mode="popLayout">
+              {items.length === 0 ? (
+                <span className="text-xs font-mono text-slate-500 italic">Queue is empty</span>
+              ) : (
+                items.map((item, idx) => {
+                  const isFront = idx === frontIndex;
+                  const isRear = idx === rearIndex;
+
+                  const boxStyle: React.CSSProperties = isFront
+                    ? {
+                        backgroundColor: 'var(--sem-swapping-bg)',
+                        borderColor: 'var(--sem-swapping-border)',
+                        color: 'var(--sem-swapping-text)',
+                      }
+                    : isRear
+                    ? {
+                        backgroundColor: 'var(--sem-sorted-bg)',
+                        borderColor: 'var(--sem-sorted-border)',
+                        color: 'var(--sem-sorted-text)',
+                      }
+                    : {
+                        backgroundColor: 'var(--sem-default-cell-bg)',
+                        borderColor: 'var(--sem-default-border)',
+                        color: 'var(--sem-default-text)',
+                      };
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, x: 24, scale: 0.9 }}
+                      animate={{ opacity: 1, x: 0, scale: isFront || isRear ? 1.05 : 1 }}
+                      exit={{ opacity: 0, x: -24, scale: 0.9 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                      className="flex flex-col items-center shrink-0"
+                    >
+                      <div
+                        style={boxStyle}
+                        className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center font-mono font-bold shadow-sm border-2 ${
+                          isFront ? 'ring-2 ring-[#F43F5E]/40' : isRear ? 'ring-2 ring-[#10B981]/40' : ''
+                        }`}
+                      >
+                        <span className="text-base font-extrabold tabular-nums leading-none">{item.val}</span>
+                        <span className="text-[9px] opacity-65 mt-0.5 tabular-nums">[{idx}]</span>
+                      </div>
+
+                      <div className="flex gap-1 mt-1.5 min-h-[18px] items-center">
+                        {isFront && (
+                          <span
+                            style={{
+                              backgroundColor: 'var(--sem-swapping-solid)',
+                              color: 'var(--sem-swapping-on-solid)',
+                            }}
+                            className="theme-solid-badge text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded uppercase"
+                          >
+                            FRONT
+                          </span>
+                        )}
+                        {isRear && (
+                          <span
+                            style={{
+                              backgroundColor: 'var(--sem-sorted-solid)',
+                              color: 'var(--sem-sorted-on-solid)',
+                            }}
+                            className="theme-solid-badge text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded uppercase"
+                          >
+                            REAR
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Inflow Label (Rear / Enqueue) */}
+          <div className="flex flex-col items-center text-emerald-400 font-mono text-xs font-bold shrink-0">
+            <span>ENTRY ←</span>
+            <span className="text-[9.5px] text-slate-500 font-normal">ENQUEUE (REAR)</span>
+          </div>
+        </div>
+
+        {/* Served (FIFO Output) vs Arriving Stream */}
+        <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-4xl">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#111827] border border-[#1F293D] text-[11px] font-mono">
+            <span className="text-rose-400 font-bold">Served (FIFO):</span>
+            {servedHistory.length === 0 ? (
+              <span className="text-slate-500 italic">none yet</span>
             ) : (
-              incomingQueue.map((v, i) => (
-                <span key={i} className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">
+              servedHistory.map((v, i) => (
+                <span
+                  key={`${v}-${i}`}
+                  style={{
+                    backgroundColor: 'var(--sem-swapping-bg)',
+                    borderColor: 'var(--sem-swapping-border)',
+                    color: 'var(--sem-swapping-text)',
+                  }}
+                  className="px-1.5 py-0.5 rounded border font-bold tabular-nums"
+                >
                   {v}
                 </span>
               ))
             )}
           </div>
-          {servedHistory.length > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-rose-950/30 border border-rose-800/40 text-[11px] font-mono text-rose-300">
-              <span>Served (FIFO):</span>
-              {servedHistory.map((v, i) => (
-                <span key={i} className="px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-700/50 text-rose-200 font-bold">
+
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#111827] border border-[#1F293D] text-[11px] font-mono">
+            <span className="text-cyan-400 font-bold">Arriving Stream:</span>
+            {incomingQueue.length === 0 ? (
+              <span className="text-slate-500 italic">exhausted</span>
+            ) : (
+              incomingQueue.map((v, i) => (
+                <span key={`${v}-${i}`} className="px-1.5 py-0.5 rounded bg-[#1E293B] border border-[#334155] text-slate-300 font-bold tabular-nums">
                   {v}
                 </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Tube / Pipe Pipeline Container */}
-        <div className="relative flex items-center justify-center py-6 px-6 bg-slate-950/60 border-y-2 border-slate-800 rounded-3xl max-w-4xl w-full">
-          {/* Outflow Label (Front) */}
-          <div className="absolute left-3 flex flex-col items-center text-rose-400 font-mono text-xs font-bold">
-            <span>← EXIT</span>
-            <span className="text-[10px] text-slate-500 font-normal">DEQUEUE</span>
-          </div>
-
-          {/* Queue Slot Cells */}
-          <div className="flex items-center gap-3 overflow-x-auto px-16 py-2">
-            {items.map((item, idx) => {
-              const isFront = idx === frontIndex;
-              const isRear = idx === rearIndex;
-
-              return (
-                <div key={item.id} className="flex flex-col items-center">
-                  {/* Item Box */}
-                  <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center font-mono font-bold text-lg shadow-xl border-2 transition-all duration-300 ${
-                      isFront
-                        ? 'border-rose-400 bg-rose-950/60 text-rose-200 ring-2 ring-rose-400/40 scale-105'
-                        : isRear
-                        ? 'border-emerald-400 bg-emerald-950/60 text-emerald-200 ring-2 ring-emerald-400/40 scale-105'
-                        : 'border-blue-500/40 bg-slate-900/90 text-white'
-                    }`}
-                  >
-                    {item.val}
-                  </div>
-
-                  {/* Pointer Badges */}
-                  <div className="flex flex-col gap-1 mt-2 items-center">
-                    {isFront && (
-                      <span className="text-[9px] font-mono font-bold bg-rose-950 border border-rose-600/60 text-rose-300 px-1.5 py-0.5 rounded">
-                        FRONT
-                      </span>
-                    )}
-                    {isRear && (
-                      <span className="text-[9px] font-mono font-bold bg-emerald-950 border border-emerald-600/60 text-emerald-300 px-1.5 py-0.5 rounded">
-                        REAR
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Inflow Label (Rear) */}
-          <div className="absolute right-3 flex flex-col items-center text-emerald-400 font-mono text-xs font-bold">
-            <span>ENTRY ←</span>
-            <span className="text-[10px] text-slate-500 font-normal">ENQUEUE</span>
+              ))
+            )}
           </div>
         </div>
       </div>

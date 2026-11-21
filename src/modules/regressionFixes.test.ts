@@ -104,8 +104,8 @@ describe('Visualizer regression fixes', () => {
     }
   });
 
-  it('has 162 registered modules with unique ids', () => {
-    expect(allModules).toHaveLength(162);
-    expect(new Set(allModules.map((m) => m.id)).size).toBe(162);
+  it('has 168 registered modules with unique ids', () => {
+    expect(allModules).toHaveLength(168);
+    expect(new Set(allModules.map((m) => m.id)).size).toBe(168);
   });
 });

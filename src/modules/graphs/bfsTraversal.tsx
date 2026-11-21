@@ -586,33 +586,40 @@ def bfs(graph, start):
                     cy={n.y}
                     r="18"
                     className="transition-all duration-300"
-                    fill={
-                      isActive
-                        ? '#F59E0B'
+                    style={{
+                      fill: isActive
+                        ? 'var(--sem-comparing-solid)'
                         : isVisited
-                        ? '#10B981'
+                        ? 'var(--sem-sorted-solid)'
                         : isQueued
-                        ? '#A855F7'
-                        : '#1E293B'
-                    }
-                    stroke={
-                      isActive
-                        ? '#FDE68A'
+                        ? 'var(--sem-pivot-solid)'
+                        : 'var(--svg-node-bg)',
+                      stroke: isActive
+                        ? 'var(--sem-comparing-border)'
                         : onPath
-                        ? '#C4B5FD'
+                        ? 'var(--sem-pivot-border)'
                         : isVisited
-                        ? '#6EE7B7'
+                        ? 'var(--sem-sorted-border)'
                         : isQueued
-                        ? '#E9D5FF'
-                        : '#475569'
-                    }
+                        ? 'var(--sem-pivot-border)'
+                        : 'var(--svg-node-border)',
+                    }}
                     strokeWidth={isActive || onPath ? '3' : '2.5'}
                   />
                   <text
                     x={n.x}
                     y={n.y + 4}
                     textAnchor="middle"
-                    fill={isVisited || isQueued || isActive ? '#0B0F19' : '#FFFFFF'}
+                    className={isVisited || isQueued || isActive ? 'svg-on-solid' : undefined}
+                    style={{
+                      fill: isActive
+                        ? 'var(--sem-comparing-on-solid)'
+                        : isVisited
+                        ? 'var(--sem-sorted-on-solid)'
+                        : isQueued
+                        ? 'var(--sem-pivot-on-solid)'
+                        : 'var(--svg-node-text)',
+                    }}
                     fontSize="12"
                     fontWeight="bold"
                     fontFamily="monospace"
@@ -623,7 +630,7 @@ def bfs(graph, start):
                     x={n.x}
                     y={n.y + 31}
                     textAnchor="middle"
-                    fill="#67E8F9"
+                    style={{ fill: 'var(--svg-label-cyan)' }}
                     fontSize="9"
                     fontWeight="bold"
                     fontFamily="monospace"
@@ -636,7 +643,7 @@ def bfs(graph, start):
                       x={n.x}
                       y={n.y + 43}
                       textAnchor="middle"
-                      fill="#34D399"
+                      style={{ fill: 'var(--svg-label-emerald)' }}
                       fontSize="8.5"
                       fontWeight="bold"
                       fontFamily="monospace"

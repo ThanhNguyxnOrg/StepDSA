@@ -1,3 +1,5 @@
+import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface MonotonicStackState {
@@ -221,28 +223,80 @@ export const monotonicStackModule: AlgorithmModule<number[], MonotonicStackState
   },
   renderStage: (frame: ExecutionFrame<MonotonicStackState>) => {
     const { array, result, stack, currentIndex } = frame.state;
+    const maxVal = Math.max(...array.map((v) => Math.abs(v)), 1);
 
     return (
-      <div className="flex flex-col items-center justify-center p-6 w-full min-h-[380px] gap-8">
-        {/* Input Array and Results Table */}
-        <div className="flex flex-col items-center gap-3">
-          <span className="text-xs font-mono text-slate-400 font-semibold tracking-wider">INPUT ARRAY & NEXT GREATER VALUE</span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
+      <div className="flex flex-col items-center justify-center p-4 sm:p-6 w-full min-h-[360px] gap-6 select-none">
+        {/* Input Array Bars + Next Greater Element Result Row */}
+        <div className="flex flex-col items-center gap-2.5 w-full max-w-4xl">
+          <span className="text-[11px] font-mono text-slate-400 font-semibold tracking-wider uppercase">
+            Input Array &amp; Resolved Next Greater Element (NGE)
+          </span>
+          <div className="flex flex-wrap items-end justify-center gap-2.5">
             {array.map((val, idx) => {
               const isCurrent = currentIndex === idx;
               const inStack = stack.includes(idx);
               const resVal = result[idx];
+              const isResolved = resVal !== null;
+              const barH = Math.max(14, Math.round((Math.abs(val) / maxVal) * 72));
 
-              let boxClass = 'border-slate-700 bg-slate-900/60';
-              if (isCurrent) boxClass = 'border-amber-400 bg-amber-950/40 ring-2 ring-amber-400';
-              else if (inStack) boxClass = 'border-indigo-500 bg-indigo-950/40';
+              const cardStyle: React.CSSProperties = isCurrent
+                ? {
+                    backgroundColor: 'var(--sem-comparing-bg)',
+                    borderColor: 'var(--sem-comparing-border)',
+                    color: 'var(--sem-comparing-text)',
+                  }
+                : inStack
+                ? {
+                    backgroundColor: 'var(--sem-pivot-bg)',
+                    borderColor: 'var(--sem-pivot-border)',
+                    color: 'var(--sem-pivot-text)',
+                  }
+                : isResolved
+                ? {
+                    backgroundColor: 'var(--sem-sorted-bg)',
+                    borderColor: 'var(--sem-sorted-border)',
+                    color: 'var(--sem-sorted-text)',
+                  }
+                : {
+                    backgroundColor: 'var(--sem-default-cell-bg)',
+                    borderColor: 'var(--sem-default-border)',
+                    color: 'var(--sem-default-text)',
+                  };
 
               return (
-                <div key={idx} className={`flex flex-col items-center justify-between p-2 w-16 h-24 rounded-lg border-2 transition-all ${boxClass}`}>
-                  <span className="text-xs font-mono text-slate-500">[{idx}]</span>
-                  <span className="text-lg font-bold font-mono text-white">{val}</span>
-                  <div className="text-[11px] font-mono px-1 py-0.5 rounded bg-slate-800 text-slate-300 w-full text-center">
-                    {resVal !== null ? resVal : '—'}
+                <div key={idx} className="flex flex-col items-center gap-1.5">
+                  {/* Proportional bar */}
+                  <div className="h-[74px] flex items-end justify-center">
+                    <motion.div
+                      initial={false}
+                      animate={{ height: barH }}
+                      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                      style={{
+                        backgroundColor: isCurrent
+                          ? 'var(--sem-comparing-solid)'
+                          : inStack
+                          ? 'var(--sem-pivot-solid)'
+                          : isResolved
+                          ? 'var(--sem-sorted-solid)'
+                          : 'var(--sem-default-border)',
+                      }}
+                      className="w-8 rounded-t-md opacity-85"
+                    />
+                  </div>
+
+                  {/* Value + NGE card */}
+                  <div
+                    style={cardStyle}
+                    className={`flex flex-col items-center justify-between p-2 w-16 rounded-xl border-2 transition-all ${
+                      isCurrent ? 'ring-2 ring-[#F59E0B]/45 scale-105 shadow-md' : ''
+                    }`}
+                  >
+                    <span className="text-[10px] font-mono opacity-65 tabular-nums">[{idx}]</span>
+                    <span className="text-base font-extrabold font-mono tabular-nums my-0.5">{val}</span>
+                    <div className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0B0F19]/60 border border-[#1F293D] w-full text-center font-bold tabular-nums">
+                      {resVal !== null ? `→ ${resVal}` : '—'}
+                    </div>
                   </div>
                 </div>
               );
@@ -250,20 +304,52 @@ export const monotonicStackModule: AlgorithmModule<number[], MonotonicStackState
           </div>
         </div>
 
-        {/* Monotonic Stack View */}
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-xs font-mono text-indigo-400 font-semibold tracking-wider">MONOTONIC STACK (INDEX : VALUE)</span>
-          <div className="flex items-center gap-2 p-3 bg-slate-900/80 border border-slate-700 rounded-xl min-w-[280px] justify-center min-h-[56px]">
-            {stack.length === 0 ? (
-              <span className="text-xs font-mono text-slate-500 italic">Empty Stack</span>
-            ) : (
-              stack.map((idx) => (
-                <div key={idx} className="flex flex-col items-center px-3 py-1 bg-indigo-900/60 border border-indigo-500 rounded text-center">
-                  <span className="text-xs font-mono text-indigo-200 font-bold">{array[idx]}</span>
-                  <span className="text-[10px] font-mono text-slate-400">idx {idx}</span>
-                </div>
-              ))
-            )}
+        {/* Monotonic Decreasing Stack Tray */}
+        <div className="flex flex-col items-center gap-2 w-full max-w-2xl">
+          <div className="flex items-center gap-2 text-[11px] font-mono font-semibold tracking-wider uppercase text-purple-400">
+            <span>Monotonic Decreasing Stack (Waiting for Greater Element)</span>
+            <span className="text-slate-500">· size {stack.length}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 p-3 bg-[#111827] border-2 border-[#1F293D] rounded-xl min-w-[300px] justify-center min-h-[64px] shadow-sm">
+            <AnimatePresence mode="popLayout">
+              {stack.length === 0 ? (
+                <span className="text-xs font-mono text-slate-500 italic">Empty Stack</span>
+              ) : (
+                stack.map((idx, pos) => {
+                  const isTop = pos === stack.length - 1;
+                  return (
+                    <motion.div
+                      key={idx}
+                      layout
+                      initial={{ opacity: 0, scale: 0.8, y: -8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.75, y: -10 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+                      style={{
+                        backgroundColor: isTop ? 'var(--sem-comparing-bg)' : 'var(--sem-pivot-bg)',
+                        borderColor: isTop ? 'var(--sem-comparing-border)' : 'var(--sem-pivot-border)',
+                        color: isTop ? 'var(--sem-comparing-text)' : 'var(--sem-pivot-text)',
+                      }}
+                      className="flex flex-col items-center px-3 py-1.5 border-2 rounded-lg text-center font-mono relative"
+                    >
+                      {isTop && (
+                        <span
+                          style={{
+                            backgroundColor: 'var(--sem-comparing-solid)',
+                            color: 'var(--sem-comparing-on-solid)',
+                          }}
+                          className="theme-solid-badge absolute -top-2.5 px-1 py-0.2 rounded text-[7.5px] font-bold uppercase"
+                        >
+                          TOP
+                        </span>
+                      )}
+                      <span className="text-sm font-extrabold tabular-nums">{array[idx]}</span>
+                      <span className="text-[9.5px] opacity-75 tabular-nums">idx {idx}</span>
+                    </motion.div>
+                  );
+                })
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

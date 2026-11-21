@@ -262,76 +262,226 @@ void traverse(Node* head) {
   },
   renderStage: (frame: ExecutionFrame<CircularLinkedListState>) => {
     const { nodes, activePointerIndex, pointerName } = frame.state;
+    const n = Math.max(nodes.length, 1);
+    const cx = 185;
+    const cy = 148;
+    const rx = 122;
+    const ry = 88;
+    const nodeR = 23;
+
+    const coords = nodes.map((_, idx) => {
+      const angle = (idx / n) * Math.PI * 2 - Math.PI / 2;
+      return {
+        x: cx + rx * Math.cos(angle),
+        y: cy + ry * Math.sin(angle),
+        tagX: cx + (rx + 36) * Math.cos(angle),
+        tagY: cy + (ry + 30) * Math.sin(angle),
+      };
+    });
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
-            Nodes: <span className="text-cyan-400 font-bold">{nodes.length}</span>
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 sm:p-6 gap-4 select-none">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-xs font-mono text-slate-300">
+            Nodes: <span className="text-cyan-400 font-bold tabular-nums">{nodes.length}</span>
           </div>
-          <div className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
-            Structure: <span className="text-emerald-400 font-bold">Closed Loop (Ring)</span>
+          <div className="px-2.5 py-1 rounded-lg bg-[#111827] border border-[#1F293D] text-xs font-mono text-slate-300">
+            Invariant: <span className="text-emerald-400 font-bold">tail.next === head</span>
           </div>
           {pointerName && (
-            <div className="px-3 py-1 rounded bg-indigo-950/80 border border-indigo-700/60 text-xs font-mono text-indigo-300 font-bold">
+            <div
+              style={{
+                backgroundColor: 'var(--sem-active-bg)',
+                borderColor: 'var(--sem-active-border)',
+                color: 'var(--sem-active-text)',
+              }}
+              className="px-2.5 py-1 rounded-lg border text-xs font-mono font-bold"
+            >
               {pointerName}
             </div>
           )}
         </div>
 
-        {/* Circular Ring Visualizer */}
-        <div className="relative flex flex-col items-center max-w-3xl w-full p-8 bg-slate-950/70 border border-slate-800 rounded-3xl">
-          {/* Linear Nodes with arrows */}
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            {nodes.map((node, idx) => {
-              const isActive = idx === activePointerIndex;
-              const isHead = idx === 0;
-              const isTail = idx === nodes.length - 1;
+        {/* True 360° SVG Circular Linked Ring */}
+        <div className="w-full max-w-lg rounded-2xl bg-[#111827] border border-[#1F293D] p-3 flex items-center justify-center shadow-sm">
+          <svg viewBox="0 0 370 296" className="w-full max-w-[400px] h-auto overflow-visible">
+            <defs>
+              <marker id="cll-arr" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" style={{ fill: 'var(--svg-edge-default)' }} />
+              </marker>
+              <marker id="cll-arr-active" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" style={{ fill: 'var(--sem-comparing-solid)' }} />
+              </marker>
+              <marker id="cll-arr-loop" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" style={{ fill: 'var(--sem-sorted-solid)' }} />
+              </marker>
+            </defs>
+
+            {/* Directed circular next edges including TAIL -> HEAD wrap edge */}
+            {nodes.map((_, idx) => {
+              const nextIdx = (idx + 1) % n;
+              const a = coords[idx];
+              const b = coords[nextIdx];
+              if (!a || !b) return null;
+              const dx = b.x - a.x;
+              const dy = b.y - a.y;
+              const dist = Math.hypot(dx, dy) || 1;
+              const ux = dx / dist;
+              const uy = dy / dist;
+              const isLoopBack = idx === n - 1;
+              const isCurrentEdge = idx === activePointerIndex;
 
               return (
-                <div key={node.id} className="flex items-center gap-3">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center font-mono font-bold border-2 shadow-xl transition-all duration-300 ${
-                        isActive
-                          ? 'border-cyan-400 bg-cyan-950/70 text-cyan-200 ring-4 ring-cyan-400/40 scale-110'
-                          : isHead
-                          ? 'border-emerald-400 bg-emerald-950/50 text-emerald-200'
-                          : isTail
-                          ? 'border-amber-400 bg-amber-950/50 text-amber-200'
-                          : 'border-blue-500/40 bg-slate-900/90 text-white'
-                      }`}
+                <g key={`edge-${idx}`}>
+                  <line
+                    x1={a.x + ux * (nodeR + 3)}
+                    y1={a.y + uy * (nodeR + 3)}
+                    x2={b.x - ux * (nodeR + 8)}
+                    y2={b.y - uy * (nodeR + 8)}
+                    style={{
+                      stroke: isCurrentEdge
+                        ? 'var(--sem-comparing-solid)'
+                        : isLoopBack
+                        ? 'var(--sem-sorted-solid)'
+                        : 'var(--svg-edge-default)',
+                    }}
+                    strokeWidth={isCurrentEdge || isLoopBack ? 2.6 : 2}
+                    strokeDasharray={isLoopBack ? '5 3' : undefined}
+                    markerEnd={
+                      isCurrentEdge
+                        ? 'url(#cll-arr-active)'
+                        : isLoopBack
+                        ? 'url(#cll-arr-loop)'
+                        : 'url(#cll-arr)'
+                    }
+                  />
+                  {isLoopBack && (
+                    <text
+                      x={(a.x + b.x) / 2 - 14}
+                      y={(a.y + b.y) / 2 - 6}
+                      textAnchor="middle"
+                      style={{ fill: 'var(--svg-label-emerald)' }}
+                      fontSize="8.5"
+                      fontWeight="bold"
+                      fontFamily="monospace"
                     >
-                      <span className="text-lg">{node.val}</span>
-                      <span className="text-[9px] text-slate-400 font-normal">
-                        {isHead ? 'HEAD' : isTail ? 'TAIL' : `#${idx}`}
-                      </span>
-                    </div>
-
-                    {isActive && (
-                      <span className="mt-2 text-[9px] font-mono font-bold bg-cyan-950 border border-cyan-500 text-cyan-300 px-1.5 py-0.5 rounded">
-                        ▲ curr
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Next Arrow between nodes */}
-                  {idx < nodes.length - 1 && (
-                    <div className="flex items-center text-slate-500 font-mono text-lg font-bold">
-                      →
-                    </div>
+                      tail→head
+                    </text>
                   )}
-                </div>
+                </g>
               );
             })}
-          </div>
 
-          {/* Loop Return Path from Tail to Head */}
-          <div className="w-full mt-6 pt-4 border-t border-dashed border-cyan-500/50 flex items-center justify-between text-xs font-mono text-cyan-400 px-4">
-            <span className="flex items-center gap-1">⮐ Loop to Head</span>
-            <span className="text-[10px] text-slate-500">tail.next === head (Infinite Ring)</span>
-            <span>Tail ⮑</span>
-          </div>
+            {/* Center label */}
+            <text
+              x={cx}
+              y={cy - 4}
+              textAnchor="middle"
+              style={{ fill: 'var(--theme-text-muted)' }}
+              fontSize="9.5"
+              fontWeight="bold"
+              fontFamily="monospace"
+            >
+              360° CLOSED RING
+            </text>
+            <text
+              x={cx}
+              y={cy + 11}
+              textAnchor="middle"
+              style={{ fill: 'var(--theme-text-subtle)' }}
+              fontSize="8.5"
+              fontFamily="monospace"
+            >
+              no NULL terminator
+            </text>
+
+            {/* Circular Nodes */}
+            {nodes.map((node, idx) => {
+              const pos = coords[idx];
+              const isActive = idx === activePointerIndex;
+              const isHead = idx === 0;
+              const isTail = idx === n - 1;
+              const fill = isActive
+                ? 'var(--sem-comparing-bg)'
+                : isHead
+                ? 'var(--sem-sorted-bg)'
+                : isTail
+                ? 'var(--sem-pivot-bg)'
+                : 'var(--svg-node-bg)';
+              const stroke = isActive
+                ? 'var(--sem-comparing-border)'
+                : isHead
+                ? 'var(--sem-sorted-border)'
+                : isTail
+                ? 'var(--sem-pivot-border)'
+                : 'var(--svg-node-border)';
+              const textFill = isActive
+                ? 'var(--sem-comparing-text)'
+                : isHead
+                ? 'var(--sem-sorted-text)'
+                : isTail
+                ? 'var(--sem-pivot-text)'
+                : 'var(--svg-node-text)';
+
+              return (
+                <g key={node.id}>
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={nodeR}
+                    style={{ fill, stroke }}
+                    strokeWidth={isActive ? 3.2 : 2.2}
+                  />
+                  <text
+                    x={pos.x}
+                    y={pos.y + 3}
+                    textAnchor="middle"
+                    style={{ fill: textFill }}
+                    fontSize="13"
+                    fontWeight="bold"
+                    fontFamily="monospace"
+                  >
+                    {node.val}
+                  </text>
+                  <text
+                    x={pos.x}
+                    y={pos.y + 14}
+                    textAnchor="middle"
+                    style={{ fill: 'var(--theme-text-muted)' }}
+                    fontSize="7.5"
+                    fontFamily="monospace"
+                  >
+                    {isHead ? 'HEAD' : isTail ? 'TAIL' : `#${idx}`}
+                  </text>
+
+                  {isActive && (
+                    <g>
+                      <rect
+                        x={pos.tagX - 20}
+                        y={pos.tagY - 8}
+                        width={40}
+                        height={15}
+                        rx={4}
+                        style={{ fill: 'var(--sem-comparing-solid)' }}
+                      />
+                      <text
+                        x={pos.tagX}
+                        y={pos.tagY + 2.5}
+                        textAnchor="middle"
+                        className="svg-on-solid"
+                        style={{ fill: 'var(--sem-comparing-on-solid)' }}
+                        fontSize="8"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        curr
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
         </div>
       </div>
     );

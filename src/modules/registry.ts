@@ -175,6 +175,12 @@ import { twoThreeTreeModule } from './trees/twoThreeTree';
 import { mergesortRecursionTreeModule } from './recursion/mergesortRecursionTree';
 import { quicksortPartitionTreeModule } from './recursion/quicksortPartitionTree';
 import { backtrackingDecisionTreeModule } from './recursion/backtrackingDecisionTree';
+import { lruCacheModule } from './linkedList/lruCache';
+import { trappingRainWaterModule } from './arrays/trappingRainWater';
+import { dutchNationalFlagModule } from './arrays/dutchNationalFlag';
+import { prefixSumModule } from './arrays/prefixSum';
+import { lcaBinaryTreeModule } from './trees/lcaBinaryTree';
+import { bloomFilterModule } from './arrays/bloomFilter';
 
 /**
  * Modules are exported as-authored. Earlier revisions patched empty first frames with a
@@ -346,6 +352,12 @@ const curriculumModules: AlgorithmModule[] = [
   mergesortRecursionTreeModule,
   quicksortPartitionTreeModule,
   backtrackingDecisionTreeModule,
+  lruCacheModule,
+  trappingRainWaterModule,
+  dutchNationalFlagModule,
+  prefixSumModule,
+  lcaBinaryTreeModule,
+  bloomFilterModule,
 ];
 
 /**

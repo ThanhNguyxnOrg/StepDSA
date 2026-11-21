@@ -229,15 +229,16 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                       onClick={() => shortcuts.setOSMode(m.id)}
                       className={`relative px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold transition-colors cursor-pointer z-10 flex items-center gap-1 ${
                         isSelected
-                          ? 'text-[#0B0F19] font-bold'
+                          ? 'font-bold'
                           : 'text-slate-400 hover:text-white'
                       }`}
+                      style={isSelected ? { color: 'var(--theme-on-accent)' } : undefined}
                     >
                       {isSelected && (
                         <motion.div
                           layoutId="os-shortcut-mode-pill"
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                          className="absolute inset-0 rounded-lg bg-[#10B981] -z-10"
+                          className="absolute inset-0 rounded-lg theme-accent-bg -z-10"
                         />
                       )}
                       <span>{m.label}</span>
@@ -364,7 +365,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 rounded-lg bg-[#10B981] text-[#0B0F19] font-bold hover:bg-[#059669] transition-colors cursor-pointer"
+              className="px-4 py-1.5 rounded-lg theme-accent-bg font-bold transition-colors cursor-pointer"
             >
               Done
             </button>

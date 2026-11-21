@@ -148,7 +148,7 @@ export const TheoryDrawer: React.FC<TheoryDrawerProps> = ({
                   type="button"
                   onClick={() => onSelectModule(related.id)}
                   title={`Open ${related.label}`}
-                  className="group flex items-center gap-1 px-2 py-1 rounded-md bg-[#8B5CF6]/10 border border-[#8B5CF6]/30 text-[11px] font-mono font-semibold text-[#C4B5FD] hover:bg-[#8B5CF6]/20 hover:text-white transition-colors cursor-pointer"
+                  className="group flex items-center gap-1 px-2 py-1 rounded-md bg-[#8B5CF6]/10 border border-[#8B5CF6]/30 text-[11px] font-mono font-semibold text-violet-300 hover:bg-[#8B5CF6]/20 hover:text-white transition-colors cursor-pointer"
                 >
                   <span>{related.label}</span>
                   <ArrowUpRight className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />

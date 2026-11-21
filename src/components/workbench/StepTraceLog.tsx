@@ -8,7 +8,7 @@ interface StepTraceLogProps {
   onSeekTo: (step: number) => void;
 }
 
-export const StepTraceLog: React.FC<StepTraceLogProps> = ({
+export const StepTraceLog: React.FC<StepTraceLogProps> = React.memo(({
   timeline,
   currentStep,
   onSeekTo,
@@ -18,7 +18,7 @@ export const StepTraceLog: React.FC<StepTraceLogProps> = ({
 
   useEffect(() => {
     if (activeItemRef.current && typeof activeItemRef.current.scrollIntoView === 'function') {
-      activeItemRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      activeItemRef.current.scrollIntoView({ block: 'nearest', behavior: 'auto' });
     }
   }, [currentStep]);
 
@@ -48,7 +48,7 @@ export const StepTraceLog: React.FC<StepTraceLogProps> = ({
             onClick={() => setFilterMode('all')}
             className={`px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
               filterMode === 'all'
-                ? 'bg-[#10B981]/20 text-[#10B981] font-bold'
+                ? 'theme-accent-soft font-bold'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -87,7 +87,7 @@ export const StepTraceLog: React.FC<StepTraceLogProps> = ({
               ref={isCurrent ? activeItemRef : undefined}
               type="button"
               onClick={() => onSeekTo(idx)}
-              className={`w-full text-left p-2 rounded-lg border transition-all cursor-pointer flex items-start gap-2.5 ${
+              className={`trace-row-virtual w-full text-left p-2 rounded-lg border transition-colors cursor-pointer flex items-start gap-2.5 ${
                 isCurrent
                   ? 'bg-[#10B981]/15 border-[#10B981]/60 shadow-sm'
                   : isMilestone
@@ -101,7 +101,7 @@ export const StepTraceLog: React.FC<StepTraceLogProps> = ({
               <div
                 className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tabular-nums shrink-0 mt-0.5 ${
                   isCurrent
-                    ? 'bg-[#10B981] text-[#0B0F19]'
+                    ? 'theme-accent-bg'
                     : isMilestone
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                     : 'bg-[#1F2937] text-slate-400'
@@ -167,4 +167,5 @@ export const StepTraceLog: React.FC<StepTraceLogProps> = ({
       </div>
     </div>
   );
-};
+});
+StepTraceLog.displayName = 'StepTraceLog';

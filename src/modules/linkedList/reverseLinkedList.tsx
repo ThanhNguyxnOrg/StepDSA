@@ -380,8 +380,27 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
               const isPrev = prev === idx;
               const isCurr = curr === idx;
               const isNext = next === idx;
-              const fill = isCurr ? '#78350F' : isPrev ? '#064E3B' : isNext ? '#0C4A6E' : '#111827';
-              const stroke = isCurr ? '#F59E0B' : isPrev ? '#10B981' : isNext ? '#38BDF8' : '#475569';
+              const fillVar = isCurr
+                ? 'var(--sem-comparing-bg)'
+                : isPrev
+                ? 'var(--sem-sorted-bg)'
+                : isNext
+                ? 'var(--sem-active-bg)'
+                : 'var(--svg-node-bg)';
+              const strokeVar = isCurr
+                ? 'var(--sem-comparing-border)'
+                : isPrev
+                ? 'var(--sem-sorted-border)'
+                : isNext
+                ? 'var(--sem-active-border)'
+                : 'var(--svg-node-border)';
+              const textVar = isCurr
+                ? 'var(--sem-comparing-text)'
+                : isPrev
+                ? 'var(--sem-sorted-text)'
+                : isNext
+                ? 'var(--sem-active-text)'
+                : 'var(--svg-node-text)';
 
               return (
                 <g key={node.id}>
@@ -391,15 +410,14 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
                     width={nodeWidth}
                     height={52}
                     rx={10}
-                    fill={fill}
-                    stroke={stroke}
+                    style={{ fill: fillVar, stroke: strokeVar }}
                     strokeWidth={isCurr || isPrev || isNext ? 3 : 1.8}
                   />
                   <text
                     x={x + nodeWidth / 2}
                     y={y + 4}
                     textAnchor="middle"
-                    fill="#F8FAFC"
+                    style={{ fill: textVar }}
                     fontSize="16"
                     fontWeight="bold"
                     fontFamily="monospace"
@@ -410,7 +428,7 @@ export const reverseLinkedListModule: AlgorithmModule<number[], ReverseLLState> 
                     x={x + nodeWidth / 2}
                     y={y + 19}
                     textAnchor="middle"
-                    fill="#94A3B8"
+                    style={{ fill: 'var(--theme-text-muted)' }}
                     fontSize="8.5"
                     fontFamily="monospace"
                   >

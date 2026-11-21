@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Play,
@@ -31,7 +31,7 @@ export interface StepperControlsProps {
   linkCopied?: boolean;
 }
 
-export const StepperControls: React.FC<StepperControlsProps> = ({
+export const StepperControls: React.FC<StepperControlsProps> = React.memo(({
   controller,
   currentFrame,
   timeline,
@@ -39,6 +39,7 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
   onCopyLink,
   linkCopied = false,
 }) => {
+  const [hoverPreview, setHoverPreview] = useState<{ step: number; pct: number } | null>(null);
   const {
     currentStep,
     totalSteps,
@@ -80,7 +81,31 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
   const nextMilestone = milestones.find((m) => m.step > currentStep);
 
   return (
-    <div className="bg-[#111827] border-t border-[#1F293D] px-3 py-1.5 flex items-center justify-between gap-2.5 select-none overflow-x-auto no-scrollbar">
+    <div className="relative bg-[#111827] border-t border-[#1F293D] select-none">
+      {/* Floating Hover Step Preview Tooltip (positioned outside horizontal scroll wrapper so it never clips) */}
+      {hoverPreview && timeline && timeline[hoverPreview.step] && (
+        <div
+          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 px-3 py-1.5 rounded-lg bg-[#0F172A]/95 border border-[#1F293D] shadow-xl backdrop-blur-md max-w-[min(420px,calc(100%-24px))]"
+        >
+          <div className="flex items-center gap-1.5 text-[10px] font-mono">
+            <span className="font-bold theme-accent-text tabular-nums shrink-0">
+              Step {hoverPreview.step + 1}/{totalSteps}
+            </span>
+            {timeline[hoverPreview.step].milestoneTitle && (
+              <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold truncate">
+                {timeline[hoverPreview.step].milestoneTitle}
+              </span>
+            )}
+          </div>
+          {timeline[hoverPreview.step].explanation && (
+            <p className="text-[10.5px] text-slate-300 leading-snug truncate mt-0.5">
+              {timeline[hoverPreview.step].explanation}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="px-2.5 py-1.5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
       {/* 1. Left: Primary Playback Transport Controls (Always visible first) */}
       <div className="flex items-center gap-1 shrink-0">
         <motion.button
@@ -89,10 +114,10 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
           onClick={reset}
           title={`Reset to Start (${shortcuts.reset})`}
           aria-label="Reset timeline"
-          className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#1F2937] text-slate-300 hover:text-white hover:bg-[#374151] text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap"
+          className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-[#1F2937] text-slate-300 hover:text-white hover:bg-[#374151] text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span className="hidden xl:inline">Reset</span>
+          <span className="hidden 2xl:inline">Reset</span>
         </motion.button>
 
         {/* Jump to Start */}
@@ -116,10 +141,10 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
           disabled={currentStep === 0}
           title={`Step Back Line (${shortcuts.prevStep})`}
           aria-label="Step Back"
-          className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#1F2937] text-slate-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-all text-[11px] font-mono font-medium cursor-pointer whitespace-nowrap"
+          className="flex items-center gap-0.5 px-1.5 py-1 rounded-md bg-[#1F2937] text-slate-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-all text-[11px] font-mono font-medium cursor-pointer whitespace-nowrap"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Prev</span>
+          <span className="hidden xl:inline">Prev</span>
         </motion.button>
 
         {/* Play / Pause Primary Button */}
@@ -135,10 +160,10 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
               : `Play (${shortcuts.playPause})`
           }
           aria-label={isPlaying ? 'Pause' : 'Play'}
-          className={`h-7 px-3 rounded-md flex items-center justify-center gap-1.5 font-mono text-[11px] font-bold shadow-sm transition-colors cursor-pointer shrink-0 ${
+          className={`h-7 px-2.5 rounded-md flex items-center justify-center gap-1.5 font-mono text-[11px] font-bold shadow-sm transition-colors cursor-pointer shrink-0 ${
             isPlaying
               ? 'bg-[#F59E0B] text-[#0B0F19] hover:bg-[#d97706]'
-              : 'bg-[#10B981] text-[#0B0F19] hover:bg-[#059669]'
+              : 'theme-accent-bg'
           }`}
         >
           {isPlaying ? (
@@ -162,9 +187,9 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
           disabled={currentStep >= totalSteps - 1}
           title={`Step Forward Line (${shortcuts.nextStep})`}
           aria-label="Step Forward"
-          className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#1F2937] text-slate-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-all text-[11px] font-mono font-medium cursor-pointer whitespace-nowrap"
+          className="flex items-center gap-0.5 px-1.5 py-1 rounded-md bg-[#1F2937] text-slate-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-all text-[11px] font-mono font-medium cursor-pointer whitespace-nowrap"
         >
-          <span className="hidden md:inline">Next</span>
+          <span className="hidden xl:inline">Next</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </motion.button>
 
@@ -227,7 +252,17 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
           <strong className="text-white">{currentStep + 1}</strong>/{totalSteps}
         </span>
 
-        <div className="relative flex-1 flex items-center group min-w-[80px]">
+        <div
+          className="relative flex-1 flex items-center group min-w-[80px]"
+          onMouseMove={(e) => {
+            if (totalSteps <= 1) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+            const step = Math.round(ratio * (totalSteps - 1));
+            setHoverPreview({ step, pct: ratio * 100 });
+          }}
+          onMouseLeave={() => setHoverPreview(null)}
+        >
           <input
             type="range"
             min={0}
@@ -235,7 +270,8 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
             value={currentStep}
             onChange={(e) => seekTo(Number(e.target.value))}
             aria-label="Timeline step scrubber"
-            className="w-full h-1.5 bg-[#1F2937] rounded-lg appearance-none cursor-pointer accent-[#10B981] focus:outline-none focus:ring-1 focus:ring-[#10B981]"
+            style={{ accentColor: 'var(--theme-accent)' }}
+            className="w-full h-1.5 bg-[#1F2937] rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-1"
           />
 
           {/* Milestone Bookmark Markers along the track */}
@@ -348,6 +384,8 @@ export const StepperControls: React.FC<StepperControlsProps> = ({
           </button>
         )}
       </div>
+      </div>
     </div>
   );
-};
+});
+StepperControls.displayName = 'StepperControls';

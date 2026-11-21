@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { AlgorithmModule, ExecutionFrame } from '../../core/types';
 
 export interface DoublyNode {
@@ -258,71 +259,160 @@ void insertAfter(Node node, int val) {
     const { nodes, activePointer, direction } = frame.state;
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6">
-        <div className="flex items-center gap-2 mb-4 text-xs font-mono text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800">
-          <span>Mode:</span>
-          <span className="text-cyan-400 font-bold uppercase">{direction || 'idle'} traversal</span>
-          <span>•</span>
-          <span className="text-amber-400 font-bold">Prev (←) & Next (→)</span>
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 sm:p-6 gap-5 select-none">
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-mono bg-[#111827] px-3.5 py-1.5 rounded-xl border border-[#1F293D]">
+          <span className="text-slate-400">Direction:</span>
+          <span className="text-cyan-400 font-bold uppercase">{direction || 'idle'}</span>
+          <span className="text-slate-600">·</span>
+          <span className="text-emerald-400 font-bold">next → (top)</span>
+          <span className="text-slate-600">/</span>
+          <span className="text-amber-400 font-bold">← prev (bottom)</span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-5xl py-8">
-          {/* NULL indicator at head */}
-          <div className="flex items-center gap-1 text-slate-500 font-mono text-xs">
-            <span className="px-2 py-1 rounded bg-slate-800/80 border border-slate-700/80 text-slate-400">
+        <div className="flex flex-wrap items-center justify-center gap-y-8 gap-x-1.5 max-w-5xl py-6">
+          {/* NULL head boundary */}
+          <div className="flex items-center gap-1.5 font-mono text-xs self-center -mt-3">
+            <span className="px-2 py-1 rounded-md bg-[#1E293B] border border-dashed border-[#334155] text-[10px] font-bold text-slate-400">
               NULL
             </span>
-            <span className="text-slate-600 font-bold">↔</span>
+            <svg width="22" height="16" viewBox="0 0 22 16">
+              <line x1="20" y1="8" x2="6" y2="8" style={{ stroke: 'var(--sem-comparing-solid)' }} strokeWidth="1.8" />
+              <polygon points="8,4 1,8 8,12" style={{ fill: 'var(--sem-comparing-solid)' }} />
+            </svg>
           </div>
 
           {nodes.map((node, i) => {
             const isActive = activePointer?.nodeIndex === i;
+            const isModified = node.status === 'modified';
+
+            const boxStyle: React.CSSProperties = isModified
+              ? {
+                  backgroundColor: 'var(--sem-sorted-bg)',
+                  borderColor: 'var(--sem-sorted-border)',
+                  color: 'var(--sem-sorted-text)',
+                }
+              : isActive
+              ? {
+                  backgroundColor: 'var(--sem-active-bg)',
+                  borderColor: 'var(--sem-active-border)',
+                  color: 'var(--sem-active-text)',
+                }
+              : {
+                  backgroundColor: 'var(--sem-default-cell-bg)',
+                  borderColor: 'var(--sem-default-border)',
+                  color: 'var(--sem-default-text)',
+                };
+
             return (
               <React.Fragment key={node.id}>
-                {/* Doubly Linked Node Box */}
-                <div className="flex flex-col items-center">
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, scale: 0.85, y: -8 }}
+                  animate={{ opacity: 1, scale: isActive || isModified ? 1.05 : 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+                  className="flex flex-col items-center"
+                >
+                  <div className="h-4 flex items-center gap-1 mb-1">
+                    {i === 0 && (
+                      <span
+                        style={{ backgroundColor: 'var(--sem-active-solid)', color: 'var(--sem-active-on-solid)' }}
+                        className="theme-solid-badge px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase"
+                      >
+                        HEAD
+                      </span>
+                    )}
+                    {i === nodes.length - 1 && (
+                      <span className="px-1.5 py-0.2 rounded bg-[#1E293B] border border-[#334155] text-[8px] font-mono text-slate-400 uppercase">
+                        TAIL
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 3-Compartment Struct: [ ←P | val | N→ ] */}
                   <div
-                    className={`flex items-center rounded-xl border-2 shadow-lg transition-all duration-300 overflow-hidden ${
-                      node.status === 'modified'
-                        ? 'border-emerald-400 bg-emerald-950/50 shadow-emerald-500/20 scale-105 ring-2 ring-emerald-400/40'
-                        : isActive
-                        ? 'border-cyan-400 bg-cyan-950/50 shadow-cyan-500/20 scale-105 ring-2 ring-cyan-400/40'
-                        : 'border-slate-700 bg-slate-900/90'
+                    style={boxStyle}
+                    className={`flex items-stretch rounded-xl border-2 shadow-md overflow-hidden ${
+                      isActive ? 'ring-2 ring-[#06B6D4]/40' : isModified ? 'ring-2 ring-[#10B981]/40' : ''
                     }`}
                   >
-                    {/* Prev link pin */}
-                    <div className="px-2 py-3 bg-slate-800/80 text-[10px] font-mono text-cyan-400 font-bold border-r border-slate-700/60">
+                    <div className="px-2 py-2.5 bg-black/5 text-[9.5px] font-mono text-amber-400 font-bold border-r border-current/20 flex items-center">
                       ←P
                     </div>
-
-                    {/* Value cell */}
-                    <div className="px-4 py-3 min-w-[50px] text-center font-mono font-bold text-base text-white flex items-center justify-center">
+                    <div className="px-3.5 py-2.5 min-w-[48px] text-center font-mono font-extrabold text-base tabular-nums flex items-center justify-center">
                       {node.val}
                     </div>
-
-                    {/* Next link pin */}
-                    <div className="px-2 py-3 bg-slate-800/80 text-[10px] font-mono text-indigo-400 font-bold border-l border-slate-700/60">
+                    <div className="px-2 py-2.5 bg-black/5 text-[9.5px] font-mono text-emerald-400 font-bold border-l border-current/20 flex items-center">
                       N→
                     </div>
                   </div>
 
-                  {/* Active pointer badge */}
-                  {isActive && (
-                    <div className="mt-2 text-[10px] font-mono font-bold text-cyan-300 uppercase tracking-wider bg-cyan-950/90 px-2 py-0.5 rounded border border-cyan-500/40 shadow-sm animate-bounce">
-                      {activePointer.name}
-                    </div>
-                  )}
-                </div>
+                  <span className="text-[9px] font-mono text-slate-500 mt-1 tabular-nums">[{i}]</span>
 
-                {/* Bidirectional connector */}
+                  {/* Gliding Active Pointer Pill */}
+                  <div className="h-6 mt-0.5 flex items-start justify-center">
+                    {isActive && (
+                      <motion.div
+                        layoutId="dll-active-ptr"
+                        transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                        style={{
+                          backgroundColor: isModified ? 'var(--sem-sorted-solid)' : 'var(--sem-active-solid)',
+                          color: isModified ? 'var(--sem-sorted-on-solid)' : 'var(--sem-active-on-solid)',
+                        }}
+                        className="theme-solid-badge text-[9px] font-mono font-bold uppercase tracking-wide px-2 py-0.5 rounded shadow-sm whitespace-nowrap"
+                      >
+                        ▲ {activePointer.name}
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* Dual Parallel Bidirectional Arrows (top: next →, bottom: ← prev) */}
                 {i < nodes.length - 1 ? (
-                  <div className="flex items-center text-cyan-400 font-mono text-base font-bold px-1">
-                    ↔
+                  <div className="flex items-center self-center -mt-3">
+                    <svg width="34" height="26" viewBox="0 0 34 26" className="overflow-visible">
+                      {/* Top: next → */}
+                      <line
+                        x1="2"
+                        y1="7"
+                        x2="26"
+                        y2="7"
+                        style={{
+                          stroke: direction === 'forward' && isActive ? 'var(--sem-sorted-solid)' : 'var(--svg-label-emerald)',
+                        }}
+                        strokeWidth={direction === 'forward' && isActive ? 2.4 : 1.75}
+                      />
+                      <polygon
+                        points="24,3.5 32,7 24,10.5"
+                        style={{
+                          fill: direction === 'forward' && isActive ? 'var(--sem-sorted-solid)' : 'var(--svg-label-emerald)',
+                        }}
+                      />
+                      {/* Bottom: ← prev */}
+                      <line
+                        x1="32"
+                        y1="19"
+                        x2="8"
+                        y2="19"
+                        style={{
+                          stroke: direction === 'backward' && isActive ? 'var(--sem-comparing-solid)' : 'var(--svg-label-amber)',
+                        }}
+                        strokeWidth={direction === 'backward' && isActive ? 2.4 : 1.75}
+                      />
+                      <polygon
+                        points="10,15.5 2,19 10,22.5"
+                        style={{
+                          fill: direction === 'backward' && isActive ? 'var(--sem-comparing-solid)' : 'var(--svg-label-amber)',
+                        }}
+                      />
+                    </svg>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 text-slate-500 font-mono text-xs">
-                    <span className="text-slate-600 font-bold">↔</span>
-                    <span className="px-2 py-1 rounded bg-slate-800/80 border border-slate-700/80 text-slate-400">
+                  <div className="flex items-center gap-1.5 font-mono text-xs self-center -mt-3">
+                    <svg width="22" height="16" viewBox="0 0 22 16">
+                      <line x1="2" y1="8" x2="16" y2="8" style={{ stroke: 'var(--svg-label-emerald)' }} strokeWidth="1.8" />
+                      <polygon points="14,4 21,8 14,12" style={{ fill: 'var(--svg-label-emerald)' }} />
+                    </svg>
+                    <span className="px-2 py-1 rounded-md bg-[#1E293B] border border-dashed border-[#334155] text-[10px] font-bold text-slate-400">
                       NULL
                     </span>
                   </div>
