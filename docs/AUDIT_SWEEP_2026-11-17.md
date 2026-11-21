@@ -11,7 +11,7 @@ Measured with a scripted sweep over `generateTimeline` for the default input plu
 
 ## Status after the flagship rebuilds (2026-11-19)
 
-**31/40 modules fully meet the standard** (aligned snippets + exact code-line map
+**32/40 modules fully meet the standard** (aligned snippets + exact code-line map
 + full pedagogy + 2 checkpoints + clean audit on every input): the five flagship
 sorts — insertion-sort, quicksort, mergesort, bubble-sort, heapsort — plus
 selection-sort, counting-sort, radix-sort, shellsort, cocktail-shaker-sort and
@@ -201,6 +201,10 @@ all Tier C (0% pedagogy, 0 checkpoints).
    3 checkpoints, 3 real milestones, five aligned 17-line snippets,
    mapBad 239 -> 0 on every input, honest delimiter-clash normalisation,
    monotonic R boundary tested, 6 regression tests.
+   ~~rabin-karp~~ ✅ rebuilt 2026-11-20: pedagogy on every frame (was 0%),
+   2 checkpoints, 3 real milestones, five aligned 18-line snippets,
+   mapBad 235 -> 0 on every input, honest {text, pattern} normalisation,
+   spurious-hit/rolling-hash tested, 6 regression tests.
 2. Then the remaining S1 sorts: selection, counting, radix, shellsort, cocktail,
    bucket, introsort, quickselect, timsort, stooge, bogosort, drop-sort, sleep-sort.
 3. `backtracking-decision-tree` / `mergesort-recursion-tree` /

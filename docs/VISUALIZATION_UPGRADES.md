@@ -299,6 +299,14 @@ heapsort, then the rest of S1; string/hashing modules stay in STR1/H1.
 
 ### Legacy rebuilds (DP standard applied to old batches)
 
+- **rabin-karp ✅ (2026-11-20):** rebuild — pedagogy on every frame (was 0%),
+  2 checkpoints (spurious-hit verification need with non-zero correct index +
+  rolling hash O(1) mechanism), named actions (INIT → HASH_COMPARE →
+  VERIFY_MATCH / SPURIOUS_HIT → ROLL_HASH → DONE), 3 real milestones
+  (Pattern Hash Ready, First Match Found, Search Complete), five 18-line
+  snippets with the same statement per line and exact code-line mapping
+  (mapBad 235 → 0), honest normalisation for {text, pattern} (M > N →
+  valid short run with 0 matches). 6 regression tests pending.
 - **z-algorithm ✅ (2026-11-20):** rebuild — pedagogy on every frame (was
   0%), 3 checkpoints (delimiter role, match position with non-zero correct
   index, box reuse), named actions (INIT → BOX_CHECK → Z_BOX_SHIFT →
