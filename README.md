@@ -110,7 +110,7 @@ npm test
 
 # 4. Run Local CLI Tracer & Environment Doctor
 node cli/stepdsa.js doctor
-node cli/stepdsa.js run cli/sample_bubble_sort.cpp --no-open
+node cli/stepdsa.js run cli/sample_quicksort.stepdsa --no-open
 
 # 5. Type-check & build production bundle
 npm run build

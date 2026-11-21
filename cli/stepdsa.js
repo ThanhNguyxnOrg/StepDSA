@@ -39,10 +39,11 @@ function printHelp() {
 
   Supported Languages:
     • StepDSA Script (.stepdsa)
-    • Python (.py)
     • JavaScript (.js)
-    • TypeScript (.ts)
-    • C++ (.cpp)
+    • TypeScript (.ts, JavaScript-compatible syntax)
+    • C++ (.cpp, built-in generateParenthesis model only)
+
+  For Python, use Personal Code Studio in the browser.
 
   Options:
     --out <path>     Custom output path for the .stepdsa.json snapshot file
@@ -54,7 +55,6 @@ function printHelp() {
   Examples:
     stepdsa init
     stepdsa run solution.stepdsa
-    stepdsa run solution.cpp
     stepdsa trace solution.stepdsa --out trace.json
   `);
 }
@@ -169,9 +169,8 @@ function traceWithProxy(code, initialInput, options = {}) {
       { input: proxiedArray, console },
       { timeout: 2000 }
     );
-  } catch (err) {
-    // Timeouts and unsupported syntax fall back to the deterministic engine.
-    if (frames.length <= 1) return [];
+  } catch {
+    return [];
   }
 
   if (frames.length > 1) {
@@ -340,86 +339,12 @@ function generateTraceSnapshot(filePath) {
     }
   }
 
-  // Fallback to deterministic adjacent comparison simulation if proxy wasn't applicable
   if (frames.length === 0) {
-    console.log(`\x1b[35m[Engine]\x1b[0m Traced via Deterministic Sequence Engine`);
-    const arr = [...initialArray];
-    const n = arr.length;
-    let stepCount = 0;
-
-    frames.push({
-      stepIndex: stepCount++,
-      codeLine: 1,
-      explanation: `Initial state: Loaded array of size ${n} from ${baseName}${ext}`,
-      state: {
-        array: arr.map((val, idx) => ({ id: `${idx}`, value: val, status: 'normal' })),
-        pointers: { 'n': n },
-      },
-    });
-
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n - i - 1; j++) {
-        const isGreater = arr[j] > arr[j + 1];
-        frames.push({
-          stepIndex: stepCount++,
-          codeLine: 4,
-          explanation: `Comparing arr[${j}] (${arr[j]}) with arr[${j + 1}] (${arr[j + 1]}). ${isGreater ? 'Swap required!' : 'In order, continue.'}`,
-          state: {
-            array: arr.map((val, idx) => ({
-              id: `${idx}`,
-              value: val,
-              status: idx === j || idx === j + 1 ? 'comparing' : idx >= n - i ? 'sorted' : 'normal',
-            })),
-            pointers: { 'i': i, 'j': j, 'j+1': j + 1 },
-          },
-        });
-
-        if (isGreater) {
-          const temp = arr[j];
-          arr[j] = arr[j + 1];
-          arr[j + 1] = temp;
-
-          frames.push({
-            stepIndex: stepCount++,
-            codeLine: 5,
-            explanation: `Swapped arr[${j}] and arr[${j + 1}]. Array is now [${arr.join(', ')}].`,
-            state: {
-              array: arr.map((val, idx) => ({
-                id: `${idx}`,
-                value: val,
-                status: idx === j || idx === j + 1 ? 'swapping' : idx >= n - i ? 'sorted' : 'normal',
-              })),
-              pointers: { 'i': i, 'j': j },
-            },
-          });
-        }
-      }
-      frames.push({
-        stepIndex: stepCount++,
-        codeLine: 3,
-        explanation: `Pass ${i + 1} complete. Largest unsorted element settled at index ${n - i - 1}.`,
-        state: {
-          array: arr.map((val, idx) => ({
-            id: `${idx}`,
-            value: val,
-            status: idx >= n - i - 1 ? 'sorted' : 'normal',
-          })),
-          pointers: { 'sorted': n - i - 1 },
-        },
-      });
-    }
-
-    frames.push({
-      stepIndex: stepCount,
-      codeLine: rawContent.split('\n').length,
-      isMilestone: true,
-      milestoneTitle: 'Algorithm Execution Terminated',
-      explanation: `Local trace finished. Final sorted array: [${arr.join(', ')}].`,
-      state: {
-        array: arr.map((val, idx) => ({ id: `${idx}`, value: val, status: 'sorted' })),
-        pointers: {},
-      },
-    });
+    const reason = ext === '.py'
+      ? 'Python tracing is not supported by the local CLI. Use Personal Code Studio in the browser.'
+      : 'The local CLI could not capture a complete trace for this file.';
+    console.error(`\x1b[31m[Unsupported trace]\x1b[0m ${path.basename(filePath)}: ${reason}`);
+    process.exit(1);
   }
 
   // Calculate live accumulator metrics for each frame
@@ -636,7 +561,7 @@ if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
 
 if (args[0] === 'trace') {
   if (!args[1]) {
-    console.error('\x1b[31m[Error]\x1b[0m Please specify a file to trace (e.g. stepdsa trace my_code.py)');
+    console.error('\x1b[31m[Error]\x1b[0m Please specify a file to trace (e.g. stepdsa trace solution.stepdsa)');
     process.exit(1);
   }
   printBanner();
@@ -658,4 +583,3 @@ if (args[0] === 'trace') {
   console.error(`\x1b[31m[Error]\x1b[0m Unknown command '${args[0]}'. Use 'stepdsa --help'.`);
   process.exit(1);
 }
-
